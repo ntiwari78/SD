@@ -1,0 +1,1664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 06: The Transformer Architecture</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: #0a0a0f;
+            color: #e0e0e8;
+            line-height: 1.6;
+        }
+
+        /* Sticky Navigation */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: linear-gradient(180deg, #0a0a0f 0%, #0a0a0f 80%, transparent 100%);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid #2a2a3e;
+        }
+
+        nav a {
+            color: #6c63ff;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        nav a:hover {
+            color: #00d2ff;
+        }
+
+        /* Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        section {
+            margin: 4rem 0;
+            opacity: 0;
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 4rem 0;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #6c63ff, #00d2ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero .subtitle {
+            font-size: 1.8rem;
+            color: #8888a0;
+            margin-bottom: 1.5rem;
+            font-style: italic;
+        }
+
+        .meta {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 2rem;
+            color: #8888a0;
+            font-size: 0.95rem;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Headings */
+        h2 {
+            font-size: 2.2rem;
+            margin-bottom: 1.5rem;
+            color: #00d2ff;
+            border-left: 4px solid #6c63ff;
+            padding-left: 1rem;
+        }
+
+        h3 {
+            font-size: 1.5rem;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: #6c63ff;
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: #c0c0c8;
+            line-height: 1.8;
+        }
+
+        /* Cards */
+        .card {
+            background: #1a1a2e;
+            border: 1px solid #2a2a3e;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .card.highlight {
+            border-color: #6c63ff;
+            background: linear-gradient(135deg, #1a1a2e 0%, #1a0a3e 100%);
+        }
+
+        /* SVG Diagrams */
+        svg {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            margin: 2rem 0;
+        }
+
+        .diagram-container {
+            background: #12121a;
+            border: 1px solid #2a2a3e;
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 2rem 0;
+            overflow-x: auto;
+        }
+
+        /* Interactive Elements */
+        .interactive-box {
+            background: #1a1a2e;
+            border: 2px solid #2a2a3e;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .interactive-box:hover {
+            border-color: #6c63ff;
+            background: #12121a;
+            transform: translateY(-2px);
+        }
+
+        .interactive-box.active {
+            border-color: #00d2ff;
+            background: linear-gradient(135deg, #1a1a2e 0%, #0a1a3e 100%);
+        }
+
+        /* Slider */
+        .slider-container {
+            margin: 2rem 0;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: #8888a0;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #2a2a3e;
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #6c63ff;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(108, 99, 255, 0.5);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #6c63ff;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 10px rgba(108, 99, 255, 0.5);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin: 2rem 0;
+            border-bottom: 1px solid #2a2a3e;
+        }
+
+        .tab-button {
+            background: none;
+            border: none;
+            color: #8888a0;
+            cursor: pointer;
+            padding: 1rem 1.5rem;
+            border-bottom: 2px solid transparent;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .tab-button.active {
+            color: #6c63ff;
+            border-bottom-color: #6c63ff;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Code */
+        pre {
+            background: #12121a;
+            border: 1px solid #2a2a3e;
+            border-radius: 8px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+
+        code {
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: #00d2ff;
+            line-height: 1.5;
+        }
+
+        .keyword {
+            color: #6c63ff;
+        }
+
+        .string {
+            color: #ff6b6b;
+        }
+
+        .comment {
+            color: #8888a0;
+        }
+
+        .function {
+            color: #00d2ff;
+        }
+
+        /* Footer Navigation */
+        .nav-footer {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 4rem;
+            padding: 2rem 0;
+            border-top: 1px solid #2a2a3e;
+        }
+
+        .nav-link {
+            color: #6c63ff;
+            text-decoration: none;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.3s;
+        }
+
+        .nav-link:hover {
+            color: #00d2ff;
+        }
+
+        /* Heatmap */
+        .heatmap {
+            display: inline-block;
+            border-collapse: collapse;
+        }
+
+        .heatmap td {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #2a2a3e;
+            text-align: center;
+            font-size: 0.7rem;
+            padding: 2px;
+        }
+
+        /* Matrix visualization */
+        .matrix-container {
+            margin: 2rem 0;
+            padding: 1.5rem;
+            background: #12121a;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        .matrix {
+            display: inline-block;
+            border: 2px solid #6c63ff;
+            border-radius: 4px;
+        }
+
+        .matrix-row {
+            display: flex;
+        }
+
+        .matrix-cell {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #2a2a3e;
+            font-size: 0.8rem;
+            color: #00d2ff;
+        }
+
+        /* Attention visualization */
+        .attention-viz {
+            position: relative;
+            padding: 2rem;
+            background: #12121a;
+            border-radius: 8px;
+            margin: 2rem 0;
+        }
+
+        .word-token {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            margin: 0.5rem;
+            background: #1a1a2e;
+            border: 2px solid #2a2a3e;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .word-token:hover {
+            border-color: #6c63ff;
+            background: #1a0a3e;
+        }
+
+        .word-token.active {
+            background: #6c63ff;
+            color: #0a0a0f;
+            border-color: #6c63ff;
+        }
+
+        /* Equation styles */
+        .equation {
+            background: #1a1a2e;
+            padding: 1rem;
+            border-left: 4px solid #6c63ff;
+            margin: 1.5rem 0;
+            font-family: 'Monaco', monospace;
+            overflow-x: auto;
+        }
+
+        /* Responsiveness */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero .subtitle {
+                font-size: 1.3rem;
+            }
+
+            h2 {
+                font-size: 1.6rem;
+            }
+
+            .meta {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .nav-footer {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            svg {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="index.html">← Back to Course</a>
+    </nav>
+
+    <div class="container">
+        <!-- Hero Section -->
+        <section class="hero">
+            <h1>Module 06</h1>
+            <p class="subtitle">The Transformer Architecture</p>
+            <p class="subtitle">"Attention Is All You Need"</p>
+            <div class="meta">
+                <div class="meta-item">⏱️ ~35 minutes</div>
+                <div class="meta-item">📄 Vaswani et al. (2017)</div>
+                <div class="meta-item">🔑 Foundational</div>
+            </div>
+        </section>
+
+        <!-- The Big Picture -->
+        <section>
+            <h2>The Big Picture</h2>
+            <p>The Transformer completely redefined deep learning. Before this architecture, sequence models relied on recurrence (RNNs, LSTMs) or convolutions. The Transformer's key insight: <strong>process all tokens in parallel using attention mechanisms.</strong></p>
+
+            <p>This diagram shows the complete Transformer architecture from the original paper:</p>
+
+            <div class="diagram-container">
+                <svg viewBox="0 0 1200 600" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Title -->
+                    <text x="600" y="25" text-anchor="middle" font-size="20" font-weight="bold" fill="#e0e0e8">
+                        Transformer Architecture
+                    </text>
+
+                    <!-- Encoder Side -->
+                    <text x="250" y="55" text-anchor="middle" font-size="14" font-weight="bold" fill="#6c63ff">
+                        ENCODER
+                    </text>
+
+                    <!-- Input -->
+                    <rect x="150" y="70" width="200" height="50" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4"/>
+                    <text x="250" y="105" text-anchor="middle" font-size="12" fill="#e0e0e8">Input Sequence</text>
+
+                    <!-- Embedding + Positional Encoding -->
+                    <g>
+                        <rect x="150" y="140" width="200" height="50" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4" class="arch-component" data-component="embedding"/>
+                        <text x="250" y="165" text-anchor="middle" font-size="11" fill="#e0e0e8">Embedding +</text>
+                        <text x="250" y="180" text-anchor="middle" font-size="11" fill="#e0e0e8">Positional Encoding</text>
+                    </g>
+
+                    <!-- Encoder Stack (simplified) -->
+                    <g>
+                        <rect x="150" y="210" width="200" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4" class="arch-component" data-component="multi-head"/>
+                        <text x="250" y="240" text-anchor="middle" font-size="11" fill="#e0e0e8">Multi-Head Attention</text>
+                    </g>
+
+                    <g>
+                        <rect x="150" y="270" width="200" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4" class="arch-component" data-component="norm"/>
+                        <text x="250" y="300" text-anchor="middle" font-size="11" fill="#e0e0e8">Add & Norm</text>
+                    </g>
+
+                    <g>
+                        <rect x="150" y="330" width="200" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4" class="arch-component" data-component="feedforward"/>
+                        <text x="250" y="360" text-anchor="middle" font-size="11" fill="#e0e0e8">Feed-Forward</text>
+                    </g>
+
+                    <g>
+                        <rect x="150" y="390" width="200" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4" class="arch-component" data-component="norm"/>
+                        <text x="250" y="420" text-anchor="middle" font-size="11" fill="#e0e0e8">Add & Norm</text>
+                    </g>
+
+                    <text x="250" y="470" text-anchor="middle" font-size="10" fill="#8888a0">× N layers</text>
+
+                    <!-- Decoder Side -->
+                    <text x="950" y="55" text-anchor="middle" font-size="14" font-weight="bold" fill="#00d2ff">
+                        DECODER
+                    </text>
+
+                    <!-- Output Embedding -->
+                    <rect x="850" y="70" width="200" height="50" fill="#1a1a2e" stroke="#00d2ff" stroke-width="2" rx="4"/>
+                    <text x="950" y="105" text-anchor="middle" font-size="12" fill="#e0e0e8">Output Sequence</text>
+
+                    <!-- Decoder Stack -->
+                    <g>
+                        <rect x="850" y="140" width="200" height="40" fill="#1a1a2e" stroke="#00d2ff" stroke-width="2" rx="4" class="arch-component" data-component="masked-attn"/>
+                        <text x="950" y="170" text-anchor="middle" font-size="11" fill="#e0e0e8">Masked Multi-Head Attention</text>
+                    </g>
+
+                    <g>
+                        <rect x="850" y="200" width="200" height="40" fill="#1a1a2e" stroke="#00d2ff" stroke-width="2" rx="4" class="arch-component" data-component="norm"/>
+                        <text x="950" y="230" text-anchor="middle" font-size="11" fill="#e0e0e8">Add & Norm</text>
+                    </g>
+
+                    <g>
+                        <rect x="850" y="260" width="200" height="40" fill="#1a1a2e" stroke="#00d2ff" stroke-width="2" rx="4" class="arch-component" data-component="cross-attn"/>
+                        <text x="950" y="290" text-anchor="middle" font-size="11" fill="#e0e0e8">Cross-Attention</text>
+                    </g>
+
+                    <!-- Arrow from Encoder to Decoder -->
+                    <path d="M 350 320 Q 600 300 850 290" stroke="#ff6b6b" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+
+                    <g>
+                        <rect x="850" y="320" width="200" height="40" fill="#1a1a2e" stroke="#00d2ff" stroke-width="2" rx="4" class="arch-component" data-component="norm"/>
+                        <text x="950" y="350" text-anchor="middle" font-size="11" fill="#e0e0e8">Add & Norm</text>
+                    </g>
+
+                    <g>
+                        <rect x="850" y="380" width="200" height="40" fill="#1a1a2e" stroke="#00d2ff" stroke-width="2" rx="4" class="arch-component" data-component="feedforward"/>
+                        <text x="950" y="410" text-anchor="middle" font-size="11" fill="#e0e0e8">Feed-Forward</text>
+                    </g>
+
+                    <g>
+                        <rect x="850" y="440" width="200" height="40" fill="#1a1a2e" stroke="#00d2ff" stroke-width="2" rx="4" class="arch-component" data-component="norm"/>
+                        <text x="950" y="470" text-anchor="middle" font-size="11" fill="#e0e0e8">Add & Norm</text>
+                    </g>
+
+                    <text x="950" y="530" text-anchor="middle" font-size="10" fill="#8888a0">× N layers</text>
+
+                    <!-- Output -->
+                    <rect x="850" y="550" width="200" height="40" fill="#1a1a2e" stroke="#00d2ff" stroke-width="2" rx="4"/>
+                    <text x="950" y="575" text-anchor="middle" font-size="11" fill="#e0e0e8">Output Probabilities</text>
+
+                    <!-- Arrow marker -->
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <polygon points="0 0, 10 3, 0 6" fill="#ff6b6b" />
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+
+            <p><strong>Click any component above to learn more.</strong> This architecture can process entire sequences in parallel, unlike recurrent networks that must process token-by-token.</p>
+        </section>
+
+        <!-- Positional Encoding -->
+        <section>
+            <h2>Positional Encoding: Adding Order to Parallel Processing</h2>
+
+            <p>Transformers process all tokens simultaneously—but sequences have order. How do we tell the model about position?</p>
+
+            <h3>The Problem</h3>
+            <p>Without position information, the sentence "The cat ate the mouse" would be identical to "The mouse ate the cat" after embedding. The order is lost.</p>
+
+            <h3>The Solution: Sinusoidal Positional Encoding</h3>
+            <p>Add a position-dependent vector to each token embedding:</p>
+
+            <div class="equation">
+PE(pos, 2i) = sin(pos / 10000^(2i/d_model))<br>
+PE(pos, 2i+1) = cos(pos / 10000^(2i/d_model))
+            </div>
+
+            <p>This formula creates waves at different frequencies. Each dimension oscillates at a different rate, creating a unique signature for each position.</p>
+
+            <h3>Interactive Positional Encoding</h3>
+
+            <div class="card">
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>Position in sequence:</span>
+                        <span id="pos-value">0</span>
+                    </div>
+                    <input type="range" id="pos-slider" min="0" max="20" value="0">
+                </div>
+
+                <p style="margin-top: 1.5rem; font-size: 0.9rem; color: #8888a0;">
+                    Positional encoding vector (first 16 dimensions):
+                </p>
+
+                <table class="heatmap" id="pe-heatmap" style="margin-top: 1rem;"></table>
+
+                <div id="pe-viz" style="margin-top: 2rem; height: 300px;"></div>
+            </div>
+
+            <p style="margin-top: 1.5rem; font-size: 0.9rem;">
+                <strong>Key insight:</strong> Positions far apart have very different encodings. Nearby positions have similar encodings. This lets the model learn relative position relationships through attention.
+            </p>
+        </section>
+
+        <!-- Self-Attention -->
+        <section>
+            <h2>Self-Attention: The Heart of Transformers</h2>
+
+            <p>Self-attention lets each token "look at" every other token in the sequence. It's the mechanism that enables the parallelization—everything happens in one forward pass.</p>
+
+            <h3>The Intuition</h3>
+            <p>When processing the word "it" in "The cat sat on the mat. It was comfortable.", the model needs to know that "it" refers to "cat". Self-attention creates weighted connections between tokens based on how relevant they are to each other.</p>
+
+            <h3>Step-by-Step Computation</h3>
+
+            <div class="card highlight">
+                <h4 style="margin-bottom: 1rem; color: #00d2ff;">Example: "The cat sat on the mat"</h4>
+            </div>
+
+            <h3>Step 1: Input Embeddings</h3>
+            <p>Convert each word to a vector (d_model = 512 dimensions, shown simplified as 4):</p>
+
+            <div class="matrix-container">
+                <div style="text-align: center; margin-bottom: 1rem; color: #8888a0; font-size: 0.9rem;">
+                    Each row = one token's embedding
+                </div>
+                <div class="matrix">
+                    <div class="matrix-row">
+                        <div class="matrix-cell" style="background: #1a3a2e;">0.2</div>
+                        <div class="matrix-cell" style="background: #1a3a2e;">0.5</div>
+                        <div class="matrix-cell" style="background: #1a3a2e;">-0.3</div>
+                        <div class="matrix-cell" style="background: #1a3a2e;">0.8</div>
+                    </div>
+                    <div class="matrix-row">
+                        <div class="matrix-cell" style="background: #2a2a4e;">0.4</div>
+                        <div class="matrix-cell" style="background: #2a2a4e;">-0.1</div>
+                        <div class="matrix-cell" style="background: #2a2a4e;">0.6</div>
+                        <div class="matrix-cell" style="background: #2a2a4e;">0.2</div>
+                    </div>
+                    <div class="matrix-row">
+                        <div class="matrix-cell" style="background: #3a1a4e;">0.1</div>
+                        <div class="matrix-cell" style="background: #3a1a4e;">0.3</div>
+                        <div class="matrix-cell" style="background: #3a1a4e;">0.7</div>
+                        <div class="matrix-cell" style="background: #3a1a4e;">-0.2</div>
+                    </div>
+                    <div class="matrix-row">
+                        <div class="matrix-cell" style="background: #2a1a6e;">0.5</div>
+                        <div class="matrix-cell" style="background: #2a1a6e;">0.2</div>
+                        <div class="matrix-cell" style="background: #2a1a6e;">-0.4</div>
+                        <div class="matrix-cell" style="background: #2a1a6e;">0.3</div>
+                    </div>
+                    <div class="matrix-row">
+                        <div class="matrix-cell" style="background: #1a2a5e;">-0.2</div>
+                        <div class="matrix-cell" style="background: #1a2a5e;">0.6</div>
+                        <div class="matrix-cell" style="background: #1a2a5e;">0.1</div>
+                        <div class="matrix-cell" style="background: #1a2a5e;">0.4</div>
+                    </div>
+                    <div class="matrix-row">
+                        <div class="matrix-cell" style="background: #3a2a4e;">0.3</div>
+                        <div class="matrix-cell" style="background: #3a2a4e;">-0.3</div>
+                        <div class="matrix-cell" style="background: #3a2a4e;">0.5</div>
+                        <div class="matrix-cell" style="background: #3a2a4e;">0.1</div>
+                    </div>
+                </div>
+            </div>
+
+            <p style="text-align: center; margin-top: 1rem; color: #8888a0; font-size: 0.9rem;">
+                The / cat / sat / on / the / mat
+            </p>
+
+            <h3>Step 2: Create Query, Key, Value</h3>
+            <p>Project embeddings through three learned weight matrices:</p>
+
+            <div class="equation">
+Q = X · W<sup>Q</sup><br>
+K = X · W<sup>K</sup><br>
+V = X · W<sup>V</sup>
+            </div>
+
+            <p style="margin-top: 1rem;">
+                <strong>Query:</strong> "What am I looking for?"<br>
+                <strong>Key:</strong> "What information do I have?"<br>
+                <strong>Value:</strong> "What should I pass forward?"<br>
+            </p>
+
+            <h3>Step 3: Compute Attention Scores (Q · K<sup>T</sup>)</h3>
+            <p>For each query, compute how much it matches each key (dot product):</p>
+
+            <div class="matrix-container">
+                <div style="text-align: center; margin-bottom: 1rem; color: #8888a0; font-size: 0.9rem;">
+                    Attention Scores (before softmax) - showing how each word attends to others
+                </div>
+                <div class="matrix">
+                    <div class="matrix-row">
+                        <div class="matrix-cell" style="background: #3a5a2e;">3.2</div>
+                        <div class="matrix-cell" style="background: #2a3a2e;">1.1</div>
+                        <div class="matrix-cell" style="background: #2a3a2e;">0.5</div>
+                        <div class="matrix-cell" style="background: #2a3a2e;">1.8</div>
+                        <div class="matrix-cell" style="background: #2a3a2e;">2.3</div>
+                        <div class="matrix-cell" style="background: #2a3a2e;">0.9</div>
+                    </div>
+                    <div class="matrix-row">
+                        <div class="matrix-cell" style="background: #2a3a3e;">0.8</div>
+                        <div class="matrix-cell" style="background: #3a5a4e;">4.1</div>
+                        <div class="matrix-cell" style="background: #2a3a3e;">2.5</div>
+                        <div class="matrix-cell" style="background: #2a3a3e;">3.2</div>
+                        <div class="matrix-cell" style="background: #2a3a3e;">1.0</div>
+                        <div class="matrix-cell" style="background: #2a3a3e;">2.7</div>
+                    </div>
+                    <div class="matrix-row">
+                        <div class="matrix-cell" style="background: #2a3a4e;">1.5</div>
+                        <div class="matrix-cell" style="background: #2a3a4e;">2.8</div>
+                        <div class="matrix-cell" style="background: #3a5a5e;">3.9</div>
+                        <div class="matrix-cell" style="background: #2a3a4e;">2.2</div>
+                        <div class="matrix-cell" style="background: #2a3a4e;">1.3</div>
+                        <div class="matrix-cell" style="background: #2a3a4e;">2.1</div>
+                    </div>
+                    <div class="matrix-row">
+                        <div class="matrix-cell" style="background: #2a3a5e;">2.0</div>
+                        <div class="matrix-cell" style="background: #2a3a5e;">3.5</div>
+                        <div class="matrix-cell" style="background: #2a3a5e;">1.8</div>
+                        <div class="matrix-cell" style="background: #3a5a6e;">3.7</div>
+                        <div class="matrix-cell" style="background: #2a3a5e;">1.6</div>
+                        <div class="matrix-cell" style="background: #2a3a5e;">2.4</div>
+                    </div>
+                    <div class="matrix-row">
+                        <div class="matrix-cell" style="background: #2a3a3e;">1.2</div>
+                        <div class="matrix-cell" style="background: #2a3a3e;">0.7</div>
+                        <div class="matrix-cell" style="background: #2a3a3e;">1.5</div>
+                        <div class="matrix-cell" style="background: #2a3a3e;">2.1</div>
+                        <div class="matrix-cell" style="background: #3a5a3e;">4.3</div>
+                        <div class="matrix-cell" style="background: #2a3a3e;">3.2</div>
+                    </div>
+                    <div class="matrix-row">
+                        <div class="matrix-cell" style="background: #2a3a4e;">0.9</div>
+                        <div class="matrix-cell" style="background: #2a3a4e;">2.2</div>
+                        <div class="matrix-cell" style="background: #2a3a4e;">3.1</div>
+                        <div class="matrix-cell" style="background: #2a3a4e;">1.9</div>
+                        <div class="matrix-cell" style="background: #2a3a4e;">2.8</div>
+                        <div class="matrix-cell" style="background: #3a5a4e;">4.0</div>
+                    </div>
+                </div>
+            </div>
+
+            <p style="text-align: center; margin-top: 1rem; color: #8888a0; font-size: 0.85rem;">
+                (Row = query token, Column = key token. Brighter = higher similarity)
+            </p>
+
+            <h3>Step 4: Scale by √d_k</h3>
+            <p>Divide by √d_model (for d=4: divide by 2) to prevent softmax saturation:</p>
+
+            <div class="equation">
+Scaled Scores = Scores / √d_k
+            </div>
+
+            <h3>Step 5: Apply Softmax</h3>
+            <p>Convert scores to probabilities (sum to 1):</p>
+
+            <div class="equation">
+Attention Weights = softmax(Scaled Scores)
+            </div>
+
+            <div class="matrix-container">
+                <div style="text-align: center; margin-bottom: 1rem; color: #8888a0; font-size: 0.9rem;">
+                    Attention Weights (after softmax) - each row sums to 1.0
+                </div>
+                <div class="matrix">
+                    <div class="matrix-row">
+                        <div class="matrix-cell" style="background: #3a5a2e;">0.42</div>
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.08</div>
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.05</div>
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.12</div>
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.25</div>
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.08</div>
+                    </div>
+                    <div class="matrix-row">
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.05</div>
+                        <div class="matrix-cell" style="background: #3a5a2e;">0.58</div>
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.18</div>
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.12</div>
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.04</div>
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.03</div>
+                    </div>
+                    <div class="matrix-row">
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.07</div>
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.16</div>
+                        <div class="matrix-cell" style="background: #3a5a2e;">0.45</div>
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.15</div>
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.08</div>
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.09</div>
+                    </div>
+                    <div class="matrix-row">
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.11</div>
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.22</div>
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.09</div>
+                        <div class="matrix-cell" style="background: #3a5a2e;">0.40</div>
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.12</div>
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.06</div>
+                    </div>
+                    <div class="matrix-row">
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.03</div>
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.02</div>
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.04</div>
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.08</div>
+                        <div class="matrix-cell" style="background: #3a5a2e;">0.76</div>
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.07</div>
+                    </div>
+                    <div class="matrix-row">
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.04</div>
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.09</div>
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.18</div>
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.07</div>
+                        <div class="matrix-cell" style="background: #1a2a1e;">0.22</div>
+                        <div class="matrix-cell" style="background: #3a5a2e;">0.40</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3>Step 6: Multiply by Values and Sum</h3>
+            <p>Weight each value by its attention weight and sum:</p>
+
+            <div class="equation">
+Output = Attention Weights × V
+            </div>
+
+            <p style="margin-top: 1rem;">This is <strong>attention in one equation:</strong></p>
+
+            <div class="equation">
+Attention(Q, K, V) = softmax(Q·K<sup>T</sup> / √d_k) · V
+            </div>
+
+            <div class="interactive-box">
+                <p><strong>✓ What this achieves:</strong></p>
+                <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                    <li>Each token can "look at" all other tokens in the sequence</li>
+                    <li>The model learns how relevant each token is to each other token</li>
+                    <li>All computations happen in parallel (no sequential loop)</li>
+                    <li>Gradients flow directly between any two positions</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Multi-Head Attention -->
+        <section>
+            <h2>Multi-Head Attention: Multiple Perspectives</h2>
+
+            <p>Single-head attention captures one type of relationship. Multi-head attention uses multiple "heads" in parallel, each learning different attention patterns.</p>
+
+            <h3>The Insight</h3>
+            <p>Just like humans can focus on different aspects of a scene simultaneously (colors, shapes, text), multi-head attention lets the model attend to different types of relationships:</p>
+
+            <ul style="margin-left: 1.5rem;">
+                <li><strong>Head 1:</strong> Positional relationships (nearby words)</li>
+                <li><strong>Head 2:</strong> Syntactic patterns (subject-verb agreement)</li>
+                <li><strong>Head 3:</strong> Semantic relationships (related concepts)</li>
+                <li><strong>Head 4-8:</strong> Rarer, learned patterns</li>
+            </ul>
+
+            <h3>Architecture</h3>
+
+            <div class="equation">
+MultiHead(Q, K, V) = Concat(head₁, ..., head_h) · W<sup>O</sup><br>
+where head_i = Attention(Q·W<sup>Q</sup>_i, K·W<sup>K</sup>_i, V·W<sup>V</sup>_i)
+            </div>
+
+            <p style="margin-top: 1.5rem;"><strong>Example with h=8 heads:</strong> If d_model=512, each head operates on d_k=64 dimensions. This is more efficient than one head on 512 dimensions.</p>
+
+            <h3>Interactive: Attention Heads Visualization</h3>
+
+            <div class="card">
+                <div class="tabs">
+                    <button class="tab-button active" onclick="switchHead(1)">Head 1: Positional</button>
+                    <button class="tab-button" onclick="switchHead(2)">Head 2: Subject-Verb</button>
+                    <button class="tab-button" onclick="switchHead(3)">Head 3: Articles</button>
+                    <button class="tab-button" onclick="switchHead(4)">Head 4: Verbs</button>
+                </div>
+
+                <div id="head-1" class="tab-content active">
+                    <p style="margin-top: 1rem; margin-bottom: 1.5rem; color: #8888a0; font-size: 0.9rem;">
+                        This head learns to attend primarily to nearby words (positional locality).
+                    </p>
+                    <svg viewBox="0 0 600 250" xmlns="http://www.w3.org/2000/svg" style="margin: 0;">
+                        <!-- Words -->
+                        <g id="head1-words">
+                            <rect x="50" y="20" width="70" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4"/>
+                            <text x="85" y="48" text-anchor="middle" font-size="14" fill="#e0e0e8" font-weight="bold">The</text>
+
+                            <rect x="140" y="20" width="70" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4"/>
+                            <text x="175" y="48" text-anchor="middle" font-size="14" fill="#e0e0e8" font-weight="bold">cat</text>
+
+                            <rect x="230" y="20" width="70" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4"/>
+                            <text x="265" y="48" text-anchor="middle" font-size="14" fill="#e0e0e8" font-weight="bold">sat</text>
+
+                            <rect x="320" y="20" width="70" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4"/>
+                            <text x="355" y="48" text-anchor="middle" font-size="14" fill="#e0e0e8" font-weight="bold">on</text>
+
+                            <rect x="410" y="20" width="70" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4"/>
+                            <text x="445" y="48" text-anchor="middle" font-size="14" fill="#e0e0e8" font-weight="bold">the</text>
+
+                            <rect x="500" y="20" width="70" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4"/>
+                            <text x="535" y="48" text-anchor="middle" font-size="14" fill="#e0e0e8" font-weight="bold">mat</text>
+                        </g>
+
+                        <!-- Attention lines for Head 1 -->
+                        <line x1="85" y1="60" x2="85" y2="100" stroke="#6c63ff" stroke-width="3" opacity="0.8"/>
+                        <line x1="175" y1="60" x2="175" y2="100" stroke="#6c63ff" stroke-width="3" opacity="0.8"/>
+                        <line x1="175" y1="60" x2="85" y2="100" stroke="#00d2ff" stroke-width="2" opacity="0.6"/>
+                        <line x1="175" y1="60" x2="265" y2="100" stroke="#00d2ff" stroke-width="2" opacity="0.6"/>
+                        <line x1="265" y1="60" x2="265" y2="100" stroke="#6c63ff" stroke-width="3" opacity="0.8"/>
+                        <line x1="265" y1="60" x2="175" y2="100" stroke="#00d2ff" stroke-width="2" opacity="0.5"/>
+                        <line x1="265" y1="60" x2="355" y2="100" stroke="#00d2ff" stroke-width="2" opacity="0.5"/>
+                        <line x1="355" y1="60" x2="355" y2="100" stroke="#6c63ff" stroke-width="3" opacity="0.8"/>
+                        <line x1="355" y1="60" x2="265" y2="100" stroke="#00d2ff" stroke-width="2" opacity="0.5"/>
+                        <line x1="355" y1="60" x2="445" y2="100" stroke="#00d2ff" stroke-width="2" opacity="0.6"/>
+                        <line x1="445" y1="60" x2="445" y2="100" stroke="#6c63ff" stroke-width="3" opacity="0.8"/>
+                        <line x1="445" y1="60" x2="355" y2="100" stroke="#00d2ff" stroke-width="2" opacity="0.5"/>
+                        <line x1="445" y1="60" x2="535" y2="100" stroke="#00d2ff" stroke-width="2" opacity="0.6"/>
+                        <line x1="535" y1="60" x2="535" y2="100" stroke="#6c63ff" stroke-width="3" opacity="0.8"/>
+                        <line x1="535" y1="60" x2="445" y2="100" stroke="#00d2ff" stroke-width="2" opacity="0.6"/>
+
+                        <!-- Legend -->
+                        <text x="50" y="180" font-size="12" fill="#8888a0">Thick lines = high attention to self</text>
+                        <text x="50" y="205" font-size="12" fill="#8888a0">Thin lines = attention to nearby words</text>
+                    </svg>
+                </div>
+
+                <div id="head-2" class="tab-content">
+                    <p style="margin-top: 1rem; margin-bottom: 1.5rem; color: #8888a0; font-size: 0.9rem;">
+                        This head learns to connect subjects with verbs and other syntactic dependencies.
+                    </p>
+                    <svg viewBox="0 0 600 250" xmlns="http://www.w3.org/2000/svg" style="margin: 0;">
+                        <!-- Words -->
+                        <g id="head2-words">
+                            <rect x="50" y="20" width="70" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4"/>
+                            <text x="85" y="48" text-anchor="middle" font-size="14" fill="#e0e0e8" font-weight="bold">The</text>
+
+                            <rect x="140" y="20" width="70" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4"/>
+                            <text x="175" y="48" text-anchor="middle" font-size="14" fill="#e0e0e8" font-weight="bold">cat</text>
+
+                            <rect x="230" y="20" width="70" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4"/>
+                            <text x="265" y="48" text-anchor="middle" font-size="14" fill="#e0e0e8" font-weight="bold">sat</text>
+
+                            <rect x="320" y="20" width="70" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4"/>
+                            <text x="355" y="48" text-anchor="middle" font-size="14" fill="#e0e0e8" font-weight="bold">on</text>
+
+                            <rect x="410" y="20" width="70" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4"/>
+                            <text x="445" y="48" text-anchor="middle" font-size="14" fill="#e0e0e8" font-weight="bold">the</text>
+
+                            <rect x="500" y="20" width="70" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4"/>
+                            <text x="535" y="48" text-anchor="middle" font-size="14" fill="#e0e0e8" font-weight="bold">mat</text>
+                        </g>
+
+                        <!-- Attention lines for Head 2 - Subject-Verb -->
+                        <line x1="85" y1="60" x2="85" y2="100" stroke="#6c63ff" stroke-width="2" opacity="0.4"/>
+                        <line x1="175" y1="60" x2="175" y2="100" stroke="#ff6b6b" stroke-width="3" opacity="0.9"/>
+                        <line x1="175" y1="60" x2="265" y2="100" stroke="#ff6b6b" stroke-width="3" opacity="0.8"/>
+                        <line x1="265" y1="60" x2="265" y2="100" stroke="#ff6b6b" stroke-width="3" opacity="0.9"/>
+                        <line x1="265" y1="60" x2="175" y2="100" stroke="#ff6b6b" stroke-width="2" opacity="0.6"/>
+                        <line x1="355" y1="60" x2="355" y2="100" stroke="#6c63ff" stroke-width="2" opacity="0.4"/>
+                        <line x1="445" y1="60" x2="445" y2="100" stroke="#6c63ff" stroke-width="2" opacity="0.4"/>
+                        <line x1="535" y1="60" x2="535" y2="100" stroke="#6c63ff" stroke-width="2" opacity="0.4"/>
+
+                        <!-- Legend -->
+                        <text x="50" y="180" font-size="12" fill="#8888a0">Strong connections between subject (cat) and verb (sat)</text>
+                    </svg>
+                </div>
+
+                <div id="head-3" class="tab-content">
+                    <p style="margin-top: 1rem; margin-bottom: 1.5rem; color: #8888a0; font-size: 0.9rem;">
+                        This head learns to group articles with their nouns.
+                    </p>
+                    <svg viewBox="0 0 600 250" xmlns="http://www.w3.org/2000/svg" style="margin: 0;">
+                        <!-- Words -->
+                        <g id="head3-words">
+                            <rect x="50" y="20" width="70" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4"/>
+                            <text x="85" y="48" text-anchor="middle" font-size="14" fill="#e0e0e8" font-weight="bold">The</text>
+
+                            <rect x="140" y="20" width="70" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4"/>
+                            <text x="175" y="48" text-anchor="middle" font-size="14" fill="#e0e0e8" font-weight="bold">cat</text>
+
+                            <rect x="230" y="20" width="70" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4"/>
+                            <text x="265" y="48" text-anchor="middle" font-size="14" fill="#e0e0e8" font-weight="bold">sat</text>
+
+                            <rect x="320" y="20" width="70" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4"/>
+                            <text x="355" y="48" text-anchor="middle" font-size="14" fill="#e0e0e8" font-weight="bold">on</text>
+
+                            <rect x="410" y="20" width="70" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4"/>
+                            <text x="445" y="48" text-anchor="middle" font-size="14" fill="#e0e0e8" font-weight="bold">the</text>
+
+                            <rect x="500" y="20" width="70" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4"/>
+                            <text x="535" y="48" text-anchor="middle" font-size="14" fill="#e0e0e8" font-weight="bold">mat</text>
+                        </g>
+
+                        <!-- Attention lines for Head 3 - Articles and nouns -->
+                        <line x1="85" y1="60" x2="85" y2="100" stroke="#6c63ff" stroke-width="2" opacity="0.4"/>
+                        <line x1="85" y1="60" x2="175" y2="100" stroke="#00d2ff" stroke-width="3" opacity="0.8"/>
+                        <line x1="175" y1="60" x2="175" y2="100" stroke="#6c63ff" stroke-width="2" opacity="0.4"/>
+                        <line x1="175" y1="60" x2="85" y2="100" stroke="#00d2ff" stroke-width="2" opacity="0.5"/>
+                        <line x1="265" y1="60" x2="265" y2="100" stroke="#6c63ff" stroke-width="2" opacity="0.4"/>
+                        <line x1="355" y1="60" x2="355" y2="100" stroke="#6c63ff" stroke-width="2" opacity="0.4"/>
+                        <line x1="445" y1="60" x2="445" y2="100" stroke="#6c63ff" stroke-width="2" opacity="0.4"/>
+                        <line x1="445" y1="60" x2="535" y2="100" stroke="#00d2ff" stroke-width="3" opacity="0.8"/>
+                        <line x1="535" y1="60" x2="535" y2="100" stroke="#6c63ff" stroke-width="2" opacity="0.4"/>
+                        <line x1="535" y1="60" x2="445" y2="100" stroke="#00d2ff" stroke-width="2" opacity="0.5"/>
+
+                        <!-- Legend -->
+                        <text x="50" y="180" font-size="12" fill="#8888a0">Articles connect to their nouns (The↔cat, the↔mat)</text>
+                    </svg>
+                </div>
+
+                <div id="head-4" class="tab-content">
+                    <p style="margin-top: 1rem; margin-bottom: 1.5rem; color: #8888a0; font-size: 0.9rem;">
+                        This head focuses on prepositions and spatial relationships.
+                    </p>
+                    <svg viewBox="0 0 600 250" xmlns="http://www.w3.org/2000/svg" style="margin: 0;">
+                        <!-- Words -->
+                        <g id="head4-words">
+                            <rect x="50" y="20" width="70" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4"/>
+                            <text x="85" y="48" text-anchor="middle" font-size="14" fill="#e0e0e8" font-weight="bold">The</text>
+
+                            <rect x="140" y="20" width="70" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4"/>
+                            <text x="175" y="48" text-anchor="middle" font-size="14" fill="#e0e0e8" font-weight="bold">cat</text>
+
+                            <rect x="230" y="20" width="70" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4"/>
+                            <text x="265" y="48" text-anchor="middle" font-size="14" fill="#e0e0e8" font-weight="bold">sat</text>
+
+                            <rect x="320" y="20" width="70" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4"/>
+                            <text x="355" y="48" text-anchor="middle" font-size="14" fill="#e0e0e8" font-weight="bold">on</text>
+
+                            <rect x="410" y="20" width="70" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4"/>
+                            <text x="445" y="48" text-anchor="middle" font-size="14" fill="#e0e0e8" font-weight="bold">the</text>
+
+                            <rect x="500" y="20" width="70" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4"/>
+                            <text x="535" y="48" text-anchor="middle" font-size="14" fill="#e0e0e8" font-weight="bold">mat</text>
+                        </g>
+
+                        <!-- Attention for Head 4 - prepositions -->
+                        <line x1="85" y1="60" x2="85" y2="100" stroke="#6c63ff" stroke-width="2" opacity="0.3"/>
+                        <line x1="175" y1="60" x2="175" y2="100" stroke="#6c63ff" stroke-width="2" opacity="0.3"/>
+                        <line x1="265" y1="60" x2="265" y2="100" stroke="#6c63ff" stroke-width="2" opacity="0.3"/>
+                        <line x1="355" y1="60" x2="355" y2="100" stroke="#ff6b6b" stroke-width="3" opacity="0.9"/>
+                        <line x1="355" y1="60" x2="265" y2="100" stroke="#ff6b6b" stroke-width="3" opacity="0.7"/>
+                        <line x1="355" y1="60" x2="535" y2="100" stroke="#ff6b6b" stroke-width="3" opacity="0.8"/>
+                        <line x1="445" y1="60" x2="445" y2="100" stroke="#6c63ff" stroke-width="2" opacity="0.3"/>
+                        <line x1="535" y1="60" x2="535" y2="100" stroke="#6c63ff" stroke-width="2" opacity="0.3"/>
+
+                        <!-- Legend -->
+                        <text x="50" y="180" font-size="12" fill="#8888a0">Preposition (on) connects objects in spatial relationships</text>
+                    </svg>
+                </div>
+            </div>
+
+            <p style="margin-top: 2rem; font-size: 0.9rem; color: #c0c0c8;">
+                Each head learns <strong>independently</strong> what patterns to attend to. After all heads compute their attention, their outputs are concatenated and projected back to the original dimension. This gives the model much richer representations than single-head attention.
+            </p>
+        </section>
+
+        <!-- Feed-Forward Network -->
+        <section>
+            <h2>Feed-Forward Network</h2>
+
+            <p>After attention, each position is independently transformed by the same feed-forward network:</p>
+
+            <div class="equation">
+FFN(x) = max(0, x·W₁ + b₁)·W₂ + b₂
+            </div>
+
+            <p style="margin-top: 1rem;">This is a two-layer MLP with ReLU activation. The key: <strong>each position gets transformed independently.</strong></p>
+
+            <div class="card">
+                <p style="margin-bottom: 1rem;">
+                    <strong>Why two layers?</strong> The inner dimension (d_ff = 2048) is typically 4x larger than d_model (512). This creates a bottleneck:
+                </p>
+                <ul style="margin-left: 1.5rem;">
+                    <li>Layer 1: 512 → 2048 (expansion)</li>
+                    <li>ReLU: introduce non-linearity</li>
+                    <li>Layer 2: 2048 → 512 (projection back)</li>
+                </ul>
+                <p style="margin-top: 1rem;">This expansion-contraction helps the model learn non-linear transformations without making the model much larger.</p>
+            </div>
+
+            <p style="margin-top: 1rem; font-size: 0.9rem; color: #8888a0;">
+                Note: This is applied <strong>after</strong> attention and normalization, and the weights are <strong>shared across all positions</strong> but <strong>different</strong> for each layer in the stack.
+            </p>
+        </section>
+
+        <!-- Residual Connections & Layer Norm -->
+        <section>
+            <h2>Residual Connections & Layer Normalization</h2>
+
+            <p>Every attention block and feed-forward block includes two crucial components:</p>
+
+            <h3>Skip Connections (Residuals)</h3>
+
+            <div class="diagram-container">
+                <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+                    <text x="200" y="25" text-anchor="middle" font-size="14" font-weight="bold" fill="#e0e0e8">
+                        Residual Connection
+                    </text>
+
+                    <!-- Input -->
+                    <rect x="150" y="50" width="100" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4"/>
+                    <text x="200" y="75" text-anchor="middle" font-size="12" fill="#e0e0e8">x</text>
+
+                    <!-- Main path -->
+                    <rect x="150" y="110" width="100" height="50" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4"/>
+                    <text x="200" y="130" text-anchor="middle" font-size="11" fill="#e0e0e8">MultiHead Attention</text>
+                    <text x="200" y="145" text-anchor="middle" font-size="11" fill="#e0e0e8">or FFN</text>
+
+                    <!-- Plus sign -->
+                    <circle cx="200" cy="190" r="8" fill="#00d2ff" stroke="#00d2ff" stroke-width="2"/>
+                    <text x="200" y="195" text-anchor="middle" font-size="16" fill="#0a0a0f" font-weight="bold">+</text>
+
+                    <!-- Output -->
+                    <rect x="150" y="220" width="100" height="40" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2" rx="4"/>
+                    <text x="200" y="245" text-anchor="middle" font-size="12" fill="#e0e0e8">x + f(x)</text>
+
+                    <!-- Arrows -->
+                    <path d="M 200 90 L 200 110" stroke="#6c63ff" stroke-width="2" marker-end="url(#arrowhead2)"/>
+                    <path d="M 200 160 L 200 175" stroke="#6c63ff" stroke-width="2" marker-end="url(#arrowhead2)"/>
+                    <path d="M 200 200 L 200 220" stroke="#6c63ff" stroke-width="2" marker-end="url(#arrowhead2)"/>
+
+                    <!-- Skip connection -->
+                    <path d="M 250 70 Q 310 130 250 240" stroke="#00d2ff" stroke-width="2" stroke-dasharray="5,5" marker-end="url(#arrowhead3)"/>
+                    <text x="330" y="155" font-size="11" fill="#00d2ff">Skip</text>
+
+                    <defs>
+                        <marker id="arrowhead2" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <polygon points="0 0, 10 3, 0 6" fill="#6c63ff" />
+                        </marker>
+                        <marker id="arrowhead3" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <polygon points="0 0, 10 3, 0 6" fill="#00d2ff" />
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+
+            <p style="margin-top: 1.5rem;">
+                <strong>Why skip connections?</strong>
+            </p>
+            <ul style="margin-left: 1.5rem;">
+                <li><strong>Gradient flow:</strong> Backpropagation can skip over the function, creating a "highway" for gradients</li>
+                <li><strong>Training deeper models:</strong> Deep networks without skip connections suffer from vanishing gradients</li>
+                <li><strong>Residual learning:</strong> The function learns the residual (difference) rather than the full transformation</li>
+            </ul>
+
+            <h3>Layer Normalization</h3>
+
+            <p style="margin-top: 2rem;">After each sub-layer, normalize across the feature dimension:</p>
+
+            <div class="equation">
+LayerNorm(x) = γ · (x - μ) / √(σ² + ε) + β
+            </div>
+
+            <p style="margin-top: 1rem;">Where μ and σ are computed <strong>per example, across the feature dimension</strong> (unlike batch norm which is across the batch).</p>
+
+            <div class="card">
+                <p><strong>Benefits of Layer Norm:</strong></p>
+                <ul style="margin-left: 1.5rem;">
+                    <li>Stabilizes training by keeping activations in a reasonable range</li>
+                    <li>Works well for transformer architectures and variable sequence lengths</li>
+                    <li>Allows using higher learning rates</li>
+                    <li>Learnable affine parameters (γ, β) adapt normalization per feature</li>
+                </ul>
+            </div>
+
+            <p style="margin-top: 1rem; font-size: 0.9rem; color: #8888a0;">
+                Pre-LayerNorm (applying norm before the function) is now standard in transformers instead of post-LayerNorm, as it improves training stability.
+            </p>
+        </section>
+
+        <!-- Encoder-Decoder & Masking -->
+        <section>
+            <h2>Encoder-Decoder Connection & Masked Attention</h2>
+
+            <p>The encoder processes the input sequence and produces key-value pairs. The decoder generates output token-by-token, attending to:</p>
+            <ul style="margin-left: 1.5rem;">
+                <li><strong>Masked self-attention:</strong> Can only see previously generated tokens</li>
+                <li><strong>Cross-attention:</strong> Attends to encoder outputs</li>
+            </ul>
+
+            <h3>Causal Masking (Autoregressive Generation)</h3>
+
+            <p style="margin-top: 1.5rem;">During generation, we can't let the model look at future tokens it hasn't generated yet. Solution: set attention scores to -∞ for future positions before softmax.</p>
+
+            <div class="card">
+                <p style="margin-bottom: 1rem; color: #8888a0; font-size: 0.9rem;">
+                    When generating position 3, only positions 0, 1, 2 are visible (causal mask):
+                </p>
+
+                <table style="margin: 1rem 0;">
+                    <tr>
+                        <td style="padding: 0.5rem; width: 50px; text-align: center; font-size: 0.9rem; color: #8888a0;">Position</td>
+                        <td style="padding: 0.5rem; width: 50px; text-align: center; font-size: 0.9rem; color: #8888a0;">0</td>
+                        <td style="padding: 0.5rem; width: 50px; text-align: center; font-size: 0.9rem; color: #8888a0;">1</td>
+                        <td style="padding: 0.5rem; width: 50px; text-align: center; font-size: 0.9rem; color: #8888a0;">2</td>
+                        <td style="padding: 0.5rem; width: 50px; text-align: center; font-size: 0.9rem; color: #8888a0;">3</td>
+                        <td style="padding: 0.5rem; width: 50px; text-align: center; font-size: 0.9rem; color: #8888a0;">4</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.5rem; text-align: center; font-size: 0.9rem; color: #8888a0;">Can see:</td>
+                        <td style="padding: 0.5rem; text-align: center; background: #1a3a2e; border-radius: 4px;">✓</td>
+                        <td style="padding: 0.5rem; text-align: center; background: #1a3a2e; border-radius: 4px;">✓</td>
+                        <td style="padding: 0.5rem; text-align: center; background: #1a3a2e; border-radius: 4px;">✓</td>
+                        <td style="padding: 0.5rem; text-align: center; background: #3a1a2e; border-radius: 4px;">✗</td>
+                        <td style="padding: 0.5rem; text-align: center; background: #3a1a2e; border-radius: 4px;">✗</td>
+                    </tr>
+                </table>
+
+                <p style="margin-top: 1rem; font-size: 0.9rem;">
+                    This is the causal mask: a lower triangular matrix. Masked positions get attention weight = 0 after softmax.
+                </p>
+            </div>
+
+            <h3>Cross-Attention</h3>
+
+            <p style="margin-top: 2rem;">In the decoder, one attention layer has a different structure:</p>
+
+            <div class="equation">
+Cross-Attention(Q_decoder, K_encoder, V_encoder)
+            </div>
+
+            <p style="margin-top: 1rem;">The decoder's queries "ask questions" about the encoder's output. The encoder's keys and values provide the answers. This is how the decoder "reads" what the encoder has processed.</p>
+
+            <div class="card">
+                <p><strong>Example: English-to-German translation</strong></p>
+                <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                    <li><strong>Encoder:</strong> processes "The cat sat on the mat" → produces contextualized representations</li>
+                    <li><strong>Decoder (generating "Die"):</strong> queries the encoder: "What does position 0-1 mean?"</li>
+                    <li><strong>Decoder (generating "Katze"):</strong> queries the encoder: "What does position 1-2 mean?"</li>
+                    <li>Each decoder step can flexibly attend to different encoder positions</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Complete PyTorch Code -->
+        <section>
+            <h2>Complete Transformer Implementation (PyTorch)</h2>
+
+            <p>Here's the core components of a transformer. This is simplified for clarity but captures the essential logic:</p>
+
+            <pre><code><span class="keyword">import</span> torch
+<span class="keyword">import</span> torch.nn <span class="keyword">as</span> nn
+<span class="keyword">import</span> math
+
+<span class="keyword">def</span> <span class="function">scaled_dot_product_attention</span>(Q, K, V, mask=<span class="keyword">None</span>):
+    <span class="comment">"""Scaled dot-product attention"""</span>
+    d_k = Q.shape[-1]
+
+    <span class="comment"># Compute attention scores: Q · K^T / sqrt(d_k)</span>
+    scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(d_k)
+
+    <span class="comment"># Apply mask if provided (for causal masking)</span>
+    <span class="keyword">if</span> mask <span class="keyword">is</span> <span class="keyword">not</span> <span class="keyword">None</span>:
+        scores = scores.masked_fill(mask == 0, <span class="keyword">float</span>(<span class="string">'-inf'</span>))
+
+    <span class="comment"># Apply softmax to get probabilities</span>
+    attention_weights = torch.softmax(scores, dim=-1)
+
+    <span class="comment"># Multiply by values and return</span>
+    output = torch.matmul(attention_weights, V)
+    <span class="keyword">return</span> output, attention_weights
+
+
+<span class="keyword">class</span> <span class="function">MultiHeadAttention</span>(nn.Module):
+    <span class="keyword">def</span> <span class="function">__init__</span>(self, d_model, num_heads):
+        <span class="keyword">super</span>().<span class="function">__init__</span>()
+        <span class="keyword">assert</span> d_model % num_heads == 0
+
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.d_k = d_model // num_heads
+
+        <span class="comment"># Linear projections for Q, K, V</span>
+        self.W_q = nn.Linear(d_model, d_model)
+        self.W_k = nn.Linear(d_model, d_model)
+        self.W_v = nn.Linear(d_model, d_model)
+
+        <span class="comment"># Output projection</span>
+        self.W_o = nn.Linear(d_model, d_model)
+
+    <span class="keyword">def</span> <span class="function">forward</span>(self, Q, K, V, mask=<span class="keyword">None</span>):
+        batch_size = Q.shape[0]
+
+        <span class="comment"># Linear projections</span>
+        Q = self.W_q(Q)
+        K = self.W_k(K)
+        V = self.W_v(V)
+
+        <span class="comment"># Reshape for multi-head attention</span>
+        <span class="comment"># (batch, seq_len, d_model) → (batch, seq_len, num_heads, d_k)</span>
+        Q = Q.view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)
+        K = K.view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)
+        V = V.view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)
+
+        <span class="comment"># Apply attention for all heads in parallel</span>
+        output, attn_weights = <span class="function">scaled_dot_product_attention</span>(Q, K, V, mask)
+
+        <span class="comment"># Concatenate heads: (batch, num_heads, seq_len, d_k)</span>
+        <span class="comment"># → (batch, seq_len, d_model)</span>
+        output = output.transpose(1, 2).contiguous()
+        output = output.view(batch_size, -1, self.d_model)
+
+        <span class="comment"># Final output projection</span>
+        output = self.W_o(output)
+        <span class="keyword">return</span> output
+
+
+<span class="keyword">class</span> <span class="function">PositionalEncoding</span>(nn.Module):
+    <span class="keyword">def</span> <span class="function">__init__</span>(self, d_model, max_seq_len=1000):
+        <span class="keyword">super</span>().<span class="function">__init__</span>()
+
+        <span class="comment"># Create positional encodings</span>
+        pe = torch.zeros(max_seq_len, d_model)
+        position = torch.arange(0, max_seq_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() *
+                             -(math.log(10000.0) / d_model))
+
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+
+        self.register_buffer(<span class="string">'pe'</span>, pe.unsqueeze(0))
+
+    <span class="keyword">def</span> <span class="function">forward</span>(self, x):
+        <span class="comment"># x: (batch, seq_len, d_model)</span>
+        <span class="keyword">return</span> x + self.pe[:, :x.shape[1]]
+
+
+<span class="keyword">class</span> <span class="function">FeedForward</span>(nn.Module):
+    <span class="keyword">def</span> <span class="function">__init__</span>(self, d_model, d_ff):
+        <span class="keyword">super</span>().<span class="function">__init__</span>()
+        self.linear1 = nn.Linear(d_model, d_ff)
+        self.linear2 = nn.Linear(d_ff, d_model)
+        self.relu = nn.ReLU()
+
+    <span class="keyword">def</span> <span class="function">forward</span>(self, x):
+        <span class="keyword">return</span> self.linear2(self.relu(self.linear1(x)))
+
+
+<span class="keyword">class</span> <span class="function">TransformerEncoderLayer</span>(nn.Module):
+    <span class="keyword">def</span> <span class="function">__init__</span>(self, d_model, num_heads, d_ff, dropout=0.1):
+        <span class="keyword">super</span>().<span class="function">__init__</span>()
+
+        self.attention = <span class="function">MultiHeadAttention</span>(d_model, num_heads)
+        self.feed_forward = <span class="function">FeedForward</span>(d_model, d_ff)
+
+        <span class="comment"># Layer normalization (pre-norm)</span>
+        self.norm1 = nn.LayerNorm(d_model)
+        self.norm2 = nn.LayerNorm(d_model)
+
+        self.dropout = nn.Dropout(dropout)
+
+    <span class="keyword">def</span> <span class="function">forward</span>(self, x, mask=<span class="keyword">None</span>):
+        <span class="comment"># Pre-norm residual connection</span>
+        attn_output = self.attention(x, x, x, mask)
+        x = x + self.dropout(attn_output)
+        x = self.norm1(x)
+
+        <span class="comment"># Feed-forward with residual</span>
+        ff_output = self.feed_forward(x)
+        x = x + self.dropout(ff_output)
+        x = self.norm2(x)
+
+        <span class="keyword">return</span> x
+
+
+<span class="keyword">class</span> <span class="function">Transformer</span>(nn.Module):
+    <span class="keyword">def</span> <span class="function">__init__</span>(self, vocab_size, d_model=512, num_heads=8,
+                 num_layers=6, d_ff=2048, max_seq_len=1000):
+        <span class="keyword">super</span>().<span class="function">__init__</span>()
+
+        self.embedding = nn.Embedding(vocab_size, d_model)
+        self.pos_encoding = <span class="function">PositionalEncoding</span>(d_model, max_seq_len)
+
+        <span class="comment"># Encoder stack</span>
+        self.encoder_layers = nn.ModuleList([
+            <span class="function">TransformerEncoderLayer</span>(d_model, num_heads, d_ff)
+            <span class="keyword">for</span> _ <span class="keyword">in</span> <span class="function">range</span>(num_layers)
+        ])
+
+        <span class="comment"># Output projection to vocabulary</span>
+        self.fc_out = nn.Linear(d_model, vocab_size)
+
+    <span class="keyword">def</span> <span class="function">forward</span>(self, x, mask=<span class="keyword">None</span>):
+        <span class="comment"># Embedding + positional encoding</span>
+        x = self.embedding(x) * math.sqrt(self.d_model)
+        x = self.pos_encoding(x)
+
+        <span class="comment"># Pass through encoder layers</span>
+        <span class="keyword">for</span> layer <span class="keyword">in</span> self.encoder_layers:
+            x = layer(x, mask)
+
+        <span class="comment"># Output logits</span>
+        output = self.fc_out(x)
+        <span class="keyword">return</span> output
+</code></pre>
+
+            <p style="margin-top: 2rem; font-size: 0.9rem; color: #c0c0c8;">
+                This code captures the essential transformer components. Real implementations add dropout, better initialization, gradient checkpointing for memory efficiency, and many other optimizations. The original "Attention Is All You Need" paper provided the foundation that remains largely unchanged in modern transformers like GPT, BERT, and T5.
+            </p>
+        </section>
+
+        <!-- Translation Application -->
+        <section>
+            <h2>The Transformer Was Built for Translation</h2>
+
+            <p>The original paper tested the Transformer on neural machine translation (NMT). It achieves state-of-the-art results on translation tasks and generalizes well to other sequence-to-sequence problems.</p>
+
+            <h3>How Translation Works</h3>
+
+            <div class="card highlight">
+                <p><strong>Example: English → German</strong></p>
+                <p style="margin-top: 1rem; color: #e0e0e8;">
+                    Input: <code style="background: #0a0a0f; padding: 0.25rem 0.5rem; border-radius: 3px;">"The ancient language has been lost"</code>
+                </p>
+                <p style="margin-top: 0.5rem; color: #e0e0e8;">
+                    Output: <code style="background: #0a0a0f; padding: 0.25rem 0.5rem; border-radius: 3px;">"Die alte Sprache ist verloren gegangen"</code>
+                </p>
+            </div>
+
+            <h3>Process</h3>
+
+            <ol style="margin-left: 1.5rem; margin-top: 1.5rem;">
+                <li>
+                    <strong>Encoding:</strong> Process the entire English sentence through the encoder. All 6 layers (or more) transform the embeddings while attending to all positions simultaneously.
+                </li>
+                <li style="margin-top: 1rem;">
+                    <strong>Decoding (step 1):</strong> Start with a special token (e.g., [START]). The decoder uses masked self-attention and cross-attention to the encoder. Outputs probability distribution over German vocabulary.
+                </li>
+                <li style="margin-top: 1rem;">
+                    <strong>Decoding (step 2):</strong> Sample or select the highest probability word (e.g., "Die"). Feed it back as input, along with the previous token.
+                </li>
+                <li style="margin-top: 1rem;">
+                    <strong>Decoding (step 3+):</strong> Repeat, autoregressively building the output sequence until generating [END] token.
+                </li>
+            </ol>
+
+            <p style="margin-top: 2rem;">
+                <strong>The power of the Transformer for translation:</strong> Unlike RNNs, the encoder can process the entire 50-word English sentence in parallel. The decoder then flexibly attends to any part of the source during generation. Earlier models (seq2seq with attention) had to encode entire sentences into a fixed-size vector; Transformers access the full encoder output at every step.
+            </p>
+        </section>
+
+        <!-- Key Takeaways -->
+        <section>
+            <h2>Key Takeaways</h2>
+
+            <div class="card highlight">
+                <p><strong>1. Parallelization:</strong> Process all tokens simultaneously (unlike RNNs), enabling efficient training on modern hardware.</p>
+
+                <p style="margin-top: 1.5rem;"><strong>2. Attention Mechanism:</strong> Let each token "see" every other token with learned weights. Captures both local and long-range dependencies.</p>
+
+                <p style="margin-top: 1.5rem;"><strong>3. Multi-Head Attention:</strong> Multiple independent attention heads learn different relationship types (positional, syntactic, semantic, etc.).</p>
+
+                <p style="margin-top: 1.5rem;"><strong>4. Positional Encoding:</strong> Add sinusoidal signals to embeddings so the model learns about position without explicit position tokens.</p>
+
+                <p style="margin-top: 1.5rem;"><strong>5. Residuals & Normalization:</strong> Skip connections enable training deep models; layer norm stabilizes activations.</p>
+
+                <p style="margin-top: 1.5rem;"><strong>6. Encoder-Decoder:</strong> Encoder processes input in parallel; decoder generates output autoregressively with access to encoder via cross-attention.</p>
+
+                <p style="margin-top: 1.5rem;"><strong>7. Foundation for Everything:</strong> BERT (encoder-only), GPT (decoder-only), T5, LLaMA, and all modern language models build on transformer components.</p>
+            </div>
+        </section>
+
+        <!-- Navigation Footer -->
+        <section>
+            <div class="nav-footer">
+                <a href="05-attention.html" class="nav-link">← Attention</a>
+                <a href="07-bert.html" class="nav-link">BERT →</a>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Positional Encoding Interactive
+        function updatePositionalEncoding() {
+            const slider = document.getElementById('pos-slider');
+            const posValue = document.getElementById('pos-value');
+            const d_model = 16;
+            const pos = parseInt(slider.value);
+
+            posValue.textContent = pos;
+
+            // Compute PE
+            const pe = [];
+            for (let i = 0; i < d_model; i++) {
+                const i_half = i / 2;
+                const div_term = Math.pow(10000, (2 * i_half) / d_model);
+                if (i % 2 === 0) {
+                    pe.push(Math.sin(pos / div_term));
+                } else {
+                    pe.push(Math.cos(pos / div_term));
+                }
+            }
+
+            // Render heatmap
+            const heatmap = document.getElementById('pe-heatmap');
+            heatmap.innerHTML = '';
+            const row = document.createElement('tr');
+
+            const minVal = Math.min(...pe);
+            const maxVal = Math.max(...pe);
+            const range = maxVal - minVal || 1;
+
+            pe.forEach((val, i) => {
+                const td = document.createElement('td');
+                const norm = (val - minVal) / range;
+                const hue = norm > 0.5 ? 200 - norm * 100 : 200 + (1 - norm) * 50;
+                td.style.background = `hsl(${hue}, 60%, 40%)`;
+                td.textContent = val.toFixed(2);
+                td.style.fontSize = '0.7rem';
+                td.style.cursor = 'default';
+                row.appendChild(td);
+            });
+            heatmap.appendChild(row);
+
+            // Render SVG visualization
+            renderPEVisualization(pe, pos);
+        }
+
+        function renderPEVisualization(pe, pos) {
+            const svg = document.getElementById('pe-viz');
+            svg.innerHTML = '';
+            const width = 700;
+            const height = 300;
+
+            const ns = 'http://www.w3.org/2000/svg';
+            const svgEl = document.createElementNS(ns, 'svg');
+            svgEl.setAttribute('viewBox', `0 0 ${width} ${height}`);
+            svgEl.setAttribute('width', '100%');
+            svgEl.setAttribute('height', height);
+
+            // Draw sine and cosine waves
+            const scale = 80;
+            const centerY = height / 2;
+
+            // Draw grid and axis
+            const g = document.createElementNS(ns, 'g');
+
+            // X axis
+            const line1 = document.createElementNS(ns, 'line');
+            line1.setAttribute('x1', '30');
+            line1.setAttribute('y1', centerY);
+            line1.setAttribute('x2', width - 20);
+            line1.setAttribute('y2', centerY);
+            line1.setAttribute('stroke', '#2a2a3e');
+            line1.setAttribute('stroke-width', '1');
+            g.appendChild(line1);
+
+            // Y axis
+            const line2 = document.createElementNS(ns, 'line');
+            line2.setAttribute('x1', '30');
+            line2.setAttribute('y1', '20');
+            line2.setAttribute('x2', '30');
+            line2.setAttribute('y2', height - 20);
+            line2.setAttribute('stroke', '#2a2a3e');
+            line2.setAttribute('stroke-width', '1');
+            g.appendChild(line2);
+
+            // Draw sine wave (first 8 dimensions, even indices)
+            const sinePath = document.createElementNS(ns, 'path');
+            let sinPoints = '';
+            for (let dim = 0; dim < 8; dim++) {
+                const div_term = Math.pow(10000, (2 * dim) / 16);
+                const val = Math.sin((pos + dim) / div_term);
+                const x = 30 + dim * 60;
+                const y = centerY - val * scale;
+                sinPoints += (dim === 0 ? 'M' : 'L') + ` ${x} ${y}`;
+            }
+            sinePath.setAttribute('d', sinPoints);
+            sinePath.setAttribute('stroke', '#6c63ff');
+            sinePath.setAttribute('stroke-width', '2');
+            sinePath.setAttribute('fill', 'none');
+            g.appendChild(sinePath);
+
+            // Draw cosine wave (odd indices)
+            const cosPath = document.createElementNS(ns, 'path');
+            let cosPoints = '';
+            for (let dim = 0; dim < 8; dim++) {
+                const div_term = Math.pow(10000, (2 * dim) / 16);
+                const val = Math.cos((pos + dim) / div_term);
+                const x = 30 + dim * 60;
+                const y = centerY - val * scale;
+                cosPoints += (dim === 0 ? 'M' : 'L') + ` ${x} ${y}`;
+            }
+            cosPath.setAttribute('d', cosPoints);
+            cosPath.setAttribute('stroke', '#00d2ff');
+            cosPath.setAttribute('stroke-width', '2');
+            cosPath.setAttribute('fill', 'none');
+            g.appendChild(cosPath);
+
+            // Add labels
+            const sinLabel = document.createElementNS(ns, 'text');
+            sinLabel.setAttribute('x', width - 150);
+            sinLabel.setAttribute('y', '30');
+            sinLabel.setAttribute('fill', '#6c63ff');
+            sinLabel.setAttribute('font-size', '12');
+            sinLabel.textContent = 'sin(pos / div_term)';
+            g.appendChild(sinLabel);
+
+            const cosLabel = document.createElementNS(ns, 'text');
+            cosLabel.setAttribute('x', width - 150);
+            cosLabel.setAttribute('y', '50');
+            cosLabel.setAttribute('fill', '#00d2ff');
+            cosLabel.setAttribute('font-size', '12');
+            cosLabel.textContent = 'cos(pos / div_term)';
+            g.appendChild(cosLabel);
+
+            svgEl.appendChild(g);
+            svg.appendChild(svgEl);
+        }
+
+        // Switch attention heads
+        function switchHead(headNum) {
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(`head-${headNum}`).classList.add('active');
+        }
+
+        // Interactive architecture diagram
+        document.querySelectorAll('.arch-component').forEach(el => {
+            el.addEventListener('click', function() {
+                document.querySelectorAll('.arch-component').forEach(e => e.classList.remove('active'));
+                this.classList.add('active');
+
+                // Scroll to corresponding section
+                const component = this.getAttribute('data-component');
+                let targetSection = null;
+
+                if (component === 'embedding') targetSection = document.querySelector('section:nth-of-type(3)');
+                else if (component === 'multi-head') targetSection = document.querySelector('section:nth-of-type(5)');
+                else if (component === 'norm') targetSection = document.querySelector('section:nth-of-type(7)');
+                else if (component === 'feedforward') targetSection = document.querySelector('section:nth-of-type(6)');
+                else if (component === 'cross-attn') targetSection = document.querySelector('section:nth-of-type(8)');
+
+                if (targetSection) {
+                    targetSection.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+
+        // Initialize positional encoding
+        document.getElementById('pos-slider').addEventListener('input', updatePositionalEncoding);
+        updatePositionalEncoding();
+
+        // Scroll animations
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.animationPlayState = 'running';
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('section').forEach(section => {
+            observer.observe(section);
+        });
+    </script>
+</body>
+</html>

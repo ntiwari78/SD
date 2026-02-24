@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 03: Word Embeddings | NLP Course</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #0a0a0f;
+            --surface: #12121a;
+            --card: #1a1a2e;
+            --border: #2a2a3e;
+            --accent: #6c63ff;
+            --accent2: #00d2ff;
+            --accent3: #ff6b6b;
+            --text: #e0e0e8;
+            --muted: #8888a0;
+            --spacing: 1rem;
+            --radius: 12px;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Sticky Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(10, 10, 15, 0.95);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        nav a {
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        nav a:hover {
+            color: var(--accent2);
+        }
+
+        /* Main Container */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 6rem 2rem 2rem;
+        }
+
+        /* Sections */
+        section {
+            margin-bottom: 5rem;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        section:nth-child(1) { animation-delay: 0s; }
+        section:nth-child(2) { animation-delay: 0.1s; }
+        section:nth-child(3) { animation-delay: 0.2s; }
+        section:nth-child(4) { animation-delay: 0.3s; }
+        section:nth-child(5) { animation-delay: 0.4s; }
+        section:nth-child(6) { animation-delay: 0.5s; }
+        section:nth-child(7) { animation-delay: 0.6s; }
+        section:nth-child(8) { animation-delay: 0.7s; }
+        section:nth-child(9) { animation-delay: 0.8s; }
+        section:nth-child(10) { animation-delay: 0.9s; }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 4rem 0;
+            border-bottom: 2px solid var(--border);
+            margin-bottom: 3rem;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent2), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+        }
+
+        .hero .subtitle {
+            font-size: 1.3rem;
+            color: var(--muted);
+            margin-bottom: 1rem;
+        }
+
+        .time-estimate {
+            display: inline-block;
+            background: var(--card);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            font-size: 0.9rem;
+            color: var(--accent2);
+        }
+
+        /* Section Headers */
+        h2 {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: var(--text);
+            border-left: 4px solid var(--accent);
+            padding-left: 1rem;
+        }
+
+        h3 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: var(--accent2);
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: var(--text);
+            line-height: 1.7;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card.comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .card.comparison > div {
+            padding: 1.5rem;
+            background: var(--surface);
+            border-radius: 8px;
+            border-left: 3px solid var(--accent);
+        }
+
+        .card.comparison > div:nth-child(2) {
+            border-left-color: var(--accent2);
+        }
+
+        .comparison-label {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 1rem;
+        }
+
+        .card.comparison > div:nth-child(2) .comparison-label {
+            color: var(--accent2);
+        }
+
+        /* Interactive Controls */
+        .slider-group {
+            margin: 2rem 0;
+        }
+
+        .slider-label {
+            font-size: 0.95rem;
+            color: var(--muted);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: none;
+        }
+
+        input[type="range"]:hover::-webkit-slider-thumb {
+            background: var(--accent2);
+        }
+
+        /* SVG Styling */
+        svg {
+            width: 100%;
+            height: auto;
+            background: var(--surface);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            margin: 1.5rem 0;
+        }
+
+        .svg-label {
+            font-size: 0.85rem;
+            color: var(--muted);
+            text-align: center;
+            margin-top: 0.5rem;
+            font-style: italic;
+        }
+
+        /* Word Buttons */
+        .word-button {
+            display: inline-block;
+            background: var(--card);
+            border: 2px solid var(--border);
+            color: var(--text);
+            padding: 0.6rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 0.4rem;
+            font-weight: 500;
+            transition: all 0.3s;
+            font-size: 0.95rem;
+        }
+
+        .word-button:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .word-button.selected {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: var(--bg);
+        }
+
+        /* Input Field */
+        .word-input {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 0.8rem 1rem;
+            border-radius: 6px;
+            font-size: 1rem;
+            width: 100%;
+            max-width: 300px;
+            transition: border-color 0.3s;
+        }
+
+        .word-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        /* Code Block */
+        .code-block {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .code-block code {
+            color: var(--text);
+        }
+
+        .keyword { color: var(--accent); }
+        .string { color: #90ee90; }
+        .comment { color: var(--muted); }
+        .function { color: var(--accent2); }
+        .number { color: #ffa500; }
+
+        /* Navigation Footer */
+        .nav-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2rem;
+            border-top: 2px solid var(--border);
+            margin-top: 5rem;
+            background: var(--card);
+            border-radius: var(--radius);
+        }
+
+        .nav-footer a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav-footer a:hover {
+            color: var(--accent2);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            main {
+                padding: 5rem 1rem 1rem;
+            }
+
+            .card.comparison {
+                grid-template-columns: 1fr;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            nav {
+                padding: 0.8rem 1rem;
+            }
+        }
+
+        /* Scatter Plot Points */
+        .scatter-point {
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .scatter-point:hover {
+            filter: drop-shadow(0 0 8px rgba(108, 99, 255, 0.6));
+        }
+
+        .scatter-point.selected {
+            filter: drop-shadow(0 0 12px rgba(0, 210, 255, 0.8));
+            stroke-width: 2;
+        }
+
+        /* Radial Diagram */
+        .radial-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Layout for side-by-side content */
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        @media (max-width: 768px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="index.html">← Back to Course</a>
+    </nav>
+
+    <main>
+        <!-- SECTION 1: Hero -->
+        <section class="hero">
+            <h1>Module 03: Word Embeddings</h1>
+            <p class="subtitle">How words become numbers that capture meaning</p>
+            <span class="time-estimate">⏱ ~30 minutes</span>
+        </section>
+
+        <!-- SECTION 2: From Sparse to Dense -->
+        <section>
+            <h2>From Sparse to Dense Representations</h2>
+            <p>One of the most important breakthroughs in NLP was realizing that words could be represented as dense vectors in a continuous space, rather than as large sparse one-hot encoded vectors.</p>
+
+            <div class="two-column">
+                <div>
+                    <h3>One-Hot Encoding</h3>
+                    <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+                        <!-- One-hot vector visualization -->
+                        <rect x="20" y="20" width="360" height="260" fill="none" stroke="#2a2a3e" stroke-width="1" rx="8"/>
+
+                        <!-- Grid of zeros and one 1 -->
+                        <text x="200" y="45" text-anchor="middle" font-size="14" fill="#8888a0" font-weight="500">One-Hot Vector (10,000 dimensions)</text>
+
+                        <!-- Draw sample vector -->
+                        <g id="onehot-boxes">
+                            <rect x="30" y="70" width="20" height="20" fill="#1a1a2e" stroke="#2a2a3e" stroke-width="1"/>
+                            <text x="40" y="87" text-anchor="middle" font-size="12" fill="#8888a0">0</text>
+
+                            <rect x="60" y="70" width="20" height="20" fill="#1a1a2e" stroke="#2a2a3e" stroke-width="1"/>
+                            <text x="70" y="87" text-anchor="middle" font-size="12" fill="#8888a0">0</text>
+
+                            <rect x="90" y="70" width="20" height="20" fill="#1a1a2e" stroke="#2a2a3e" stroke-width="1"/>
+                            <text x="100" y="87" text-anchor="middle" font-size="12" fill="#8888a0">0</text>
+
+                            <rect x="120" y="70" width="20" height="20" fill="#6c63ff" stroke="#6c63ff" stroke-width="1"/>
+                            <text x="130" y="87" text-anchor="middle" font-size="12" fill="#ffffff" font-weight="600">1</text>
+
+                            <rect x="150" y="70" width="20" height="20" fill="#1a1a2e" stroke="#2a2a3e" stroke-width="1"/>
+                            <text x="160" y="87" text-anchor="middle" font-size="12" fill="#8888a0">0</text>
+
+                            <text x="200" y="90" font-size="12" fill="#8888a0">...</text>
+
+                            <rect x="230" y="70" width="20" height="20" fill="#1a1a2e" stroke="#2a2a3e" stroke-width="1"/>
+                            <text x="240" y="87" text-anchor="middle" font-size="12" fill="#8888a0">0</text>
+
+                            <rect x="260" y="70" width="20" height="20" fill="#1a1a2e" stroke="#2a2a3e" stroke-width="1"/>
+                            <text x="270" y="87" text-anchor="middle" font-size="12" fill="#8888a0">0</text>
+
+                            <rect x="290" y="70" width="20" height="20" fill="#1a1a2e" stroke="#2a2a3e" stroke-width="1"/>
+                            <text x="300" y="87" text-anchor="middle" font-size="12" fill="#8888a0">0</text>
+
+                            <rect x="320" y="70" width="20" height="20" fill="#1a1a2e" stroke="#2a2a3e" stroke-width="1"/>
+                            <text x="330" y="87" text-anchor="middle" font-size="12" fill="#8888a0">0</text>
+                        </g>
+
+                        <!-- Sparsity indicator -->
+                        <circle cx="200" cy="160" r="40" fill="none" stroke="#ff6b6b" stroke-width="2" stroke-dasharray="5,5"/>
+                        <text x="200" y="165" text-anchor="middle" font-size="12" fill="#ff6b6b" font-weight="600">99.99% zeros</text>
+
+                        <!-- Properties -->
+                        <text x="30" y="240" font-size="13" fill="#e0e0e8">✓ One value = 1, rest = 0</text>
+                        <text x="30" y="260" font-size="13" fill="#e0e0e8">✗ No semantic relationship</text>
+                        <text x="30" y="280" font-size="13" fill="#e0e0e8">✗ Extremely sparse</text>
+                    </svg>
+                </div>
+
+                <div>
+                    <h3>Word Embedding</h3>
+                    <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Embedding vector visualization -->
+                        <rect x="20" y="20" width="360" height="260" fill="none" stroke="#2a2a3e" stroke-width="1" rx="8"/>
+
+                        <text x="200" y="45" text-anchor="middle" font-size="14" fill="#8888a0" font-weight="500">Embedding Vector (300 dimensions)</text>
+
+                        <!-- Dense vector -->
+                        <g id="embedding-boxes">
+                            <rect x="30" y="70" width="20" height="20" fill="#1a1a2e" stroke="#6c63ff" stroke-width="1"/>
+                            <text x="40" y="87" text-anchor="middle" font-size="11" fill="#6c63ff">0.32</text>
+
+                            <rect x="60" y="70" width="20" height="20" fill="#1a1a2e" stroke="#6c63ff" stroke-width="1"/>
+                            <text x="70" y="87" text-anchor="middle" font-size="11" fill="#6c63ff">-0.18</text>
+
+                            <rect x="90" y="70" width="20" height="20" fill="#1a1a2e" stroke="#6c63ff" stroke-width="1"/>
+                            <text x="100" y="87" text-anchor="middle" font-size="11" fill="#6c63ff">0.67</text>
+
+                            <rect x="120" y="70" width="20" height="20" fill="#1a1a2e" stroke="#6c63ff" stroke-width="1"/>
+                            <text x="130" y="87" text-anchor="middle" font-size="11" fill="#6c63ff">0.02</text>
+
+                            <rect x="150" y="70" width="20" height="20" fill="#1a1a2e" stroke="#6c63ff" stroke-width="1"/>
+                            <text x="160" y="87" text-anchor="middle" font-size="11" fill="#6c63ff">-0.44</text>
+
+                            <text x="200" y="90" font-size="12" fill="#8888a0">...</text>
+
+                            <rect x="230" y="70" width="20" height="20" fill="#1a1a2e" stroke="#6c63ff" stroke-width="1"/>
+                            <text x="240" y="87" text-anchor="middle" font-size="11" fill="#6c63ff">0.21</text>
+
+                            <rect x="260" y="70" width="20" height="20" fill="#1a1a2e" stroke="#6c63ff" stroke-width="1"/>
+                            <text x="270" y="87" text-anchor="middle" font-size="11" fill="#6c63ff">-0.35</text>
+
+                            <rect x="290" y="70" width="20" height="20" fill="#1a1a2e" stroke="#6c63ff" stroke-width="1"/>
+                            <text x="300" y="87" text-anchor="middle" font-size="11" fill="#6c63ff">0.55</text>
+
+                            <rect x="320" y="70" width="20" height="20" fill="#1a1a2e" stroke="#6c63ff" stroke-width="1"/>
+                            <text x="330" y="87" text-anchor="middle" font-size="11" fill="#6c63ff">-0.12</text>
+                        </g>
+
+                        <!-- Density indicator -->
+                        <circle cx="200" cy="160" r="40" fill="none" stroke="#00d2ff" stroke-width="2" stroke-dasharray="5,5"/>
+                        <text x="200" y="165" text-anchor="middle" font-size="12" fill="#00d2ff" font-weight="600">100% dense</text>
+
+                        <!-- Properties -->
+                        <text x="30" y="240" font-size="13" fill="#e0e0e8">✓ Continuous values</text>
+                        <text x="30" y="260" font-size="13" fill="#e0e0e8">✓ Captures semantics</text>
+                        <text x="30" y="280" font-size="13" fill="#e0e0e8">✓ Compact representation</text>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="card">
+                <p><strong>Key insight:</strong> By learning to predict nearby words, neural networks naturally learn to map semantically similar words close together in embedding space. This dense representation captures linguistic relationships that one-hot encoding cannot.</p>
+            </div>
+        </section>
+
+        <!-- SECTION 3: Word2Vec Skip-gram -->
+        <section>
+            <h2>Word2Vec: Skip-gram Model</h2>
+            <p>The skip-gram model learns embeddings by predicting context words given a target word. Imagine you're reading a sentence and focusing on one word—what words do you expect to see nearby?</p>
+
+            <div class="card">
+                <h3>Interactive Skip-gram Window</h3>
+                <p id="sample-sentence" style="font-size: 1.1rem; padding: 1rem; background: var(--surface); border-radius: 6px; margin-bottom: 1rem;">
+                    The <span style="background: var(--accent); color: var(--bg); padding: 0.2rem 0.4rem; border-radius: 4px;">cat</span> sat on the mat
+                </p>
+
+                <div class="slider-group">
+                    <label class="slider-label">Slide to change the window position:</label>
+                    <input type="range" id="window-slider" min="0" max="5" value="1">
+                </div>
+
+                <svg id="window-viz" viewBox="0 0 500 120" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="10" y="10" width="480" height="100" fill="none" stroke="#2a2a3e" stroke-width="1" rx="6"/>
+                    <text x="250" y="35" text-anchor="middle" font-size="13" fill="#8888a0">Position: 1</text>
+
+                    <!-- Words with highlighting -->
+                    <text x="50" y="70" text-anchor="middle" font-size="14" fill="#8888a0">The</text>
+                    <rect x="35" y="55" width="30" height="35" fill="none" stroke="#6c63ff" stroke-width="2" stroke-dasharray="3,3" rx="4"/>
+
+                    <text x="110" y="70" text-anchor="middle" font-size="14" fill="#00d2ff" font-weight="600">cat</text>
+                    <rect x="95" y="50" width="30" height="45" fill="none" stroke="#ff6b6b" stroke-width="3" rx="4"/>
+                    <text x="110" y="92" text-anchor="middle" font-size="11" fill="#ff6b6b" font-weight="600">TARGET</text>
+
+                    <text x="170" y="70" text-anchor="middle" font-size="14" fill="#8888a0">sat</text>
+                    <rect x="155" y="55" width="30" height="35" fill="none" stroke="#6c63ff" stroke-width="2" stroke-dasharray="3,3" rx="4"/>
+
+                    <text x="230" y="70" text-anchor="middle" font-size="14" fill="#8888a0">on</text>
+                    <text x="230" y="92" text-anchor="middle" font-size="11" fill="#8888a0">(window=2)</text>
+
+                    <text x="290" y="70" text-anchor="middle" font-size="14" fill="#8888a0">the</text>
+
+                    <text x="350" y="70" text-anchor="middle" font-size="14" fill="#8888a0">mat</text>
+                </svg>
+                <p class="svg-label">Context words highlighted in blue (window size = 2)</p>
+            </div>
+
+            <div class="card">
+                <h3>The Skip-gram Neural Network</h3>
+                <svg viewBox="0 0 600 280" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Input layer -->
+                    <circle cx="60" cy="140" r="12" fill="#6c63ff" stroke="#2a2a3e" stroke-width="1"/>
+                    <text x="60" y="165" text-anchor="middle" font-size="12" fill="#e0e0e8" font-weight="500">cat</text>
+                    <text x="60" y="25" text-anchor="middle" font-size="13" fill="#8888a0" font-weight="600">Input Layer</text>
+                    <text x="60" y="205" text-anchor="middle" font-size="11" fill="#8888a0">(one-hot)</text>
+
+                    <!-- Hidden layer -->
+                    <circle cx="300" cy="80" r="10" fill="#00d2ff" stroke="#2a2a3e" stroke-width="1"/>
+                    <circle cx="300" cy="140" r="10" fill="#00d2ff" stroke="#2a2a3e" stroke-width="1"/>
+                    <circle cx="300" cy="200" r="10" fill="#00d2ff" stroke="#2a2a3e" stroke-width="1"/>
+                    <text x="300" y="25" text-anchor="middle" font-size="13" fill="#8888a0" font-weight="600">Hidden Layer</text>
+                    <text x="300" y="250" text-anchor="middle" font-size="11" fill="#00d2ff" font-weight="600">These are the embeddings!</text>
+
+                    <!-- Output layer -->
+                    <circle cx="540" cy="60" r="10" fill="#ff6b6b" stroke="#2a2a3e" stroke-width="1"/>
+                    <circle cx="540" cy="120" r="10" fill="#ff6b6b" stroke="#2a2a3e" stroke-width="1"/>
+                    <circle cx="540" cy="180" r="10" fill="#ff6b6b" stroke="#2a2a3e" stroke-width="1"/>
+                    <circle cx="540" cy="240" r="10" fill="#ff6b6b" stroke="#2a2a3e" stroke-width="1"/>
+                    <text x="540" y="25" text-anchor="middle" font-size="13" fill="#8888a0" font-weight="600">Output Layer</text>
+                    <text x="540" y="275" text-anchor="middle" font-size="11" fill="#ff6b6b">Context words</text>
+
+                    <!-- Connections -->
+                    <line x1="72" y1="140" x2="290" y2="80" stroke="#4a4a6a" stroke-width="1"/>
+                    <line x1="72" y1="140" x2="290" y2="140" stroke="#4a4a6a" stroke-width="1"/>
+                    <line x1="72" y1="140" x2="290" y2="200" stroke="#4a4a6a" stroke-width="1"/>
+
+                    <line x1="310" y1="80" x2="530" y2="60" stroke="#4a4a6a" stroke-width="1"/>
+                    <line x1="310" y1="80" x2="530" y2="120" stroke="#4a4a6a" stroke-width="1"/>
+                    <line x1="310" y1="80" x2="530" y2="180" stroke="#4a4a6a" stroke-width="1"/>
+                    <line x1="310" y1="80" x2="530" y2="240" stroke="#4a4a6a" stroke-width="1"/>
+
+                    <line x1="310" y1="140" x2="530" y2="60" stroke="#4a4a6a" stroke-width="1"/>
+                    <line x1="310" y1="140" x2="530" y2="120" stroke="#4a4a6a" stroke-width="1"/>
+                    <line x1="310" y1="140" x2="530" y2="180" stroke="#4a4a6a" stroke-width="1"/>
+                    <line x1="310" y1="140" x2="530" y2="240" stroke="#4a4a6a" stroke-width="1"/>
+
+                    <line x1="310" y1="200" x2="530" y2="60" stroke="#4a4a6a" stroke-width="1"/>
+                    <line x1="310" y1="200" x2="530" y2="120" stroke="#4a4a6a" stroke-width="1"/>
+                    <line x1="310" y1="200" x2="530" y2="180" stroke="#4a4a6a" stroke-width="1"/>
+                    <line x1="310" y1="200" x2="530" y2="240" stroke="#4a4a6a" stroke-width="1"/>
+                </svg>
+                <p class="svg-label">Training objective: Given input word, predict surrounding context words</p>
+            </div>
+
+            <div class="card" style="background: var(--surface); border-left: 3px solid var(--accent);">
+                <p><strong>How embeddings are learned:</strong> The model adjusts the hidden layer weights to minimize prediction error. After training, the weights of the hidden layer become the word embeddings—dense vectors where semantically similar words cluster together.</p>
+            </div>
+        </section>
+
+        <!-- SECTION 4: Word2Vec CBOW -->
+        <section>
+            <h2>Word2Vec: Continuous Bag of Words (CBOW)</h2>
+            <p>CBOW reverses the skip-gram approach: instead of predicting context from a target, it predicts the target word from its context.</p>
+
+            <div class="card comparison">
+                <div>
+                    <div class="comparison-label">Skip-gram</div>
+                    <p><strong>Input:</strong> target word</p>
+                    <p><strong>Predict:</strong> context words</p>
+                    <p style="margin-top: 1rem; padding: 1rem; background: var(--card); border-radius: 6px; border-left: 2px solid var(--accent);">Better for smaller datasets and rare words. Works well with limited context.</p>
+                </div>
+                <div>
+                    <div class="comparison-label">CBOW</div>
+                    <p><strong>Input:</strong> context words</p>
+                    <p><strong>Predict:</strong> target word</p>
+                    <p style="margin-top: 1rem; padding: 1rem; background: var(--card); border-radius: 6px; border-left: 2px solid var(--accent2);">Better for larger datasets. Faster to train. Good for semantic relationships.</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>CBOW in Action</h3>
+                <p style="font-size: 1.1rem; padding: 1rem; background: var(--surface); border-radius: 6px; margin-bottom: 1rem;">
+                    The <span style="background: var(--border); color: var(--accent2); padding: 0.2rem 0.4rem; border-radius: 4px;">cat</span> sat <span style="background: var(--accent); color: var(--bg); padding: 0.2rem 0.4rem; border-radius: 4px; font-weight: 600;">???</span> on the mat
+                </p>
+                <p>Given the context words (cat, sat, on, the, mat), CBOW predicts the missing word is "on".</p>
+            </div>
+        </section>
+
+        <!-- SECTION 5: The Magic of Embedding Space -->
+        <section>
+            <h2>The Magic of Embedding Space</h2>
+            <p>The true power of embeddings emerges when we visualize them in 2D. Semantically related words cluster together, and we can perform arithmetic on vectors to discover analogies!</p>
+
+            <div class="card">
+                <h3>Interactive Embedding Space</h3>
+                <p style="margin-bottom: 1rem; color: var(--muted);">Click words to select them. The arithmetic will be computed instantly.</p>
+
+                <svg id="scatter-plot" viewBox="0 0 700 500" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <polygon points="0 0, 10 3, 0 6" fill="#00d2ff" />
+                        </marker>
+                    </defs>
+
+                    <!-- Background grid -->
+                    <rect x="30" y="20" width="640" height="440" fill="var(--surface)" stroke="#2a2a3e" stroke-width="1" rx="6"/>
+
+                    <!-- Axes -->
+                    <line x1="50" y1="460" x2="650" y2="460" stroke="#2a2a3e" stroke-width="2"/>
+                    <line x1="50" y1="20" x2="50" y2="460" stroke="#2a2a3e" stroke-width="2"/>
+
+                    <!-- Axis labels -->
+                    <text x="660" y="465" font-size="12" fill="#8888a0">Dimension 1</text>
+                    <text x="30" y="20" font-size="12" fill="#8888a0">Dimension 2</text>
+                </svg>
+                <p class="svg-label">2D projection of word embeddings (using t-SNE)</p>
+            </div>
+
+            <div class="card">
+                <h3>Vector Arithmetic: king - man + woman = ?</h3>
+                <p style="margin-bottom: 1.5rem;">Select three words to perform vector arithmetic and see the result in embedding space:</p>
+
+                <div style="background: var(--surface); padding: 1.5rem; border-radius: 6px; margin-bottom: 1.5rem;">
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-size: 0.9rem; color: var(--muted); margin-bottom: 0.5rem;">First word (subtract):</label>
+                        <div id="button-group-1"></div>
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-size: 0.9rem; color: var(--muted); margin-bottom: 0.5rem;">Second word (add):</label>
+                        <div id="button-group-2"></div>
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-size: 0.9rem; color: var(--muted); margin-bottom: 0.5rem;">Third word (subtract):</label>
+                        <div id="button-group-3"></div>
+                    </div>
+
+                    <div style="padding: 1rem; background: var(--card); border-radius: 6px; border-left: 3px solid var(--accent2);">
+                        <p style="margin: 0; font-size: 0.9rem; color: var(--muted);">Result: <span id="arithmetic-result" style="color: var(--accent2); font-weight: 600;">Select three words</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="background: var(--surface); border-left: 3px solid var(--accent2);">
+                <p><strong>Why this works:</strong> The model learns to encode analogies as vector relationships. If "king" and "queen" differ by a "royalty" dimension, and "man" and "woman" differ by a "gender" dimension, then algebraically we can transfer gender semantics across domains.</p>
+            </div>
+        </section>
+
+        <!-- SECTION 6: GloVe Explained -->
+        <section>
+            <h2>GloVe: Global Vectors for Word Representation</h2>
+            <p>While Word2Vec learns embeddings by predicting local context, GloVe combines local context windows with global co-occurrence statistics to learn embeddings.</p>
+
+            <div class="two-column">
+                <div>
+                    <h3>Co-occurrence Matrix</h3>
+                    <svg viewBox="0 0 350 280" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="10" y="10" width="330" height="260" fill="none" stroke="#2a2a3e" stroke-width="1" rx="6"/>
+
+                        <text x="175" y="30" text-anchor="middle" font-size="12" fill="#8888a0" font-weight="600">Co-occurrence Matrix</text>
+                        <text x="175" y="50" text-anchor="middle" font-size="11" fill="#8888a0">(How often words appear together)</text>
+
+                        <!-- Row and column headers -->
+                        <text x="35" y="75" text-anchor="middle" font-size="11" fill="#8888a0" font-weight="500">cat</text>
+                        <text x="35" y="95" text-anchor="middle" font-size="11" fill="#8888a0" font-weight="500">dog</text>
+                        <text x="35" y="115" text-anchor="middle" font-size="11" fill="#8888a0" font-weight="500">the</text>
+                        <text x="35" y="135" text-anchor="middle" font-size="11" fill="#8888a0" font-weight="500">sat</text>
+
+                        <text x="65" y="65" text-anchor="middle" font-size="11" fill="#8888a0" font-weight="500">cat</text>
+                        <text x="95" y="65" text-anchor="middle" font-size="11" fill="#8888a0" font-weight="500">dog</text>
+                        <text x="125" y="65" text-anchor="middle" font-size="11" fill="#8888a0" font-weight="500">the</text>
+                        <text x="155" y="65" text-anchor="middle" font-size="11" fill="#8888a0" font-weight="500">sat</text>
+
+                        <!-- Matrix cells with colors based on co-occurrence -->
+                        <!-- cat row -->
+                        <rect x="55" y="75" width="30" height="15" fill="#ff6b6b" opacity="0.8"/>
+                        <text x="70" y="85" text-anchor="middle" font-size="10" fill="#fff">142</text>
+
+                        <rect x="85" y="75" width="30" height="15" fill="#ffa500" opacity="0.6"/>
+                        <text x="100" y="85" text-anchor="middle" font-size="10" fill="#fff">35</text>
+
+                        <rect x="115" y="75" width="30" height="15" fill="#ff6b6b" opacity="0.8"/>
+                        <text x="130" y="85" text-anchor="middle" font-size="10" fill="#fff">98</text>
+
+                        <rect x="145" y="75" width="30" height="15" fill="#ffa500" opacity="0.6"/>
+                        <text x="160" y="85" text-anchor="middle" font-size="10" fill="#fff">45</text>
+
+                        <!-- dog row -->
+                        <rect x="55" y="95" width="30" height="15" fill="#ffa500" opacity="0.6"/>
+                        <text x="70" y="105" text-anchor="middle" font-size="10" fill="#fff">35</text>
+
+                        <rect x="85" y="95" width="30" height="15" fill="#ff6b6b" opacity="0.8"/>
+                        <text x="100" y="105" text-anchor="middle" font-size="10" fill="#fff">156</text>
+
+                        <rect x="115" y="95" width="30" height="15" fill="#ff6b6b" opacity="0.8"/>
+                        <text x="130" y="105" text-anchor="middle" font-size="10" fill="#fff">89</text>
+
+                        <rect x="145" y="95" width="30" height="15" fill="#ffa500" opacity="0.6"/>
+                        <text x="160" y="105" text-anchor="middle" font-size="10" fill="#fff">52</text>
+
+                        <!-- the row -->
+                        <rect x="55" y="115" width="30" height="15" fill="#ff6b6b" opacity="0.8"/>
+                        <text x="70" y="125" text-anchor="middle" font-size="10" fill="#fff">98</text>
+
+                        <rect x="85" y="115" width="30" height="15" fill="#ff6b6b" opacity="0.8"/>
+                        <text x="100" y="125" text-anchor="middle" font-size="10" fill="#fff">89</text>
+
+                        <rect x="115" y="115" width="30" height="15" fill="#ff6b6b" opacity="0.8"/>
+                        <text x="130" y="125" text-anchor="middle" font-size="10" fill="#fff">412</text>
+
+                        <rect x="145" y="115" width="30" height="15" fill="#ff6b6b" opacity="0.8"/>
+                        <text x="160" y="125" text-anchor="middle" font-size="10" fill="#fff">156</text>
+
+                        <!-- sat row -->
+                        <rect x="55" y="135" width="30" height="15" fill="#ffa500" opacity="0.6"/>
+                        <text x="70" y="145" text-anchor="middle" font-size="10" fill="#fff">45</text>
+
+                        <rect x="85" y="135" width="30" height="15" fill="#ffa500" opacity="0.6"/>
+                        <text x="100" y="145" text-anchor="middle" font-size="10" fill="#fff">52</text>
+
+                        <rect x="115" y="135" width="30" height="15" fill="#ff6b6b" opacity="0.8"/>
+                        <text x="130" y="145" text-anchor="middle" font-size="10" fill="#fff">156</text>
+
+                        <rect x="145" y="135" width="30" height="15" fill="#ffa500" opacity="0.6"/>
+                        <text x="160" y="145" text-anchor="middle" font-size="10" fill="#fff">28</text>
+
+                        <!-- Legend -->
+                        <text x="30" y="175" font-size="11" fill="#ff6b6b" font-weight="600">High frequency ↑</text>
+                        <text x="30" y="195" font-size="11" fill="#ffa500">Low frequency ↓</text>
+
+                        <text x="30" y="230" font-size="12" fill="#e0e0e8">GloVe learns embeddings</text>
+                        <text x="30" y="245" font-size="12" fill="#e0e0e8">that reconstruct this</text>
+                        <text x="30" y="260" font-size="12" fill="#e0e0e8">global matrix</text>
+                    </svg>
+                </div>
+
+                <div>
+                    <h3>GloVe vs Word2Vec</h3>
+                    <div class="card" style="background: var(--surface);">
+                        <p style="margin-bottom: 1rem;"><strong style="color: var(--accent);">Word2Vec</strong></p>
+                        <ul style="margin-left: 1rem; margin-bottom: 1.5rem;">
+                            <li>Local context only</li>
+                            <li>Uses neural network</li>
+                            <li>Fast to train</li>
+                            <li>Works with streaming data</li>
+                        </ul>
+
+                        <p style="margin-bottom: 1rem;"><strong style="color: var(--accent2);">GloVe</strong></p>
+                        <ul style="margin-left: 1rem;">
+                            <li>Local + global statistics</li>
+                            <li>Weighted least squares</li>
+                            <li>Better on small corpora</li>
+                            <li>More interpretable</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>GloVe Objective Function</h3>
+                <svg viewBox="0 0 650 180" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="10" y="10" width="630" height="160" fill="var(--surface)" stroke="#2a2a3e" stroke-width="1" rx="6"/>
+
+                    <text x="325" y="35" text-anchor="middle" font-size="13" fill="#8888a0" font-weight="600">GloVe Objective: Minimize Reconstruction Error</text>
+
+                    <!-- Main equation -->
+                    <text x="30" y="70" font-size="12" fill="#e0e0e8">Weighted Loss:</text>
+                    <text x="30" y="95" font-size="13" fill="#6c63ff" font-family="Monaco, monospace">f(X_ij) × (w_i · w_j + b_i + b_j - log(X_ij))²</text>
+
+                    <text x="30" y="135" font-size="11" fill="#8888a0">Where: X_ij = co-occurrence count of words i and j</text>
+                    <text x="30" y="152" font-size="11" fill="#8888a0">f(X_ij) = weighting function (gives less weight to rare pairs)</text>
+                </svg>
+                <p class="svg-label">GloVe learns word vectors that minimize the difference between dot product and co-occurrence log probability</p>
+            </div>
+        </section>
+
+        <!-- SECTION 7: Similarity Explorer -->
+        <section>
+            <h2>Similarity Explorer</h2>
+            <p>Enter a word to see its nearest neighbors in embedding space. The similarity is measured by cosine similarity—how aligned the vectors are.</p>
+
+            <div class="card">
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; font-size: 0.9rem; color: var(--muted); margin-bottom: 0.5rem;">Enter a word:</label>
+                    <input type="text" id="similarity-input" class="word-input" placeholder="e.g., king, good, run..." value="king">
+                </div>
+
+                <div id="similarity-output">
+                    <svg id="radial-diagram" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <marker id="arrowhead-radial" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                                <polygon points="0 0, 10 3, 0 6" fill="#00d2ff" />
+                            </marker>
+                        </defs>
+
+                        <!-- Center circle -->
+                        <circle cx="250" cy="250" r="30" fill="#6c63ff" stroke="#2a2a3e" stroke-width="2"/>
+                        <text x="250" y="255" text-anchor="middle" font-size="12" fill="#ffffff" font-weight="600">king</text>
+
+                        <!-- Radial lines and neighbors will be added by JavaScript -->
+                    </svg>
+                    <p class="svg-label">Nearest neighbors by cosine similarity</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 8: Python Code -->
+        <section>
+            <h2>Implementation in Python</h2>
+            <p>Here's how to work with word embeddings in practice using popular libraries.</p>
+
+            <div class="card">
+                <h3>Training Word2Vec with Gensim</h3>
+                <div class="code-block"><code><span class="keyword">from</span> gensim.models <span class="keyword">import</span> Word2Vec
+<span class="keyword">import</span> numpy <span class="keyword">as</span> np
+
+<span class="comment"># Prepare sentences</span>
+sentences = [
+    [<span class="string">"the"</span>, <span class="string">"cat"</span>, <span class="string">"sat"</span>, <span class="string">"on"</span>, <span class="string">"the"</span>, <span class="string">"mat"</span>],
+    [<span class="string">"the"</span>, <span class="string">"dog"</span>, <span class="string">"played"</span>, <span class="string">"in"</span>, <span class="string">"the"</span>, <span class="string">"park"</span>],
+]
+
+<span class="comment"># Train Word2Vec model</span>
+model = Word2Vec(
+    sentences,
+    vector_size=<span class="number">100</span>,      <span class="comment"># Embedding dimension</span>
+    window=<span class="number">5</span>,            <span class="comment"># Context window size</span>
+    min_count=<span class="number">1</span>,          <span class="comment"># Ignore words appearing less than once</span>
+    workers=<span class="number">4</span>,           <span class="comment"># Parallel processing</span>
+    sg=<span class="number">1</span>              <span class="comment"># 1 for Skip-gram, 0 for CBOW</span>
+)
+
+<span class="comment"># Get embedding for a word</span>
+embedding = model.wv[<span class="string">"cat"</span>]  <span class="comment"># Shape: (100,)</span>
+
+<span class="comment"># Find similar words</span>
+similar = model.wv.most_similar(<span class="string">"cat"</span>, topn=<span class="number">5</span>)
+<span class="keyword">print</span>(similar)
+<span class="comment"># [('kitten', 0.92), ('dog', 0.85), ('puppy', 0.78), ...]</span></code></div>
+            </div>
+
+            <div class="card">
+                <h3>Loading Pre-trained GloVe Embeddings</h3>
+                <div class="code-block"><code><span class="comment"># Download GloVe from https://nlp.stanford.edu/projects/glove/</span>
+<span class="keyword">import</span> numpy <span class="keyword">as</span> np
+
+<span class="function">def</span> load_glove_embeddings(filepath):
+    embeddings = {}
+    <span class="keyword">with</span> <span class="function">open</span>(filepath, <span class="string">'r'</span>, encoding=<span class="string">'utf-8'</span>) <span class="keyword">as</span> f:
+        <span class="keyword">for</span> line <span class="keyword">in</span> f:
+            values = line.split()
+            word = values[<span class="number">0</span>]
+            vector = np.asarray(values[<span class="number">1</span>:], dtype=<span class="string">'float32'</span>)
+            embeddings[word] = vector
+    <span class="keyword">return</span> embeddings
+
+glove = load_glove_embeddings(<span class="string">'glove.6B.100d.txt'</span>)
+embedding = glove[<span class="string">'cat'</span>]  <span class="comment"># Shape: (100,)</span></code></div>
+            </div>
+
+            <div class="card">
+                <h3>Word Analogies</h3>
+                <div class="code-block"><code><span class="comment"># Using Word2Vec for analogies</span>
+<span class="keyword">def</span> analogy(a, b, c, model):
+    <span class="string">"""
+    Solve: a - b + c = ?
+    Example: king - man + woman = queen
+    """</span>
+    <span class="keyword">return</span> model.wv.most_similar(
+        positive=[a, c],
+        negative=[b],
+        topn=<span class="number">1</span>
+    )
+
+result = analogy(<span class="string">"king"</span>, <span class="string">"man"</span>, <span class="string">"woman"</span>, model)
+<span class="keyword">print</span>(result)  <span class="comment"># [('queen', 0.897)]</span></code></div>
+            </div>
+
+            <div class="card">
+                <h3>Cosine Similarity</h3>
+                <div class="code-block"><code><span class="keyword">from</span> sklearn.metrics.pairwise <span class="keyword">import</span> cosine_similarity
+<span class="keyword">import</span> numpy <span class="keyword">as</span> np
+
+<span class="comment"># Calculate cosine similarity between two embeddings</span>
+v1 = model.wv[<span class="string">"cat"</span>].reshape(<span class="number">1</span>, -<span class="number">1</span>)
+v2 = model.wv[<span class="string">"kitten"</span>].reshape(<span class="number">1</span>, -<span class="number">1</span>)
+
+similarity = cosine_similarity(v1, v2)[<span class="number">0</span>][<span class="number">0</span>]
+<span class="keyword">print</span>(f<span class="string">"Similarity: {similarity:.3f}"</span>)  <span class="comment"># Similarity: 0.892</span></code></div>
+            </div>
+
+            <div class="card">
+                <h3>Visualizing Embeddings with t-SNE</h3>
+                <div class="code-block"><code><span class="keyword">from</span> sklearn.manifold <span class="keyword">import</span> TSNE
+<span class="keyword">import</span> matplotlib.pyplot <span class="keyword">as</span> plt
+
+<span class="comment"># Get embeddings for a set of words</span>
+words = [<span class="string">"king"</span>, <span class="string">"queen"</span>, <span class="string">"man"</span>, <span class="string">"woman"</span>,
+         <span class="string">"cat"</span>, <span class="string">"kitten"</span>, <span class="string">"dog"</span>, <span class="string">"puppy"</span>]
+embeddings = np.array([model.wv[w] <span class="keyword">for</span> w <span class="keyword">in</span> words])
+
+<span class="comment"># Reduce to 2D for visualization</span>
+tsne = TSNE(n_components=<span class="number">2</span>, random_state=<span class="number">42</span>)
+embeddings_2d = tsne.fit_transform(embeddings)
+
+<span class="comment"># Plot</span>
+plt.figure(figsize=(<span class="number">10</span>, <span class="number">8</span>))
+<span class="keyword">for</span> i, word <span class="keyword">in</span> <span class="function">enumerate</span>(words):
+    plt.scatter(embeddings_2d[i, <span class="number">0</span>], embeddings_2d[i, <span class="number">1</span>])
+    plt.annotate(word, (embeddings_2d[i, <span class="number">0</span>], embeddings_2d[i, <span class="number">1</span>]))
+
+plt.title(<span class="string">"Word Embeddings Visualization"</span>)
+plt.show()</code></div>
+            </div>
+        </section>
+
+        <!-- SECTION 9: Translation Connection -->
+        <section>
+            <h2>Cross-lingual Connection: Ancient Language Alignment</h2>
+            <p>One of the most remarkable applications of embeddings is aligning embedding spaces across languages. Researchers have even used this technique to help decipher ancient languages like Linear B and Ugaritic!</p>
+
+            <div class="two-column">
+                <div>
+                    <h3>The Idea</h3>
+                    <p>If we train embeddings on separate English and French corpora, the embedding spaces will have different orientations. But if we find just a few word pairs that mean the same thing (e.g., "king" = "roi"), we can learn a linear transformation to align the spaces.</p>
+                </div>
+
+                <div>
+                    <svg viewBox="0 0 350 300" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="10" y="10" width="330" height="280" fill="none" stroke="#2a2a3e" stroke-width="1" rx="6"/>
+
+                        <!-- English space -->
+                        <circle cx="80" cy="100" r="40" fill="none" stroke="#6c63ff" stroke-width="2" stroke-dasharray="5,5"/>
+                        <text x="80" y="150" text-anchor="middle" font-size="12" fill="#6c63ff" font-weight="600">English</text>
+
+                        <!-- French space -->
+                        <circle cx="270" cy="100" r="40" fill="none" stroke="#00d2ff" stroke-width="2" stroke-dasharray="5,5"/>
+                        <text x="270" y="150" text-anchor="middle" font-size="12" fill="#00d2ff" font-weight="600">French</text>
+
+                        <!-- Points inside circles -->
+                        <circle cx="60" cy="80" r="3" fill="#6c63ff"/>
+                        <text x="60" y="75" text-anchor="middle" font-size="10" fill="#6c63ff">king</text>
+
+                        <circle cx="100" cy="120" r="3" fill="#6c63ff"/>
+                        <text x="100" y="130" text-anchor="middle" font-size="10" fill="#6c63ff">queen</text>
+
+                        <circle cx="250" cy="80" r="3" fill="#00d2ff"/>
+                        <text x="250" y="75" text-anchor="middle" font-size="10" fill="#00d2ff">roi</text>
+
+                        <circle cx="290" cy="120" r="3" fill="#00d2ff"/>
+                        <text x="290" y="130" text-anchor="middle" font-size="10" fill="#00d2ff">reine</text>
+
+                        <!-- Alignment arrow -->
+                        <path d="M 120 100 Q 175 50 230 100" fill="none" stroke="#ff6b6b" stroke-width="2" marker-end="url(#arrowhead-radial)"/>
+                        <text x="175" y="45" text-anchor="middle" font-size="11" fill="#ff6b6b" font-weight="600">Rotation +</text>
+                        <text x="175" y="58" text-anchor="middle" font-size="11" fill="#ff6b6b" font-weight="600">Scaling</text>
+
+                        <!-- Bottom explanation -->
+                        <text x="175" y="220" text-anchor="middle" font-size="11" fill="#e0e0e8">Seed pairs ("king"="roi", "queen"="reine")</text>
+                        <text x="175" y="235" text-anchor="middle" font-size="11" fill="#e0e0e8">allow us to learn a transformation</text>
+                        <text x="175" y="250" text-anchor="middle" font-size="11" fill="#e0e0e8">that aligns the entire space</text>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="card" style="background: var(--surface); border-left: 3px solid var(--accent3);">
+                <h3>Deciphering Ancient Languages</h3>
+                <p>Researchers trained embeddings on modern languages and ancient texts, then aligned them. By finding the closest matches between ancient words and modern cognates, they could build translation dictionaries and even help decode Linear B—a 3,500-year-old writing system!</p>
+                <p style="margin-top: 1rem; font-size: 0.95rem; color: var(--muted);">This shows how embeddings capture universal linguistic structure that transcends time.</p>
+            </div>
+        </section>
+
+        <!-- SECTION 10: Navigation Footer -->
+        <section style="margin-top: 6rem; margin-bottom: 0;">
+            <div class="nav-footer">
+                <a href="02-representation.html">← Text Representation</a>
+                <span style="color: var(--muted);">Module 03: Word Embeddings</span>
+                <a href="04-rnns.html">Recurrent Neural Networks →</a>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // ====== SCROLL-TRIGGERED ANIMATIONS ======
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.animation = `fadeIn 0.8s ease-out forwards`;
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('section').forEach(section => {
+            observer.observe(section);
+        });
+
+        // ====== SKIP-GRAM WINDOW VISUALIZATION ======
+        const windowSlider = document.getElementById('window-slider');
+        const windowViz = document.getElementById('window-viz');
+
+        const words = ['The', 'cat', 'sat', 'on', 'the', 'mat'];
+        const positions = [50, 110, 170, 230, 290, 350];
+
+        windowSlider.addEventListener('input', (e) => {
+            const pos = parseInt(e.target.value);
+            const windowSize = 2;
+
+            windowViz.innerHTML = `
+                <rect x="10" y="10" width="480" height="100" fill="none" stroke="#2a2a3e" stroke-width="1" rx="6"/>
+                <text x="250" y="35" text-anchor="middle" font-size="13" fill="#8888a0">Position: ${pos}</text>
+            `;
+
+            words.forEach((word, idx) => {
+                const x = positions[idx];
+                const isBetweenMin = idx >= Math.max(0, pos - windowSize);
+                const isBetweenMax = idx <= Math.min(words.length - 1, pos + windowSize);
+                const isTarget = idx === pos;
+
+                if (isTarget) {
+                    windowViz.innerHTML += `
+                        <text x="${x}" y="70" text-anchor="middle" font-size="14" fill="#00d2ff" font-weight="600">${word}</text>
+                        <rect x="${x - 15}" y="50" width="30" height="45" fill="none" stroke="#ff6b6b" stroke-width="3" rx="4"/>
+                        <text x="${x}" y="92" text-anchor="middle" font-size="11" fill="#ff6b6b" font-weight="600">TARGET</text>
+                    `;
+                } else if (isBetweenMin && isBetweenMax) {
+                    windowViz.innerHTML += `
+                        <text x="${x}" y="70" text-anchor="middle" font-size="14" fill="#8888a0">${word}</text>
+                        <rect x="${x - 15}" y="55" width="30" height="35" fill="none" stroke="#6c63ff" stroke-width="2" stroke-dasharray="3,3" rx="4"/>
+                    `;
+                } else {
+                    windowViz.innerHTML += `
+                        <text x="${x}" y="70" text-anchor="middle" font-size="14" fill="#555555">${word}</text>
+                    `;
+                }
+            });
+
+            windowViz.innerHTML += `<text x="230" y="92" text-anchor="middle" font-size="11" fill="#8888a0">(window=2)</text>`;
+        });
+
+        windowSlider.dispatchEvent(new Event('input'));
+
+        // ====== EMBEDDING SPACE SCATTER PLOT ======
+        const scatterPlot = document.getElementById('scatter-plot');
+
+        // Pre-computed embedding positions (2D projection)
+        const embeddingData = {
+            'king': { x: 520, y: 180, color: '#ffd700', category: 'royalty' },
+            'queen': { x: 540, y: 160, color: '#ffd700', category: 'royalty' },
+            'man': { x: 480, y: 200, color: '#90ee90', category: 'gender' },
+            'woman': { x: 550, y: 140, color: '#90ee90', category: 'gender' },
+            'prince': { x: 490, y: 170, color: '#ffd700', category: 'royalty' },
+            'princess': { x: 530, y: 150, color: '#ffd700', category: 'royalty' },
+            'cat': { x: 350, y: 250, color: '#ff9999', category: 'animal' },
+            'dog': { x: 320, y: 280, color: '#ff9999', category: 'animal' },
+            'kitten': { x: 380, y: 240, color: '#ff9999', category: 'animal' },
+            'puppy': { x: 300, y: 300, color: '#ff9999', category: 'animal' },
+            'paris': { x: 150, y: 300, color: '#87ceeb', category: 'city' },
+            'france': { x: 100, y: 350, color: '#87ceeb', category: 'country' },
+            'berlin': { x: 250, y: 350, color: '#87ceeb', category: 'city' },
+            'germany': { x: 200, y: 400, color: '#87ceeb', category: 'country' },
+            'london': { x: 180, y: 250, color: '#87ceeb', category: 'city' },
+            'uk': { x: 140, y: 280, color: '#87ceeb', category: 'country' },
+            'good': { x: 420, y: 80, color: '#ffb6c1', category: 'adjective' },
+            'bad': { x: 380, y: 120, color: '#ffb6c1', category: 'adjective' },
+            'best': { x: 450, y: 60, color: '#ffb6c1', category: 'adjective' },
+            'worst': { x: 350, y: 140, color: '#ffb6c1', category: 'adjective' }
+        };
+
+        function renderScatterPlot() {
+            let svg = `
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" fill="#00d2ff" />
+                    </marker>
+                </defs>
+
+                <rect x="30" y="20" width="640" height="440" fill="var(--surface)" stroke="#2a2a3e" stroke-width="1" rx="6"/>
+
+                <line x1="50" y1="460" x2="650" y2="460" stroke="#2a2a3e" stroke-width="2"/>
+                <line x1="50" y1="20" x2="50" y2="460" stroke="#2a2a3e" stroke-width="2"/>
+
+                <text x="660" y="465" font-size="12" fill="#8888a0">Dimension 1</text>
+                <text x="30" y="20" font-size="12" fill="#8888a0">Dimension 2</text>
+            `;
+
+            Object.entries(embeddingData).forEach(([word, data]) => {
+                svg += `
+                    <g class="scatter-point" onclick="selectWordForArithmetic('${word}')">
+                        <circle cx="${data.x}" cy="${data.y}" r="8" fill="${data.color}" stroke="#2a2a3e" stroke-width="1" opacity="0.8" style="cursor: pointer;"/>
+                        <text x="${data.x}" y="${data.y + 20}" text-anchor="middle" font-size="11" fill="${data.color}" font-weight="500">${word}</text>
+                    </g>
+                `;
+            });
+
+            svg += `</svg>`;
+            scatterPlot.parentElement.innerHTML = `<svg id="scatter-plot" viewBox="0 0 700 500" xmlns="http://www.w3.org/2000/svg">${svg}`;
+        }
+
+        renderScatterPlot();
+
+        // ====== VECTOR ARITHMETIC ======
+        let selectedWords = {};
+        const wordCategories = ['group-1', 'group-2', 'group-3'];
+        const categoryLabels = ['First word (add):', 'Second word (subtract):', 'Third word (add):'];
+
+        const sampleWords = ['king', 'queen', 'man', 'woman', 'prince', 'paris', 'france', 'cat', 'dog', 'good', 'bad'];
+
+        // Create word selection buttons
+        ['button-group-1', 'button-group-2', 'button-group-3'].forEach((groupId, idx) => {
+            const container = document.getElementById(groupId);
+            sampleWords.forEach(word => {
+                const btn = document.createElement('button');
+                btn.className = 'word-button';
+                btn.textContent = word;
+                btn.onclick = () => selectWordButton(word, idx);
+                container.appendChild(btn);
+            });
+        });
+
+        function selectWordButton(word, groupIdx) {
+            selectedWords[groupIdx] = word;
+            updateArithmeticResult();
+            updateButtonStates();
+        }
+
+        function selectWordForArithmetic(word) {
+            // Auto-select in order
+            if (!selectedWords[0]) {
+                selectedWords[0] = word;
+            } else if (!selectedWords[1]) {
+                selectedWords[1] = word;
+            } else if (!selectedWords[2]) {
+                selectedWords[2] = word;
+            } else {
+                selectedWords = { 0: word };
+            }
+            updateArithmeticResult();
+            updateButtonStates();
+        }
+
+        function updateButtonStates() {
+            document.querySelectorAll('.word-button').forEach((btn, idx) => {
+                btn.classList.remove('selected');
+            });
+
+            Object.values(selectedWords).forEach(word => {
+                document.querySelectorAll('.word-button').forEach(btn => {
+                    if (btn.textContent === word) {
+                        btn.classList.add('selected');
+                    }
+                });
+            });
+        }
+
+        function updateArithmeticResult() {
+            const resultDiv = document.getElementById('arithmetic-result');
+
+            if (Object.keys(selectedWords).length === 3) {
+                const w1 = selectedWords[0];
+                const w2 = selectedWords[1];
+                const w3 = selectedWords[2];
+
+                let result = '';
+                // Hardcoded analogies for demo
+                if (w1 === 'king' && w2 === 'man' && w3 === 'woman') {
+                    result = 'queen';
+                } else if (w1 === 'paris' && w2 === 'france' && w3 === 'germany') {
+                    result = 'berlin';
+                } else if (w1 === 'bad' && w2 === 'good' && w3 === 'bad') {
+                    result = 'good';
+                } else if (w1 === 'dog' && w2 === 'cat' && w3 === 'kitten') {
+                    result = 'puppy';
+                } else {
+                    result = '(no common analogy in dataset)';
+                }
+
+                resultDiv.textContent = `${w1} - ${w2} + ${w3} ≈ ${result}`;
+            } else {
+                resultDiv.textContent = 'Select three words';
+            }
+        }
+
+        // ====== SIMILARITY EXPLORER ======
+        const similarityInput = document.getElementById('similarity-input');
+
+        const similarityData = {
+            'king': ['queen', 'prince', 'royal'],
+            'queen': ['king', 'princess', 'royal'],
+            'cat': ['kitten', 'dog', 'animal'],
+            'dog': ['puppy', 'cat', 'animal'],
+            'good': ['best', 'great', 'excellent'],
+            'bad': ['worst', 'poor', 'terrible'],
+            'paris': ['france', 'london', 'city'],
+            'run': ['walk', 'sprint', 'jog'],
+            'happy': ['joy', 'smile', 'cheerful'],
+            'love': ['affection', 'adore', 'care']
+        };
+
+        const similarityScores = {
+            'king-queen': 0.89, 'king-prince': 0.82, 'king-royal': 0.76,
+            'cat-kitten': 0.92, 'cat-dog': 0.78, 'cat-animal': 0.85,
+            'good-best': 0.88, 'good-great': 0.85, 'good-excellent': 0.83,
+            'paris-france': 0.91, 'paris-london': 0.68, 'paris-city': 0.79,
+        };
+
+        function renderRadialDiagram(word) {
+            const neighbors = similarityData[word.toLowerCase()] || ['similar1', 'similar2', 'similar3'];
+            const svg = document.getElementById('radial-diagram');
+
+            let html = `
+                <defs>
+                    <marker id="arrowhead-radial" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" fill="#00d2ff" />
+                    </marker>
+                </defs>
+
+                <circle cx="250" cy="250" r="30" fill="#6c63ff" stroke="#2a2a3e" stroke-width="2"/>
+                <text x="250" y="255" text-anchor="middle" font-size="12" fill="#ffffff" font-weight="600">${word}</text>
+            `;
+
+            neighbors.forEach((neighbor, idx) => {
+                const angle = (idx / neighbors.length) * Math.PI * 2;
+                const x = 250 + 150 * Math.cos(angle);
+                const y = 250 + 150 * Math.sin(angle);
+
+                const key = `${word.toLowerCase()}-${neighbor}`;
+                const similarity = similarityScores[key] || 0.85;
+
+                html += `
+                    <line x1="280" y1="250" x2="${Math.floor(x - 30 * Math.cos(angle))}" y2="${Math.floor(y - 30 * Math.sin(angle))}" stroke="#4a4a6a" stroke-width="2" marker-end="url(#arrowhead-radial)"/>
+                    <circle cx="${Math.floor(x)}" cy="${Math.floor(y)}" r="8" fill="#00d2ff" stroke="#2a2a3e" stroke-width="1" opacity="0.8"/>
+                    <text x="${Math.floor(x)}" y="${Math.floor(y - 18)}" text-anchor="middle" font-size="11" fill="#00d2ff" font-weight="500">${neighbor}</text>
+                    <text x="${Math.floor((250 + x) / 2)}" y="${Math.floor((250 + y) / 2) - 8}" text-anchor="middle" font-size="10" fill="#8888a0">${similarity.toFixed(2)}</text>
+                `;
+            });
+
+            svg.innerHTML = html;
+        }
+
+        similarityInput.addEventListener('input', (e) => {
+            renderRadialDiagram(e.target.value);
+        });
+
+        renderRadialDiagram('king');
+
+        // Dark theme for code blocks
+        console.log('✓ Word Embeddings Module loaded');
+    </script>
+</body>
+</html>

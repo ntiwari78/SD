@@ -1,0 +1,1625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 04: Recurrent Neural Networks - NLP Course</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #0a0a0f;
+            --surface: #12121a;
+            --card: #1a1a2e;
+            --border: #2a2a3e;
+            --accent: #6c63ff;
+            --accent2: #00d2ff;
+            --accent3: #ff6b6b;
+            --text: #e0e0e8;
+            --muted: #8888a0;
+            --spacing: 1.5rem;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        /* Sticky Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(180deg, rgba(10, 10, 15, 0.95) 0%, rgba(10, 10, 15, 0.7) 100%);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            z-index: 1000;
+            border-bottom: 1px solid var(--border);
+        }
+
+        nav a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        nav a:hover {
+            gap: 1rem;
+            color: var(--accent2);
+        }
+
+        main {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 6rem 2rem 2rem;
+        }
+
+        /* Fade-in Animation */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Section Styling */
+        section {
+            margin-bottom: 5rem;
+            padding: 2rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0;
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            font-size: 1.2rem;
+            color: var(--muted);
+            margin-bottom: 1rem;
+        }
+
+        .module-time {
+            display: inline-block;
+            background: var(--card);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            font-size: 0.9rem;
+            color: var(--accent2);
+            margin-top: 1rem;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            color: var(--accent);
+            position: relative;
+            padding-left: 15px;
+        }
+
+        h2::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 24px;
+            background: linear-gradient(180deg, var(--accent), var(--accent2));
+            border-radius: 2px;
+        }
+
+        h3 {
+            font-size: 1.3rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.8rem;
+            color: var(--accent2);
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: var(--text);
+            font-size: 1rem;
+        }
+
+        strong {
+            color: var(--accent2);
+        }
+
+        /* Interactive Elements */
+        .interactive-container {
+            background: var(--card);
+            padding: 2rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            margin: 1.5rem 0;
+        }
+
+        .svg-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            margin: 2rem 0;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        input[type="text"], input[type="range"], button, select {
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 0.8rem;
+            background: var(--card);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 6px;
+            font-size: 1rem;
+            margin: 0.5rem 0;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 10px rgba(108, 99, 255, 0.2);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+            margin: 1rem 0;
+            height: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: var(--card);
+            border-radius: 3px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(108, 99, 255, 0.3);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 10px rgba(108, 99, 255, 0.3);
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+            margin: 0.5rem;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(108, 99, 255, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.secondary {
+            background: var(--card);
+            color: var(--accent);
+            border: 1px solid var(--border);
+        }
+
+        button.secondary:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 15px rgba(108, 99, 255, 0.2);
+        }
+
+        .toggle-btn {
+            display: inline-block;
+            background: var(--card);
+            padding: 0.5rem 1.5rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--text);
+            font-weight: 500;
+            margin: 0.25rem;
+        }
+
+        .toggle-btn.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        select {
+            background: var(--card);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 0.8rem;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 10px rgba(108, 99, 255, 0.2);
+        }
+
+        option {
+            background: var(--card);
+            color: var(--text);
+        }
+
+        /* Code Block */
+        .code-block {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            position: relative;
+        }
+
+        .code-block::before {
+            content: attr(data-language);
+            position: absolute;
+            top: 0.5rem;
+            right: 0.8rem;
+            font-size: 0.75rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        pre {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: var(--text);
+            margin: 0;
+        }
+
+        .keyword { color: var(--accent); }
+        .string { color: #a1ff70; }
+        .comment { color: var(--muted); }
+        .function { color: var(--accent2); }
+        .number { color: #ff9c6e; }
+
+        /* Comparison Table */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        .comparison-table th {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: white;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .comparison-table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .comparison-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .comparison-table tr:nth-child(even) {
+            background: rgba(108, 99, 255, 0.05);
+        }
+
+        /* Footer Navigation */
+        .nav-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 5rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .nav-footer a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .nav-footer a:hover {
+            gap: 1rem;
+            color: var(--accent2);
+        }
+
+        /* Utility Classes */
+        .text-muted {
+            color: var(--muted);
+        }
+
+        .text-accent {
+            color: var(--accent2);
+        }
+
+        .badge {
+            display: inline-block;
+            background: var(--card);
+            padding: 0.3rem 0.8rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            border: 1px solid var(--border);
+            margin-right: 0.5rem;
+        }
+
+        .badge.accent {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            h2 {
+                font-size: 1.4rem;
+            }
+
+            main {
+                padding: 5rem 1rem 2rem;
+            }
+
+            section {
+                padding: 1.5rem;
+            }
+
+            .comparison-table {
+                font-size: 0.8rem;
+            }
+
+            .comparison-table th, .comparison-table td {
+                padding: 0.7rem;
+            }
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        .slide-in {
+            animation: slideIn 0.6s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="index.html">← Back to Course</a>
+    </nav>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="fade-in hero">
+            <h1>Module 04: Recurrent Neural Networks</h1>
+            <p class="hero-subtitle">Processing text one word at a time</p>
+            <p>Learn how RNNs, LSTMs, and GRUs maintain memory across sequences, and why attention will be needed next.</p>
+            <span class="module-time">⏱️ ~30 minutes</span>
+        </section>
+
+        <!-- Why Sequence Matters -->
+        <section class="fade-in">
+            <h2>Why Sequence Matters</h2>
+            <p>Consider these two sentences:</p>
+            <p><strong>"The bank by the river"</strong> vs <strong>"Money in the bank"</strong></p>
+            <p>The word <em>"bank"</em> appears in both, but means something completely different. The meaning depends on context—the other words surrounding it. This is why RNNs were invented: to process words one at a time while maintaining a <strong>hidden state</strong> that remembers what came before.</p>
+
+            <div class="svg-container">
+                <svg width="600" height="250" viewBox="0 0 600 250">
+                    <!-- Background -->
+                    <rect width="600" height="250" fill="rgba(26, 26, 46, 0.5)" rx="8"/>
+
+                    <!-- Sentence 1 -->
+                    <text x="30" y="30" font-size="12" fill="#8888a0" font-weight="500">Sentence 1: River Context</text>
+                    <g id="sent1-words">
+                        <rect x="20" y="50" width="60" height="40" fill="#1a1a2e" stroke="#2a2a3e" stroke-width="1"/>
+                        <text x="50" y="80" text-anchor="middle" font-size="12" fill="#e0e0e8" font-weight="500">The</text>
+
+                        <line x1="85" y1="70" x2="115" y2="70" stroke="#6c63ff" stroke-width="2"/>
+                        <polygon points="115,70 105,65 105,75" fill="#6c63ff"/>
+
+                        <rect x="120" y="50" width="60" height="40" fill="#1a1a2e" stroke="#2a2a3e" stroke-width="1"/>
+                        <text x="150" y="80" text-anchor="middle" font-size="12" fill="#e0e0e8" font-weight="500">bank</text>
+
+                        <line x1="185" y1="70" x2="215" y2="70" stroke="#6c63ff" stroke-width="2"/>
+                        <polygon points="215,70 205,65 205,75" fill="#6c63ff"/>
+
+                        <rect x="220" y="50" width="60" height="40" fill="#1a1a2e" stroke="#2a2a3e" stroke-width="1"/>
+                        <text x="250" y="80" text-anchor="middle" font-size="12" fill="#e0e0e8" font-weight="500">by</text>
+
+                        <line x1="285" y1="70" x2="315" y2="70" stroke="#6c63ff" stroke-width="2"/>
+                        <polygon points="315,70 305,65 305,75" fill="#6c63ff"/>
+
+                        <rect x="320" y="50" width="60" height="40" fill="#1a1a2e" stroke="#2a2a3e" stroke-width="1"/>
+                        <text x="350" y="80" text-anchor="middle" font-size="12" fill="#e0e0e8" font-weight="500">river</text>
+                    </g>
+                    <rect x="400" y="50" width="120" height="40" fill="#00d2ff" opacity="0.1" stroke="#00d2ff" stroke-width="1" rx="4"/>
+                    <text x="460" y="80" text-anchor="middle" font-size="12" fill="#00d2ff" font-weight="600">Meaning: Geography</text>
+
+                    <!-- Sentence 2 -->
+                    <text x="30" y="160" font-size="12" fill="#8888a0" font-weight="500">Sentence 2: Money Context</text>
+                    <g id="sent2-words">
+                        <rect x="20" y="180" width="60" height="40" fill="#1a1a2e" stroke="#2a2a3e" stroke-width="1"/>
+                        <text x="50" y="210" text-anchor="middle" font-size="12" fill="#e0e0e8" font-weight="500">Money</text>
+
+                        <line x1="85" y1="200" x2="115" y2="200" stroke="#6c63ff" stroke-width="2"/>
+                        <polygon points="115,200 105,195 105,205" fill="#6c63ff"/>
+
+                        <rect x="120" y="180" width="60" height="40" fill="#1a1a2e" stroke="#2a2a3e" stroke-width="1"/>
+                        <text x="150" y="210" text-anchor="middle" font-size="12" fill="#e0e0e8" font-weight="500">in</text>
+
+                        <line x1="185" y1="200" x2="215" y2="200" stroke="#6c63ff" stroke-width="2"/>
+                        <polygon points="215,200 205,195 205,205" fill="#6c63ff"/>
+
+                        <rect x="220" y="180" width="60" height="40" fill="#1a1a2e" stroke="#2a2a3e" stroke-width="1"/>
+                        <text x="250" y="210" text-anchor="middle" font-size="12" fill="#e0e0e8" font-weight="500">bank</text>
+                    </g>
+                    <rect x="400" y="180" width="120" height="40" fill="#ff6b6b" opacity="0.1" stroke="#ff6b6b" stroke-width="1" rx="4"/>
+                    <text x="460" y="210" text-anchor="middle" font-size="12" fill="#ff6b6b" font-weight="600">Meaning: Finance</text>
+                </svg>
+            </div>
+
+            <p>RNNs solve this by maintaining a <strong>hidden state vector</strong> that gets updated at each time step. This hidden state acts like a "memory" that captures relevant context from previous words.</p>
+        </section>
+
+        <!-- Vanilla RNN Interactive -->
+        <section class="fade-in">
+            <h2>Vanilla RNN: Step-by-Step Processing</h2>
+            <p>A simple RNN maintains a hidden state <code>h_t</code> that processes each word sequentially. The formula is:</p>
+            <p style="background: var(--card); padding: 1rem; border-radius: 6px; font-family: monospace; text-align: center; color: var(--accent2);">
+                h<sub>t</sub> = tanh(W<sub>hh</sub> · h<sub>t-1</sub> + W<sub>xh</sub> · x<sub>t</sub>)
+            </p>
+
+            <div class="interactive-container">
+                <h3>Try It: Process a Sentence</h3>
+                <p>Type a short sentence below. Watch how each word is processed step-by-step through the hidden state.</p>
+                <input type="text" id="rnn-input" placeholder="Type a sentence... (e.g., 'I love NLP')" value="I love NLP">
+                <button onclick="processRNNSequence()">Process Sequence</button>
+
+                <div id="rnn-output" style="margin-top: 1.5rem;"></div>
+            </div>
+
+            <div class="svg-container">
+                <svg id="rnn-diagram" width="100%" viewBox="0 0 700 300" style="min-height: 300px;">
+                    <!-- This will be populated by JavaScript -->
+                </svg>
+            </div>
+
+            <h3>How It Works</h3>
+            <p>The RNN processes words left-to-right, updating the hidden state at each step. The hidden state (shown as the colored bar) changes based on the current word and the previous hidden state. This mechanism allows the network to build up context as it reads.</p>
+        </section>
+
+        <!-- Vanishing Gradient Problem -->
+        <section class="fade-in">
+            <h2>The Vanishing Gradient Problem</h2>
+            <p>While RNNs can theoretically learn long-range dependencies, they often fail in practice. The problem is <strong>vanishing gradients</strong>: when we backpropagate through many time steps, gradients multiply together and become exponentially smaller, making it impossible to update weights for early words.</p>
+
+            <div class="interactive-container">
+                <h3>Interactive Gradient Flow</h3>
+                <label for="seq-length">Sequence Length: <span id="length-display">10</span></label>
+                <input type="range" id="seq-length" min="5" max="50" value="10" onchange="updateGradientVisualization()">
+
+                <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--muted);">Watch how gradient magnitude (bar heights) decreases exponentially as it flows backward through time steps. The red zone indicates "vanishing gradient" territory.</p>
+
+                <div id="gradient-viz" style="margin-top: 1.5rem;"></div>
+            </div>
+
+            <h3>Why This Matters</h3>
+            <p>With sequence length 50, gradients become essentially zero by the time they reach the first few words. This means early words have almost no influence on learning, making it impossible for vanilla RNNs to learn long-term dependencies. LSTMs and GRUs solve this problem.</p>
+        </section>
+
+        <!-- LSTM Deep Dive -->
+        <section class="fade-in">
+            <h2>LSTM: Long Short-Term Memory</h2>
+            <p>LSTMs introduce a <strong>cell state</strong> (a "highway" of information) and <strong>gates</strong> (valves controlling what flows through). This architecture prevents vanishing gradients and allows learning dependencies across 100+ time steps.</p>
+
+            <div class="interactive-container">
+                <h3>LSTM Cell Gates</h3>
+                <p>Click "Next Gate" to step through each component of an LSTM cell:</p>
+
+                <div style="margin: 1.5rem 0;">
+                    <button onclick="nextLSTMGate()" style="width: 100%; padding: 1rem; font-size: 1rem;">Next Gate →</button>
+                    <button onclick="resetLSTMGate()" class="secondary" style="width: 100%; margin-top: 0.5rem; padding: 1rem;">Reset</button>
+                </div>
+
+                <div id="lstm-explanation" style="background: var(--card); padding: 1.5rem; border-radius: 6px; border: 1px solid var(--border); min-height: 100px;">
+                    <p style="color: var(--muted); text-align: center;">Click "Next Gate" to begin exploring the LSTM cell...</p>
+                </div>
+            </div>
+
+            <div class="svg-container">
+                <svg id="lstm-diagram" width="100%" viewBox="0 0 800 400" style="min-height: 400px;">
+                    <!-- LSTM cell diagram will be drawn here -->
+                </svg>
+            </div>
+
+            <h3>The Key Insight</h3>
+            <p>The cell state acts as a conveyor belt running along the entire chain. The gates (forget, input, output) control what information flows into, out of, and through this cell state. This allows gradients to flow unobstructed backward through time, solving the vanishing gradient problem.</p>
+        </section>
+
+        <!-- GRU Simplified -->
+        <section class="fade-in">
+            <h2>GRU: Gated Recurrent Unit (Simplified LSTM)</h2>
+            <p>GRUs are a lighter-weight alternative to LSTMs with fewer gates but similar performance. They're simpler to train and often preferred when computational resources are limited.</p>
+
+            <div class="interactive-container">
+                <h3>LSTM vs GRU Comparison</h3>
+                <div style="margin: 1rem 0;">
+                    <button class="toggle-btn active" onclick="toggleComparison('lstm')">LSTM</button>
+                    <button class="toggle-btn" onclick="toggleComparison('gru')">GRU</button>
+                </div>
+
+                <div id="comparison-view" style="margin-top: 1.5rem;">
+                    <svg id="arch-diagram" width="100%" viewBox="0 0 700 300" style="min-height: 300px;">
+                        <!-- Architecture diagram -->
+                    </svg>
+                </div>
+            </div>
+
+            <h3>Quick Comparison Table</h3>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Aspect</th>
+                        <th>LSTM</th>
+                        <th>GRU</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Gates</strong></td>
+                        <td>3 (forget, input, output)</td>
+                        <td>2 (reset, update)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Parameters</strong></td>
+                        <td>4x input/hidden dims</td>
+                        <td>3x input/hidden dims</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Training Speed</strong></td>
+                        <td>Slower</td>
+                        <td>Faster</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Performance</strong></td>
+                        <td>Excellent on long sequences</td>
+                        <td>Often comparable to LSTM</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Use When</strong></td>
+                        <td>Data is abundant, compute available</td>
+                        <td>Need speed, limited resources</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Understanding GRU Gates</h3>
+            <p><strong>Reset gate:</strong> Controls how much of the previous hidden state to forget. Low value = "reset" the memory.</p>
+            <p><strong>Update gate:</strong> Controls how much of the new hidden state candidate to keep vs. how much of the old state to preserve.</p>
+        </section>
+
+        <!-- Sequence-to-Sequence -->
+        <section class="fade-in">
+            <h2>Seq2Seq: Encoding and Decoding</h2>
+            <p>RNNs shine in sequence-to-sequence tasks: reading one sequence (like French) and generating another (like English). The architecture has two parts:</p>
+            <p><strong>1. Encoder RNN:</strong> Reads the source language word-by-word, building up a hidden state.</p>
+            <p><strong>2. Decoder RNN:</strong> Uses that final hidden state as a starting point to generate the target language word-by-word.</p>
+
+            <div class="svg-container">
+                <svg id="seq2seq-diagram" width="100%" viewBox="0 0 800 300" style="min-height: 300px;">
+                    <!-- Seq2seq visualization -->
+                </svg>
+            </div>
+
+            <div class="interactive-container">
+                <h3>Try Translation</h3>
+                <p>Watch how the encoder processes French and passes context to the decoder:</p>
+
+                <select id="translation-pair" onchange="updateTranslationViz()">
+                    <option value="french">French → English: "Chat mange souris"</option>
+                    <option value="spanish">Spanish → English: "Gato come ratón"</option>
+                    <option value="german">German → English: "Katze frisst Maus"</option>
+                </select>
+
+                <button onclick="animateTranslation()" style="width: 100%; margin-top: 1rem;">Animate Translation</button>
+                <div id="translation-output" style="margin-top: 1rem; background: var(--card); padding: 1rem; border-radius: 6px; display: none;">
+                    <p style="color: var(--muted); font-size: 0.9rem;">Source: <span id="source-text"></span></p>
+                    <p style="color: var(--accent2); font-size: 0.9rem; margin-top: 0.5rem;">Target: <span id="target-text"></span></p>
+                </div>
+            </div>
+
+            <h3>The Bottleneck Problem</h3>
+            <p>Notice the problem: everything—the entire meaning of the source sentence—must be squeezed into a single vector (the final hidden state). For long sentences, this becomes a bottleneck. This is why <strong>attention mechanisms</strong> (Module 05) were invented: to let the decoder focus on different parts of the encoder output at each step.</p>
+        </section>
+
+        <!-- Python Code -->
+        <section class="fade-in">
+            <h2>Implementation: PyTorch Code</h2>
+
+            <h3>Simple RNN in PyTorch</h3>
+            <div class="code-block" data-language="python">
+                <pre><span class="keyword">import</span> torch
+<span class="keyword">import</span> torch.nn <span class="keyword">as</span> nn
+
+<span class="comment"># Simple RNN cell</span>
+rnn = nn.RNN(input_size=100, hidden_size=256, batch_first=<span class="keyword">True</span>)
+
+<span class="comment"># Input: (batch_size, seq_len, input_size)</span>
+x = torch.randn(32, 10, 100)  <span class="comment"># 32 sequences, 10 time steps, 100D embeddings</span>
+
+<span class="comment"># Forward pass</span>
+output, hidden = rnn(x)  <span class="comment"># output: (32, 10, 256), hidden: (1, 32, 256)</span>
+</pre>
+            </div>
+
+            <h3>LSTM Cell in PyTorch</h3>
+            <div class="code-block" data-language="python">
+                <pre><span class="comment"># LSTM is just a drop-in replacement</span>
+lstm = nn.LSTM(input_size=100, hidden_size=256, num_layers=2,
+               batch_first=<span class="keyword">True</span>, dropout=0.5)
+
+x = torch.randn(32, 10, 100)
+
+<span class="comment"># Forward pass returns output and (hidden_state, cell_state)</span>
+output, (h_n, c_n) = lstm(x)
+<span class="comment"># output: (32, 10, 256)</span>
+<span class="comment"># h_n: (2, 32, 256) - hidden state for 2 layers</span>
+<span class="comment"># c_n: (2, 32, 256) - cell state for 2 layers</span>
+</pre>
+            </div>
+
+            <h3>Sequence Classification</h3>
+            <div class="code-block" data-language="python">
+                <pre><span class="keyword">class</span> <span class="function">SentimentClassifier</span>(nn.Module):
+    <span class="keyword">def</span> <span class="function">__init__</span>(<span class="keyword">self</span>):
+        <span class="keyword">super</span>().__init__()
+        <span class="keyword">self</span>.embedding = nn.Embedding(vocab_size=10000, embedding_dim=100)
+        <span class="keyword">self</span>.lstm = nn.LSTM(input_size=100, hidden_size=128, batch_first=<span class="keyword">True</span>)
+        <span class="keyword">self</span>.fc = nn.Linear(128, 2)  <span class="comment"># Binary classification</span>
+
+    <span class="keyword">def</span> <span class="function">forward</span>(<span class="keyword">self</span>, x):
+        x = <span class="keyword">self</span>.embedding(x)  <span class="comment"># (batch, seq_len) → (batch, seq_len, 100)</span>
+        _, (h_n, _) = <span class="keyword">self</span>.lstm(x)  <span class="comment"># Use final hidden state</span>
+        logits = <span class="keyword">self</span>.fc(h_n.squeeze(0))  <span class="comment"># (batch, 2)</span>
+        <span class="keyword">return</span> logits
+</pre>
+            </div>
+
+            <h3>Bidirectional LSTM</h3>
+            <div class="code-block" data-language="python">
+                <pre><span class="comment"># Process sequence in both directions</span>
+bilstm = nn.LSTM(input_size=100, hidden_size=128,
+                 bidirectional=<span class="keyword">True</span>, batch_first=<span class="keyword">True</span>)
+
+x = torch.randn(32, 10, 100)
+output, (h_n, c_n) = bilstm(x)
+
+<span class="comment"># output shape: (32, 10, 256) - 256 because bidirectional doubles hidden_size</span>
+<span class="comment"># h_n shape: (2, 32, 128) - 2 because forward + backward</span>
+</pre>
+            </div>
+
+            <h3>Sequence-to-Sequence Model</h3>
+            <div class="code-block" data-language="python">
+                <pre><span class="keyword">class</span> <span class="function">Seq2SeqModel</span>(nn.Module):
+    <span class="keyword">def</span> <span class="function">__init__</span>(<span class="keyword">self</span>, input_size, output_size, hidden_size=256):
+        <span class="keyword">super</span>().__init__()
+        <span class="keyword">self</span>.encoder_embed = nn.Embedding(input_size, 100)
+        <span class="keyword">self</span>.encoder = nn.LSTM(100, hidden_size, batch_first=<span class="keyword">True</span>)
+
+        <span class="keyword">self</span>.decoder_embed = nn.Embedding(output_size, 100)
+        <span class="keyword">self</span>.decoder = nn.LSTM(100, hidden_size, batch_first=<span class="keyword">True</span>)
+        <span class="keyword">self</span>.fc = nn.Linear(hidden_size, output_size)
+
+    <span class="keyword">def</span> <span class="function">forward</span>(<span class="keyword">self</span>, src, tgt):
+        <span class="comment"># Encode source sequence</span>
+        src_emb = <span class="keyword">self</span>.encoder_embed(src)
+        _, (h_n, c_n) = <span class="keyword">self</span>.encoder(src_emb)
+
+        <span class="comment"># Decode target sequence using encoder's final state</span>
+        tgt_emb = <span class="keyword">self</span>.decoder_embed(tgt)
+        decoder_out, _ = <span class="keyword">self</span>.decoder(tgt_emb, (h_n, c_n))
+
+        <span class="comment"># Generate logits</span>
+        logits = <span class="keyword">self</span>.fc(decoder_out)
+        <span class="keyword">return</span> logits
+</pre>
+            </div>
+        </section>
+
+        <!-- Footer Navigation -->
+        <div class="nav-footer">
+            <a href="03-embeddings.html">← Word Embeddings</a>
+            <a href="05-attention.html">Attention Mechanism →</a>
+        </div>
+    </main>
+
+    <script>
+        // Scroll-triggered fade-in animations
+        const observerOptions = {
+            threshold: 0.15,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+        // ============ VANILLA RNN PROCESSING ============
+        function processRNNSequence() {
+            const input = document.getElementById('rnn-input').value.trim();
+            if (!input) {
+                alert('Please enter a sentence');
+                return;
+            }
+
+            const words = input.toLowerCase().split(/\s+/);
+            const outputDiv = document.getElementById('rnn-output');
+            outputDiv.innerHTML = '';
+
+            let html = '<h4 style="margin-bottom: 1rem; color: var(--accent2);">Processing Steps:</h4>';
+            html += '<div style="display: flex; flex-direction: column; gap: 0.8rem;">';
+
+            let hiddenState = 0.5; // Initial hidden state
+            const memory = [];
+
+            words.forEach((word, idx) => {
+                const wordHash = word.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % 100 / 100;
+                hiddenState = Math.tanh(0.7 * hiddenState + 0.3 * wordHash);
+                memory.push({ word, hidden: hiddenState });
+
+                const intensity = Math.round(hiddenState * 100);
+                html += `
+                    <div style="background: var(--card); padding: 1rem; border-radius: 6px; border-left: 4px solid var(--accent);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <span style="font-weight: 600; color: var(--accent2);">Step ${idx + 1}: "${word}"</span>
+                            <span style="font-size: 0.9rem; color: var(--muted);">Memory: ${intensity}%</span>
+                        </div>
+                        <div style="width: 100%; height: 20px; background: var(--surface); border-radius: 3px; overflow: hidden;">
+                            <div style="height: 100%; width: ${intensity}%; background: linear-gradient(90deg, #6c63ff, #00d2ff); transition: width 0.3s ease;"></div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            outputDiv.innerHTML = html;
+
+            // Draw RNN diagram
+            drawRNNDiagram(memory);
+        }
+
+        function drawRNNDiagram(memory) {
+            const svg = document.getElementById('rnn-diagram');
+            const width = svg.clientWidth || 700;
+            const height = 300;
+            svg.setAttribute('viewBox', `0 0 ${width} 300`);
+            svg.innerHTML = '';
+
+            const cellWidth = (width - 60) / Math.max(memory.length, 1);
+
+            // Title
+            const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            title.setAttribute('x', '20');
+            title.setAttribute('y', '25');
+            title.setAttribute('font-size', '14');
+            title.setAttribute('fill', '#8888a0');
+            title.setAttribute('font-weight', '500');
+            title.textContent = 'Unrolled RNN Over Time';
+            svg.appendChild(title);
+
+            memory.forEach((item, i) => {
+                const x = 30 + i * cellWidth;
+                const y = 80;
+
+                // Word input box
+                const wordBox = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', x);
+                rect.setAttribute('y', y);
+                rect.setAttribute('width', cellWidth - 10);
+                rect.setAttribute('height', 40);
+                rect.setAttribute('fill', '#1a1a2e');
+                rect.setAttribute('stroke', '#2a2a3e');
+                rect.setAttribute('stroke-width', '1');
+                rect.setAttribute('rx', '4');
+                wordBox.appendChild(rect);
+
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', x + (cellWidth - 10) / 2);
+                text.setAttribute('y', y + 27);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('font-size', '12');
+                text.setAttribute('fill', '#e0e0e8');
+                text.setAttribute('font-weight', '500');
+                text.textContent = item.word;
+                wordBox.appendChild(text);
+                svg.appendChild(wordBox);
+
+                // Hidden state bar
+                const barHeight = 60;
+                const hiddenY = y + 80;
+                const intensity = item.hidden * 100;
+
+                const bgBar = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                bgBar.setAttribute('x', x);
+                bgBar.setAttribute('y', hiddenY);
+                bgBar.setAttribute('width', cellWidth - 10);
+                bgBar.setAttribute('height', barHeight);
+                bgBar.setAttribute('fill', 'var(--card)');
+                bgBar.setAttribute('stroke', '#2a2a3e');
+                bgBar.setAttribute('rx', '4');
+                svg.appendChild(bgBar);
+
+                const memoryBar = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                memoryBar.setAttribute('x', x);
+                memoryBar.setAttribute('y', hiddenY + barHeight * (1 - item.hidden));
+                memoryBar.setAttribute('width', cellWidth - 10);
+                memoryBar.setAttribute('height', barHeight * item.hidden);
+                memoryBar.setAttribute('fill', `rgb(108, 99, 255)`);
+                memoryBar.setAttribute('opacity', '0.7');
+                memoryBar.setAttribute('rx', '4');
+                svg.appendChild(memoryBar);
+
+                // Hidden state label
+                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                label.setAttribute('x', x + (cellWidth - 10) / 2);
+                label.setAttribute('y', hiddenY - 10);
+                label.setAttribute('text-anchor', 'middle');
+                label.setAttribute('font-size', '11');
+                label.setAttribute('fill', '#8888a0');
+                label.textContent = 'h_t';
+                svg.appendChild(label);
+
+                // Arrows between cells
+                if (i < memory.length - 1) {
+                    const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    arrow.setAttribute('x1', x + cellWidth - 10);
+                    arrow.setAttribute('y1', hiddenY + barHeight / 2);
+                    arrow.setAttribute('x2', x + cellWidth);
+                    arrow.setAttribute('y2', hiddenY + barHeight / 2);
+                    arrow.setAttribute('stroke', '#6c63ff');
+                    arrow.setAttribute('stroke-width', '2');
+                    arrow.setAttribute('marker-end', 'url(#arrowhead)');
+                    svg.appendChild(arrow);
+                }
+            });
+
+            // Arrow marker definition
+            const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+            const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+            marker.setAttribute('id', 'arrowhead');
+            marker.setAttribute('markerWidth', '10');
+            marker.setAttribute('markerHeight', '10');
+            marker.setAttribute('refX', '9');
+            marker.setAttribute('refY', '3');
+            marker.setAttribute('orient', 'auto');
+            const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            polygon.setAttribute('points', '0 0, 10 3, 0 6');
+            polygon.setAttribute('fill', '#6c63ff');
+            marker.appendChild(polygon);
+            defs.appendChild(marker);
+            svg.appendChild(defs);
+        }
+
+        // ============ VANISHING GRADIENT VISUALIZATION ============
+        function updateGradientVisualization() {
+            const seqLength = parseInt(document.getElementById('seq-length').value);
+            document.getElementById('length-display').textContent = seqLength;
+
+            const container = document.getElementById('gradient-viz');
+            container.innerHTML = '';
+
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('width', '100%');
+            svg.setAttribute('viewBox', '0 0 800 300');
+            svg.setAttribute('style', 'min-height: 300px;');
+
+            // Title
+            const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            title.setAttribute('x', '20');
+            title.setAttribute('y', '25');
+            title.setAttribute('font-size', '14');
+            title.setAttribute('fill', '#8888a0');
+            title.setAttribute('font-weight', '500');
+            title.textContent = 'Gradient Magnitude Backpropagating Through Time';
+            svg.appendChild(title);
+
+            const barWidth = (760) / seqLength;
+            const maxHeight = 200;
+
+            for (let i = 0; i < seqLength; i++) {
+                const x = 20 + i * barWidth;
+                const y = 60;
+
+                // Gradient magnitude decreases exponentially
+                const gradient = Math.pow(0.9, seqLength - i);
+                const height = maxHeight * gradient;
+                const isVanished = gradient < 0.01;
+
+                // Background
+                const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                bg.setAttribute('x', x);
+                bg.setAttribute('y', y);
+                bg.setAttribute('width', barWidth - 2);
+                bg.setAttribute('height', maxHeight);
+                bg.setAttribute('fill', isVanished ? 'rgba(255, 107, 107, 0.05)' : 'rgba(26, 26, 46, 0.5)');
+                svg.appendChild(bg);
+
+                // Gradient bar
+                const bar = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                bar.setAttribute('x', x);
+                bar.setAttribute('y', y + maxHeight - height);
+                bar.setAttribute('width', barWidth - 2);
+                bar.setAttribute('height', height);
+                bar.setAttribute('fill', isVanished ? '#ff6b6b' : '#6c63ff');
+                bar.setAttribute('opacity', '0.8');
+                svg.appendChild(bar);
+
+                // Time step label
+                if (i % Math.ceil(seqLength / 8) === 0) {
+                    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    label.setAttribute('x', x + barWidth / 2);
+                    label.setAttribute('y', y + maxHeight + 20);
+                    label.setAttribute('text-anchor', 'middle');
+                    label.setAttribute('font-size', '10');
+                    label.setAttribute('fill', '#8888a0');
+                    label.textContent = `t=${i}`;
+                    svg.appendChild(label);
+                }
+            }
+
+            // Red zone annotation
+            const redZoneText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            redZoneText.setAttribute('x', '750');
+            redZoneText.setAttribute('y', '100');
+            redZoneText.setAttribute('font-size', '11');
+            redZoneText.setAttribute('fill', '#ff6b6b');
+            redZoneText.setAttribute('text-anchor', 'end');
+            redZoneText.textContent = 'Vanishing Gradient Zone';
+            svg.appendChild(redZoneText);
+
+            container.appendChild(svg);
+        }
+
+        // ============ LSTM GATE EXPLORATION ============
+        let currentLSTMGate = -1;
+        const lstmGates = [
+            {
+                name: 'Forget Gate',
+                emoji: '🚪',
+                description: 'Controls what information to discard from the previous cell state.',
+                formula: 'f_t = σ(W_f · [h_{t-1}, x_t] + b_f)',
+                explanation: 'The forget gate learns which parts of the previous cell state to keep. A sigmoid output near 0 means "forget", near 1 means "keep".'
+            },
+            {
+                name: 'Input Gate',
+                emoji: '📥',
+                description: 'Controls what new information to add to the cell state.',
+                formula: 'i_t = σ(W_i · [h_{t-1}, x_t] + b_i)\nC̃_t = tanh(W_c · [h_{t-1}, x_t] + b_c)',
+                explanation: 'The input gate decides which new values to add. The tanh layer produces candidate values. Together they update the cell state with relevant new information.'
+            },
+            {
+                name: 'Cell State Update',
+                emoji: '🚂',
+                description: 'Updates the cell state (the "memory highway").',
+                formula: 'C_t = f_t ⊙ C_{t-1} + i_t ⊙ C̃_t',
+                explanation: 'The cell state is updated by forgetting old information (f_t ⊙ C_{t-1}) and adding new information (i_t ⊙ C̃_t). The ⊙ symbol means element-wise multiplication.'
+            },
+            {
+                name: 'Output Gate',
+                emoji: '📤',
+                description: 'Controls what information to output as the hidden state.',
+                formula: 'o_t = σ(W_o · [h_{t-1}, x_t] + b_o)\nh_t = o_t ⊙ tanh(C_t)',
+                explanation: 'The output gate filters the cell state through a tanh, deciding what gets passed to the next time step. This hidden state h_t is used for predictions and passed forward.'
+            }
+        ];
+
+        function nextLSTMGate() {
+            currentLSTMGate = (currentLSTMGate + 1) % lstmGates.length;
+            displayLSTMGate();
+        }
+
+        function resetLSTMGate() {
+            currentLSTMGate = -1;
+            const exp = document.getElementById('lstm-explanation');
+            exp.innerHTML = '<p style="color: var(--muted); text-align: center;">Click "Next Gate" to begin exploring the LSTM cell...</p>';
+            drawLSTMCell();
+        }
+
+        function displayLSTMGate() {
+            const gate = lstmGates[currentLSTMGate];
+            const exp = document.getElementById('lstm-explanation');
+
+            exp.innerHTML = `
+                <h4 style="color: var(--accent2); margin-bottom: 0.5rem;">${gate.emoji} ${gate.name}</h4>
+                <p style="color: var(--text); margin-bottom: 1rem;">${gate.description}</p>
+                <div style="background: var(--surface); padding: 1rem; border-radius: 4px; border-left: 3px solid var(--accent); margin-bottom: 1rem;">
+                    <p style="font-family: monospace; color: var(--accent); font-size: 0.9rem; margin: 0;">${gate.formula}</p>
+                </div>
+                <p style="color: var(--text); font-size: 0.95rem;">${gate.explanation}</p>
+            `;
+
+            drawLSTMCell();
+        }
+
+        function drawLSTMCell() {
+            const svg = document.getElementById('lstm-diagram');
+            svg.innerHTML = '';
+
+            const width = 800;
+            const height = 400;
+
+            // Background
+            const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            bg.setAttribute('width', width);
+            bg.setAttribute('height', height);
+            bg.setAttribute('fill', 'rgba(26, 26, 46, 0.3)');
+            svg.appendChild(bg);
+
+            // Title
+            const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            title.setAttribute('x', '20');
+            title.setAttribute('y', '25');
+            title.setAttribute('font-size', '14');
+            title.setAttribute('fill', '#8888a0');
+            title.setAttribute('font-weight', '500');
+            title.textContent = 'LSTM Cell Architecture';
+            svg.appendChild(title);
+
+            // Input
+            drawBox(svg, 50, 150, 60, 40, 'x_t', '#ff6b6b');
+
+            // Previous hidden state
+            drawBox(svg, 50, 240, 60, 40, 'h_{t-1}', '#ff9c6e');
+
+            // Previous cell state
+            drawBox(svg, 50, 330, 60, 40, 'C_{t-1}', '#ffd93d');
+
+            // Forget gate
+            const forgetColor = currentLSTMGate === 0 ? '#00d2ff' : '#6c63ff';
+            drawGate(svg, 200, 200, 'Forget\nGate', 'f_t', forgetColor);
+
+            // Input gate + candidate
+            const inputColor = currentLSTMGate === 1 ? '#00d2ff' : '#6c63ff';
+            drawGate(svg, 350, 200, 'Input\nGate', 'i_t', inputColor);
+            drawGate(svg, 350, 300, 'Candidate\nValues', 'C̃_t', '#a0e7a0');
+
+            // Cell state
+            const cellColor = currentLSTMGate === 2 ? '#00d2ff' : '#6c63ff';
+            drawBox(svg, 500, 280, 80, 60, 'C_t', cellColor);
+
+            // Output gate
+            const outputColor = currentLSTMGate === 3 ? '#00d2ff' : '#6c63ff';
+            drawGate(svg, 650, 240, 'Output\nGate', 'o_t', outputColor);
+
+            // Output hidden state
+            drawBox(svg, 750, 180, 60, 40, 'h_t', '#00d2ff');
+
+            // Connection lines
+            // Inputs to gates
+            drawArrow(svg, 110, 170, 200, 220);
+            drawArrow(svg, 110, 260, 200, 220);
+            drawArrow(svg, 110, 260, 350, 220);
+            drawArrow(svg, 110, 170, 350, 220);
+            drawArrow(svg, 110, 350, 350, 320);
+
+            // Previous cell state through forget gate
+            drawArrow(svg, 110, 350, 200, 280);
+            drawArrow(svg, 280, 240, 500, 300, '#ffd93d');
+
+            // Input gate output
+            drawArrow(svg, 430, 230, 500, 310);
+
+            // Candidate values
+            drawArrow(svg, 430, 330, 500, 320);
+
+            // Cell state forward
+            drawArrow(svg, 580, 310, 650, 280, '#6c63ff');
+
+            // Cell state to output gate
+            drawArrow(svg, 540, 280, 650, 260, '#ffd93d');
+
+            // Inputs to output gate
+            drawArrow(svg, 110, 170, 650, 220);
+            drawArrow(svg, 110, 260, 650, 240);
+
+            // Output
+            drawArrow(svg, 710, 260, 750, 200);
+
+            // Legend
+            const legend = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            legend.setAttribute('x', '20');
+            legend.setAttribute('y', 'height - 10');
+            legend.setAttribute('font-size', '10');
+            legend.setAttribute('fill', '#8888a0');
+            if (currentLSTMGate >= 0) {
+                legend.textContent = `Exploring: ${lstmGates[currentLSTMGate].name}`;
+            } else {
+                legend.textContent = 'All LSTM gates work together to preserve and update memory';
+            }
+            svg.appendChild(legend);
+        }
+
+        function drawBox(svg, x, y, w, h, label, color) {
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('x', x);
+            rect.setAttribute('y', y);
+            rect.setAttribute('width', w);
+            rect.setAttribute('height', h);
+            rect.setAttribute('fill', color);
+            rect.setAttribute('opacity', '0.3');
+            rect.setAttribute('stroke', color);
+            rect.setAttribute('stroke-width', '2');
+            rect.setAttribute('rx', '4');
+            svg.appendChild(rect);
+
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', x + w / 2);
+            text.setAttribute('y', y + h / 2 + 4);
+            text.setAttribute('text-anchor', 'middle');
+            text.setAttribute('font-size', '11');
+            text.setAttribute('fill', color);
+            text.setAttribute('font-weight', '600');
+            text.textContent = label;
+            svg.appendChild(text);
+        }
+
+        function drawGate(svg, x, y, label, output, color) {
+            // Circle for gate
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', x + 25);
+            circle.setAttribute('cy', y + 25);
+            circle.setAttribute('r', '25');
+            circle.setAttribute('fill', color);
+            circle.setAttribute('opacity', '0.2');
+            circle.setAttribute('stroke', color);
+            circle.setAttribute('stroke-width', '2');
+            svg.appendChild(circle);
+
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', x + 25);
+            text.setAttribute('y', y + 30);
+            text.setAttribute('text-anchor', 'middle');
+            text.setAttribute('font-size', '9');
+            text.setAttribute('fill', color);
+            text.setAttribute('font-weight', '600');
+            text.textContent = label;
+            svg.appendChild(text);
+
+            const outputLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            outputLabel.setAttribute('x', x + 25);
+            outputLabel.setAttribute('y', y + 60);
+            outputLabel.setAttribute('text-anchor', 'middle');
+            outputLabel.setAttribute('font-size', '10');
+            outputLabel.setAttribute('fill', color);
+            outputLabel.setAttribute('font-weight', '700');
+            outputLabel.textContent = output;
+            svg.appendChild(outputLabel);
+        }
+
+        function drawArrow(svg, x1, y1, x2, y2, color = '#6c63ff') {
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', x1);
+            line.setAttribute('y1', y1);
+            line.setAttribute('x2', x2);
+            line.setAttribute('y2', y2);
+            line.setAttribute('stroke', color);
+            line.setAttribute('stroke-width', '1.5');
+            line.setAttribute('marker-end', `url(#arrow-${color.replace('#', '')})`);
+            svg.appendChild(line);
+
+            // Add marker if not exists
+            if (!svg.querySelector(`#arrow-${color.replace('#', '')}`)) {
+                const defs = svg.querySelector('defs') || document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+                const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+                marker.setAttribute('id', `arrow-${color.replace('#', '')}`);
+                marker.setAttribute('markerWidth', '10');
+                marker.setAttribute('markerHeight', '10');
+                marker.setAttribute('refX', '8');
+                marker.setAttribute('refY', '3');
+                marker.setAttribute('orient', 'auto');
+                const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                poly.setAttribute('points', '0 0, 10 3, 0 6');
+                poly.setAttribute('fill', color);
+                marker.appendChild(poly);
+                defs.appendChild(marker);
+                if (!svg.querySelector('defs')) {
+                    svg.insertBefore(defs, svg.firstChild);
+                }
+            }
+        }
+
+        // ============ GRU vs LSTM TOGGLE ============
+        let comparisonMode = 'lstm';
+
+        function toggleComparison(mode) {
+            comparisonMode = mode;
+            document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            drawArchitectureDiagram();
+        }
+
+        function drawArchitectureDiagram() {
+            const svg = document.getElementById('arch-diagram');
+            svg.innerHTML = '';
+
+            const width = 700;
+            const height = 300;
+
+            // Background
+            const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            bg.setAttribute('width', width);
+            bg.setAttribute('height', height);
+            bg.setAttribute('fill', 'rgba(26, 26, 46, 0.3)');
+            svg.appendChild(bg);
+
+            if (comparisonMode === 'lstm') {
+                drawLSTMArchitecture(svg);
+            } else {
+                drawGRUArchitecture(svg);
+            }
+        }
+
+        function drawLSTMArchitecture(svg) {
+            const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            title.setAttribute('x', '20');
+            title.setAttribute('y', '25');
+            title.setAttribute('font-size', '14');
+            title.setAttribute('fill', '#8888a0');
+            title.setAttribute('font-weight', '500');
+            title.textContent = 'LSTM: 3 Gates + Cell State';
+            svg.appendChild(title);
+
+            // Inputs
+            drawBox(svg, 40, 100, 50, 30, 'x_t', '#ff6b6b');
+            drawBox(svg, 40, 150, 50, 30, 'h_{t-1}', '#ff9c6e');
+
+            // Forget gate
+            drawGate(svg, 150, 80, 'Forget', 'f_t', '#6c63ff');
+
+            // Input gate + candidate
+            drawGate(svg, 250, 80, 'Input', 'i_t', '#6c63ff');
+            drawGate(svg, 250, 160, 'Candidate', 'C̃', '#a0e7a0');
+
+            // Cell state
+            drawBox(svg, 400, 100, 70, 100, 'C_t\n(Cell\nState)', '#ffd93d');
+
+            // Output gate
+            drawGate(svg, 550, 120, 'Output', 'o_t', '#6c63ff');
+
+            // Output
+            drawBox(svg, 600, 100, 50, 30, 'h_t', '#00d2ff');
+
+            // Key feature annotation
+            const annotation = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            annotation.setAttribute('x', '350');
+            annotation.setAttribute('y', '270');
+            annotation.setAttribute('text-anchor', 'middle');
+            annotation.setAttribute('font-size', '12');
+            annotation.setAttribute('fill', '#ffd93d');
+            annotation.setAttribute('font-weight', '600');
+            annotation.textContent = '⚡ Cell State is a separate "highway" for gradients';
+            svg.appendChild(annotation);
+        }
+
+        function drawGRUArchitecture(svg) {
+            const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            title.setAttribute('x', '20');
+            title.setAttribute('y', '25');
+            title.setAttribute('font-size', '14');
+            title.setAttribute('fill', '#8888a0');
+            title.setAttribute('font-weight', '500');
+            title.textContent = 'GRU: 2 Gates (Simplified LSTM)';
+            svg.appendChild(title);
+
+            // Inputs
+            drawBox(svg, 40, 100, 50, 30, 'x_t', '#ff6b6b');
+            drawBox(svg, 40, 150, 50, 30, 'h_{t-1}', '#ff9c6e');
+
+            // Reset gate
+            drawGate(svg, 150, 100, 'Reset', 'r_t', '#6c63ff');
+
+            // Update gate + candidate
+            drawGate(svg, 280, 100, 'Update', 'z_t', '#6c63ff');
+
+            // Candidate hidden state (uses reset gate to gate previous state)
+            drawBox(svg, 400, 80, 90, 70, 'h̃_t\n(Candidate\nHidden)', '#a0e7a0');
+
+            // Output (combination of old and new)
+            drawBox(svg, 570, 100, 60, 30, 'h_t', '#00d2ff');
+
+            // Key feature annotation
+            const annotation = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            annotation.setAttribute('x', '350');
+            annotation.setAttribute('y', '270');
+            annotation.setAttribute('text-anchor', 'middle');
+            annotation.setAttribute('font-size', '12');
+            annotation.setAttribute('fill', '#a0e7a0');
+            annotation.setAttribute('font-weight', '600');
+            annotation.textContent = '⚡ No separate cell state, fewer parameters, often comparable performance';
+            svg.appendChild(annotation);
+        }
+
+        // ============ SEQ2SEQ VISUALIZATION ============
+        const translationPairs = {
+            french: { source: 'Chat mange souris', target: 'Cat eats mouse' },
+            spanish: { source: 'Gato come ratón', target: 'Cat eats mouse' },
+            german: { source: 'Katze frisst Maus', target: 'Cat eats mouse' }
+        };
+
+        function updateTranslationViz() {
+            drawSeq2SeqDiagram();
+        }
+
+        function drawSeq2SeqDiagram() {
+            const svg = document.getElementById('seq2seq-diagram');
+            svg.innerHTML = '';
+
+            const width = 800;
+            const height = 300;
+
+            // Background
+            const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            bg.setAttribute('width', width);
+            bg.setAttribute('height', height);
+            bg.setAttribute('fill', 'rgba(26, 26, 46, 0.3)');
+            svg.appendChild(bg);
+
+            // Title
+            const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            title.setAttribute('x', '20');
+            title.setAttribute('y', '25');
+            title.setAttribute('font-size', '14');
+            title.setAttribute('fill', '#8888a0');
+            title.setAttribute('font-weight', '500');
+            title.textContent = 'Sequence-to-Sequence: Encoder-Decoder Architecture';
+            svg.appendChild(title);
+
+            const pair = translationPairs[document.getElementById('translation-pair').value];
+            const srcWords = pair.source.split(' ');
+            const tgtWords = pair.target.split(' ');
+
+            // Encoder
+            const encLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            encLabel.setAttribute('x', '100');
+            encLabel.setAttribute('y', '65');
+            encLabel.setAttribute('font-size', '12');
+            encLabel.setAttribute('fill', '#6c63ff');
+            encLabel.setAttribute('font-weight', '600');
+            encLabel.textContent = 'ENCODER';
+            svg.appendChild(encLabel);
+
+            srcWords.forEach((word, i) => {
+                const x = 40 + i * 70;
+                const y = 100;
+                drawBox(svg, x, y, 60, 30, word, '#6c63ff');
+
+                if (i < srcWords.length - 1) {
+                    drawArrow(svg, x + 60, y + 15, x + 70, y + 15, '#6c63ff');
+                }
+            });
+
+            // Context vector (bottleneck)
+            const contextX = 40 + srcWords.length * 70 + 50;
+            const ctx = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            ctx.setAttribute('x', contextX);
+            ctx.setAttribute('y', 100);
+            ctx.setAttribute('width', 80);
+            ctx.setAttribute('height', 30);
+            ctx.setAttribute('fill', '#ff6b6b');
+            ctx.setAttribute('opacity', '0.3');
+            ctx.setAttribute('stroke', '#ff6b6b');
+            ctx.setAttribute('stroke-width', '2');
+            ctx.setAttribute('rx', '4');
+            svg.appendChild(ctx);
+
+            const ctxText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            ctxText.setAttribute('x', contextX + 40);
+            ctxText.setAttribute('y', '122');
+            ctxText.setAttribute('text-anchor', 'middle');
+            ctxText.setAttribute('font-size', '11');
+            ctxText.setAttribute('fill', '#ff6b6b');
+            ctxText.setAttribute('font-weight', '600');
+            ctxText.textContent = 'Context';
+            svg.appendChild(ctxText);
+
+            // Arrow from last encoder to context
+            drawArrow(svg, 40 + (srcWords.length - 1) * 70 + 60, 115, contextX, 115, '#ff6b6b');
+
+            // Decoder
+            const decLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            decLabel.setAttribute('x', contextX + 140);
+            decLabel.setAttribute('y', '65');
+            decLabel.setAttribute('font-size', '12');
+            decLabel.setAttribute('fill', '#00d2ff');
+            decLabel.setAttribute('font-weight', '600');
+            decLabel.textContent = 'DECODER';
+            svg.appendChild(decLabel);
+
+            const decoderStartX = contextX + 100;
+            tgtWords.forEach((word, i) => {
+                const x = decoderStartX + i * 70;
+                const y = 100;
+                drawBox(svg, x, y, 60, 30, word, '#00d2ff');
+
+                if (i < tgtWords.length - 1) {
+                    drawArrow(svg, x + 60, y + 15, x + 70, y + 15, '#00d2ff');
+                }
+            });
+
+            // Arrow from context to decoder start
+            drawArrow(svg, contextX + 80, 115, decoderStartX, 115, '#ff6b6b');
+
+            // Problem annotation
+            const problemBox = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            problemBox.setAttribute('x', '20');
+            problemBox.setAttribute('y', '220');
+            problemBox.setAttribute('width', '760');
+            problemBox.setAttribute('height', '60');
+            problemBox.setAttribute('fill', 'rgba(255, 107, 107, 0.05)');
+            problemBox.setAttribute('stroke', '#ff6b6b');
+            problemBox.setAttribute('stroke-width', '1');
+            problemBox.setAttribute('rx', '4');
+            svg.appendChild(problemBox);
+
+            const problemText1 = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            problemText1.setAttribute('x', '30');
+            problemText1.setAttribute('y', '240');
+            problemText1.setAttribute('font-size', '11');
+            problemText1.setAttribute('fill', '#ff6b6b');
+            problemText1.setAttribute('font-weight', '600');
+            problemText1.textContent = '⚠️ Bottleneck Problem:';
+            svg.appendChild(problemText1);
+
+            const problemText2 = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            problemText2.setAttribute('x', '30');
+            problemText2.setAttribute('y', '260');
+            problemText2.setAttribute('font-size', '10');
+            problemText2.setAttribute('fill', '#ff6b6b');
+            problemText2.textContent = 'The entire meaning of long source sentences must fit into one context vector. This is why Attention (Module 05) was invented!';
+            svg.appendChild(problemText2);
+        }
+
+        function animateTranslation() {
+            const pair = translationPairs[document.getElementById('translation-pair').value];
+            const output = document.getElementById('translation-output');
+
+            document.getElementById('source-text').textContent = pair.source;
+            document.getElementById('target-text').textContent = pair.target;
+
+            output.style.display = 'block';
+            output.style.animation = 'none';
+            setTimeout(() => {
+                output.style.animation = 'slideIn 0.6s ease-out';
+            }, 10);
+        }
+
+        // Initialize diagrams on load
+        window.addEventListener('load', () => {
+            drawLSTMCell();
+            drawSeq2SeqDiagram();
+            updateGradientVisualization();
+            drawArchitectureDiagram();
+        });
+    </script>
+</body>
+</html>
