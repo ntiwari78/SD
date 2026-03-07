@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 9: On-policy Prediction with Approximation — RL Interactive Curriculum</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
+<!-- KaTeX for LaTeX rendering -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<!-- Plotly for visualization -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+<!-- Highlight.js for code -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<style>
+:root {
+  --bg-deep: #0a0e1a;
+  --bg-card: #111827;
+  --bg-card-alt: #0f172a;
+  --bg-surface: #1e293b;
+  --border-subtle: rgba(255,255,255,0.06);
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent-indigo: #818cf8;
+  --accent-blue: #60a5fa;
+  --accent-cyan: #22d3ee;
+  --accent-emerald: #34d399;
+  --accent-amber: #fbbf24;
+  --accent-rose: #fb7185;
+  --accent-purple: #c084fc;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  line-height: 1.7;
+  font-size: 16px;
+}
+
+/* ───── Layout ───── */
+.page-wrapper {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+
+/* ───── Top Nav ───── */
+.top-nav {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(10,14,26,0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 12px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.top-nav a {
+  color: var(--text-secondary); text-decoration: none;
+  font-size: 14px; font-weight: 500;
+  display: flex; align-items: center; gap: 6px;
+  transition: color 0.2s;
+}
+.top-nav a:hover { color: var(--accent-indigo); }
+.nav-chapter-info {
+  font-size: 13px; color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.btn-complete {
+  padding: 8px 16px; border-radius: 8px; border: none;
+  background: linear-gradient(135deg, var(--accent-emerald), #10b981);
+  color: #022c22; font-weight: 600; font-size: 13px;
+  cursor: pointer; transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+.btn-complete:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(52,211,153,0.3); }
+.btn-complete.done { background: var(--bg-surface); color: var(--accent-emerald); cursor: default; }
+
+/* ───── Chapter Header ───── */
+.chapter-header {
+  text-align: center;
+  padding: 80px 0 48px;
+}
+.ch-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 14px; border-radius: 999px;
+  background: rgba(34,211,238,0.1);
+  border: 1px solid rgba(34,211,238,0.2);
+  font-size: 11px; font-weight: 700;
+  color: var(--accent-cyan);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.chapter-header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2.2rem, 5vw, 3.5rem);
+  font-weight: 900; line-height: 1.15;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #f1f5f9 0%, var(--accent-cyan) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.chapter-header .subtitle {
+  font-size: 18px; color: var(--text-secondary);
+  max-width: 580px; margin: 0 auto;
+}
+
+/* ───── Table of Contents ───── */
+.toc {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 24px 28px;
+  margin-bottom: 48px;
+}
+.toc h3 {
+  font-size: 13px; font-weight: 700;
+  color: var(--text-muted); letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.toc-list { list-style: none; }
+.toc-list li { margin-bottom: 6px; }
+.toc-list a {
+  color: var(--text-secondary); text-decoration: none;
+  font-size: 14px; font-weight: 500;
+  padding: 4px 8px; border-radius: 6px;
+  display: inline-block;
+  transition: all 0.2s;
+}
+.toc-list a:hover { color: var(--accent-indigo); background: rgba(129,140,248,0.08); }
+.toc-list .sec-num {
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  margin-right: 6px;
+}
+
+/* ───── Section Headers ───── */
+.section {
+  margin-bottom: 56px;
+}
+.section-label {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.section-label .icon { font-size: 16px; }
+.section-label.feynman { color: var(--accent-amber); }
+.section-label.technical { color: var(--accent-indigo); }
+.section-label.algorithm { color: var(--accent-emerald); }
+.section-label.sandbox { color: var(--accent-rose); }
+.section-label.interactive { color: var(--accent-cyan); }
+.section-label.sidebar { color: var(--accent-purple); }
+
+.section h2 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800; line-height: 1.2;
+  margin-bottom: 20px;
+}
+
+.section p, .section li {
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+}
+.section p strong, .section li strong { color: var(--text-primary); font-weight: 600; }
+
+/* ───── Info Cards / Callouts ───── */
+.callout {
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin: 24px 0;
+  border-left: 3px solid;
+}
+.callout.insight {
+  background: rgba(129,140,248,0.06);
+  border-color: var(--accent-indigo);
+}
+.callout.analogy {
+  background: rgba(251,191,36,0.06);
+  border-color: var(--accent-amber);
+}
+.callout.warning {
+  background: rgba(251,113,133,0.06);
+  border-color: var(--accent-rose);
+}
+.callout.definition {
+  background: rgba(52,211,153,0.06);
+  border-color: var(--accent-emerald);
+}
+.callout-title {
+  font-size: 13px; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.callout.insight .callout-title { color: var(--accent-indigo); }
+.callout.analogy .callout-title { color: var(--accent-amber); }
+.callout.warning .callout-title { color: var(--accent-rose); }
+.callout.definition .callout-title { color: var(--accent-emerald); }
+.callout p { margin-bottom: 8px; }
+.callout p:last-child { margin-bottom: 0; }
+
+/* ───── Math Toggle ───── */
+.math-toggle {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin: 24px 0;
+  overflow: hidden;
+}
+.math-toggle-header {
+  padding: 14px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.math-toggle-header:hover { background: rgba(255,255,255,0.02); }
+.math-toggle-header .label {
+  font-size: 14px; font-weight: 600;
+  color: var(--accent-purple);
+  display: flex; align-items: center; gap: 8px;
+}
+.math-toggle-header .chevron {
+  color: var(--text-muted); font-size: 14px;
+  transition: transform 0.3s;
+}
+.math-toggle.open .chevron { transform: rotate(180deg); }
+.math-toggle-body {
+  display: none;
+  padding: 0 20px 20px;
+  border-top: 1px solid var(--border-subtle);
+}
+.math-toggle.open .math-toggle-body { display: block; padding-top: 16px; }
+
+/* ───── KaTeX ───── */
+.katex-display { margin: 20px 0; overflow-x: auto; }
+.katex { font-size: 1.1em; }
+
+/* ───── Code Blocks ───── */
+.code-block {
+  background: #0d1117;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin: 24px 0;
+  overflow: hidden;
+}
+.code-header {
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.code-header .lang {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; color: var(--text-muted); font-weight: 600;
+}
+.code-header .copy-btn {
+  padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-subtle);
+  background: transparent; color: var(--text-muted);
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s;
+}
+.code-header .copy-btn:hover { border-color: var(--accent-indigo); color: var(--accent-indigo); }
+.code-block pre {
+  padding: 16px 20px;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.code-block pre code { background: none !important; padding: 0 !important; }
+
+/* ───── Scrubbable Numbers ───── */
+.scrubbable {
+  display: inline-block;
+  color: var(--accent-cyan);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  border-bottom: 2px dashed var(--accent-cyan);
+  cursor: ew-resize;
+  user-select: none;
+  padding: 0 2px;
+  transition: color 0.2s;
+}
+.scrubbable:hover {
+  color: #67e8f9;
+  background: rgba(34,211,238,0.1);
+  border-radius: 3px;
+}
+.scrub-hint {
+  font-size: 11px; color: var(--text-muted); font-style: italic;
+  margin-top: 4px;
+}
+
+/* ───── Interactive Demo Containers ───── */
+.demo-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 24px 0;
+}
+.demo-container h4 {
+  font-size: 15px; font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+
+/* ───── Canvas demos ───── */
+#linearApproxCanvas, #tilecodingCanvas {
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  display: block;
+  margin: 16px 0;
+  background: var(--bg-surface);
+}
+
+.canvas-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 12px;
+  font-style: italic;
+}
+
+/* ───── Sidebar ───── */
+.sidebar-bridge {
+  background: linear-gradient(135deg, rgba(192,132,252,0.08), rgba(34,211,238,0.06));
+  border: 1px solid rgba(192,132,252,0.2);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin: 32px 0;
+  border-left: 4px solid var(--accent-purple);
+}
+.sidebar-bridge .sidebar-label {
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--accent-purple);
+  margin-bottom: 8px;
+}
+.sidebar-bridge h4 {
+  font-size: 15px; font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+.sidebar-bridge p {
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+.sidebar-bridge p:last-child {
+  margin-bottom: 0;
+}
+
+/* ───── Socratic Questions ───── */
+.socratic-q {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin: 16px 0;
+  overflow: hidden;
+}
+.socratic-q-header {
+  padding: 14px 20px;
+  cursor: pointer;
+  display: flex; align-items: flex-start; gap: 12px;
+  transition: background 0.2s;
+}
+.socratic-q-header:hover { background: rgba(255,255,255,0.02); }
+.q-number {
+  flex-shrink: 0;
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: rgba(251,113,133,0.1);
+  color: var(--accent-rose);
+  font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+}
+.q-text {
+  font-size: 14px; font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.5;
+  flex: 1;
+}
+.q-expand {
+  flex-shrink: 0;
+  color: var(--text-muted); font-size: 12px;
+  transition: transform 0.3s;
+  margin-top: 4px;
+}
+.socratic-q.open .q-expand { transform: rotate(180deg); }
+.socratic-a {
+  display: none;
+  padding: 0 20px 16px 60px;
+  font-size: 14px; color: var(--text-secondary);
+  line-height: 1.65;
+}
+.socratic-q.open .socratic-a { display: block; }
+
+/* ───── Plot Container ───── */
+.plot-container {
+  margin: 24px 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+}
+
+/* ───── Responsive ───── */
+@media (max-width: 600px) {
+  .page-wrapper { padding: 0 16px 60px; }
+  #linearApproxCanvas, #tilecodingCanvas { max-width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<!-- ───── Top Navigation ───── -->
+<nav class="top-nav">
+  <a href="index.html">&#x2190; Skill Tree</a>
+  <span class="nav-chapter-info">Ch 9 / 17</span>
+  <button class="btn-complete" id="completeBtn" onclick="markChapterComplete()">&#x2713; Mark Complete</button>
+</nav>
+
+<div class="page-wrapper">
+
+<!-- ───── Chapter Header ───── -->
+<header class="chapter-header">
+  <div class="ch-badge">Function Approximation &middot; Chapter 9</div>
+  <h1>On-policy Prediction with Approximation</h1>
+  <p class="subtitle">Scaling value estimation from tiny tables to infinite state spaces using function approximators, feature engineering, and gradient descent.</p>
+</header>
+
+<!-- ───── Table of Contents ───── -->
+<div class="toc">
+  <h3>In This Chapter</h3>
+  <ol class="toc-list">
+    <li><a href="#feynman"><span class="sec-num">1</span> The Feynman Bridge: Learning House Price Rules</a></li>
+    <li><a href="#technical"><span class="sec-num">2</span> The Technical Ascent: VE, SGD, and Semi-gradient Methods</a></li>
+    <li><a href="#linear"><span class="sec-num">3</span> Linear Methods & Feature Construction</a></li>
+    <li><a href="#interactive-linear"><span class="sec-num">4</span> Interactive: Scrubbable Linear Approximation</a></li>
+    <li><a href="#tilecharts"><span class="sec-num">5</span> Interactive: Tile Coding Visualizer</a></li>
+    <li><a href="#algorithm"><span class="sec-num">6</span> Algorithm: Semi-gradient TD(0)</a></li>
+    <li><a href="#deep-bridge"><span class="sec-num">7</span> Deep RL Bridge: From Weights to Neural Networks</a></li>
+    <li><a href="#sandbox"><span class="sec-num">8</span> Socratic Sandbox: Debug & Explore</a></li>
+    <li><a href="#completion"><span class="sec-num">9</span> Completion & Next Steps</a></li>
+  </ol>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 1: FEYNMAN BRIDGE                              -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="feynman">
+  <div class="section-label feynman"><span class="icon">&#x1F3AF;</span> The Feynman Bridge</div>
+  <h2>Learning House Price Rules</h2>
+
+  <p>Imagine you're a real estate appraiser tasked with valuing every house in a city with 10 million properties. You could memorize the exact value of each house — but that's table lookup, and it doesn't scale. Houses you've never seen before would have zero value.</p>
+
+  <p>Instead, you learn <strong>rules</strong>: "Each extra bedroom adds $50,000. Each mile from downtown subtracts $10,000. Every year built in the last decade adds $5,000." These rules are your <strong>weights</strong> (the \(w\) vector). The house's attributes — number of bedrooms, distance from downtown, age — are the <strong>features</strong> (the \(x(s)\) vector).</p>
+
+  <div class="callout analogy">
+    <div class="callout-title">The Core Analogy</div>
+    <p><strong>Houses with unknown values</strong> = infinite state spaces. <strong>Your price rules</strong> = function approximation. <strong>Weights (w)</strong> = the parameters you learn (e.g., "$50K per bedroom"). <strong>Features (x)</strong> = the house attributes you observe. <strong>Your estimate</strong> = \(\hat{v}(s,w) = w^T x(s)\) — weights times features.</p>
+    <p>In RL, instead of house prices, we're learning state values. Instead of real estate rules, we're learning which state features matter. The mechanism is identical: we observe features, compute an estimate using our learned weights, and update those weights when our estimates are wrong.</p>
+  </div>
+
+  <p>Two critical advantages of this approach:</p>
+
+  <p><strong>1. Generalization.</strong> If you've seen a 3-bedroom house, you can estimate the value of a 3.5-bedroom house without ever having seen it. The rules transfer.</p>
+
+  <p><strong>2. Tractability.</strong> Instead of learning millions of parameters (one per state), you learn maybe dozens or hundreds (the weights). Learning is faster, storage is tiny, and the approach works even when the state space is infinite or continuous.</p>
+
+  <div class="callout insight">
+    <div class="callout-title">The Trade-off: Representation Power vs. Simplicity</div>
+    <p>Linear rules (bedroom count × weight) are interpretable and efficient, but they can't capture complex patterns. A house's value isn't just linear in its features — perhaps 3 bedrooms are worth more than twice the value of 1.5 bedrooms. Non-linear approximators like neural networks can learn arbitrary patterns, but at the cost of interpretability and computational complexity. Choosing the right approximator is an art.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 2: TECHNICAL ASCENT                            -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="technical">
+  <div class="section-label technical"><span class="icon">&#x1F4D0;</span> The Technical Ascent</div>
+  <h2>Value-Function Approximation & Gradient Descent</h2>
+
+  <p>We want to approximate the true value function \(v_\pi(s)\) with a parameterized function \(\hat{v}(s, \mathbf{w})\), where \(\mathbf{w}\) is a weight vector. The goal is to find weights such that \(\hat{v}(s, \mathbf{w}) \approx v_\pi(s)\) for all states \(s\).</p>
+
+  <div class="math-toggle" id="mt-ve">
+    <div class="math-toggle-header" onclick="toggleMath('mt-ve')">
+      <span class="label">&#x1F9EE; The Prediction Objective: Mean Squared Value Error</span>
+      <span class="chevron">&#x25BC;</span>
+    </div>
+    <div class="math-toggle-body">
+      <p style="color:var(--text-secondary)">We measure approximation quality using the <strong>Mean Squared Value Error (VE)</strong>:</p>
+      $$\text{VE}(\mathbf{w}) = \sum_s \mu(s) \left[v_\pi(s) - \hat{v}(s, \mathbf{w})\right]^2$$
+      <p style="color:var(--text-secondary)">Here, \(\mu(s)\) is a weighting over states — usually the on-policy state occupancy (how often we visit state \(s\) under the current policy). We want to minimize VE by adjusting \(\mathbf{w}\).</p>
+      <p style="color:var(--text-secondary)">In supervised learning, we'd use exact targets \(y_i\) like labels. In RL, we don't have exact values — only noisy estimates. That's where <strong>temporal difference</strong> data comes in.</p>
+    </div>
+  </div>
+
+  <p>Since we don't know the true value \(v_\pi(s)\), we use samples — rewards and bootstrapped estimates — as noisy targets. The key idea is <strong>stochastic gradient descent (SGD):</strong> take small steps in the direction that reduces error.</p>
+
+  <div class="math-toggle" id="mt-sgd">
+    <div class="math-toggle-header" onclick="toggleMath('mt-sgd')">
+      <span class="label">&#x1F9EE; Stochastic Gradient Descent Update</span>
+      <span class="chevron">&#x25BC;</span>
+    </div>
+    <div class="math-toggle-body">
+      <p style="color:var(--text-secondary)">For a single sample \((S_t, v_\text{target})\), the SGD update is:</p>
+      $$\mathbf{w}_{t+1} = \mathbf{w}_t + \alpha \left[v_\text{target} - \hat{v}(S_t, \mathbf{w}_t)\right] \nabla_{\mathbf{w}} \hat{v}(S_t, \mathbf{w}_t)$$
+      <p style="color:var(--text-secondary)">Here, \(\alpha\) is the step-size (learning rate), and \(\nabla_{\mathbf{w}} \hat{v}\) is the gradient of the approximator with respect to its weights. The update pushes the estimate toward the target by moving weights in the direction of steepest descent.</p>
+      <p style="color:var(--text-secondary)">The term \(\left[v_\text{target} - \hat{v}(S_t, \mathbf{w}_t)\right]\) is the <strong>temporal difference (TD) error</strong> — how far off our estimate is.</p>
+    </div>
+  </div>
+
+  <p>In on-policy prediction with bootstrapping, we face a subtlety: we use the <strong>current weight vector</strong> to estimate the next state's value. This means the target itself depends on \(\mathbf{w}\), violating the i.i.d. assumption of SGD. The fix is the <strong>semi-gradient method:</strong> treat the bootstrapped estimate as a fixed target (ignore its dependence on \(\mathbf{w}\)), then take the gradient.</p>
+
+  <div class="math-toggle" id="mt-semigradient">
+    <div class="math-toggle-header" onclick="toggleMath('mt-semigradient')">
+      <span class="label">&#x1F9EE; Semi-gradient TD(0) Update</span>
+      <span class="chevron">&#x25BC;</span>
+    </div>
+    <div class="math-toggle-body">
+      <p style="color:var(--text-secondary)">The core on-policy prediction update with function approximation:</p>
+      $$\mathbf{w}_{t+1} = \mathbf{w}_t + \alpha \left[R_{t+1} + \gamma \hat{v}(S_{t+1}, \mathbf{w}_t) - \hat{v}(S_t, \mathbf{w}_t)\right] \nabla_{\mathbf{w}} \hat{v}(S_t, \mathbf{w}_t)$$
+      <p style="color:var(--text-secondary)">The TD target is \(R_{t+1} + \gamma \hat{v}(S_{t+1}, \mathbf{w}_t)\). We treat this as fixed (the "semi" part), then take only the gradient with respect to \(\hat{v}(S_t, \mathbf{w}_t)\), ignoring the gradient of the bootstrapped \(\hat{v}(S_{t+1}, \mathbf{w}_t)\) term.</p>
+      <p style="color:var(--text-secondary)">Why? Taking the full gradient would make convergence less reliable. The semi-gradient approach sacrifices theoretical optimality for practical stability. It's the foundation of deep RL methods like DQN.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 3: LINEAR METHODS                              -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="linear">
+  <div class="section-label technical"><span class="icon">&#x1F4D1;</span> Implementation</div>
+  <h2>Linear Methods & Feature Engineering</h2>
+
+  <p>The simplest and most interpretable function approximator is <strong>linear:</strong></p>
+  $$\hat{v}(s, \mathbf{w}) = \mathbf{w}^T \mathbf{x}(s) = \sum_i w_i x_i(s)$$
+  <p>Here, \(\mathbf{x}(s)\) is a feature vector extracted from state \(s\). Each feature \(x_i(s)\) encodes some aspect of the state (e.g., distance to goal, number of enemies). The weight \(w_i\) tells us how much that feature contributes to the value.</p>
+
+  <p><strong>Gradient for linear approximators:</strong> \(\nabla_{\mathbf{w}} \hat{v}(s, \mathbf{w}) = \mathbf{x}(s)\). Simple! The gradient is just the feature vector itself.</p>
+
+  <div class="callout definition">
+    <div class="callout-title">Feature Construction Techniques</div>
+    <p><strong>Polynomials:</strong> For 1D state \(s\), use \([1, s, s^2, s^3, \ldots]\). Higher powers capture nonlinear relationships. Risk: high-order polynomials oscillate wildly (Runge's phenomenon).</p>
+    <p><strong>Fourier Basis:</strong> Use sine/cosine functions at different frequencies: \([1, \sin(\pi s), \cos(\pi s), \sin(2\pi s), \ldots]\). Better numerical stability and frequency-based interpretation.</p>
+    <p><strong>Coarse Coding:</strong> Divide the state space into overlapping bins. If state \(s\) falls in bin \(i\), set \(x_i(s) = 1\); otherwise 0. Simple and works well for continuous spaces.</p>
+    <p><strong>Tile Coding:</strong> Multiple coarse-coded tilings, offset from each other. A state activates one tile in each tiling layer. More tiles = finer resolution. Very efficient in practice.</p>
+    <p><strong>RBFs (Radial Basis Functions):</strong> Gaussians centered at different points in the state space. \(x_i(s) = \exp\left(-\frac{\|s - c_i\|^2}{2\sigma^2}\right)\). Smooth and interpretable, but sensitive to center placement.</p>
+  </div>
+
+  <div class="callout insight">
+    <div class="callout-title">Step-Size Parameters</div>
+    <p>The learning rate \(\alpha\) controls how fast we update. Too high: divergence or instability. Too low: slow learning. In linear function approximation, it's safe to use a constant step-size and expect convergence (under certain conditions). With nonlinear approximators like neural networks, careful scheduling (reducing \(\alpha\) over time) is often necessary.</p>
+  </div>
+
+  <p>For nonlinear approximators like neural networks, the gradient-descent principle remains the same, but the gradient is now computed via backpropagation. The challenge: loss landscape is non-convex, and semi-gradient methods don't guarantee convergence. Yet they work remarkably well in practice (e.g., DQN, A3C, PPO).</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 4: INTERACTIVE LINEAR APPROXIMATION            -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="interactive-linear">
+  <div class="section-label interactive"><span class="icon">&#x1F39B;</span> Interactive</div>
+  <h2>Scrubbable Linear Approximation</h2>
+
+  <p>Drag the weight sliders to fit a linear value function to the target curve. Watch the Mean Squared Value Error change in real time:</p>
+
+  <div class="demo-container">
+    <h4>Linear Value Function Fitting</h4>
+    <div style="margin-bottom: 20px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 16px;">
+        <div>
+          <label style="display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">
+            Intercept (w<sub>0</sub>): <strong style="color: var(--accent-cyan);" id="w0-display">0.5</strong>
+          </label>
+          <input type="range" id="w0-slider" min="-2" max="2" step="0.05" value="0.5" style="width: 100%;">
+        </div>
+        <div>
+          <label style="display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">
+            Slope (w<sub>1</sub>): <strong style="color: var(--accent-cyan);" id="w1-display">0.5</strong>
+          </label>
+          <input type="range" id="w1-slider" min="-2" max="2" step="0.05" value="0.5" style="width: 100%;">
+        </div>
+      </div>
+      <canvas id="linearApproxCanvas" width="700" height="350"></canvas>
+      <div class="canvas-label">Blue curve = target | Red line = your approximation | VE = sum of squared differences</div>
+    </div>
+    <div style="text-align: center;">
+      <div style="display: inline-block; background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.3); border-radius: 8px; padding: 12px 20px;">
+        <div style="font-size: 12px; color: var(--text-muted);">Mean Squared Value Error</div>
+        <div style="font-size: 24px; font-weight: 700; color: var(--accent-amber);" id="ve-display">0.00</div>
+      </div>
+    </div>
+  </div>
+
+  <p style="margin-top: 24px;"><strong>How to use:</strong> The blue curve is a sample target value function across states [0, 1]. Adjust the sliders (intercept and slope) to minimize VE. Can linear approximation fit this curve perfectly? Why or why not?</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 5: TILE CODING VISUALIZER                      -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="tilecharts">
+  <div class="section-label interactive"><span class="icon">&#x1F39B;</span> Interactive</div>
+  <h2>Tile Coding Visualizer</h2>
+
+  <p>Tile coding overlays multiple coarse-coded tilings, each offset slightly. When you move the state (mouse), see which tiles activate:</p>
+
+  <div class="demo-container">
+    <h4>Tile Coding Feature Activation</h4>
+    <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 14px;">
+      Move your mouse over the 2D space to see which tiles activate. Each tiling layer (different color) adds more precision.
+    </p>
+    <canvas id="tilecodingCanvas" width="700" height="400"></canvas>
+    <div class="canvas-label">Each overlapping grid = one tiling layer. Active tiles appear highlighted. Try moving across boundaries.</div>
+  </div>
+
+  <div style="margin-top: 24px; padding: 16px; background: var(--bg-surface); border-radius: 8px; border-left: 3px solid var(--accent-cyan);">
+    <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 0;">
+      <strong>Why tile coding is powerful:</strong> One feature vector can have \(\approx\) 10-20 active tiles. A state near a boundary activates different tiles than a state in the middle of a tile, giving fine-grained discrimination. Yet the feature vector is sparse, keeping computation fast. Tile coding is used in many practical RL algorithms.
+    </p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 6: ALGORITHM                                   -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="algorithm">
+  <div class="section-label algorithm"><span class="icon">&#x1F4BB;</span> Algorithm</div>
+  <h2>Semi-gradient TD(0) with Linear Approximation</h2>
+
+  <p>Below is a complete, working Python implementation of on-policy value prediction using semi-gradient TD with linear function approximation. This forms the foundation for more complex RL algorithms.</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="lang">python</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><code class="language-python">import numpy as np
+from collections import defaultdict
+
+class LinearFunctionApproximator:
+    """Value function approximator: v_hat(s, w) = w^T x(s)"""
+
+    def __init__(self, num_features, initial_weights=None):
+        self.num_features = num_features
+        if initial_weights is None:
+            self.w = np.zeros(num_features)
+        else:
+            self.w = initial_weights.copy()
+
+    def predict(self, features):
+        """Return estimated value: w^T x"""
+        return np.dot(self.w, features)
+
+    def update(self, features, td_error, alpha):
+        """SGD update: w <- w + alpha * td_error * x"""
+        self.w += alpha * td_error * features
+
+    def gradient(self, features):
+        """Gradient w.r.t. w is simply the feature vector"""
+        return features
+
+
+class SemiGradientTDPredictor:
+    """On-policy prediction using semi-gradient TD(0)"""
+
+    def __init__(self, gamma=0.99, alpha=0.01, num_features=10):
+        self.gamma = gamma           # discount factor
+        self.alpha = alpha           # step-size
+        self.approximator = LinearFunctionApproximator(num_features)
+        self.value_errors = []       # track TD errors
+
+    def get_features(self, state):
+        """
+        Extract features from state.
+        Example: polynomial features for 1D state in [0, 1]
+        """
+        # Simple polynomial features: [1, s, s^2, ..., s^(n-1)]
+        s = float(state) if not np.isscalar(state) else state
+        features = np.array([s ** i for i in range(self.approximator.num_features)])
+        return features
+
+    def predict_value(self, state):
+        """Estimate the value of a state"""
+        features = self.get_features(state)
+        return self.approximator.predict(features)
+
+    def update_weights(self, state_t, reward_t1, state_t1, gamma=None):
+        """
+        Semi-gradient TD(0) update:
+        w <- w + alpha * [R + gamma * v_hat(S', w) - v_hat(S, w)] * x(S)
+
+        Key: we treat v_hat(S', w) as a fixed target (don't take gradient through it).
+        """
+        if gamma is None:
+            gamma = self.gamma
+
+        # Get features
+        x_t = self.get_features(state_t)
+
+        # Current estimate
+        v_t = self.approximator.predict(x_t)
+
+        # Bootstrap estimate for next state (using current weights as fixed target)
+        v_t1 = self.approximator.predict(self.get_features(state_t1))
+
+        # TD target
+        td_target = reward_t1 + gamma * v_t1
+
+        # TD error
+        td_error = td_target - v_t
+        self.value_errors.append(td_error)
+
+        # Update weights
+        self.approximator.update(x_t, td_error, self.alpha)
+
+        return td_error
+
+    def get_weights(self):
+        return self.approximator.w.copy()
+
+    def set_weights(self, w):
+        self.approximator.w = w.copy()
+
+    def mean_value_error(self, states, true_values, state_dist=None):
+        """
+        Compute Mean Squared Value Error over a set of states.
+        VE(w) = sum_s mu(s) * [v_pi(s) - v_hat(s,w)]^2
+        """
+        if state_dist is None:
+            state_dist = np.ones(len(states)) / len(states)
+
+        mse = 0.0
+        for s, v_true, mu in zip(states, true_values, state_dist):
+            v_hat = self.predict_value(s)
+            mse += mu * (v_true - v_hat) ** 2
+        return mse
+
+
+def simulate_episode(predictor, env_dynamics_fn, start_state, episode_length=20):
+    """
+    Run one episode and update value function.
+
+    Args:
+        predictor: SemiGradientTDPredictor
+        env_dynamics_fn: function(state) -> (next_state, reward)
+        start_state: starting state
+        episode_length: number of steps
+    """
+    state = start_state
+    total_return = 0.0
+
+    for t in range(episode_length):
+        # Environment step
+        next_state, reward = env_dynamics_fn(state)
+
+        # Semi-gradient TD update
+        td_error = predictor.update_weights(state, reward, next_state)
+
+        total_return += (predictor.gamma ** t) * reward
+        state = next_state
+
+    return total_return
+
+
+# ───── Example: Simple 1D Value Learning ─────
+if __name__ == "__main__":
+    # Define a simple environment: random walk with reward structure
+    def simple_env(state):
+        """Random walk: bias toward high values"""
+        next_state = state + np.random.randn() * 0.1
+        next_state = np.clip(next_state, 0, 1)  # stay in [0, 1]
+        # Reward increases toward right
+        reward = next_state + 0.1 * np.random.randn()
+        return next_state, reward
+
+    # Create predictor with polynomial features
+    predictor = SemiGradientTDPredictor(gamma=0.99, alpha=0.01, num_features=5)
+
+    # Training loop
+    num_episodes = 100
+    for episode in range(num_episodes):
+        start_state = np.random.uniform(0, 1)
+        return_val = simulate_episode(predictor, simple_env, start_state)
+
+        if (episode + 1) % 20 == 0:
+            print(f"Episode {episode+1}: weights = {predictor.get_weights()}, "
+                  f"return = {return_val:.3f}")
+
+    # Final values at some test points
+    test_states = [0.0, 0.25, 0.5, 0.75, 1.0]
+    print("\nFinal learned values:")
+    for s in test_states:
+        v = predictor.predict_value(s)
+        print(f"  v({s:.2f}) = {v:.4f}")
+</code></pre>
+  </div>
+
+  <p style="margin-top: 20px;"><strong>Key points:</strong></p>
+  <ul style="color: var(--text-secondary); margin-left: 20px;">
+    <li style="margin-bottom: 10px;">The <code>update_weights</code> method implements the semi-gradient TD(0) update. Notice how we compute the TD target using the <em>current</em> weights (not updated during the gradient).</li>
+    <li style="margin-bottom: 10px;">Feature extraction via polynomial basis is simple but limited. Real systems use richer features: tile coding, RBFs, hand-engineered domain knowledge, or learned representations (deep learning).</li>
+    <li style="margin-bottom: 10px;">The algorithm converges because linear approximators in on-policy settings have favorable convergence properties under SGD.</li>
+    <li>This architecture scales to continuous state spaces without discretization, a huge advantage over tabular methods.</li>
+  </ul>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 7: DEEP RL BRIDGE SIDEBAR                      -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="sidebar-bridge">
+  <div class="sidebar-label">Deep RL Bridge</div>
+  <h4>From Linear Weights to Neural Networks</h4>
+  <p>The semi-gradient TD update you just learned is universal. Swap out the linear approximator for a neural network, and you get the foundation of <strong>Deep Q-Networks (DQN)</strong> — arguably the most important algorithm in modern RL.</p>
+  <p><strong>DQN (2015, Mnih et al.):</strong> Uses a convolutional neural network as the function approximator, playing Atari from raw pixels. The same semi-gradient update runs, but now the network learns to extract features automatically. The network's hidden layers discover that edges matter, sprites matter, and patterns in the game state.</p>
+  <p><strong>The leap:</strong> Instead of hand-engineering tile coding or RBF centers, let the neural network learn them. This is the power of representation learning. DQN is just semi-gradient TD with a deep approximator — conceptually simple, practically revolutionary.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 8: SOCRATIC SANDBOX                            -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="sandbox">
+  <div class="section-label sandbox"><span class="icon">&#x1F4A1;</span> Socratic Sandbox</div>
+  <h2>Debug & Explore: Five Questions</h2>
+
+  <p>Use these questions to stress-test your understanding. Click to reveal answers.</p>
+
+  <div class="socratic-q" id="sq1">
+    <div class="socratic-q-header" onclick="toggleQuestion(this)">
+      <div class="q-number">1</div>
+      <div class="q-text">Why is it called "semi-gradient"? What are we NOT taking the gradient of?</div>
+      <div class="q-expand">&#x25BC;</div>
+    </div>
+    <div class="socratic-a">
+      In the TD update \(\mathbf{w}_{t+1} = \mathbf{w}_t + \alpha [R_{t+1} + \gamma \hat{v}(S_{t+1}, \mathbf{w}_t) - \hat{v}(S_t, \mathbf{w}_t)] \nabla \hat{v}(S_t, \mathbf{w}_t)\), the TD target \(R_{t+1} + \gamma \hat{v}(S_{t+1}, \mathbf{w}_t)\) depends on \(\mathbf{w}_t\) through the second term. In a true gradient-descent approach, we'd take the gradient through both terms. Instead, we treat \(\hat{v}(S_{t+1}, \mathbf{w}_t)\) as a constant (not differentiating it), so we only take the gradient w.r.t. \(\hat{v}(S_t, \mathbf{w}_t)\). This gives faster, more stable learning at the cost of theoretical convergence guarantees. It's "semi" because we omit part of the true gradient.
+    </div>
+  </div>
+
+  <div class="socratic-q" id="sq2">
+    <div class="socratic-q-header" onclick="toggleQuestion(this)">
+      <div class="q-number">2</div>
+      <div class="q-text">Why doesn't full gradient descent (taking the gradient of the entire TD target) work well in practice?</div>
+      <div class="q-expand">&#x25BC;</div>
+    </div>
+    <div class="socratic-a">
+      Full gradient would give us a true SGD update to minimize the squared TD error. However, the target itself is estimated using the same weights, so the landscape is moving as we learn. This creates a non-stationary learning problem: the "ground truth" keeps shifting. The bootstrap target (using current weights) is biased when those weights are inaccurate. Semi-gradient sidesteps this by treating the next-state value as fixed, breaking the feedback loop and enabling stable learning, even though the final fixed point is biased.
+    </div>
+  </div>
+
+  <div class="socratic-q" id="sq3">
+    <div class="socratic-q-header" onclick="toggleQuestion(this)">
+      <div class="q-number">3</div>
+      <div class="q-text">Tile coding vs. polynomial features: when would you choose tile coding?</div>
+      <div class="q-expand">&#x25BC;</div>
+    </div>
+    <div class="socratic-a">
+      Tile coding shines when: (1) you need local approximation (nearby states should have similar values), (2) you want control over resolution (add more tilings for finer detail), (3) you're working with multi-dimensional continuous states (polynomial features blow up in dimension), and (4) you want sparse, interpretable features. Polynomial features are good for low-dimensional problems with clear global trends but fail in high dimensions and can exhibit Runge's phenomenon (oscillations at high orders). Tile coding is more robust and is still widely used in practice.
+    </div>
+  </div>
+
+  <div class="socratic-q" id="sq4">
+    <div class="socratic-q-header" onclick="toggleQuestion(this)">
+      <div class="q-number">4</div>
+      <div class="q-text">When does linear approximation fundamentally fail? Give an example.</div>
+      <div class="q-expand">&#x25BC;</div>
+    </div>
+    <div class="socratic-a">
+      Linear approximation fails when the true value function is inherently nonlinear. A simple example: in a 2D gridworld, the optimal value is the minimum distance to a goal. If states are represented by their (x, y) coordinates, the true value is something like \(v(x,y) = \sqrt{x^2 + y^2}\) — highly nonlinear! Linear approximation \(\hat{v}(x,y,w) = w_0 + w_1 x + w_2 y\) can't capture this Euclidean distance structure, no matter what weights we choose. You'd need polynomial features (like \(x^2, y^2, xy\)) or a nonlinear approximator (neural network) to fit it well.
+    </div>
+  </div>
+
+  <div class="socratic-q" id="sq5">
+    <div class="socratic-q-header" onclick="toggleQuestion(this)">
+      <div class="q-number">5</div>
+      <div class="q-text">Neural networks are nonlinear approximators, but why are they tricky to train with semi-gradient TD?</div>
+      <div class="q-expand">&#x25BC;</div>
+    </div>
+    <div class="socratic-a">
+      Neural networks have non-convex loss landscapes: lots of local minima, saddle points, and plateaus. With linear approximators, the loss is convex, so any local minimum is global. With neural networks, convergence isn't guaranteed — you can get stuck. Also, the semi-gradient TD target uses bootstrapping (current network weights), which introduces a moving target: the network chases a goal that's shifting as the network learns. Experience replay (storing and replaying past transitions) and target networks (using an old copy of the weights for bootstrap targets) help stabilize training, but these are tricks on top of the core semi-gradient idea. Deep RL is fundamentally harder than supervised learning because of this moving-target issue.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 9: COMPLETION                                  -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="completion">
+  <div class="section-label technical"><span class="icon">&#x2713;</span> Completion</div>
+  <h2>Chapter Summary & Next Steps</h2>
+
+  <p>In Chapter 9, you learned how to escape the curse of tabular methods by using function approximation. Key concepts:</p>
+
+  <ul style="color: var(--text-secondary); margin-left: 20px; margin-bottom: 24px;">
+    <li><strong>Value-function approximation</strong> scales value estimation to infinite or very large state spaces using learned weights and hand-engineered or discovered features.</li>
+    <li><strong>The prediction objective (VE)</strong> quantifies approximation error: mean squared error across states, weighted by occupancy.</li>
+    <li><strong>Stochastic gradient descent</strong> is the core learning mechanism: update weights in the direction that reduces TD error.</li>
+    <li><strong>Semi-gradient methods</strong> treat bootstrapped estimates as fixed targets, sacrificing convergence guarantees for stability and speed.</li>
+    <li><strong>Linear approximators</strong> are interpretable, stable, and still practical (tile coding, RBFs). <strong>Nonlinear approximators</strong> (neural networks) unlock arbitrary representation power, leading to deep RL.</li>
+    <li><strong>Feature engineering</strong> is an art: polynomials, Fourier basis, coarse coding, tile coding, RBFs, or learned representations each have trade-offs.</li>
+  </ul>
+
+  <div class="callout insight">
+    <div class="callout-title">Looking Ahead</div>
+    <p><strong>Chapter 10 (Off-policy Prediction):</strong> What if you want to evaluate a policy you're not currently following? Learn importance sampling and off-policy corrections.</p>
+    <p><strong>Chapter 11 onwards:</strong> Control (learning optimal policies), actor-critic methods, policy gradients, and the path to modern deep RL frameworks.</p>
+  </div>
+
+  <p style="margin-top: 32px; text-align: center;">
+    <button class="btn-complete done" id="finalCompleteBtn" onclick="markChapterComplete()" style="background: linear-gradient(135deg, var(--accent-emerald), #10b981); color: #022c22; cursor: pointer;">
+      ✓ Mark This Chapter Complete
+    </button>
+  </p>
+</div>
+
+</div><!-- end page-wrapper -->
+
+<script>
+// ───── Math Toggle ─────
+function toggleMath(id) {
+  const toggle = document.getElementById(id);
+  toggle.classList.toggle('open');
+}
+
+// ───── Socratic Questions ─────
+function toggleQuestion(header) {
+  const question = header.closest('.socratic-q');
+  question.classList.toggle('open');
+}
+
+// ───── Chapter Completion ─────
+function markChapterComplete() {
+  const btn = document.getElementById('completeBtn');
+  const finalBtn = document.getElementById('finalCompleteBtn');
+
+  if (btn && !btn.classList.contains('done')) {
+    btn.classList.add('done');
+    btn.textContent = '✓ Completed';
+    localStorage.setItem('ch9-completed', 'true');
+  }
+  if (finalBtn && !finalBtn.classList.contains('done')) {
+    finalBtn.classList.add('done');
+    localStorage.setItem('ch9-completed', 'true');
+  }
+}
+
+// Check on load
+window.addEventListener('load', () => {
+  if (localStorage.getItem('ch9-completed') === 'true') {
+    const btn = document.getElementById('completeBtn');
+    if (btn) {
+      btn.classList.add('done');
+      btn.textContent = '✓ Completed';
+    }
+  }
+
+  // Render KaTeX
+  renderMathInElement(document.body);
+
+  // Highlight code
+  document.querySelectorAll('code').forEach(el => {
+    hljs.highlightElement(el);
+  });
+
+  // Initialize interactive demos
+  initLinearApproximationDemo();
+  initTileCodingDemo();
+});
+
+// ═════════════════════════════════════════════════════════════
+// INTERACTIVE DEMO 1: Linear Approximation
+// ═════════════════════════════════════════════════════════════
+function initLinearApproximationDemo() {
+  const canvas = document.getElementById('linearApproxCanvas');
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  const w0Slider = document.getElementById('w0-slider');
+  const w1Slider = document.getElementById('w1-slider');
+  const w0Display = document.getElementById('w0-display');
+  const w1Display = document.getElementById('w1-display');
+  const veDisplay = document.getElementById('ve-display');
+
+  function computeVE(w0, w1) {
+    let ve = 0;
+    for (let i = 0; i < 100; i++) {
+      const s = i / 99;
+      // Target: a smooth nonlinear curve
+      const v_true = 0.3 * Math.sin(2 * Math.PI * s) + 0.5;
+      // Approximation: linear
+      const v_hat = w0 + w1 * s;
+      const error = v_true - v_hat;
+      ve += error * error / 100;
+    }
+    return ve;
+  }
+
+  function drawDemo() {
+    const w0 = parseFloat(w0Slider.value);
+    const w1 = parseFloat(w1Slider.value);
+
+    ctx.fillStyle = 'rgba(15, 23, 42, 1)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const padding = 40;
+    const plotWidth = canvas.width - 2 * padding;
+    const plotHeight = canvas.height - 2 * padding;
+
+    // Grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 10; i++) {
+      const x = padding + (i / 10) * plotWidth;
+      const y = padding + (i / 10) * plotHeight;
+      ctx.beginPath();
+      ctx.moveTo(x, padding);
+      ctx.lineTo(x, padding + plotHeight);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(padding, y);
+      ctx.lineTo(padding + plotWidth, y);
+      ctx.stroke();
+    }
+
+    // Axes
+    ctx.strokeStyle = 'rgba(200, 200, 200, 0.3)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(padding, padding + plotHeight);
+    ctx.lineTo(padding + plotWidth, padding + plotHeight);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(padding, padding);
+    ctx.lineTo(padding, padding + plotHeight);
+    ctx.stroke();
+
+    // Draw target (blue curve)
+    ctx.strokeStyle = 'rgba(34, 211, 238, 0.8)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    for (let i = 0; i <= 100; i++) {
+      const s = i / 100;
+      const v = 0.3 * Math.sin(2 * Math.PI * s) + 0.5;
+      const x = padding + s * plotWidth;
+      const y = padding + plotHeight - v * plotHeight;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Draw approximation (red line)
+    ctx.strokeStyle = 'rgba(251, 113, 133, 0.9)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    for (let i = 0; i <= 100; i++) {
+      const s = i / 100;
+      const v = w0 + w1 * s;
+      const x = padding + s * plotWidth;
+      const y = padding + plotHeight - v * plotHeight;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Update displays
+    w0Display.textContent = w0.toFixed(2);
+    w1Display.textContent = w1.toFixed(2);
+
+    const ve = computeVE(w0, w1);
+    veDisplay.textContent = ve.toFixed(4);
+  }
+
+  w0Slider.addEventListener('input', drawDemo);
+  w1Slider.addEventListener('input', drawDemo);
+
+  drawDemo();
+}
+
+// ═════════════════════════════════════════════════════════════
+// INTERACTIVE DEMO 2: Tile Coding
+// ═════════════════════════════════════════════════════════════
+function initTileCodingDemo() {
+  const canvas = document.getElementById('tilecodingCanvas');
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  let mouseX = canvas.width / 2;
+  let mouseY = canvas.height / 2;
+
+  // Tile coding parameters
+  const numTilings = 4;
+  const tilesPerDim = 4;
+  const tileSize = canvas.width / tilesPerDim;
+
+  canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    mouseX = e.clientX - rect.left;
+    mouseY = e.clientY - rect.top;
+  });
+
+  function getTileIndex(x, y, tilingIndex) {
+    // Offset each tiling slightly
+    const offset = (tilingIndex / numTilings) * tileSize;
+    const tileX = Math.floor((x - offset) / tileSize);
+    const tileY = Math.floor((y - offset) / tileSize);
+    return { x: tileX, y: tileY };
+  }
+
+  function drawDemo() {
+    ctx.fillStyle = 'rgba(15, 23, 42, 1)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const colors = [
+      'rgba(129, 140, 248, 0.15)',
+      'rgba(52, 211, 153, 0.15)',
+      'rgba(251, 191, 36, 0.15)',
+      'rgba(251, 113, 133, 0.15)'
+    ];
+
+    const borderColors = [
+      'rgba(129, 140, 248, 0.4)',
+      'rgba(52, 211, 153, 0.4)',
+      'rgba(251, 191, 36, 0.4)',
+      'rgba(251, 113, 133, 0.4)'
+    ];
+
+    // Draw tilings
+    for (let t = 0; t < numTilings; t++) {
+      const offset = (t / numTilings) * tileSize;
+
+      ctx.strokeStyle = borderColors[t];
+      ctx.lineWidth = 1;
+
+      for (let i = 0; i <= tilesPerDim + 1; i++) {
+        const x = i * tileSize - offset;
+        const y = i * tileSize - offset;
+
+        // Vertical lines
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+
+        // Horizontal lines
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+    }
+
+    // Highlight active tiles
+    for (let t = 0; t < numTilings; t++) {
+      const tile = getTileIndex(mouseX, mouseY, t);
+      const offset = (t / numTilings) * tileSize;
+      const x = tile.x * tileSize - offset;
+      const y = tile.y * tileSize - offset;
+
+      ctx.fillStyle = colors[t];
+      ctx.fillRect(x, y, tileSize, tileSize);
+
+      ctx.strokeStyle = borderColors[t];
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, tileSize, tileSize);
+    }
+
+    // Draw cursor
+    ctx.fillStyle = 'rgba(248, 250, 252, 0.5)';
+    ctx.beginPath();
+    ctx.arc(mouseX, mouseY, 8, 0, 2 * Math.PI);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(248, 250, 252, 0.8)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(mouseX, mouseY, 8, 0, 2 * Math.PI);
+    ctx.stroke();
+  }
+
+  function animate() {
+    drawDemo();
+    requestAnimationFrame(animate);
+  }
+  animate();
+}
+
+// ───── Code Copy Button ─────
+function copyCode(btn) {
+  const codeBlock = btn.closest('.code-block');
+  const code = codeBlock.querySelector('pre code').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    const originalText = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => {
+      btn.textContent = originalText;
+    }, 2000);
+  });
+}
+</script>
+</body>
+</html>

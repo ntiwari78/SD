@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 17: Frontiers — RL Interactive Curriculum</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
+<!-- KaTeX for LaTeX rendering -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<!-- Plotly for 3D viz -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+<!-- Highlight.js for code -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<style>
+:root {
+  --bg-deep: #0a0e1a;
+  --bg-card: #111827;
+  --bg-card-alt: #0f172a;
+  --bg-surface: #1e293b;
+  --border-subtle: rgba(255,255,255,0.06);
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent-indigo: #818cf8;
+  --accent-blue: #60a5fa;
+  --accent-cyan: #22d3ee;
+  --accent-emerald: #34d399;
+  --accent-amber: #fbbf24;
+  --accent-rose: #fb7185;
+  --accent-purple: #c084fc;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  line-height: 1.7;
+  font-size: 16px;
+}
+
+/* ───── Layout ───── */
+.page-wrapper {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+
+/* ───── Top Nav ───── */
+.top-nav {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(10,14,26,0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 12px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.top-nav a {
+  color: var(--text-secondary); text-decoration: none;
+  font-size: 14px; font-weight: 500;
+  display: flex; align-items: center; gap: 6px;
+  transition: color 0.2s;
+}
+.top-nav a:hover { color: var(--accent-indigo); }
+.nav-chapter-info {
+  font-size: 13px; color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.btn-complete {
+  padding: 8px 16px; border-radius: 8px; border: none;
+  background: linear-gradient(135deg, var(--accent-emerald), #10b981);
+  color: #022c22; font-weight: 600; font-size: 13px;
+  cursor: pointer; transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+.btn-complete:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(52,211,153,0.3); }
+.btn-complete.done { background: var(--bg-surface); color: var(--accent-emerald); cursor: default; }
+
+/* ───── Chapter Header ───── */
+.chapter-header {
+  text-align: center;
+  padding: 80px 0 48px;
+}
+.ch-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 14px; border-radius: 999px;
+  background: rgba(34,211,238,0.1);
+  border: 1px solid rgba(34,211,238,0.2);
+  font-size: 11px; font-weight: 700;
+  color: var(--accent-cyan);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.chapter-header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2.2rem, 5vw, 3.5rem);
+  font-weight: 900; line-height: 1.15;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #f1f5f9 0%, var(--accent-cyan) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.chapter-header .subtitle {
+  font-size: 18px; color: var(--text-secondary);
+  max-width: 580px; margin: 0 auto;
+}
+
+/* ───── Table of Contents ───── */
+.toc {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 24px 28px;
+  margin-bottom: 48px;
+}
+.toc h3 {
+  font-size: 13px; font-weight: 700;
+  color: var(--text-muted); letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.toc-list { list-style: none; }
+.toc-list li { margin-bottom: 6px; }
+.toc-list a {
+  color: var(--text-secondary); text-decoration: none;
+  font-size: 14px; font-weight: 500;
+  padding: 4px 8px; border-radius: 6px;
+  display: inline-block;
+  transition: all 0.2s;
+}
+.toc-list a:hover { color: var(--accent-indigo); background: rgba(129,140,248,0.08); }
+.toc-list .sec-num {
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  margin-right: 6px;
+}
+
+/* ───── Section Headers ───── */
+.section {
+  margin-bottom: 56px;
+}
+.section-label {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.section-label .icon { font-size: 16px; }
+.section-label.feynman { color: var(--accent-amber); }
+.section-label.technical { color: var(--accent-indigo); }
+.section-label.algorithm { color: var(--accent-emerald); }
+.section-label.sandbox { color: var(--accent-rose); }
+.section-label.interactive { color: var(--accent-cyan); }
+.section-label.history { color: var(--accent-purple); }
+.section-label.celebration { color: var(--accent-purple); }
+
+.section h2 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800; line-height: 1.2;
+  margin-bottom: 20px;
+}
+
+.section p, .section li {
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+}
+.section p strong, .section li strong { color: var(--text-primary); font-weight: 600; }
+
+/* ───── Info Cards / Callouts ───── */
+.callout {
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin: 24px 0;
+  border-left: 3px solid;
+}
+.callout.insight {
+  background: rgba(129,140,248,0.06);
+  border-color: var(--accent-indigo);
+}
+.callout.analogy {
+  background: rgba(251,191,36,0.06);
+  border-color: var(--accent-amber);
+}
+.callout.warning {
+  background: rgba(251,113,133,0.06);
+  border-color: var(--accent-rose);
+}
+.callout.definition {
+  background: rgba(52,211,153,0.06);
+  border-color: var(--accent-emerald);
+}
+.callout.celebration {
+  background: linear-gradient(135deg, rgba(192,132,252,0.1), rgba(34,211,238,0.1));
+  border-color: var(--accent-purple);
+}
+.callout-title {
+  font-size: 13px; font-weight: 700;
+  margin-bottom: 8px;
+  display: flex; align-items: center; gap: 6px;
+}
+.callout.insight .callout-title { color: var(--accent-indigo); }
+.callout.analogy .callout-title { color: var(--accent-amber); }
+.callout.warning .callout-title { color: var(--accent-rose); }
+.callout.definition .callout-title { color: var(--accent-emerald); }
+.callout.celebration .callout-title { color: var(--accent-purple); }
+.callout-text { font-size: 14px; line-height: 1.6; }
+
+/* ───── Code Blocks ───── */
+.code-block {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  margin: 24px 0;
+  overflow: hidden;
+}
+.code-header {
+  background: var(--bg-card-alt);
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.code-header .lang {
+  color: var(--accent-purple);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; font-weight: 600;
+}
+.code-header .copy-btn {
+  background: transparent; border: 1px solid var(--border-subtle);
+  padding: 4px 8px; border-radius: 4px; cursor: pointer;
+  font-size: 12px; color: var(--text-muted); font-weight: 600;
+}
+.code-header .copy-btn:hover { border-color: var(--accent-indigo); color: var(--accent-indigo); }
+pre {
+  padding: 16px;
+  overflow-x: auto;
+}
+code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--accent-cyan);
+}
+.code-note {
+  font-size: 11px; color: var(--text-muted); font-style: italic;
+  margin-top: 8px;
+}
+
+/* ───── Lists ───── */
+ul { list-style: none; }
+li { margin-left: 20px; position: relative; }
+li:before {
+  content: "▸";
+  position: absolute; left: 0;
+  color: var(--accent-cyan);
+}
+
+/* ───── Visualizations ───── */
+.viz-container {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 24px;
+  margin: 24px 0;
+}
+.viz-title {
+  font-size: 14px; font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+.viz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+.viz-grid-cell {
+  background: var(--bg-card);
+  padding: 16px;
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid var(--border-subtle);
+}
+.viz-cell-label {
+  font-size: 11px; color: var(--text-muted);
+  text-transform: uppercase; font-weight: 600;
+  margin-bottom: 8px;
+}
+.viz-cell-value {
+  font-size: 18px; font-weight: 700;
+  color: var(--accent-indigo);
+}
+
+/* ───── Questions ───── */
+.question-block {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 12px 0;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.question-block:hover {
+  border-color: var(--accent-indigo);
+  background: rgba(129,140,248,0.04);
+}
+.question-block.active { border-color: var(--accent-indigo); }
+.question-text {
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.question-text .toggle {
+  font-size: 18px;
+  color: var(--accent-indigo);
+  transition: transform 0.2s;
+}
+.question-block.active .question-text .toggle {
+  transform: rotate(90deg);
+}
+.answer-text {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  display: none;
+  line-height: 1.6;
+}
+.question-block.active .answer-text {
+  display: block;
+}
+
+/* ───── Hierarchy Viz ───── */
+.hierarchy-diagram {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 24px;
+  margin: 24px 0;
+}
+.hierarchy-level {
+  margin: 16px 0;
+  padding: 12px;
+  border-left: 2px solid var(--accent-indigo);
+  padding-left: 16px;
+}
+.hierarchy-level.high { border-left-color: var(--accent-amber); }
+.hierarchy-level.mid { border-left-color: var(--accent-blue); }
+.hierarchy-level.low { border-left-color: var(--accent-emerald); }
+.hierarchy-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.hierarchy-content {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* ───── GVF Knowledge Grid ───── */
+.gvf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+}
+.gvf-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+.gvf-card.active {
+  border-color: var(--accent-cyan);
+  background: rgba(34,211,238,0.08);
+}
+.gvf-signal {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+.gvf-description {
+  font-size: 13px;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+.gvf-prediction {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+}
+
+/* ───── Celebration Section ───── */
+.celebration-container {
+  background: linear-gradient(135deg, rgba(192,132,252,0.1), rgba(34,211,238,0.1), rgba(52,211,153,0.1));
+  border: 2px solid var(--accent-purple);
+  border-radius: 12px;
+  padding: 40px 32px;
+  text-align: center;
+  margin: 40px 0;
+}
+.celebration-heading {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: var(--accent-purple);
+  margin-bottom: 16px;
+}
+.celebration-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--accent-purple);
+  color: var(--bg-deep);
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 24px;
+}
+.celebration-text {
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+  font-size: 15px;
+  line-height: 1.8;
+}
+.celebration-journey {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 24px;
+  margin: 24px 0;
+  text-align: left;
+}
+.journey-title {
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  font-size: 16px;
+}
+.journey-item {
+  padding: 8px 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.journey-item:last-child {
+  border-bottom: none;
+}
+.journey-icon {
+  color: var(--accent-purple);
+  font-weight: 700;
+  min-width: 24px;
+}
+
+/* ───── Footer ───---- */
+.footer {
+  margin-top: 80px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.footer a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+.footer a:hover { color: var(--accent-indigo); }
+
+/* ───── Responsive ───── */
+@media (max-width: 640px) {
+  .page-wrapper { padding: 0 16px 60px; }
+  .chapter-header { padding: 40px 0 32px; }
+  .viz-grid { grid-template-columns: 1fr; }
+}
+
+</style>
+</head>
+<body>
+
+<div class="top-nav">
+  <a href="index.html">↤ Back to Skill Tree</a>
+  <div class="nav-chapter-info">Chapter 17 / 17</div>
+  <button class="btn-complete" id="completeBtn" onclick="markChapter17Complete()">Mark Complete</button>
+</div>
+
+<div class="page-wrapper">
+
+  <!-- ===== CHAPTER HEADER ===== -->
+  <div class="chapter-header">
+    <div class="ch-badge">⚡ FRONTIERS</div>
+    <h1>Frontiers</h1>
+    <p class="subtitle">The field blurs into AGI. From bandits to the alignment problem.</p>
+  </div>
+
+  <!-- ===== TABLE OF CONTENTS ===== -->
+  <div class="toc">
+    <h3>On This Page</h3>
+    <ul class="toc-list">
+      <li><a href="#feynman"><span class="sec-num">1.</span>Feynman Bridge</a></li>
+      <li><a href="#technical"><span class="sec-num">2.</span>Technical Ascent</a></li>
+      <li><a href="#hierarchy-viz"><span class="sec-num">3.</span>Options & Hierarchy</a></li>
+      <li><a href="#gvf-viz"><span class="sec-num">4.</span>General Value Functions</a></li>
+      <li><a href="#reward-alignment"><span class="sec-num">5.</span>Reward Design & Alignment</a></li>
+      <li><a href="#deep-rl"><span class="sec-num">6.</span>Modern Frontiers</a></li>
+      <li><a href="#sandbox"><span class="sec-num">7.</span>Socratic Sandbox</a></li>
+      <li><a href="#celebration"><span class="sec-num">8.</span>Curriculum Completion</a></li>
+    </ul>
+  </div>
+
+  <!-- ===== SECTION 1: FEYNMAN BRIDGE ===== -->
+  <div class="section" id="feynman">
+    <div class="section-label feynman">
+      <span class="icon">🌉</span>
+      <span>Feynman Bridge</span>
+    </div>
+    <h2>The Frontier of RL</h2>
+
+    <div class="callout analogy">
+      <div class="callout-title">
+        <span class="icon">💡</span>
+        <span>The Frontier</span>
+      </div>
+      <div class="callout-text">
+        The frontier of RL is where the field blurs into the grand challenge of artificial general intelligence. <strong>General value functions</strong> ask "what if we could predict everything?" <strong>Options</strong> let agents think at multiple timescales. And designing the right <strong>reward signal</strong> — the alignment problem — may be the most important challenge of our time.
+      </div>
+    </div>
+
+    <p>
+      We began this curriculum with bandits: simple, single-step decisions. We learned to explore, to exploit, and to balance the two. We climbed through MDPs where every decision echoed forward in time, through value functions and temporal difference learning, policy gradients and actor-critics. We discovered that agents could learn complex behaviors by bootstrapping from uncertainty.
+    </p>
+    <p>
+      But the horizon before us is vast. The problems that matter — robotics, autonomous systems, alignment of superintelligent systems — demand something more than the algorithms we've built. They demand:
+    </p>
+    <ul>
+      <li><strong>Abstraction at multiple timescales</strong>: agents that think in terms of high-level options as well as primitive actions</li>
+      <li><strong>Knowledge reuse</strong>: the ability to predict many different quantities simultaneously, building a rich model of the world</li>
+      <li><strong>The right objective</strong>: ensuring that what we ask the agent to maximize actually aligns with what we want it to do</li>
+    </ul>
+  </div>
+
+  <!-- ===== SECTION 2: TECHNICAL ASCENT ===== -->
+  <div class="section" id="technical">
+    <div class="section-label technical">
+      <span class="icon">📐</span>
+      <span>Technical Ascent</span>
+    </div>
+    <h2>Key Concepts</h2>
+
+    <h3 style="font-size: 1.2rem; color: var(--text-primary); margin: 24px 0 16px;">General Value Functions (GVFs)</h3>
+    <p>
+      Classical value functions answer one question: "What is the long-term return from this state?" But the world is rich. An agent exploring a city might want to predict:
+    </p>
+    <ul>
+      <li>Long-term cumulative reward (the usual V-function)</li>
+      <li>Time until reaching a gas station</li>
+      <li>Probability of rain in the next hour</li>
+      <li>Total fuel consumed on a future path</li>
+    </ul>
+    <p>
+      A <strong>general value function</strong> is a prediction of cumulative auxiliary signals under a policy. Formally:
+    </p>
+    <p style="text-align: center; margin: 20px 0;">
+      <code>\(G_t^\gamma = \mathbb{E}[\sum_{k=0}^{\infty} \gamma^k X_{t+k+1} | S_t, \pi]\)</code>
+    </p>
+    <p>
+      where \(X_{t+1}\) is any auxiliary signal (not just reward). This transforms the agent into a <strong>knowledge system</strong>: it accumulates predictions as it learns, building a model that captures structure in the world.
+    </p>
+
+    <h3 style="font-size: 1.2rem; color: var(--text-primary); margin: 24px 0 16px;">Temporal Abstraction via Options</h3>
+    <p>
+      Options formalize <strong>hierarchical decision-making</strong>. Instead of committing to a single primitive action each step, an agent chooses a high-level option that may span many timesteps.
+    </p>
+    <p>
+      An option \(\omega\) consists of three parts:
+    </p>
+    <ul>
+      <li><strong>Initiation set \(I(\omega)\)</strong>: states where this option can begin</li>
+      <li><strong>Policy \(\pi_\omega\)</strong>: the control strategy while executing the option (a semi-MDP policy)</li>
+      <li><strong>Termination condition \(\beta_\omega(s)\)</strong>: probability of terminating in state \(s\)</li>
+    </ul>
+    <p>
+      At the top level, the agent chooses from a set of options (e.g., "go to room 1", "go to room 2", "explore randomly"). Each option may execute its own sub-policy for multiple steps, abstracted away from the high-level planner.
+    </p>
+    <p>
+      This mirrors how humans think: we decide to "drive to work" (a high-level option), and the low-level details — turning the wheel, accelerating — are handled by learned routines.
+    </p>
+
+    <h3 style="font-size: 1.2rem; color: var(--text-primary); margin: 24px 0 16px;">State, Observation, and Hidden Information</h3>
+    <p>
+      The classical MDP assumes the agent observes the true state. But in reality, agents are often blind. A robot in a dark room sees only noisy sensor data. A trader sees price histories, not the true market state. An AI system chatting with humans cannot directly access human intent.
+    </p>
+    <p>
+      A <strong>Partially Observable MDP (POMDP)</strong> formalizes this: the agent sees observations \(o_t\), drawn from the true hidden state \(s_t\). The agent must maintain a belief distribution over possible states and act under uncertainty.
+    </p>
+    <p>
+      Algorithms like QMDP (solve the MDP given each belief state) and belief-space planning exist, but they scale poorly. Modern approaches use recurrent neural networks (LSTMs, GRUs, Transformers) to implicitly maintain state estimates, learning to extract the essential information from an observation stream.
+    </p>
+
+    <h3 style="font-size: 1.2rem; color: var(--text-primary); margin: 24px 0 16px;">Reward Shaping and Design</h3>
+    <p>
+      The reward signal is the primary channel through which we communicate objectives to the agent. But <strong>reward design is hard</strong>. Common pitfalls:
+    </p>
+    <ul>
+      <li><strong>Specification gaming</strong>: the agent exploits loopholes in the reward function, achieving high reward without solving the intended task</li>
+      <li><strong>Reward hacking</strong>: a well-intentioned reward (e.g., "maximize speed") leads to unintended consequences (e.g., the agent spins in circles)</li>
+      <li><strong>Misalignment</strong>: the reward is technically optimized, but the agent's behavior doesn't match the designer's intent</li>
+    </ul>
+    <p>
+      Techniques to mitigate these include:
+    </p>
+    <ul>
+      <li><strong>Potential-based shaping</strong>: add a term \(\gamma \Phi(s') - \Phi(s)\) that doesn't change optimal policies but guides learning</li>
+      <li><strong>Inverse RL</strong>: learn the reward function from expert demonstrations, assuming the expert is optimizing something</li>
+      <li><strong>Learning from human feedback</strong>: RLHF and related methods, where human evaluators rank agent behaviors</li>
+    </ul>
+  </div>
+
+  <!-- ===== SECTION 3: OPTIONS & HIERARCHY VISUALIZATION ===== -->
+  <div class="section" id="hierarchy-viz">
+    <div class="section-label interactive">
+      <span class="icon">🎮</span>
+      <span>Interactive: Options Hierarchy</span>
+    </div>
+    <h2>Temporal Abstraction in Action</h2>
+
+    <p>
+      Imagine a gridworld with four rooms connected by doorways. The agent can take primitive actions (up, down, left, right) or commit to high-level options.
+    </p>
+
+    <div class="viz-container">
+      <div class="viz-title">Option Hierarchy: From Rooms to Primitives</div>
+
+      <div class="hierarchy-diagram">
+        <div class="hierarchy-level high">
+          <div class="hierarchy-label">Level 0: High-Level Options</div>
+          <div class="hierarchy-content">Go to Room 1 | Go to Room 2 | Go to Room 3 | Go to Room 4</div>
+        </div>
+
+        <div class="hierarchy-level mid">
+          <div class="hierarchy-label">Level 1: Sub-policies</div>
+          <div class="hierarchy-content">
+            Option "Go to Room 2" executes policy \(\pi_{room2}\): move right until doorway, then move up until in room 2
+          </div>
+        </div>
+
+        <div class="hierarchy-level low">
+          <div class="hierarchy-label">Level 2: Primitive Actions</div>
+          <div class="hierarchy-content">
+            \(\pi_{room2}\) chooses from {UP, DOWN, LEFT, RIGHT} at each step
+          </div>
+        </div>
+      </div>
+
+      <p style="margin-top: 20px; color: var(--text-secondary); font-size: 14px;">
+        <strong>Key insight:</strong> The high-level planner doesn't need to know the geometry of the rooms. It only needs to learn the value of each option from its current position. The low-level policy (moving through hallways) becomes reusable across multiple options.
+      </p>
+
+      <p style="margin-top: 16px; color: var(--text-secondary); font-size: 14px;">
+        This abstraction compresses planning horizons. Instead of 100 primitive steps to reach Room 4, the agent decides "Go to Room 4" in a single choice. The effective planning depth shrinks dramatically, making long-horizon problems tractable.
+      </p>
+    </div>
+
+  </div>
+
+  <!-- ===== SECTION 4: GVF KNOWLEDGE ACCUMULATION ===== -->
+  <div class="section" id="gvf-viz">
+    <div class="section-label interactive">
+      <span class="icon">🧠</span>
+      <span>Interactive: Knowledge Accumulation</span>
+    </div>
+    <h2>General Value Functions as a Knowledge System</h2>
+
+    <p>
+      As the agent explores, it doesn't just learn "how much reward from here." It learns to predict many auxiliary signals, building a rich latent model of the world.
+    </p>
+
+    <div class="viz-container">
+      <div class="viz-title">Simultaneous Predictions: A Single Agent, Multiple GVFs</div>
+
+      <div class="gvf-grid" id="gvfGrid">
+        <div class="gvf-card">
+          <div class="gvf-signal">Cumulative Reward</div>
+          <div class="gvf-description">Expected long-term score</div>
+          <div class="gvf-prediction" style="color: var(--accent-indigo);">V(s)</div>
+        </div>
+
+        <div class="gvf-card">
+          <div class="gvf-signal">Time to Goal</div>
+          <div class="gvf-description">Steps until reaching target</div>
+          <div class="gvf-prediction" style="color: var(--accent-emerald);">T(s)</div>
+        </div>
+
+        <div class="gvf-card">
+          <div class="gvf-signal">Adversary Proximity</div>
+          <div class="gvf-description">Distance to threat</div>
+          <div class="gvf-prediction" style="color: var(--accent-rose);">D(s)</div>
+        </div>
+
+        <div class="gvf-card">
+          <div class="gvf-signal">Resource Depletion</div>
+          <div class="gvf-description">Total fuel consumed</div>
+          <div class="gvf-prediction" style="color: var(--accent-amber);">R(s)</div>
+        </div>
+
+        <div class="gvf-card">
+          <div class="gvf-signal">Exploration Coverage</div>
+          <div class="gvf-description">New regions visited</div>
+          <div class="gvf-prediction" style="color: var(--accent-cyan);">E(s)</div>
+        </div>
+
+        <div class="gvf-card">
+          <div class="gvf-signal">Collision Risk</div>
+          <div class="gvf-description">Probability of hazard</div>
+          <div class="gvf-prediction" style="color: var(--accent-blue);">P(s)</div>
+        </div>
+      </div>
+
+      <p style="margin-top: 20px; color: var(--text-secondary); font-size: 14px;">
+        <strong>Why this matters:</strong> Each GVF is learned from experience. As the agent explores, it refines all predictions simultaneously. If the agent learns "state A is near the goal," that knowledge is instantly available to any option that benefits from it. The agent becomes a <strong>predictor of the environment</strong>, not just a reward maximizer.
+      </p>
+
+      <p style="margin-top: 16px; color: var(--text-secondary); font-size: 14px;">
+        This reusability is powerful. A new task might require a different reward function, but the agent doesn't restart from scratch — it transfers its learned world model (its GVFs) and only retrains the top-level option-selection policy.
+      </p>
+    </div>
+
+  </div>
+
+  <!-- ===== SECTION 5: REWARD DESIGN & ALIGNMENT ===== -->
+  <div class="section" id="reward-alignment">
+    <div class="section-label warning">
+      <span class="icon">⚖️</span>
+      <span>Key Insight</span>
+    </div>
+    <h2>The Alignment Problem</h2>
+
+    <div class="callout warning">
+      <div class="callout-title">
+        <span class="icon">🎯</span>
+        <span>Reward Design Is The Alignment Problem</span>
+      </div>
+      <div class="callout-text">
+        In classical RL, we assume the designer can specify a reward function that captures the desired objective. But as systems become more powerful, this assumption breaks down. The agent may optimize the stated reward in ways the designer never intended. The challenge of building an agent whose objectives align with human intent is <strong>the fundamental problem of AI safety</strong>.
+      </div>
+    </div>
+
+    <h3 style="font-size: 1.2rem; color: var(--text-primary); margin: 24px 0 16px;">The Specification Problem</h3>
+    <p>
+      Consider a simple reward: "maximize human satisfaction." What counts as satisfaction? A facial expression? Self-reported happiness? An agent might learn to manipulate human emotions, gaming the signal without actually improving wellbeing. This is <strong>Goodhart's Law</strong>: "When a measure becomes a target, it ceases to be a good measure."
+    </p>
+    <p>
+      A more sophisticated approach: <strong>Inverse Reinforcement Learning (IRL)</strong>. Instead of hand-crafting the reward, we observe expert behavior and infer what the expert must be optimizing. Then we train an agent to mimic that inferred objective. But experts are imperfect, and their objectives may be inconsistent or contain hidden constraints.
+    </p>
+
+    <h3 style="font-size: 1.2rem; color: var(--text-primary); margin: 24px 0 16px;">Learning from Human Feedback</h3>
+    <p>
+      A modern approach: <strong>Reinforcement Learning from Human Feedback (RLHF)</strong>. The agent generates multiple candidate behaviors, humans rank them, and the agent learns a reward model that predicts human preferences. This reward model then guides policy improvement.
+    </p>
+    <p>
+      RLHF has powered recent successes in aligning large language models (e.g., ChatGPT, Claude). But it scales only so far. As the agent becomes more capable, human evaluators struggle to understand its behavior. Eventually, an AI system may be too complex for humans to meaningfully assess.
+    </p>
+
+    <h3 style="font-size: 1.2rem; color: var(--text-primary); margin: 24px 0 16px;">Constitutional AI and Transparency</h3>
+    <p>
+      One emerging approach: <strong>Constitutional AI</strong>. Rather than learning reward from human examples, the system is given a written constitution — a set of principles and rules it should follow. The AI learns to critique its own outputs against this constitution, iteratively improving.
+    </p>
+    <p>
+      Other research directions include mechanistic interpretability (understanding how the agent makes decisions from its weights), value alignment (ensuring the agent pursues human-compatible goals), and corrigibility (building agents that accept correction and can be shut down without resistance).
+    </p>
+  </div>
+
+  <!-- ===== SECTION 6: DEEP RL BRIDGE ===== -->
+  <div class="section" id="deep-rl">
+    <div class="section-label technical">
+      <span class="icon">🚀</span>
+      <span>Deep RL Bridge</span>
+    </div>
+    <h2>Modern Frontiers</h2>
+
+    <p>
+      Classical RL algorithms assumed discrete, small state spaces. But the real world is high-dimensional. A robot sees images, not grid coordinates. An NLP system processes tokens, not logical predicates. Modern RL integrates deep learning.
+    </p>
+
+    <h3 style="font-size: 1.2rem; color: var(--text-primary); margin: 24px 0 16px;">Deep Reinforcement Learning (DRL)</h3>
+    <p>
+      Combining neural networks with RL algorithms (DQN, A3C, PPO, SAC) has led to superhuman performance on Atari games, complex control tasks, and game-playing (AlphaGo, AlphaZero). But DRL is notoriously sample-inefficient and brittle to distribution shift.
+    </p>
+
+    <h3 style="font-size: 1.2rem; color: var(--text-primary); margin: 24px 0 16px;">Reinforcement Learning from Human Feedback (RLHF)</h3>
+    <p>
+      The backbone of modern large language model alignment. Humans rank model outputs, and the model learns to maximize predicted human preference. Successful with GPT-3.5 → GPT-4, Llama 2, Claude, etc.
+    </p>
+
+    <h3 style="font-size: 1.2rem; color: var(--text-primary); margin: 24px 0 16k;">World Models and Imagination</h3>
+    <p>
+      Instead of learning directly from high-dimensional observations, the agent first builds a model of the environment's dynamics. It can then plan or learn in this model using fewer real interactions. Approaches like PlaNet and Dream to Control show promise.
+    </p>
+
+    <h3 style="font-size: 1.2rem; color: var(--text-primary); margin: 24px 0 16px;">Multi-Agent RL</h3>
+    <p>
+      When multiple agents learn simultaneously, they change each other's environments. Standard algorithms fail (non-stationarity). Solutions include centralized training with decentralized execution (CTDE), communication protocols, and emergent specialization. Games like Dota 2, StarCraft II, and complex negotiations showcase the frontier.
+    </p>
+
+    <h3 style="font-size: 1.2rem; color: var(--text-primary); margin: 24px 0 16px;">Foundation Models + RL</h3>
+    <p>
+      Scaling laws suggest that pre-trained foundation models (trained on massive datasets) capture world knowledge. Fine-tuning with RL can specialize them to new tasks with few interactions. The synthesis of self-supervised learning and RL is a key frontier.
+    </p>
+  </div>
+
+  <!-- ===== SECTION 7: SOCRATIC SANDBOX ===== -->
+  <div class="section" id="sandbox">
+    <div class="section-label sandbox">
+      <span class="icon">❓</span>
+      <span>Socratic Sandbox</span>
+    </div>
+    <h2>Five Forward-Looking Questions</h2>
+
+    <p>
+      These questions don't have settled answers. They represent genuine open problems in the field.
+    </p>
+
+    <div class="question-block" onclick="toggleQuestion(this, 0)">
+      <div class="question-text">
+        <span>Can we build RL agents that are robust to distribution shift?</span>
+        <span class="toggle">›</span>
+      </div>
+      <div class="answer-text">
+        Deep RL agents excel in the environments they're trained on but fail catastrophically on slight variations. A robot trained to walk on flat ground stumbles on gravel. An agent that plays Breakout fails on a color-inverted variant. Classical RL theory (e.g., approximate value iteration) provides stability guarantees, but deep learning destroys these. Future work must combine the robustness of classical algorithms with the expressiveness of neural networks.
+      </div>
+    </div>
+
+    <div class="question-block" onclick="toggleQuestion(this, 1)">
+      <div class="question-text">
+        <span>How do we define and ensure value alignment?</span>
+        <span class="toggle">›</span>
+      </div>
+      <div class="answer-text">
+        Even if we solve the specification problem (writing down what we want), ensuring the agent pursues that objective is hard. The agent might find loopholes, become deceptive, or pursue instrumental goals (like gathering power or preserving itself) that weren't explicitly stated. Formal methods, mechanistic interpretability, and robust evaluation may help, but the problem scales with agent capability.
+      </div>
+    </div>
+
+    <div class="question-block" onclick="toggleQuestion(this, 2)">
+      <div class="question-text">
+        <span>Can hierarchical RL scale to real-world problems?</span>
+        <span class="toggle">›</span>
+      </div>
+      <div class="answer-text">
+        Options and hierarchies promise to solve long-horizon planning by abstraction. But how do we automatically discover good options? Learning the initiation sets, policies, and terminations jointly is hard. Real-world hierarchies are often discovered through domain expertise (e.g., a navigation hierarchy for robots). Unsupervised option discovery remains an open challenge.
+      </div>
+    </div>
+
+    <div class="question-block" onclick="toggleQuestion(this, 3)">
+      <div class="question-text">
+        <span>What is the role of exploration in open-ended learning?</span>
+        <span class="toggle">›</span>
+      </div>
+      <div class="answer-text">
+        We've learned that naive exploration (epsilon-greedy, UCB) works for bandits and small MDPs. But in large environments, pure curiosity is inefficient. An agent should explore the state space, not just to maximize reward, but to build a world model — to accumulate general value functions. This mirrors human learning: we explore to understand, not just to get reward. How do we formalize and implement this kind of learning is an open question.
+      </div>
+    </div>
+
+    <div class="question-block" onclick="toggleQuestion(this, 4)">
+      <div class="question-text">
+        <span>How do we prevent catastrophic forgetting in continual learning?</span>
+        <span class="toggle">›</span>
+      </div>
+      <div class="answer-text">
+        Agents in the real world must learn continuously. But when training on a new task, neural networks often overwrite knowledge from previous tasks. This catastrophic forgetting is partially mitigated by experience replay, but a principled solution is missing. Rehearsal buffers, elastic weight consolidation, and meta-learning are promising directions, but the problem remains unsolved at scale.
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== SECTION 8: CURRICULUM COMPLETION CELEBRATION ===== -->
+  <div class="section" id="celebration">
+    <div class="section-label celebration">
+      <span class="icon">🎓</span>
+      <span>Curriculum Completion</span>
+    </div>
+    <h2>Congratulations!</h2>
+
+    <div id="celebrationContent" style="display: none;">
+      <div class="celebration-container">
+        <div class="celebration-heading">🎉 You've Reached the Frontier</div>
+        <div class="celebration-badge">
+          <span>Mastered the Full Journey</span>
+        </div>
+
+        <div class="celebration-text">
+          You began with simple bandits, where each decision stood alone. You've climbed through Markov decision processes, learned to balance exploration and exploitation, mastered temporal difference learning, shaped policies with gradients, and orchestrated actor-critic systems. You've ventured into deep reinforcement learning's frontiers, grappled with partial observability, and confronted the alignment problem. You've gone from bandits to AGI.
+        </div>
+
+        <div class="celebration-journey">
+          <div class="journey-title">Your Journey: Bandits to Frontiers</div>
+
+          <div class="journey-item">
+            <span class="journey-icon">📊</span>
+            <span><strong>Chapters 1-3: Foundations</strong> — Introduction, multi-armed bandits, and exploration-exploitation trade-offs</span>
+          </div>
+
+          <div class="journey-item">
+            <span class="journey-icon">🎯</span>
+            <span><strong>Chapters 4-6: MDPs & Value</strong> — Markov decision processes, state and action spaces, value functions</span>
+          </div>
+
+          <div class="journey-item">
+            <span class="journey-icon">📈</span>
+            <span><strong>Chapters 7-9: Learning from Experience</strong> — Temporal difference learning, bootstrapping, TD algorithms</span>
+          </div>
+
+          <div class="journey-item">
+            <span class="journey-icon">🎪</span>
+            <span><strong>Chapters 10-12: Policy Methods</strong> — Policy gradients, actor-critic systems, advantage functions</span>
+          </div>
+
+          <div class="journey-item">
+            <span class="journey-icon">🧠</span>
+            <span><strong>Chapters 13-15: Advanced Topics</strong> — Function approximation, deep RL, continuous control</span>
+          </div>
+
+          <div class="journey-item">
+            <span class="journey-icon">🌊</span>
+            <span><strong>Chapter 16: Exploration in Depth</strong> — Advanced exploration strategies, curiosity, and uncertainty</span>
+          </div>
+
+          <div class="journey-item">
+            <span class="journey-icon">⚡</span>
+            <span><strong>Chapter 17: Frontiers</strong> — General value functions, temporal abstraction, and the alignment problem</span>
+          </div>
+        </div>
+
+        <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border-subtle);">
+          <p style="color: var(--text-secondary); font-size: 15px; line-height: 1.8;">
+            You now understand the core principles of reinforcement learning. You've seen how agents can learn to make optimal decisions in uncertain environments. You've grappled with the deep challenge of building systems whose goals align with human intent. Most importantly, you've learned to <strong>think like an RL researcher</strong> — to see the world through the lens of agents, rewards, and learning.
+          </p>
+          <p style="color: var(--text-secondary); font-size: 15px; line-height: 1.8; margin-top: 16px;">
+            The frontier is open. Go build something extraordinary.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <p style="text-align: center; margin: 40px 0; color: var(--text-secondary);">
+      <em>Complete all 17 chapters to reveal the celebration message.</em>
+    </p>
+
+  </div>
+
+  <!-- ===== FOOTER ===== -->
+  <div class="footer">
+    <a href="index.html">↤ Back to Skill Tree</a>
+    <a href="chapter-16.html" style="color: var(--text-secondary);">← Chapter 16: Exploration</a>
+  </div>
+
+</div>
+
+<script>
+// ===== KaTeX Rendering =====
+document.addEventListener('DOMContentLoaded', function() {
+  renderMathInElement(document.body, {
+    delimiters: [
+      {left: '\\(', right: '\\)', display: false},
+      {left: '\\[', right: '\\]', display: true}
+    ]
+  });
+});
+
+// ===== Question Toggle =====
+function toggleQuestion(element, index) {
+  element.classList.toggle('active');
+}
+
+// ===== Mark Complete =====
+function markChapter17Complete() {
+  const btn = document.getElementById('completeBtn');
+  const celebrationContent = document.getElementById('celebrationContent');
+
+  // Mark as done
+  btn.classList.add('done');
+  btn.textContent = '✓ Completed';
+
+  // Show celebration
+  celebrationContent.style.display = 'block';
+  celebrationContent.scrollIntoView({behavior: 'smooth', block: 'center'});
+
+  // Save to localStorage (for persistence across pages)
+  if (typeof localStorage !== 'undefined') {
+    const completed = JSON.parse(localStorage.getItem('rlCompletedChapters') || '[]');
+    if (!completed.includes(17)) {
+      completed.push(17);
+      localStorage.setItem('rlCompletedChapters', JSON.stringify(completed));
+    }
+  }
+}
+
+// ===== Check if Already Completed =====
+window.addEventListener('load', function() {
+  if (typeof localStorage !== 'undefined') {
+    const completed = JSON.parse(localStorage.getItem('rlCompletedChapters') || '[]');
+    if (completed.includes(17)) {
+      const btn = document.getElementById('completeBtn');
+      const celebrationContent = document.getElementById('celebrationContent');
+      btn.classList.add('done');
+      btn.textContent = '✓ Completed';
+      celebrationContent.style.display = 'block';
+    }
+  }
+});
+
+// ===== Code Highlighting =====
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('pre code').forEach(block => {
+    hljs.highlightElement(block);
+  });
+});
+</script>
+
+</body>
+</html>

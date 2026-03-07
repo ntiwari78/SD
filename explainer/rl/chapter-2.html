@@ -1,0 +1,1745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 2: Multi-Armed Bandits — RL Interactive Curriculum</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
+<!-- KaTeX for LaTeX rendering -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<!-- Plotly for visualizations -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+<!-- Highlight.js for code -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<style>
+:root {
+  --bg-deep: #0a0e1a;
+  --bg-card: #111827;
+  --bg-card-alt: #0f172a;
+  --bg-surface: #1e293b;
+  --border-subtle: rgba(255,255,255,0.06);
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent-indigo: #818cf8;
+  --accent-blue: #60a5fa;
+  --accent-cyan: #22d3ee;
+  --accent-emerald: #34d399;
+  --accent-amber: #fbbf24;
+  --accent-rose: #fb7185;
+  --accent-purple: #c084fc;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  line-height: 1.7;
+  font-size: 16px;
+}
+
+/* ───── Layout ───── */
+.page-wrapper {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+
+/* ───── Top Nav ───── */
+.top-nav {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(10,14,26,0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 12px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.top-nav a {
+  color: var(--text-secondary); text-decoration: none;
+  font-size: 14px; font-weight: 500;
+  display: flex; align-items: center; gap: 6px;
+  transition: color 0.2s;
+}
+.top-nav a:hover { color: var(--accent-indigo); }
+.nav-chapter-info {
+  font-size: 13px; color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.btn-complete {
+  padding: 8px 16px; border-radius: 8px; border: none;
+  background: linear-gradient(135deg, var(--accent-emerald), #10b981);
+  color: #022c22; font-weight: 600; font-size: 13px;
+  cursor: pointer; transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+.btn-complete:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(52,211,153,0.3); }
+.btn-complete.done { background: var(--bg-surface); color: var(--accent-emerald); cursor: default; }
+
+/* ───── Chapter Header ───── */
+.chapter-header {
+  text-align: center;
+  padding: 80px 0 48px;
+}
+.ch-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 14px; border-radius: 999px;
+  background: rgba(34,211,238,0.1);
+  border: 1px solid rgba(34,211,238,0.2);
+  font-size: 11px; font-weight: 700;
+  color: var(--accent-cyan);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.chapter-header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2.2rem, 5vw, 3.5rem);
+  font-weight: 900; line-height: 1.15;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #f1f5f9 0%, var(--accent-cyan) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.chapter-header .subtitle {
+  font-size: 18px; color: var(--text-secondary);
+  max-width: 580px; margin: 0 auto;
+}
+
+/* ───── Table of Contents ───── */
+.toc {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 24px 28px;
+  margin-bottom: 48px;
+}
+.toc h3 {
+  font-size: 13px; font-weight: 700;
+  color: var(--text-muted); letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.toc-list { list-style: none; }
+.toc-list li { margin-bottom: 6px; }
+.toc-list a {
+  color: var(--text-secondary); text-decoration: none;
+  font-size: 14px; font-weight: 500;
+  padding: 4px 8px; border-radius: 6px;
+  display: inline-block;
+  transition: all 0.2s;
+}
+.toc-list a:hover { color: var(--accent-indigo); background: rgba(129,140,248,0.08); }
+.toc-list .sec-num {
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  margin-right: 6px;
+}
+
+/* ───── Section Headers ───── */
+.section {
+  margin-bottom: 56px;
+}
+.section-label {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.section-label .icon { font-size: 16px; }
+.section-label.feynman { color: var(--accent-amber); }
+.section-label.technical { color: var(--accent-indigo); }
+.section-label.algorithm { color: var(--accent-emerald); }
+.section-label.sandbox { color: var(--accent-rose); }
+.section-label.interactive { color: var(--accent-cyan); }
+.section-label.history { color: var(--accent-purple); }
+
+.section h2 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800; line-height: 1.2;
+  margin-bottom: 20px;
+}
+
+.section p, .section li {
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+}
+.section p strong, .section li strong { color: var(--text-primary); font-weight: 600; }
+
+/* ───── Info Cards / Callouts ───── */
+.callout {
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin: 24px 0;
+  border-left: 3px solid;
+}
+.callout.insight {
+  background: rgba(129,140,248,0.06);
+  border-color: var(--accent-indigo);
+}
+.callout.analogy {
+  background: rgba(251,191,36,0.06);
+  border-color: var(--accent-amber);
+}
+.callout.warning {
+  background: rgba(251,113,133,0.06);
+  border-color: var(--accent-rose);
+}
+.callout.definition {
+  background: rgba(52,211,153,0.06);
+  border-color: var(--accent-emerald);
+}
+.callout-title {
+  font-size: 13px; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.callout.insight .callout-title { color: var(--accent-indigo); }
+.callout.analogy .callout-title { color: var(--accent-amber); }
+.callout.warning .callout-title { color: var(--accent-rose); }
+.callout.definition .callout-title { color: var(--accent-emerald); }
+.callout p { margin-bottom: 8px; }
+.callout p:last-child { margin-bottom: 0; }
+
+/* ───── Math Toggle ───── */
+.math-toggle {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin: 24px 0;
+  overflow: hidden;
+}
+.math-toggle-header {
+  padding: 14px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.math-toggle-header:hover { background: rgba(255,255,255,0.02); }
+.math-toggle-header .label {
+  font-size: 14px; font-weight: 600;
+  color: var(--accent-purple);
+  display: flex; align-items: center; gap: 8px;
+}
+.math-toggle-header .chevron {
+  color: var(--text-muted); font-size: 14px;
+  transition: transform 0.3s;
+}
+.math-toggle.open .chevron { transform: rotate(180deg); }
+.math-toggle-body {
+  display: none;
+  padding: 0 20px 20px;
+  border-top: 1px solid var(--border-subtle);
+}
+.math-toggle.open .math-toggle-body { display: block; padding-top: 16px; }
+
+/* ───── KaTeX ───── */
+.katex-display { margin: 20px 0; overflow-x: auto; }
+.katex { font-size: 1.1em; }
+
+/* ───── Code Blocks ───── */
+.code-block {
+  background: #0d1117;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin: 24px 0;
+  overflow: hidden;
+}
+.code-header {
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.code-header .lang {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; color: var(--text-muted); font-weight: 600;
+}
+.code-header .copy-btn {
+  padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-subtle);
+  background: transparent; color: var(--text-muted);
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s;
+}
+.code-header .copy-btn:hover { border-color: var(--accent-indigo); color: var(--accent-indigo); }
+.code-block pre {
+  padding: 16px 20px;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.code-block pre code { background: none !important; padding: 0 !important; }
+
+/* ───── Scrubbable Numbers ───── */
+.scrubbable {
+  display: inline-block;
+  color: var(--accent-cyan);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  border-bottom: 2px dashed var(--accent-cyan);
+  cursor: ew-resize;
+  user-select: none;
+  padding: 0 2px;
+  transition: color 0.2s;
+}
+.scrubbable:hover {
+  color: #67e8f9;
+  background: rgba(34,211,238,0.1);
+  border-radius: 3px;
+}
+.scrub-hint {
+  font-size: 11px; color: var(--text-muted); font-style: italic;
+  margin-top: 4px;
+}
+
+/* ───── Interactive Demo Containers ───── */
+.demo-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 24px 0;
+}
+.demo-container h4 {
+  font-size: 15px; font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+
+/* ───── Bandit Arms Grid ───── */
+.bandit-arms {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 8px;
+  margin: 16px 0;
+}
+.arm-button {
+  padding: 12px 8px;
+  border-radius: 8px;
+  border: 2px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  font-family: 'Inter', sans-serif;
+}
+.arm-button:hover {
+  border-color: var(--accent-cyan);
+  background: rgba(34,211,238,0.1);
+}
+.arm-button.optimal {
+  border-color: var(--accent-emerald);
+  background: rgba(52,211,153,0.1);
+}
+.arm-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* ───── Bandit Controls ───── */
+.bandit-controls {
+  display: flex;
+  gap: 12px;
+  margin: 16px 0;
+  flex-wrap: wrap;
+}
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.control-group label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.control-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s;
+}
+.control-btn:hover {
+  border-color: var(--accent-indigo);
+  color: var(--accent-indigo);
+}
+.control-btn.active {
+  background: rgba(129,140,248,0.2);
+  border-color: var(--accent-indigo);
+  color: var(--accent-indigo);
+}
+
+/* ───── Stats Panel ───── */
+.stats-panel {
+  background: var(--bg-surface);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 16px 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+}
+.stat-item {
+  text-align: center;
+}
+.stat-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.stat-value {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--accent-cyan);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ───── Strategy Comparison Grid ───── */
+.strategy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin: 24px 0;
+}
+.strategy-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 16px;
+  transition: all 0.2s;
+}
+.strategy-card:hover {
+  border-color: var(--accent-indigo);
+  box-shadow: 0 4px 12px rgba(129,140,248,0.1);
+}
+.strategy-card h5 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  margin-bottom: 8px;
+}
+.strategy-card p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+.strategy-param {
+  background: var(--bg-surface);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--accent-amber);
+  margin: 4px 0;
+}
+
+/* ───── Comparative Table ───── */
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 24px 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+}
+.comparison-table th {
+  background: var(--bg-surface);
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.comparison-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.comparison-table tr:last-child td {
+  border-bottom: none;
+}
+.comparison-table td:first-child {
+  font-weight: 700;
+  color: var(--text-primary);
+  background: rgba(255,255,255,0.02);
+}
+
+/* ───── Socratic Questions ───── */
+.socratic-q {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin: 16px 0;
+  overflow: hidden;
+}
+.socratic-q-header {
+  padding: 14px 20px;
+  cursor: pointer;
+  display: flex; align-items: flex-start; gap: 12px;
+  transition: background 0.2s;
+}
+.socratic-q-header:hover { background: rgba(255,255,255,0.02); }
+.q-number {
+  flex-shrink: 0;
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: rgba(251,113,133,0.1);
+  color: var(--accent-rose);
+  font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+}
+.q-text {
+  font-size: 14px; font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.5;
+  flex: 1;
+}
+.q-expand {
+  flex-shrink: 0;
+  color: var(--text-muted); font-size: 12px;
+  transition: transform 0.3s;
+  margin-top: 4px;
+}
+.socratic-q.open .q-expand { transform: rotate(180deg); }
+.socratic-a {
+  display: none;
+  padding: 0 20px 16px 60px;
+  font-size: 14px; color: var(--text-secondary);
+  line-height: 1.65;
+}
+.socratic-q.open .socratic-a { display: block; }
+
+/* ───── Bridge Sidebar ───── */
+.deep-rl-bridge {
+  background: rgba(192,132,252,0.06);
+  border: 1px solid rgba(192,132,252,0.2);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin: 24px 0;
+}
+.deep-rl-bridge h4 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-purple);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  letter-spacing: 0.05em;
+}
+.deep-rl-bridge p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.deep-rl-bridge p:last-child {
+  margin-bottom: 0;
+}
+
+/* ───── Plot Container ───── */
+.plot-container {
+  margin: 24px 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+}
+
+/* ───── Responsive ───── */
+@media (max-width: 600px) {
+  .page-wrapper { padding: 0 16px 60px; }
+  .bandit-arms { grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); }
+  .strategy-grid { grid-template-columns: 1fr; }
+  .stats-panel { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- ───── Top Navigation ───── -->
+<nav class="top-nav">
+  <a href="index.html">&#x2190; Skill Tree</a>
+  <span class="nav-chapter-info">Ch 2 / 17</span>
+  <button class="btn-complete" id="completeBtn" onclick="markChapterComplete()">&#x2713; Mark Complete</button>
+</nav>
+
+<div class="page-wrapper">
+
+<!-- ───── Chapter Header ───── -->
+<header class="chapter-header">
+  <div class="ch-badge">Foundation &middot; Chapter 2</div>
+  <h1>Multi-Armed Bandits</h1>
+  <p class="subtitle">The simplest RL problem: choosing between actions with unknown values. Learn exploration strategies that power modern deep RL.</p>
+</header>
+
+<!-- ───── Table of Contents ───── -->
+<div class="toc">
+  <h3>In This Chapter</h3>
+  <ol class="toc-list">
+    <li><a href="#feynman"><span class="sec-num">1</span> The Feynman Bridge: Restaurants and Exploration</a></li>
+    <li><a href="#technical"><span class="sec-num">2</span> The Technical Ascent: Action Values & Estimators</a></li>
+    <li><a href="#interactive-bandit"><span class="sec-num">3</span> Interactive: 10-Armed Bandit Testbed</a></li>
+    <li><a href="#strategy-comparison"><span class="sec-num">4</span> Interactive: Exploration Strategies Compared</a></li>
+    <li><a href="#algorithm"><span class="sec-num">5</span> Algorithm: ε-Greedy, UCB & Gradient Bandits</a></li>
+    <li><a href="#comparison-table"><span class="sec-num">6</span> Comparative Table: Exploration Methods</a></li>
+    <li><a href="#sandbox"><span class="sec-num">7</span> Socratic Sandbox: Debugging a Stuck Bandit Agent</a></li>
+    <li><a href="#deep-rl"><span class="sec-num">8</span> Deep RL Bridge: Modern Applications</a></li>
+  </ol>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 1: FEYNMAN BRIDGE                              -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="feynman">
+  <div class="section-label feynman"><span class="icon">&#x1F3AF;</span> The Feynman Bridge</div>
+  <h2>Choosing Restaurants: Explore or Exploit?</h2>
+
+  <p>Imagine you're a tourist in a new city with 10 restaurants nearby. You don't know which ones are good. Each night you must pick one to eat at. Every restaurant has a hidden quality (its "true value") that you'll only discover by trying it.</p>
+
+  <p>Here's your dilemma:</p>
+
+  <div class="callout analogy">
+    <div class="callout-title">The Exploration-Exploitation Trade-off</div>
+    <p><strong>Exploit:</strong> You found a decent restaurant on night 1. Keep going back — it's reliable and you know what to expect.</p>
+    <p><strong>Explore:</strong> Try the fancy new place that opened last week. Maybe it's amazing. Maybe it's terrible. You won't know until you try.</p>
+    <p>Each night you choose one restaurant (pull one "arm"). You get a reward (how good the meal was — a number, say 1–10). Over many nights, you want to maximize your total satisfaction. The challenge: <strong>with limited nights, how do you balance trying new places against returning to known favorites?</strong></p>
+  </div>
+
+  <p>This simple decision problem is called the <strong>k-armed bandit problem</strong>. The "arms" are your action choices (restaurants). The "bandit" is the RL agent (you). Each time you pull an arm, it stochastically "pays out" a reward. The goal is to maximize total reward.</p>
+
+  <p>This problem is simpler than full RL (no states, no sequences — just single decisions), but it captures the core tension that appears everywhere in reinforcement learning:</p>
+
+  <div class="callout insight">
+    <div class="callout-title">Why Bandits Matter</div>
+    <p>Bandits are the <strong>seed problem</strong> from which all of RL grows. Even though they look toy-like, the exploration strategies you learn here — ε-greedy, optimistic initialization, upper confidence bounds (UCB), Thompson sampling — directly power modern recommender systems, A/B testing, and even the exploration strategies in deep Q-learning. Mastering bandits is mastering the exploration-exploitation frontier.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 2: TECHNICAL ASCENT                            -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="technical">
+  <div class="section-label technical"><span class="icon">&#x1F4D0;</span> The Technical Ascent</div>
+  <h2>Action Values, Sample Averages & Update Rules</h2>
+
+  <p>In the k-armed bandit, you must estimate the value of each arm and then use those estimates to decide which to pull next. Let's build this from first principles.</p>
+
+  <p><strong>The true action value</strong> of arm \(a\) is the expected reward you'd get if you pulled it forever:</p>
+
+  $$q_*(a) = \mathbb{E}[R_t \mid A_t = a]$$
+
+  <p>You don't know \(q_*(a)\), but you can estimate it by averaging the rewards you've received from arm \(a\):</p>
+
+  <div class="math-toggle" id="mt-eq21">
+    <div class="math-toggle-header" onclick="toggleMath('mt-eq21')">
+      <span class="label">&#x1F9EE; Equation 2.1: Sample-Average Estimate</span>
+      <span class="chevron">&#x25BC;</span>
+    </div>
+    <div class="math-toggle-body">
+      <p style="color:var(--text-secondary)">The simplest estimator is the sample mean. If arm \(a\) has been selected \(N_t(a)\) times by time \(t\) and the rewards were \(R_1, R_2, \ldots, R_{N_t(a)}\), then:</p>
+      $$Q_t(a) = \frac{\sum_{i=1}^{N_t(a)} R_i}{N_t(a)}$$
+      <p style="color:var(--text-secondary)">This converges to \(q_*(a)\) as \(N_t(a) \to \infty\) (law of large numbers). It's unbiased and simple, but can be slow to update.</p>
+    </div>
+  </div>
+
+  <p><strong>Action selection:</strong> The simplest strategy is ε-greedy. With probability \(\varepsilon\), explore (pick a random arm). With probability \(1-\varepsilon\), exploit (pick the arm with the highest estimated value):</p>
+
+  <div class="math-toggle" id="mt-eq22">
+    <div class="math-toggle-header" onclick="toggleMath('mt-eq22')">
+      <span class="label">&#x1F9EE; Equation 2.2: ε-Greedy Policy</span>
+      <span class="chevron">&#x25BC;</span>
+    </div>
+    <div class="math-toggle-body">
+      $$A_t = \begin{cases}
+      \text{random arm} & \text{with probability } \varepsilon \\
+      \arg\max_a Q_t(a) & \text{with probability } 1-\varepsilon
+      \end{cases}$$
+      <p style="color:var(--text-secondary)">The ε-greedy method is the simplest exploration strategy. It explores uniformly (not intelligently), but because it explores forever (albeit rarely if ε is small), it will eventually estimate all action values accurately.</p>
+    </div>
+  </div>
+
+  <p><strong>Incremental update rule:</strong> Recomputing the full average every time is wasteful. Instead, update incrementally:</p>
+
+  <div class="math-toggle" id="mt-eq23">
+    <div class="math-toggle-header" onclick="toggleMath('mt-eq23')">
+      <span class="label">&#x1F9EE; Equation 2.3: Incremental Update (Sample Average)</span>
+      <span class="chevron">&#x25BC;</span>
+    </div>
+    <div class="math-toggle-body">
+      $$Q_{n+1} = Q_n + \frac{1}{n}\Big[R_n - Q_n\Big]$$
+      <p style="color:var(--text-secondary)">Where \(n\) is the number of times the arm has been selected and \(R_n\) is the most recent reward. The term \([R_n - Q_n]\) is the error, and we move \(Q_n\) toward it by a fraction \(1/n\).</p>
+    </div>
+  </div>
+
+  <p>This can be rewritten in the general form:</p>
+
+  <div class="math-toggle" id="mt-eq24">
+    <div class="math-toggle-header" onclick="toggleMath('mt-eq24')">
+      <span class="label">&#x1F9EE; Equation 2.4: General Update Form</span>
+      <span class="chevron">&#x25BC;</span>
+    </div>
+    <div class="math-toggle-body">
+      $$\text{NewEstimate} \leftarrow \text{OldEstimate} + \text{StepSize} \times [\text{Target} - \text{OldEstimate}]$$
+      <p style="color:var(--text-secondary)">This pattern appears everywhere in RL: the step-size controls learning rate, the target is the desired value, and the bracketed term is the error. Different algorithms use different targets. In sample-average bandits, Target = \(R_n\).</p>
+    </div>
+  </div>
+
+  <p><strong>Nonstationary environments:</strong> In many real problems, the true values change over time. Sample averages give equal weight to old and new rewards, but recent rewards matter more. Use a constant step-size instead:</p>
+
+  <div class="math-toggle" id="mt-eq25">
+    <div class="math-toggle-header" onclick="toggleMath('mt-eq25')">
+      <span class="label">&#x1F9EE; Equation 2.5: Constant Step-Size Update</span>
+      <span class="chevron">&#x25BC;</span>
+    </div>
+    <div class="math-toggle-body">
+      $$Q_{n+1} = Q_n + \alpha \Big[R_n - Q_n\Big]$$
+      <p style="color:var(--text-secondary)">With constant \(\alpha \in (0,1]\). This gives more weight to recent rewards. For \(\alpha = 1/n\), it's the sample-average rule. For constant \(\alpha\), it tracks recent changes.</p>
+    </div>
+  </div>
+
+  <p>The constant step-size can be rewritten as a weighted average of all past rewards:</p>
+
+  <div class="math-toggle" id="mt-eq26">
+    <div class="math-toggle-header" onclick="toggleMath('mt-eq26')">
+      <span class="label">&#x1F9EE; Equation 2.6: Exponential Recency-Weighted Average</span>
+      <span class="chevron">&#x25BC;</span>
+    </div>
+    <div class="math-toggle-body">
+      $$Q_n = \sum_{i=1}^{n} (1-\alpha)^{n-i} \alpha R_i + (1-\alpha)^n Q_1$$
+      <p style="color:var(--text-secondary)">Recent rewards get weight \(\alpha, \alpha(1-\alpha), \alpha(1-\alpha)^2, \ldots\) (exponentially decaying). The total weight sums to 1. This is useful for nonstationary problems where old data is less relevant.</p>
+    </div>
+  </div>
+
+  <p><strong>Upper Confidence Bound (UCB) strategy:</strong> Instead of exploring uniformly at random, explore "smartly" — prioritize arms that are promising or where your estimate is uncertain:</p>
+
+  <div class="math-toggle" id="mt-eq210">
+    <div class="math-toggle-header" onclick="toggleMath('mt-eq210')">
+      <span class="label">&#x1F9EE; Equation 2.10: UCB Action Selection</span>
+      <span class="chevron">&#x25BC;</span>
+    </div>
+    <div class="math-toggle-body">
+      $$A_t = \arg\max_a \left[ Q_t(a) + c \sqrt{\frac{\ln t}{N_t(a)}} \right]$$
+      <p style="color:var(--text-secondary)">The first term \(Q_t(a)\) is the estimated value. The second term is an uncertainty bonus: \(\sqrt{\ln t / N_t(a)}\) is large when the arm hasn't been tried much. The parameter \(c > 0\) controls exploration. UCB balances exploitation (high \(Q_t(a)\)) with exploration (low \(N_t(a)\)).</p>
+    </div>
+  </div>
+
+  <p><strong>Gradient Bandit (Softmax Preference):</strong> Instead of learning action values \(Q(a)\), learn action preferences \(H(a)\). The policy is softmax over preferences:</p>
+
+  <div class="math-toggle" id="mt-eq211">
+    <div class="math-toggle-header" onclick="toggleMath('mt-eq211')">
+      <span class="label">&#x1F9EE; Equation 2.11: Softmax Policy</span>
+      <span class="chevron">&#x25BC;</span>
+    </div>
+    <div class="math-toggle-body">
+      $$\pi_t(a) = \frac{e^{H_t(a)}}{\sum_b e^{H_t(b)}}$$
+      <p style="color:var(--text-secondary)">Higher preferences lead to higher probabilities. This naturally explores but biases toward better arms. The preference is updated using the policy gradient theorem:</p>
+    </div>
+  </div>
+
+  <div class="math-toggle" id="mt-eq212">
+    <div class="math-toggle-header" onclick="toggleMath('mt-eq212')">
+      <span class="label">&#x1F9EE; Equation 2.12: Preference Update (Policy Gradient)</span>
+      <span class="chevron">&#x25BC;</span>
+    </div>
+    <div class="math-toggle-body">
+      $$H_{n+1}(a) = H_n(a) + \alpha [R_n - \bar{R}_n] \pi_n(a)$$
+      <p style="color:var(--text-secondary)">Where \(\bar{R}_n\) is the average reward (baseline). If the reward exceeded the baseline, increase the preference for the action taken. The update is proportional to the policy \(\pi_n(a)\), making this a stochastic gradient ascent on expected reward.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 3: INTERACTIVE BANDIT TESTBED                  -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="interactive-bandit">
+  <div class="section-label interactive"><span class="icon">&#x1F39B;</span> Interactive</div>
+  <h2>10-Armed Bandit Testbed Simulation</h2>
+
+  <p>Below is a live bandit agent. Pull arms to explore, watch the agent learn. See your estimated values (Q_t(a)) update in real time. The true value of each arm is hidden; your job is to discover which are best.</p>
+
+  <div class="demo-container">
+    <h4>10-Armed Bandit Environment</h4>
+    <div class="stats-panel">
+      <div class="stat-item">
+        <div class="stat-label">Pulls</div>
+        <div class="stat-value" id="stat-pulls">0</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Avg Reward</div>
+        <div class="stat-value" id="stat-avg-reward">0.00</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Max Known</div>
+        <div class="stat-value" id="stat-max-q">0.00</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Optimal Arm</div>
+        <div class="stat-value" id="stat-optimal-arm">?</div>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 16px;">
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">Number of arms (k):</div>
+      <span class="scrubbable" id="scrub-k-arms" data-min="2" data-max="20" data-step="1" data-value="10">10</span>
+    </div>
+
+    <div style="margin-bottom: 16px;">
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">Exploration rate (ε):</div>
+      <span class="scrubbable" id="scrub-epsilon" data-min="0" data-max="1" data-step="0.01" data-value="0.1">0.1</span>
+    </div>
+
+    <p class="scrub-hint">&#x2194; Drag to adjust parameters in real time</p>
+
+    <h4 style="margin-top: 20px;">Arms &amp; Estimates</h4>
+    <div class="bandit-arms" id="bandit-arms"></div>
+
+    <div style="margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px;">
+      <button class="control-btn" onclick="pullRandomArm()">Pull Arm</button>
+      <button class="control-btn" id="autoplay-btn" onclick="toggleAutoplay()">Start Autoplay</button>
+      <button class="control-btn" onclick="resetBandit()">Reset</button>
+    </div>
+
+    <div style="margin-top: 20px; display: none;" id="chart-container">
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">Average Reward Over Time</div>
+      <div class="plot-container" id="bandit-chart" style="height:300px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 4: STRATEGY COMPARISON                          -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="strategy-comparison">
+  <div class="section-label interactive"><span class="icon">&#x1F4CA;</span> Interactive</div>
+  <h2>Exploration Strategies: Side-by-Side Comparison</h2>
+
+  <p>Run the same 10-armed bandit problem with different exploration strategies. Adjust parameters with the sliders and see how each strategy's learning curve differs. Which explores smartly? Which wastes pulls on clearly bad arms?</p>
+
+  <div class="demo-container">
+    <div class="strategy-grid" id="strategy-grid">
+      <div class="strategy-card">
+        <h5>ε-Greedy</h5>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">Epsilon (ε):</div>
+        <span class="scrubbable" id="scrub-eps-greedy" data-min="0" data-max="0.5" data-step="0.01" data-value="0.1">0.10</span>
+        <p style="margin-top:12px;font-size:12px;color:var(--text-secondary);">Explores uniformly at random with probability ε. Simple but not smart about which arm to explore.</p>
+        <div class="plot-container" id="chart-eps-greedy" style="height:250px;margin-top:12px;"></div>
+      </div>
+
+      <div class="strategy-card">
+        <h5>UCB</h5>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">Confidence (c):</div>
+        <span class="scrubbable" id="scrub-ucb-c" data-min="0" data-max="4" data-step="0.1" data-value="1">1.0</span>
+        <p style="margin-top:12px;font-size:12px;color:var(--text-secondary);">Prioritizes uncertain arms. Explores smartly, balancing value estimates with uncertainty.</p>
+        <div class="plot-container" id="chart-ucb" style="height:250px;margin-top:12px;"></div>
+      </div>
+
+      <div class="strategy-card">
+        <h5>Optimistic Init</h5>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">Initial Q:</div>
+        <span class="scrubbable" id="scrub-opt-init" data-min="0.5" data-max="5" data-step="0.1" data-value="2">2.0</span>
+        <p style="margin-top:12px;font-size:12px;color:var(--text-secondary);">Start with optimistic value estimates. Every arm looks promising, forcing exploration that naturally decays.</p>
+        <div class="plot-container" id="chart-opt-init" style="height:250px;margin-top:12px;"></div>
+      </div>
+
+      <div class="strategy-card">
+        <h5>Gradient Bandit</h5>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">Step Size (α):</div>
+        <span class="scrubbable" id="scrub-gradient-alpha" data-min="0.01" data-max="0.5" data-step="0.01" data-value="0.1">0.10</span>
+        <p style="margin-top:12px;font-size:12px;color:var(--text-secondary);">Learn action preferences using softmax policy. Naturally explores proportional to probability.</p>
+        <div class="plot-container" id="chart-gradient" style="height:250px;margin-top:12px;"></div>
+      </div>
+    </div>
+
+    <div style="margin-top:24px;padding-top:24px;border-top:1px solid var(--border-subtle);">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+        <button class="control-btn" id="run-comparison-btn" onclick="runStrategyComparison()">Run Comparison (1000 steps)</button>
+        <button class="control-btn" onclick="resetStrategyComparison()">Reset</button>
+      </div>
+      <p style="font-size:12px;color:var(--text-secondary);">Each strategy runs 1000 arm pulls in the same 10-armed environment. Adjust parameters above to see how they affect learning curves.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 5: ALGORITHM IMPLEMENTATION                    -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="algorithm">
+  <div class="section-label algorithm"><span class="icon">&#x1F4BB;</span> Algorithm Implementation</div>
+  <h2>Complete Bandit Algorithms in Python</h2>
+
+  <p>Below is the full annotated implementation of all major bandit exploration strategies. Every line maps back to the equations above.</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="lang">Python / NumPy</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><code class="language-python">import numpy as np
+from typing import List, Tuple
+
+class BanditEnvironment:
+    """
+    A k-armed bandit where each arm has a fixed (unknown)
+    true value drawn from N(0, 1).
+    """
+    def __init__(self, k: int, seed: int = None):
+        if seed: np.random.seed(seed)
+        self.k = k
+        # True values: q*(a) for each arm
+        self.q_star = np.random.randn(k)
+
+    def step(self, action: int) -> float:
+        """Pull arm 'action', return reward from N(q*(action), 1)"""
+        return self.q_star[action] + np.random.randn()
+
+
+class EpsilonGreedyAgent:
+    """
+    Epsilon-greedy bandit agent (Eq 2.2).
+
+    With probability ε: explore (random arm)
+    With probability 1-ε: exploit (greedy: highest Q_t(a))
+    """
+    def __init__(self, k: int, epsilon: float = 0.1, alpha: float = None):
+        self.k = k
+        self.epsilon = epsilon
+        self.alpha = alpha  # None = sample-average, else = constant step-size
+        self.Q = np.zeros(k)      # Q_t(a) estimates (Eq 2.1 or 2.5)
+        self.N = np.zeros(k, dtype=int)  # N_t(a): times arm a selected
+
+    def select_action(self) -> int:
+        """ε-greedy action selection (Eq 2.2)"""
+        if np.random.random() < self.epsilon:
+            # Explore: random arm
+            return np.random.randint(self.k)
+        else:
+            # Exploit: greedy arm (break ties randomly)
+            best_actions = np.where(self.Q == self.Q.max())[0]
+            return np.random.choice(best_actions)
+
+    def update(self, action: int, reward: float):
+        """Update Q-value using sample-average or constant step-size"""
+        self.N[action] += 1
+        if self.alpha is None:
+            # Sample-average: Q_{n+1} = Q_n + (1/n)[R_n - Q_n] (Eq 2.3)
+            self.Q[action] += (1 / self.N[action]) * (reward - self.Q[action])
+        else:
+            # Constant step-size: Q_{n+1} = Q_n + α[R_n - Q_n] (Eq 2.5)
+            self.Q[action] += self.alpha * (reward - self.Q[action])
+
+
+class UCBAgent:
+    """
+    Upper Confidence Bound agent (Eq 2.10).
+
+    Select arm that maximizes: Q_t(a) + c·sqrt(ln(t) / N_t(a))
+
+    The bonus term prioritizes uncertain (rarely-tried) arms.
+    """
+    def __init__(self, k: int, c: float = 1.0, alpha: float = None):
+        self.k = k
+        self.c = c
+        self.alpha = alpha
+        self.Q = np.zeros(k)
+        self.N = np.zeros(k, dtype=int)
+        self.t = 0  # Total pulls
+
+    def select_action(self) -> int:
+        """UCB action selection (Eq 2.10)"""
+        self.t += 1
+
+        # Avoid log(0) on first pulls: pull each arm at least once
+        if self.t <= self.k:
+            return self.t - 1
+
+        # Upper confidence bounds for each arm
+        ucb_values = self.Q + self.c * np.sqrt(np.log(self.t) / self.N)
+        best_actions = np.where(ucb_values == ucb_values.max())[0]
+        return np.random.choice(best_actions)
+
+    def update(self, action: int, reward: float):
+        """Update Q-value"""
+        self.N[action] += 1
+        if self.alpha is None:
+            self.Q[action] += (1 / self.N[action]) * (reward - self.Q[action])
+        else:
+            self.Q[action] += self.alpha * (reward - self.Q[action])
+
+
+class GradientBanditAgent:
+    """
+    Gradient bandit / softmax preference learner (Eq 2.11, 2.12).
+
+    Learn action preferences H(a), not values.
+    Policy is softmax: π_t(a) = e^{H_t(a)} / Σ e^{H_t(b)}
+    Update: H_{n+1}(a) = H_n(a) + α[R_n - R̄_n]π_n(a)
+    """
+    def __init__(self, k: int, alpha: float = 0.1):
+        self.k = k
+        self.alpha = alpha
+        self.H = np.zeros(k)      # Preferences (initially equal)
+        self.R_bar = 0.0          # Running average reward (baseline)
+        self.t = 0                # Total pulls
+
+    def select_action(self) -> int:
+        """Sample action from softmax policy (Eq 2.11)"""
+        # Compute softmax probabilities
+        exp_H = np.exp(self.H - self.H.max())  # Subtract max for numerical stability
+        self.pi = exp_H / exp_H.sum()
+        # Sample from policy
+        return np.random.choice(self.k, p=self.pi)
+
+    def update(self, action: int, reward: float):
+        """Update preferences using policy gradient (Eq 2.12)"""
+        self.t += 1
+        # Update baseline (running average of rewards)
+        self.R_bar += (1 / self.t) * (reward - self.R_bar)
+        # Baseline (to reduce variance): any constant subtracts from all actions
+        baseline = self.R_bar
+        # Policy gradient update (Eq 2.12)
+        # Only the selected action gets updated (others implicitly: H_i -= α·baseline·π_i)
+        for a in range(self.k):
+            if a == action:
+                self.H[a] += self.alpha * (reward - baseline) * self.pi[a]
+            else:
+                self.H[a] -= self.alpha * (reward - baseline) * self.pi[a]
+
+
+class OptimisticInitAgent:
+    """
+    ε-greedy with optimistic initial values.
+
+    Start Q_1(a) = q_init (usually high, e.g., 5).
+    This forces exploration: all arms look promising at first,
+    but as you learn they're bad, you naturally explore less.
+    """
+    def __init__(self, k: int, q_init: float = 2.0, epsilon: float = 0.01, alpha: float = None):
+        self.k = k
+        self.epsilon = epsilon
+        self.alpha = alpha
+        self.Q = np.full(k, q_init)  # Initialize optimistically
+        self.N = np.zeros(k, dtype=int)
+
+    def select_action(self) -> int:
+        """ε-greedy selection"""
+        if np.random.random() < self.epsilon:
+            return np.random.randint(self.k)
+        else:
+            best_actions = np.where(self.Q == self.Q.max())[0]
+            return np.random.choice(best_actions)
+
+    def update(self, action: int, reward: float):
+        """Update Q-value"""
+        self.N[action] += 1
+        if self.alpha is None:
+            self.Q[action] += (1 / self.N[action]) * (reward - self.Q[action])
+        else:
+            self.Q[action] += self.alpha * (reward - self.Q[action])
+
+
+def run_bandit_experiment(
+    agent, env: BanditEnvironment, steps: int = 1000
+) -> Tuple[List[float], List[int]]:
+    """
+    Run one episode of a bandit agent in an environment.
+
+    Returns:
+      - rewards: list of rewards at each step
+      - actions: list of actions taken
+    """
+    rewards = []
+    actions = []
+
+    for _ in range(steps):
+        # Agent observes state (no state in bandits) and selects action
+        action = agent.select_action()
+        actions.append(action)
+
+        # Environment gives reward
+        reward = env.step(action)
+        rewards.append(reward)
+
+        # Agent updates value estimates
+        agent.update(action, reward)
+
+    return rewards, actions
+
+
+if __name__ == '__main__':
+    # Quick comparison: run each agent in a 10-armed bandit
+    np.random.seed(42)
+    env = BanditEnvironment(k=10, seed=42)
+
+    agents = {
+        'ε-greedy (ε=0.1)': EpsilonGreedyAgent(k=10, epsilon=0.1),
+        'UCB (c=2)': UCBAgent(k=10, c=2.0),
+        'Optimistic (Q_init=5)': OptimisticInitAgent(k=10, q_init=5.0),
+        'Gradient (α=0.1)': GradientBanditAgent(k=10, alpha=0.1),
+    }
+
+    print(f"True arm values (q*):\n{env.q_star}\n")
+    print(f"Optimal arm: {np.argmax(env.q_star)} (value={env.q_star.max():.3f})\n")
+
+    for name, agent in agents.items():
+        rewards, actions = run_bandit_experiment(agent, env, steps=1000)
+        avg_reward = np.mean(rewards[-100:])  # Last 100 steps
+        optimal_pct = (np.array(actions)[-100:] == np.argmax(env.q_star)).mean() * 100
+        print(f"{name:25s} | Avg reward (last 100): {avg_reward:6.3f} | Optimal arm %: {optimal_pct:5.1f}%")
+</code></pre>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 6: COMPARATIVE TABLE                           -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="comparison-table">
+  <div class="section-label technical"><span class="icon">&#x1F4DD;</span> Comparison</div>
+  <h2>Exploration Strategies: Side-by-Side Comparison</h2>
+
+  <p>Here's how the major bandit exploration strategies compare across key dimensions:</p>
+
+  <table class="comparison-table">
+    <thead>
+      <tr>
+        <th>Method</th>
+        <th>Explores By...</th>
+        <th>Key Parameter</th>
+        <th>Strengths</th>
+        <th>Weaknesses</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>ε-Greedy</td>
+        <td>Uniform random (prob ε)</td>
+        <td>ε (0 to 1)</td>
+        <td>Simple, converges to optimal, no tuning of arm values</td>
+        <td>Wastes pulls on clearly bad arms; explores inefficiently</td>
+      </tr>
+      <tr>
+        <td>Optimistic Init</td>
+        <td>Natural decay (high init → learns arms are worse)</td>
+        <td>Q_init (initial value)</td>
+        <td>No exploration parameter; elegant natural decay; works well</td>
+        <td>Requires tuning Q_init; can oscillate if Q_init too high</td>
+      </tr>
+      <tr>
+        <td>Upper Confidence Bound (UCB)</td>
+        <td>Bonus for uncertain (rarely-tried) arms</td>
+        <td>c (confidence level)</td>
+        <td>Smart exploration; provably efficient; prioritizes uncertain arms</td>
+        <td>Requires log(t) computation; assumes bounded rewards</td>
+      </tr>
+      <tr>
+        <td>Gradient Bandit</td>
+        <td>Proportional to softmax policy</td>
+        <td>α (step size)</td>
+        <td>Theoretically grounded (policy gradient); natural stochasticity</td>
+        <td>Slower convergence; requires baseline; more hyperparameters</td>
+      </tr>
+      <tr>
+        <td>Thompson Sampling</td>
+        <td>Bayesian posterior samples</td>
+        <td>Prior distribution</td>
+        <td>Theoretically optimal; data-efficient; naturally Bayesian</td>
+        <td>Expensive (posterior sampling); requires distributional assumptions</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 7: SOCRATIC SANDBOX                            -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="sandbox">
+  <div class="section-label sandbox"><span class="icon">&#x1F9EA;</span> Socratic Sandbox</div>
+  <h2>Debugging a Stuck Bandit Agent</h2>
+
+  <p>You've trained a 10-armed bandit agent with ε-greedy (ε=0.1) for 1000 pulls. Its average reward plateaued at 1.2, but the true optimal arm has value ~1.55. The agent seems to waste many pulls on clearly bad arms and hasn't discovered the best one yet.</p>
+
+  <div class="callout warning">
+    <div class="callout-title">Scenario: The Learning Plateau</div>
+    <p>You examine the agent's learned values Q_t(a) for each arm. Eight arms are correctly identified as bad (Q ~ 0 to 0.5). But the best arm has Q = 1.1 (close to optimal 1.55), and a mediocre arm also has Q ~ 1.1. The agent can't distinguish them — it alternates between them and misses the exploration needed to confirm which is truly best. With only 100 pulls left, you won't converge.</p>
+  </div>
+
+  <div class="socratic-q" onclick="toggleQ(this)">
+    <div class="socratic-q-header">
+      <span class="q-number">1</span>
+      <span class="q-text">Why does ε-greedy waste pulls on arms it's already learned are bad?</span>
+      <span class="q-expand">&#x25BC;</span>
+    </div>
+    <div class="socratic-a">
+      <p>ε-greedy explores <strong>uniformly at random</strong> — every non-greedy action has equal probability. If the agent has ruled out 8 arms as bad but still explores, it explores all 10 equally, wasting pulls on the 8 it knows are poor. <strong>UCB and Thompson sampling solve this:</strong> they explore the high-uncertainty arms (arms 1 and 9, which are close in value) while ignoring arms they're confident about. This is "smart exploration" — it doesn't repeat lessons it's already learned.</p>
+    </div>
+  </div>
+
+  <div class="socratic-q" onclick="toggleQ(this)">
+    <div class="socratic-q-header">
+      <span class="q-number">2</span>
+      <span class="q-text">You have 100 pulls left. Should you set ε=0 (pure exploitation) to squeeze maximum reward, or keep exploring?</span>
+      <span class="q-expand">&#x25BC;</span>
+    </div>
+    <div class="socratic-a">
+      <p>Keep exploring, but <strong>reduce ε</strong> (don't eliminate it). If you set ε=0, you'll forever exploit the greedy arm, never resolving the tie between arms 1 and 9. With remaining budget, the <strong>opportunity cost of exploration is high</strong> — each exploratory pull could be a greedy pull. But exploration is still profitable if the uncertainty is large. This is the essence of the exploration-exploitation tradeoff. The "optimal" strategy depends on time-horizon: with unlimited time, exploration is free. With finite time, it's expensive.</p>
+    </div>
+  </div>
+
+  <div class="socratic-q" onclick="toggleQ(this)">
+    <div class="socratic-q-header">
+      <span class="q-number">3</span>
+      <span class="q-text">What if you restart with optimistic initialization (Q_init=5) instead of Q_init=0.5? How does that change learning?</span>
+      <span class="q-expand">&#x25BC;</span>
+    </div>
+    <div class="socratic-a">
+      <p>With Q_init=5 (very high), every arm initially looks amazing. The agent will explore all arms aggressively in early steps, quickly learning which are bad and ruling them out. Bad arms drop from 5 toward 0 rapidly, creating high TD errors and informative updates. The agent <strong>naturally decays exploration</strong> — it doesn't need ε-greedy's explicit randomness. Optimistic init is often better for bandits, but requires careful tuning of Q_init. Too low and you underexplore; too high and you overshoot estimates.</p>
+    </div>
+  </div>
+
+  <div class="socratic-q" onclick="toggleQ(this)">
+    <div class="socratic-q-header">
+      <span class="q-number">4</span>
+      <span class="q-text">The environment is stationary (true arm values don't change). Should you use sample-average (1/n learning rate) or constant step-size α?</span>
+      <span class="q-expand">&#x25BC;</span>
+    </div>
+    <div class="socratic-a">
+      <p>In stationary environments, <strong>sample-average is theoretically superior</strong> — it converges to the true value with zero asymptotic error. Constant α creates a bias (older rewards matter less), but that's not a problem in stationary settings. However, sample-average updates slow down over time (step-size = 1/n shrinks), so early learning is fast but refinement is slow. In practice, many practitioners use constant α anyway for simplicity and better online performance. The tradeoff: sample-average = consistency; constant α = responsiveness.</p>
+    </div>
+  </div>
+
+  <div class="socratic-q" onclick="toggleQ(this)">
+    <div class="socratic-q-header">
+      <span class="q-number">5</span>
+      <span class="q-text">How would you modify the bandit to make it nonstationary? And what would that mean for your exploration strategy?</span>
+      <span class="q-expand">&#x25BC;</span>
+    </div>
+    <div class="socratic-a">
+      <p><strong>Nonstationary:</strong> the true arm values drift over time. For example, restaurants change quality, or ad click-through rates evolve as users learn. In nonstationary bandits, <strong>constant step-size is critical</strong> — sample-average forgets new data. You'd also want higher ε or more exploration, because the "best arm" identified at step 500 might be suboptimal at step 1000. Thompson sampling with Bayesian updates naturally handles nonstationarity: you update your belief about each arm's distribution as evidence accumulates. This is why contextual bandits and Thompson sampling are dominant in real-world recommendation systems.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 8: DEEP RL BRIDGE                              -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="deep-rl">
+  <div class="section-label history"><span class="icon">&#x1F517;</span> Modern Applications</div>
+  <h2>Connecting Bandits to Deep RL and Beyond</h2>
+
+  <div class="deep-rl-bridge">
+    <h4>Contextual Bandits → Recommendation Systems</h4>
+    <p><strong>The jump:</strong> Multi-armed bandits assume no state. Contextual bandits extend this: at each time, you observe a context (user features, news article embedding), then select an action. The reward depends on the context and action. This is the foundation of modern recommender systems: Netflix, YouTube, and Spotify all use contextual bandits (or close variants) to balance showing you content you'll click with exploring new content you might like. The exploration-exploitation tradeoff you learned here directly powers billions of daily recommendations.</p>
+  </div>
+
+  <div class="deep-rl-bridge">
+    <h4>Thompson Sampling → Bayesian Deep Learning</h4>
+    <p><strong>The jump:</strong> Thompson sampling is a Bayesian exploration method: maintain a posterior distribution over arm values and sample from it. This naturally balances exploitation (sampling from modes of the posterior) with exploration (respecting uncertainty). Modern Bayesian deep learning applies similar ideas to neural networks: maintain uncertainty estimates over network weights and use them to drive exploration in RL agents. Uncertainty-driven exploration is a frontier in safe and sample-efficient RL.</p>
+  </div>
+
+  <div class="deep-rl-bridge">
+    <h4>UCB → Bonus-Based Exploration in DQN</h4>
+    <p><strong>The jump:</strong> In the next chapters, you'll learn Q-learning and Deep Q-Networks (DQN). The standard DQN uses ε-greedy exploration, which is simple but inefficient. Modern variants (Rainbow, etc.) incorporate UCB-style bonuses: add an uncertainty or visitation-count bonus to the Q-values, prioritizing uncertain or rarely-visited states. This is UCB applied to deep RL: instead of uncertainty over action values, it's uncertainty over state-action values in a high-dimensional environment. The core insight — "explore the uncertain" — transfers directly from Chapter 2 to Chapter 7.</p>
+  </div>
+
+  <div class="deep-rl-bridge">
+    <h4>Gradient Bandits → Policy Gradient Methods</h4>
+    <p><strong>The jump:</strong> In Chapters 13–15, you'll study policy gradient methods like REINFORCE and Actor-Critic algorithms. These directly generalize the gradient bandit from Chapter 2: instead of learning preferences H(a) over discrete actions, you learn a parameterized policy π_θ(a|s) over states and actions. The update rule is nearly identical: move parameters to increase the log-probability of high-reward actions. The gradient bandit is the simplest instance of policy gradient learning — all of modern policy gradient RL builds on this foundation.</p>
+  </div>
+</div>
+
+<!-- ───── Chapter Navigation ───── -->
+<div style="display:flex;justify-content:space-between;align-items:center;margin-top:60px;padding-top:32px;border-top:1px solid var(--border-subtle);">
+  <a href="chapter-1.html" style="color:var(--text-secondary);text-decoration:none;font-size:14px;font-weight:500;">&#x2190; Chapter 1: Introduction</a>
+  <a href="chapter-3.html" style="color:var(--accent-indigo);text-decoration:none;font-size:14px;font-weight:600;" onclick="event.preventDefault();alert('Chapter 3 coming soon!')">Chapter 3: Finite MDPs &#x2192;</a>
+</div>
+
+</div><!-- end page-wrapper -->
+
+<script>
+// ═══════════════════════════════════════════
+// MATH TOGGLES
+// ═══════════════════════════════════════════
+function toggleMath(id) {
+  document.getElementById(id).classList.toggle('open');
+}
+
+// ═══════════════════════════════════════════
+// SOCRATIC QUESTIONS
+// ═══════════════════════════════════════════
+function toggleQ(el) {
+  el.classList.toggle('open');
+}
+
+// ═══════════════════════════════════════════
+// CODE COPY
+// ═══════════════════════════════════════════
+function copyCode(btn) {
+  const code = btn.closest('.code-block').querySelector('code').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
+  });
+}
+
+// ═══════════════════════════════════════════
+// SCRUBBABLE NUMBERS
+// ═══════════════════════════════════════════
+document.querySelectorAll('.scrubbable').forEach(el => {
+  let startX, startVal;
+  const min = parseFloat(el.dataset.min);
+  const max = parseFloat(el.dataset.max);
+  const step = parseFloat(el.dataset.step);
+  let value = parseFloat(el.dataset.value);
+
+  function onPointerDown(e) {
+    e.preventDefault();
+    startX = e.clientX;
+    startVal = value;
+    document.addEventListener('pointermove', onPointerMove);
+    document.addEventListener('pointerup', onPointerUp);
+    el.style.cursor = 'grabbing';
+  }
+  function onPointerMove(e) {
+    const dx = e.clientX - startX;
+    const sensitivity = step < 0.1 ? 2 : 0.5;
+    value = Math.min(max, Math.max(min, startVal + dx * step * sensitivity));
+    const decimals = step < 1 ? 2 : 0;
+    el.textContent = value.toFixed(decimals);
+    el.dataset.value = value;
+    updateBanditUI();
+    updateStrategyComparison();
+  }
+  function onPointerUp() {
+    document.removeEventListener('pointermove', onPointerMove);
+    document.removeEventListener('pointerup', onPointerUp);
+    el.style.cursor = 'ew-resize';
+  }
+  el.addEventListener('pointerdown', onPointerDown);
+});
+
+// ═══════════════════════════════════════════
+// BANDIT SIMULATION STATE
+// ═══════════════════════════════════════════
+let banditState = {
+  env: null,
+  agent: null,
+  history: { rewards: [], actions: [] },
+  autoplay: false,
+  k: 10,
+  epsilon: 0.1,
+  pullCount: 0,
+  rewardSum: 0,
+  chartsInitialized: false
+};
+
+function initBandit() {
+  const k = Math.round(parseFloat(document.getElementById('scrub-k-arms').dataset.value));
+  const epsilon = parseFloat(document.getElementById('scrub-epsilon').dataset.value);
+
+  banditState.k = k;
+  banditState.epsilon = epsilon;
+  banditState.env = new BanditEnv(k);
+  banditState.agent = new EpsilonGreedyBandit(k, epsilon);
+  banditState.history = { rewards: [], actions: [] };
+  banditState.pullCount = 0;
+  banditState.rewardSum = 0;
+
+  renderBanditUI();
+}
+
+class BanditEnv {
+  constructor(k) {
+    this.k = k;
+    this.q_star = Array.from({length: k}, () => Math.random() * 2 - 1);
+  }
+
+  step(action) {
+    return this.q_star[action] + (Math.random() + Math.random() - 1) * 0.5;
+  }
+
+  getOptimalArm() {
+    return this.q_star.indexOf(Math.max(...this.q_star));
+  }
+}
+
+class EpsilonGreedyBandit {
+  constructor(k, epsilon) {
+    this.k = k;
+    this.epsilon = epsilon;
+    this.Q = Array(k).fill(0);
+    this.N = Array(k).fill(0);
+  }
+
+  selectAction() {
+    if (Math.random() < this.epsilon) {
+      return Math.floor(Math.random() * this.k);
+    }
+    const maxQ = Math.max(...this.Q);
+    const bestArms = this.Q.map((q, i) => q === maxQ ? i : -1).filter(i => i !== -1);
+    return bestArms[Math.floor(Math.random() * bestArms.length)];
+  }
+
+  update(action, reward) {
+    this.N[action]++;
+    this.Q[action] += (1 / this.N[action]) * (reward - this.Q[action]);
+  }
+}
+
+function pullRandomArm() {
+  if (!banditState.env) initBandit();
+
+  const action = banditState.agent.selectAction();
+  const reward = banditState.env.step(action);
+
+  banditState.agent.update(action, reward);
+  banditState.history.rewards.push(reward);
+  banditState.history.actions.push(action);
+  banditState.pullCount++;
+  banditState.rewardSum += reward;
+
+  renderBanditUI();
+  updateBanditChart();
+}
+
+function toggleAutoplay() {
+  if (!banditState.env) initBandit();
+
+  const btn = document.getElementById('autoplay-btn');
+  banditState.autoplay = !banditState.autoplay;
+  btn.textContent = banditState.autoplay ? 'Stop Autoplay' : 'Start Autoplay';
+  btn.classList.toggle('active', banditState.autoplay);
+
+  if (banditState.autoplay) {
+    autoplayLoop();
+  }
+}
+
+function autoplayLoop() {
+  if (!banditState.autoplay) return;
+
+  for (let i = 0; i < 10; i++) {
+    const action = banditState.agent.selectAction();
+    const reward = banditState.env.step(action);
+    banditState.agent.update(action, reward);
+    banditState.history.rewards.push(reward);
+    banditState.history.actions.push(action);
+    banditState.pullCount++;
+    banditState.rewardSum += reward;
+  }
+
+  renderBanditUI();
+  updateBanditChart();
+
+  setTimeout(autoplayLoop, 100);
+}
+
+function renderBanditUI() {
+  if (!banditState.env) return;
+
+  const container = document.getElementById('bandit-arms');
+  container.innerHTML = '';
+
+  const optimalArm = banditState.env.getOptimalArm();
+
+  for (let i = 0; i < banditState.k; i++) {
+    const btn = document.createElement('div');
+    btn.className = 'arm-button' + (i === optimalArm ? ' optimal' : '');
+    btn.innerHTML = `
+      <div>Arm ${i}</div>
+      <div class="arm-value">Q=${banditState.agent.Q[i].toFixed(2)}</div>
+    `;
+    btn.onclick = () => { banditState.agent.selectAction = () => i; pullRandomArm(); banditState.agent.selectAction = () => EpsilonGreedyBandit.prototype.selectAction.call(banditState.agent); };
+    container.appendChild(btn);
+  }
+
+  document.getElementById('stat-pulls').textContent = banditState.pullCount;
+  document.getElementById('stat-avg-reward').textContent = (banditState.pullCount > 0 ? banditState.rewardSum / banditState.pullCount : 0).toFixed(2);
+  document.getElementById('stat-max-q').textContent = Math.max(...banditState.agent.Q).toFixed(2);
+  document.getElementById('stat-optimal-arm').textContent = optimalArm;
+}
+
+function updateBanditUI() {
+  const newEps = parseFloat(document.getElementById('scrub-epsilon').dataset.value);
+  const newK = Math.round(parseFloat(document.getElementById('scrub-k-arms').dataset.value));
+
+  if (newEps !== banditState.epsilon || newK !== banditState.k) {
+    banditState.epsilon = newEps;
+    banditState.agent.epsilon = newEps;
+    if (newK !== banditState.k) {
+      resetBandit();
+    } else {
+      renderBanditUI();
+    }
+  }
+}
+
+function resetBandit() {
+  banditState.autoplay = false;
+  const btn = document.getElementById('autoplay-btn');
+  btn.textContent = 'Start Autoplay';
+  btn.classList.remove('active');
+  initBandit();
+}
+
+function updateBanditChart() {
+  if (banditState.pullCount < 10) return;
+
+  const windowSize = 50;
+  const data = [];
+  for (let i = windowSize; i <= banditState.history.rewards.length; i++) {
+    const window = banditState.history.rewards.slice(i - windowSize, i);
+    data.push(window.reduce((a,b) => a+b, 0) / windowSize);
+  }
+
+  const chartContainer = document.getElementById('bandit-chart');
+  const trace = {
+    y: data,
+    type: 'scatter',
+    mode: 'lines',
+    line: { color: '#22d3ee', width: 2 }
+  };
+
+  const layout = {
+    paper_bgcolor: '#111827',
+    plot_bgcolor: '#111827',
+    margin: { l: 40, r: 40, t: 20, b: 40 },
+    xaxis: { color: '#64748b', gridcolor: 'rgba(255,255,255,0.05)' },
+    yaxis: { color: '#64748b', gridcolor: 'rgba(255,255,255,0.05)' },
+    font: { family: 'Inter, sans-serif', color: '#94a3b8' }
+  };
+
+  Plotly.newPlot('bandit-chart', [trace], layout, { responsive: true, displayModeBar: false });
+}
+
+// ═══════════════════════════════════════════
+// STRATEGY COMPARISON
+// ═══════════════════════════════════════════
+let strategyState = {
+  charts: {}
+};
+
+function runStrategyComparison() {
+  const k = 10;
+  const steps = 1000;
+
+  const strategies = {
+    'eps-greedy': runEpsilonGreedy(k, steps),
+    'ucb': runUCB(k, steps),
+    'opt-init': runOptimisticInit(k, steps),
+    'gradient': runGradientBandit(k, steps)
+  };
+
+  for (const [key, rewards] of Object.entries(strategies)) {
+    const windowSize = 50;
+    const data = [];
+    for (let i = windowSize; i <= rewards.length; i++) {
+      const window = rewards.slice(i - windowSize, i);
+      data.push(window.reduce((a,b) => a+b, 0) / windowSize);
+    }
+
+    const trace = {
+      y: data,
+      type: 'scatter',
+      mode: 'lines',
+      line: { color: '#22d3ee', width: 2 }
+    };
+
+    const layout = {
+      paper_bgcolor: '#111827',
+      plot_bgcolor: '#111827',
+      margin: { l: 40, r: 40, t: 20, b: 40 },
+      xaxis: { color: '#64748b', gridcolor: 'rgba(255,255,255,0.05)' },
+      yaxis: { color: '#64748b', gridcolor: 'rgba(255,255,255,0.05)', range: [-0.5, 1.5] },
+      font: { family: 'Inter, sans-serif', color: '#94a3b8' }
+    };
+
+    const chartId = key === 'eps-greedy' ? 'chart-eps-greedy' :
+                    key === 'ucb' ? 'chart-ucb' :
+                    key === 'opt-init' ? 'chart-opt-init' : 'chart-gradient';
+
+    Plotly.newPlot(chartId, [trace], layout, { responsive: true, displayModeBar: false });
+  }
+}
+
+function runEpsilonGreedy(k, steps) {
+  const env = new BanditEnv(k);
+  const agent = new EpsilonGreedyBandit(k, parseFloat(document.getElementById('scrub-eps-greedy').dataset.value));
+  const rewards = [];
+
+  for (let i = 0; i < steps; i++) {
+    const action = agent.selectAction();
+    const reward = env.step(action);
+    agent.update(action, reward);
+    rewards.push(reward);
+  }
+
+  return rewards;
+}
+
+function runUCB(k, steps) {
+  const env = new BanditEnv(k);
+  const c = parseFloat(document.getElementById('scrub-ucb-c').dataset.value);
+  const rewards = [];
+  const Q = Array(k).fill(0);
+  const N = Array(k).fill(0);
+
+  for (let t = 1; t <= steps; t++) {
+    let action;
+    if (t <= k) {
+      action = t - 1;
+    } else {
+      const ucbValues = Q.map((q, a) => q + c * Math.sqrt(Math.log(t) / N[a]));
+      const maxUcb = Math.max(...ucbValues);
+      const bestArms = ucbValues.map((u, i) => u === maxUcb ? i : -1).filter(i => i !== -1);
+      action = bestArms[Math.floor(Math.random() * bestArms.length)];
+    }
+
+    const reward = env.step(action);
+    N[action]++;
+    Q[action] += (1 / N[action]) * (reward - Q[action]);
+    rewards.push(reward);
+  }
+
+  return rewards;
+}
+
+function runOptimisticInit(k, steps) {
+  const env = new BanditEnv(k);
+  const q_init = parseFloat(document.getElementById('scrub-opt-init').dataset.value);
+  const rewards = [];
+  const Q = Array(k).fill(q_init);
+  const N = Array(k).fill(0);
+
+  for (let i = 0; i < steps; i++) {
+    const maxQ = Math.max(...Q);
+    const bestArms = Q.map((q, j) => q === maxQ ? j : -1).filter(j => j !== -1);
+    const action = bestArms[Math.floor(Math.random() * bestArms.length)];
+
+    const reward = env.step(action);
+    N[action]++;
+    Q[action] += (1 / N[action]) * (reward - Q[action]);
+    rewards.push(reward);
+  }
+
+  return rewards;
+}
+
+function runGradientBandit(k, steps) {
+  const env = new BanditEnv(k);
+  const alpha = parseFloat(document.getElementById('scrub-gradient-alpha').dataset.value);
+  const rewards = [];
+  const H = Array(k).fill(0);
+  let R_bar = 0;
+
+  for (let t = 1; t <= steps; t++) {
+    const expH = H.map(h => Math.exp(h - Math.max(...H)));
+    const sumExpH = expH.reduce((a,b) => a+b, 0);
+    const pi = expH.map(e => e / sumExpH);
+
+    let action = 0;
+    let r = Math.random();
+    for (let a = 0; a < k; a++) {
+      r -= pi[a];
+      if (r < 0) { action = a; break; }
+    }
+
+    const reward = env.step(action);
+    R_bar += (1 / t) * (reward - R_bar);
+
+    for (let a = 0; a < k; a++) {
+      if (a === action) {
+        H[a] += alpha * (reward - R_bar) * pi[a];
+      } else {
+        H[a] -= alpha * (reward - R_bar) * pi[a];
+      }
+    }
+
+    rewards.push(reward);
+  }
+
+  return rewards;
+}
+
+function updateStrategyComparison() {
+  // Can be triggered by scrubber changes if needed
+}
+
+function resetStrategyComparison() {
+  for (const chartId of ['chart-eps-greedy', 'chart-ucb', 'chart-opt-init', 'chart-gradient']) {
+    const el = document.getElementById(chartId);
+    if (el) Plotly.purge(chartId);
+  }
+}
+
+// ═══════════════════════════════════════════
+// CHAPTER COMPLETION
+// ═══════════════════════════════════════════
+function markChapterComplete() {
+  const STORAGE_KEY = 'rl-curriculum-progress';
+  let progress;
+  try { progress = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { completed: [] }; }
+  catch { progress = { completed: [] }; }
+
+  if (!progress.completed.includes(2)) {
+    progress.completed.push(2);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+  }
+
+  const btn = document.getElementById('completeBtn');
+  btn.textContent = '✓ Completed';
+  btn.classList.add('done');
+}
+
+function checkIfCompleted() {
+  try {
+    const progress = JSON.parse(localStorage.getItem('rl-curriculum-progress')) || { completed: [] };
+    if (progress.completed.includes(2)) {
+      const btn = document.getElementById('completeBtn');
+      btn.textContent = '✓ Completed';
+      btn.classList.add('done');
+    }
+  } catch {}
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  renderMathInElement(document.body, {
+    delimiters: [
+      { left: '$$', right: '$$', display: true },
+      { left: '\\(', right: '\\)', display: false }
+    ],
+    throwOnError: false
+  });
+
+  hljs.highlightAll();
+  initBandit();
+  checkIfCompleted();
+});
+</script>
+
+</body>
+</html>

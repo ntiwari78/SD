@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 13: Policy Gradient Methods — RL Interactive Curriculum</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
+<!-- KaTeX for LaTeX rendering -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<!-- Plotly for visualizations -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+<!-- Highlight.js for code -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<style>
+:root {
+  --bg-deep: #0a0e1a;
+  --bg-card: #111827;
+  --bg-card-alt: #0f172a;
+  --bg-surface: #1e293b;
+  --border-subtle: rgba(255,255,255,0.06);
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent-indigo: #818cf8;
+  --accent-blue: #60a5fa;
+  --accent-cyan: #22d3ee;
+  --accent-emerald: #34d399;
+  --accent-amber: #fbbf24;
+  --accent-rose: #fb7185;
+  --accent-purple: #c084fc;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  line-height: 1.7;
+  font-size: 16px;
+}
+
+/* ───── Layout ───── */
+.page-wrapper {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+
+/* ───── Top Nav ───── */
+.top-nav {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(10,14,26,0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 12px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.top-nav a {
+  color: var(--text-secondary); text-decoration: none;
+  font-size: 14px; font-weight: 500;
+  display: flex; align-items: center; gap: 6px;
+  transition: color 0.2s;
+}
+.top-nav a:hover { color: var(--accent-indigo); }
+.nav-chapter-info {
+  font-size: 13px; color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.btn-complete {
+  padding: 8px 16px; border-radius: 8px; border: none;
+  background: linear-gradient(135deg, var(--accent-emerald), #10b981);
+  color: #022c22; font-weight: 600; font-size: 13px;
+  cursor: pointer; transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+.btn-complete:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(52,211,153,0.3); }
+.btn-complete.done { background: var(--bg-surface); color: var(--accent-emerald); cursor: default; }
+
+/* ───── Chapter Header ───── */
+.chapter-header {
+  text-align: center;
+  padding: 80px 0 48px;
+}
+.ch-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 14px; border-radius: 999px;
+  background: rgba(129,140,248,0.1);
+  border: 1px solid rgba(129,140,248,0.2);
+  font-size: 11px; font-weight: 700;
+  color: var(--accent-indigo);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.chapter-header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2.2rem, 5vw, 3.5rem);
+  font-weight: 900; line-height: 1.15;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #f1f5f9 0%, var(--accent-indigo) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.chapter-header .subtitle {
+  font-size: 18px; color: var(--text-secondary);
+  max-width: 580px; margin: 0 auto;
+}
+
+/* ───── Table of Contents ───── */
+.toc {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 24px 28px;
+  margin-bottom: 48px;
+}
+.toc h3 {
+  font-size: 13px; font-weight: 700;
+  color: var(--text-muted); letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.toc-list { list-style: none; }
+.toc-list li { margin-bottom: 6px; }
+.toc-list a {
+  color: var(--text-secondary); text-decoration: none;
+  font-size: 14px; font-weight: 500;
+  padding: 4px 8px; border-radius: 6px;
+  display: inline-block;
+  transition: all 0.2s;
+}
+.toc-list a:hover { color: var(--accent-indigo); background: rgba(129,140,248,0.08); }
+.toc-list .sec-num {
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  margin-right: 6px;
+}
+
+/* ───── Section Headers ───── */
+.section {
+  margin-bottom: 56px;
+}
+.section-label {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.section-label .icon { font-size: 16px; }
+.section-label.feynman { color: var(--accent-amber); }
+.section-label.technical { color: var(--accent-indigo); }
+.section-label.algorithm { color: var(--accent-emerald); }
+.section-label.sandbox { color: var(--accent-rose); }
+.section-label.interactive { color: var(--accent-cyan); }
+.section-label.bridge { color: var(--accent-purple); }
+
+.section h2 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800; line-height: 1.2;
+  margin-bottom: 20px;
+}
+
+.section p, .section li {
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+}
+.section p strong, .section li strong { color: var(--text-primary); font-weight: 600; }
+
+/* ───── Info Cards / Callouts ───── */
+.callout {
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin: 24px 0;
+  border-left: 3px solid;
+}
+.callout.insight {
+  background: rgba(129,140,248,0.06);
+  border-color: var(--accent-indigo);
+}
+.callout.analogy {
+  background: rgba(251,191,36,0.06);
+  border-color: var(--accent-amber);
+}
+.callout.warning {
+  background: rgba(251,113,133,0.06);
+  border-color: var(--accent-rose);
+}
+.callout.definition {
+  background: rgba(52,211,153,0.06);
+  border-color: var(--accent-emerald);
+}
+.callout-title {
+  font-size: 13px; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.callout.insight .callout-title { color: var(--accent-indigo); }
+.callout.analogy .callout-title { color: var(--accent-amber); }
+.callout.warning .callout-title { color: var(--accent-rose); }
+.callout.definition .callout-title { color: var(--accent-emerald); }
+.callout p { margin-bottom: 8px; }
+.callout p:last-child { margin-bottom: 0; }
+
+/* ───── Math Toggle ───── */
+.math-toggle {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin: 24px 0;
+  overflow: hidden;
+}
+.math-toggle-header {
+  padding: 14px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.math-toggle-header:hover { background: rgba(255,255,255,0.02); }
+.math-toggle-header .label {
+  font-size: 14px; font-weight: 600;
+  color: var(--accent-purple);
+  display: flex; align-items: center; gap: 8px;
+}
+.math-toggle-header .chevron {
+  color: var(--text-muted); font-size: 14px;
+  transition: transform 0.3s;
+}
+.math-toggle.open .chevron { transform: rotate(180deg); }
+.math-toggle-body {
+  display: none;
+  padding: 0 20px 20px;
+  border-top: 1px solid var(--border-subtle);
+}
+.math-toggle.open .math-toggle-body { display: block; padding-top: 16px; }
+
+/* ───── KaTeX ───── */
+.katex-display { margin: 20px 0; overflow-x: auto; }
+.katex { font-size: 1.1em; }
+
+/* ───── Code Blocks ───── */
+.code-block {
+  background: #0d1117;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin: 24px 0;
+  overflow: hidden;
+}
+.code-header {
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.code-header .lang {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; color: var(--text-muted); font-weight: 600;
+}
+.code-header .copy-btn {
+  padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-subtle);
+  background: transparent; color: var(--text-muted);
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s;
+}
+.code-header .copy-btn:hover { border-color: var(--accent-indigo); color: var(--accent-indigo); }
+.code-block pre {
+  padding: 16px 20px;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.code-block pre code { background: none !important; padding: 0 !important; }
+
+/* ───── Scrubbable Numbers ───── */
+.scrubbable {
+  display: inline-block;
+  color: var(--accent-cyan);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  border-bottom: 2px dashed var(--accent-cyan);
+  cursor: ew-resize;
+  user-select: none;
+  padding: 0 2px;
+  transition: color 0.2s;
+}
+.scrubbable:hover {
+  color: #67e8f9;
+  background: rgba(34,211,238,0.1);
+  border-radius: 3px;
+}
+.scrub-hint {
+  font-size: 11px; color: var(--text-muted); font-style: italic;
+  margin-top: 4px;
+}
+
+/* ───── Demo Containers ───── */
+.demo-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 24px 0;
+}
+.demo-container h4 {
+  font-size: 15px; font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+
+/* ───── Learning Curve Charts ───── */
+.chart-container {
+  margin: 24px 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+  padding: 16px;
+}
+
+/* ───── Actor-Critic Diagram ───── */
+.ac-diagram {
+  display: flex; justify-content: space-around; align-items: flex-start;
+  gap: 24px; margin: 32px 0;
+  flex-wrap: wrap;
+}
+.ac-box {
+  padding: 20px 24px;
+  border-radius: 12px;
+  text-align: center;
+  font-weight: 700; font-size: 14px;
+  flex: 1; min-width: 180px;
+}
+.ac-box.actor {
+  background: rgba(129,140,248,0.12);
+  border: 2px solid rgba(129,140,248,0.3);
+  color: var(--accent-indigo);
+}
+.ac-box.critic {
+  background: rgba(52,211,153,0.12);
+  border: 2px solid rgba(52,211,153,0.3);
+  color: var(--accent-emerald);
+}
+.ac-flow {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 8px; font-size: 12px; color: var(--text-muted);
+  margin: 8px 0;
+}
+
+/* ───── Policy Distribution Viz ───── */
+.policy-dist {
+  display: flex; justify-content: space-around; align-items: flex-end;
+  gap: 12px; height: 120px;
+  margin: 20px 0; padding: 16px;
+  background: var(--bg-card); border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+}
+.policy-bar {
+  flex: 1; max-width: 60px;
+  background: linear-gradient(180deg, var(--accent-indigo), rgba(129,140,248,0.3));
+  border-radius: 6px 6px 0 0;
+  display: flex; flex-direction: column;
+  justify-content: flex-end; align-items: center;
+  padding-top: 8px;
+}
+.policy-bar .value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; color: var(--accent-indigo);
+  font-weight: 700; margin-bottom: 4px;
+}
+.policy-bar .label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; color: var(--text-muted);
+}
+
+/* ───── Socratic Questions ───── */
+.socratic-q {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin: 16px 0;
+  overflow: hidden;
+}
+.socratic-q-header {
+  padding: 14px 20px;
+  cursor: pointer;
+  display: flex; align-items: flex-start; gap: 12px;
+  transition: background 0.2s;
+}
+.socratic-q-header:hover { background: rgba(255,255,255,0.02); }
+.q-number {
+  flex-shrink: 0;
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: rgba(251,113,133,0.1);
+  color: var(--accent-rose);
+  font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+}
+.q-text {
+  font-size: 14px; font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.5;
+  flex: 1;
+}
+.q-expand {
+  flex-shrink: 0;
+  color: var(--text-muted); font-size: 12px;
+  transition: transform 0.3s;
+  margin-top: 4px;
+}
+.socratic-q.open .q-expand { transform: rotate(180deg); }
+.socratic-a {
+  display: none;
+  padding: 0 20px 16px 60px;
+  font-size: 14px; color: var(--text-secondary);
+  line-height: 1.65;
+}
+.socratic-q.open .socratic-a { display: block; }
+
+/* ───── Part II Summary ───── */
+.summary-box {
+  background: linear-gradient(135deg, rgba(52,211,153,0.12), rgba(34,211,153,0.08));
+  border: 2px solid var(--accent-emerald);
+  border-radius: 12px;
+  padding: 28px;
+  margin: 48px 0;
+  text-align: center;
+}
+.summary-box h3 {
+  font-size: 18px; font-weight: 800;
+  color: var(--accent-emerald);
+  margin-bottom: 12px;
+}
+.summary-box p {
+  color: var(--text-secondary);
+  font-size: 15px; line-height: 1.6;
+}
+
+/* ───── Navigation Buttons ───── */
+.chapter-nav {
+  display: flex; justify-content: space-between;
+  gap: 16px; margin-top: 64px;
+  padding-top: 32px; border-top: 1px solid var(--border-subtle);
+}
+.nav-btn {
+  flex: 1; padding: 14px 20px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 14px; font-weight: 600;
+  cursor: pointer; text-decoration: none;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: all 0.2s;
+}
+.nav-btn:hover { background: var(--bg-surface); color: var(--accent-indigo); border-color: var(--accent-indigo); }
+
+/* ───── Responsive ───── */
+@media (max-width: 600px) {
+  .page-wrapper { padding: 0 16px 60px; }
+  .ac-diagram { flex-direction: column; }
+  .policy-dist { flex-direction: column; height: auto; }
+  .policy-bar { max-width: none; }
+  .chapter-nav { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+
+<!-- ───── Top Navigation ───── -->
+<nav class="top-nav">
+  <a href="index.html">&#x2190; Skill Tree</a>
+  <span class="nav-chapter-info">Ch 13 / 17</span>
+  <button class="btn-complete" id="completeBtn" onclick="markChapterComplete()">&#x2713; Mark Complete</button>
+</nav>
+
+<div class="page-wrapper">
+
+<!-- ───── Chapter Header ───── -->
+<header class="chapter-header">
+  <div class="ch-badge">Part II &middot; Chapter 13</div>
+  <h1>Policy Gradient Methods</h1>
+  <p class="subtitle">Direct optimization of the policy — from REINFORCE to Actor-Critic, the foundation of modern deep reinforcement learning and RLHF.</p>
+</header>
+
+<!-- ───── Table of Contents ───── -->
+<div class="toc">
+  <h3>In This Chapter</h3>
+  <ol class="toc-list">
+    <li><a href="#feynman"><span class="sec-num">1</span> The Feynman Bridge: Throwing Darts</a></li>
+    <li><a href="#policy-approx"><span class="sec-num">2</span> Policy Approximation and Advantages</a></li>
+    <li><a href="#policy-gradient"><span class="sec-num">3</span> The Policy Gradient Theorem (Crown Jewel)</a></li>
+    <li><a href="#reinforce"><span class="sec-num">4</span> REINFORCE: Monte Carlo Policy Gradient</a></li>
+    <li><a href="#reinforce-baseline"><span class="sec-num">5</span> REINFORCE with Baseline</a></li>
+    <li><a href="#interactive-learning"><span class="sec-num">6</span> Interactive: Watch REINFORCE Learn</a></li>
+    <li><a href="#actor-critic"><span class="sec-num">7</span> Actor-Critic Methods</a></li>
+    <li><a href="#ac-interactive"><span class="sec-num">8</span> Interactive: Actor-Critic Architecture</a></li>
+    <li><a href="#continuous"><span class="sec-num">9</span> Policy Gradient for Continuous Actions</a></li>
+    <li><a href="#algorithm"><span class="sec-num">10</span> Algorithm: REINFORCE & Actor-Critic</a></li>
+    <li><a href="#deep-rl-bridge"><span class="sec-num">11</span> Deep RL Bridge: From REINFORCE to RLHF</a></li>
+    <li><a href="#sandbox"><span class="sec-num">12</span> Socratic Sandbox: Master the Theory</a></li>
+    <li><a href="#summary"><span class="sec-num">13</span> Part II Summary: Function Approximation Complete</a></li>
+  </ol>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 1: THE FEYNMAN BRIDGE                         -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="feynman">
+  <div class="section-label feynman"><span class="icon">🎯</span> The Feynman Bridge</div>
+  <h2>Policy Gradients: Learning to Throw Darts</h2>
+
+  <p>You're learning to play darts. There are two fundamentally different ways to improve:</p>
+
+  <p><strong>Value-Based (Chapters 11–12):</strong> You memorize the value of hitting each position on the board. Then, to improve, you compute which position has the highest value and aim there. You're thinking about the target.</p>
+
+  <p><strong>Policy-Based (This Chapter):</strong> You don't memorize values. Instead, you directly improve your throwing <em>technique</em>. After each throw, you slightly adjust your aim in the direction that would have scored more points. Good throws reinforce themselves. Bad throws get discouraged. You're learning the motion itself.</p>
+
+  <div class="callout analogy">
+    <div class="callout-title">Key Insight</div>
+    <p>Policy gradients are <strong>direct learning of behavior</strong>. Instead of asking "what's the best action?" (value), you ask "how do I improve my action probabilities?" The answer is: nudge your policy in the direction that recent rewards pointed.</p>
+  </div>
+
+  <p>This idea is the foundation of modern deep RL. ChatGPT's training uses policy gradients (via RLHF). AlphaGo used them. They're the workhorses of modern AI.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 2: POLICY APPROXIMATION                        -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="policy-approx">
+  <div class="section-label technical"><span class="icon">⚙️</span> Technical Ascent</div>
+  <h2>Policy Approximation and Its Advantages</h2>
+
+  <p><strong>Why parameterize the policy?</strong> Instead of storing a value for every state (as in tabular methods), we learn a <strong>function that maps states to action probabilities</strong>. This function is parameterized by weights <em>θ</em>.</p>
+
+  <p>The policy is: <span class="katex-inline" data-latex="\pi(a|s,\theta)"></span> — the probability of action <em>a</em> in state <em>s</em>, given parameters <em>θ</em>.</p>
+
+  <div class="callout definition">
+    <div class="callout-title">Definition: Policy Parameterization</div>
+    <p>A parameterized policy is a function <span class="katex-inline" data-latex="\pi(a|s,\theta): \mathcal{S} \times \mathcal{A} \times \mathbb{R}^d \to [0,1]"></span> that outputs action probabilities. Common choices: softmax over linear features, neural networks.</p>
+  </div>
+
+  <h3 style="font-size: 1.2rem; font-weight: 700; margin-top: 24px; margin-bottom: 12px; color: var(--text-primary);">Advantages of Policy Gradients:</h3>
+  <ul style="margin-left: 24px;">
+    <li><strong>Natural for stochastic policies:</strong> In games like poker, you need randomness. Value methods force you to construct stochastic policies from deterministic values. Policy methods are inherently stochastic.</li>
+    <li><strong>Better convergence:</strong> Directly optimizing the objective (expected return) can avoid local optima that plague value iteration.</li>
+    <li><strong>Handles continuous action spaces:</strong> Value methods struggle with continuous spaces. Policy methods use Gaussian policies: <span class="katex-inline" data-latex="\pi(a|s,\theta) = \mathcal{N}(\mu(s,\theta), \sigma(s,\theta))"></span>.</li>
+    <li><strong>More data-efficient:</strong> One policy update can affect the probability of multiple actions, not just the greedy action.</li>
+    <li><strong>Basis for deep RL:</strong> Policy gradients scale to deep networks, enabling the trillion-parameter models of today.</li>
+  </ul>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 3: POLICY GRADIENT THEOREM                     -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="policy-gradient">
+  <div class="section-label technical"><span class="icon">👑</span> The Crown Jewel</div>
+  <h2>The Policy Gradient Theorem</h2>
+
+  <p>The <strong>Policy Gradient Theorem</strong> is the mathematical heart of everything that follows. It tells us how to adjust the policy parameters to maximize expected return.</p>
+
+  <div class="callout insight">
+    <div class="callout-title">The Policy Gradient Theorem (Sutton & Barto 13.3)</div>
+    <p>$$\nabla J(\theta) \propto \sum_s \mu(s) \sum_a q_\pi(s,a) \nabla \ln \pi(a|s,\theta)$$</p>
+    <p style="margin-top: 12px; font-size: 14px;">where:</p>
+    <ul style="margin-top: 8px; margin-left: 20px;">
+      <li>$J(\theta) = v_{\pi_\theta}(s_0)$ is the expected return from the start state</li>
+      <li>$\mu(s)$ is the stationary distribution of states under $\pi_\theta$</li>
+      <li>$q_\pi(s,a)$ is the action-value function</li>
+      <li>$\nabla \ln \pi(a|s,\theta)$ is the score (gradient of log-policy)</li>
+    </ul>
+  </p>
+  </div>
+
+  <h3 style="font-size: 1.2rem; font-weight: 700; margin-top: 24px; margin-bottom: 12px; color: var(--text-primary);">What does it mean?</h3>
+
+  <p>The gradient of expected return is proportional to a weighted sum of score functions, where the weights are action values. In words:</p>
+
+  <div class="callout analogy">
+    <div class="callout-title">Intuition</div>
+    <p><strong>Increase the probability of good actions, decrease the probability of bad actions.</strong> How much? By an amount proportional to how much better (or worse) that action is than average.</p>
+  </div>
+
+  <div class="math-toggle" onclick="toggleMath(this)">
+    <div class="math-toggle-header">
+      <span class="label"><span style="color: var(--accent-purple);">⊕</span> Proof Sketch</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="math-toggle-body">
+      <p style="color: var(--text-secondary); margin-bottom: 12px;">Starting from $J(\theta) = v_{\pi_\theta}(s_0)$:</p>
+      <p style="color: var(--text-secondary); margin-bottom: 12px;">$$v_\pi(s) = \sum_a \pi(a|s,\theta) q_\pi(s,a)$$</p>
+      <p style="color: var(--text-secondary); margin-bottom: 12px;">Taking the gradient w.r.t. $\theta$ and applying the product rule:</p>
+      <p style="color: var(--text-secondary); margin-bottom: 12px;">$$\nabla_\theta v_\pi(s) = \sum_a \left[ \nabla_\theta \pi(a|s,\theta) q_\pi(s,a) + \pi(a|s,\theta) \nabla_\theta q_\pi(s,a) \right]$$</p>
+      <p style="color: var(--text-secondary); margin-bottom: 12px;">The second term (gradient of action-value) requires policy iteration ideas. The elegant part of the theorem is showing that, upon telescoping across the state distribution, only the first term (gradient of policy) survives. Thus:</p>
+      <p style="color: var(--text-secondary);">$$\nabla J(\theta) \propto \sum_s \mu(s) \sum_a \pi(a|s,\theta) \nabla_\theta \ln \pi(a|s,\theta) q_\pi(s,a)$$</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 4: REINFORCE                                  -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="reinforce">
+  <div class="section-label technical"><span class="icon">🔄</span> REINFORCE: Monte Carlo Policy Gradient</div>
+
+  <p>The Policy Gradient Theorem tells us the direction to move. <strong>REINFORCE</strong> is the simplest algorithm that acts on it.</p>
+
+  <p>The key insight: replace the unknown $q_\pi(s,a)$ with a Monte Carlo estimate. Run the policy, collect a trajectory, and use the discounted return $G_t$ as an estimate of $q_\pi(S_t, A_t)$.</p>
+
+  <div class="callout definition">
+    <div class="callout-title">REINFORCE Update Rule</div>
+    <p>$$\theta_{t+1} = \theta_t + \alpha \gamma^t G_t \nabla \ln \pi(A_t | S_t, \theta_t)$$</p>
+    <p style="margin-top: 12px; font-size: 14px;">where $G_t = \sum_{k=0}^{\infty} \gamma^k R_{t+k+1}$ is the return from time $t$.</p>
+  </div>
+
+  <p><strong>What happens:</strong></p>
+  <ul style="margin-left: 24px;">
+    <li>If $G_t > 0$ (good trajectory), we move $\theta$ in the direction of $\nabla \ln \pi(A_t | S_t, \theta_t)$, increasing the probability of actions we just took.</li>
+    <li>If $G_t < 0$ (bad trajectory), we move away, decreasing the probability of those actions.</li>
+    <li>The magnitude of the move is proportional to the return $G_t$.</li>
+  </ul>
+
+  <div class="callout warning">
+    <div class="callout-title">High Variance Problem</div>
+    <p>REINFORCE uses full returns $G_t$, which are very noisy. A single lucky episode can push the policy in the wrong direction. This is why we usually need many episodes to converge.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 5: REINFORCE WITH BASELINE                    -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="reinforce-baseline">
+  <div class="section-label technical"><span class="icon">📊</span> Variance Reduction Without Bias</div>
+
+  <p>Brilliant idea: <strong>subtract a baseline function</strong> from the return. This doesn't bias the gradient, but it cuts variance dramatically.</p>
+
+  <div class="callout definition">
+    <div class="callout-title">REINFORCE with Baseline</div>
+    <p>$$\theta_{t+1} = \theta_t + \alpha \gamma^t (G_t - b(S_t)) \nabla \ln \pi(A_t | S_t, \theta_t)$$</p>
+    <p style="margin-top: 12px; font-size: 14px;">where $b(S_t)$ is any baseline (typically the learned value function $\hat{v}(S_t, w)$).</p>
+  </div>
+
+  <p>The quantity $(G_t - b(S_t))$ is called the <strong>advantage</strong>: how much better is this trajectory than the baseline?</p>
+
+  <div class="callout insight">
+    <div class="callout-title">Why Does This Work?</div>
+    <p>The baseline doesn't introduce bias because $\mathbb{E}[b(S_t) | S_t] = b(S_t)$, and it cancels in the expectation. But it dramatically reduces variance because now we're comparing to a reference point, not to zero.</p>
+  </div>
+
+  <p>In practice, the best baseline is a learned value function. So we train two networks:</p>
+  <ul style="margin-left: 24px;">
+    <li><strong>Policy network (actor):</strong> $\pi(a|s,\theta)$</li>
+    <li><strong>Value network (critic):</strong> $\hat{v}(s,w)$</li>
+  </ul>
+
+  <p>This is the birth of Actor-Critic methods.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 6: INTERACTIVE LEARNING CURVE                 -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="interactive-learning">
+  <div class="section-label interactive"><span class="icon">📈</span> Watch REINFORCE Learn</div>
+
+  <p>Below, REINFORCE learns a simple policy in a toy environment. You can adjust the learning rate and watch the policy distribution evolve over episodes.</p>
+
+  <div class="demo-container">
+    <h4>REINFORCE Learning Curve</h4>
+    <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 14px;">Learning rate: <span class="scrubbable" id="lrDisplay" onmousedown="startScrub(event, 'lr')" style="color: var(--accent-cyan);">0.01</span></p>
+    <div class="chart-container">
+      <div id="reinforceChart" style="width: 100%; height: 300px;"></div>
+    </div>
+    <p class="scrub-hint">Drag the learning rate above to see faster/slower convergence. Higher α = more variance.</p>
+  </div>
+
+  <div class="demo-container" style="margin-top: 24px;">
+    <h4>Policy Distribution Over Episodes</h4>
+    <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 14px; text-align: center;">As learning progresses, the policy concentrates on good actions.</p>
+    <div style="display: flex; gap: 16px; justify-content: space-around; flex-wrap: wrap;">
+      <div>
+        <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px; text-align: center;">Early (Episode 5)</p>
+        <div class="policy-dist" id="policyEarly">
+          <div class="policy-bar" style="height: 40px;"><div class="value">0.25</div><div class="label">A1</div></div>
+          <div class="policy-bar" style="height: 45px;"><div class="value">0.25</div><div class="label">A2</div></div>
+          <div class="policy-bar" style="height: 38px;"><div class="value">0.25</div><div class="label">A3</div></div>
+          <div class="policy-bar" style="height: 42px;"><div class="value">0.25</div><div class="label">A4</div></div>
+        </div>
+      </div>
+      <div>
+        <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px; text-align: center;">Middle (Episode 250)</p>
+        <div class="policy-dist" id="policyMid">
+          <div class="policy-bar" style="height: 30px;"><div class="value">0.15</div><div class="label">A1</div></div>
+          <div class="policy-bar" style="height: 80px;"><div class="value">0.60</div><div class="label">A2</div></div>
+          <div class="policy-bar" style="height: 20px;"><div class="value">0.10</div><div class="label">A3</div></div>
+          <div class="policy-bar" style="height: 25px;"><div class="value">0.15</div><div class="label">A4</div></div>
+        </div>
+      </div>
+      <div>
+        <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px; text-align: center;">Late (Episode 500)</p>
+        <div class="policy-dist" id="policyLate">
+          <div class="policy-bar" style="height: 10px;"><div class="value">0.02</div><div class="label">A1</div></div>
+          <div class="policy-bar" style="height: 100px;"><div class="value">0.96</div><div class="label">A2</div></div>
+          <div class="policy-bar" style="height: 5px;"><div class="value">0.01</div><div class="label">A3</div></div>
+          <div class="policy-bar" style="height: 8px;"><div class="value">0.01</div><div class="label">A4</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 7: ACTOR-CRITIC METHODS                        -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="actor-critic">
+  <div class="section-label technical"><span class="icon">🎭</span> Actor-Critic Methods</div>
+
+  <p>REINFORCE with baseline hints at a better idea: <strong>learn the value function</strong>. This gives us the Actor-Critic architecture, one of the most important patterns in modern RL.</p>
+
+  <p><strong>The insight:</strong> Train two networks simultaneously:</p>
+
+  <div class="ac-diagram">
+    <div class="ac-box actor">
+      <strong>ACTOR</strong><br>
+      <span style="font-size: 12px; font-weight: 400;">Learns the policy</span><br>
+      <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; margin-top: 8px;">π(a|s,θ)</span>
+    </div>
+    <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px; color: var(--text-muted);">
+      <span style="font-size: 12px;">← TD Error →</span>
+      <span style="font-size: 20px;">⇄</span>
+    </div>
+    <div class="ac-box critic">
+      <strong>CRITIC</strong><br>
+      <span style="font-size: 12px; font-weight: 400;">Learns the value</span><br>
+      <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; margin-top: 8px;">v̂(s,w)</span>
+    </div>
+  </div>
+
+  <p>The critic computes the <strong>TD error (advantage)</strong>:</p>
+
+  <div class="callout definition">
+    <div class="callout-title">TD Error / Advantage</div>
+    <p>$$\delta_t = R_{t+1} + \gamma \hat{v}(S_{t+1}, w) - \hat{v}(S_t, w)$$</p>
+    <p style="margin-top: 12px; font-size: 14px;">This estimates how much better the immediate reward plus next state value is compared to the current value.</p>
+  </div>
+
+  <p>The actor uses this TD error to update the policy:</p>
+
+  <div class="callout definition">
+    <div class="callout-title">Actor-Critic Update</div>
+    <p><strong>Actor (Policy):</strong><br>
+    $$\theta_{t+1} = \theta_t + \alpha \delta_t \nabla \ln \pi(A_t | S_t, \theta_t)$$</p>
+    <p style="margin-top: 16px; margin-bottom: 0;"><strong>Critic (Value):</strong><br>
+    $$w_{t+1} = w_t + \beta \delta_t \nabla \hat{v}(S_t, w)$$</p>
+  </div>
+
+  <h3 style="font-size: 1.2rem; font-weight: 700; margin-top: 24px; margin-bottom: 12px; color: var(--text-primary);">Why Actor-Critic?</h3>
+
+  <ul style="margin-left: 24px;">
+    <li><strong>Lower variance:</strong> The critic (value function) provides a much better baseline than zero, reducing gradient noise.</li>
+    <li><strong>Online learning:</strong> We can update after every step, not just at episode end (REINFORCE is batch).</li>
+    <li><strong>Bootstrapping:</strong> The critic bootstraps from future estimates, allowing learning from single transitions.</li>
+    <li><strong>Modern backbone:</strong> A2C, A3C, PPO, and TRPO all build on Actor-Critic.</li>
+  </ul>
+
+  <div class="callout insight">
+    <div class="callout-title">Actor-Critic Interpretation</div>
+    <p><strong>Actor:</strong> "I'll try this action."<br>
+    <strong>Critic:</strong> "That was better (or worse) than expected. Here's the TD error."<br>
+    <strong>Actor:</strong> "Great feedback! I'll adjust my policy."</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 8: INTERACTIVE AC DIAGRAM                      -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="ac-interactive">
+  <div class="section-label interactive"><span class="icon">⚡</span> Actor-Critic Architecture (Animated)</div>
+
+  <div class="demo-container">
+    <h4>How Actor-Critic Learns</h4>
+    <p style="color: var(--text-secondary); margin-bottom: 24px; font-size: 14px;">Watch the flow: the critic provides feedback to the actor through the TD error.</p>
+
+    <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 20px; text-align: center;">
+      <div style="margin-bottom: 20px;">
+        <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px;">State</div>
+        <div style="background: rgba(129,140,248,0.15); padding: 12px; border-radius: 8px; color: var(--accent-indigo); font-weight: 700;">s = [2.1, -0.5]</div>
+      </div>
+
+      <div style="display: flex; gap: 16px; margin: 24px 0; justify-content: center; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 140px;">
+          <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px;">Actor Samples</div>
+          <div style="background: rgba(129,140,248,0.15); padding: 12px; border-radius: 8px; color: var(--accent-indigo); font-weight: 700;">a = UP (π=0.7)</div>
+        </div>
+        <div style="flex: 1; min-width: 140px;">
+          <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px;">Critic Evaluates</div>
+          <div style="background: rgba(52,211,153,0.15); padding: 12px; border-radius: 8px; color: var(--accent-emerald); font-weight: 700;">δ = +0.8</div>
+        </div>
+      </div>
+
+      <div style="margin-top: 20px; padding: 16px; background: rgba(251,191,36,0.08); border-radius: 8px; border-left: 3px solid var(--accent-amber);">
+        <div style="color: var(--accent-amber); font-weight: 700; font-size: 13px; margin-bottom: 4px;">FEEDBACK SIGNAL</div>
+        <div style="color: var(--text-secondary); font-size: 13px;">δ > 0: Action was good! Increase P(UP). Actor moves θ in ∇ln π direction.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 9: CONTINUOUS ACTIONS                         -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="continuous">
+  <div class="section-label technical"><span class="icon">📐</span> Policy Gradient for Continuous Actions</div>
+
+  <p>Discrete actions are easy: softmax the output. But what about continuous actions (robot arm angles, vehicle acceleration)?</p>
+
+  <p><strong>Solution:</strong> Use a Gaussian (normal distribution) as the policy. The network outputs the mean and variance.</p>
+
+  <div class="callout definition">
+    <div class="callout-title">Gaussian Policy for Continuous Actions</div>
+    <p>$$\pi(a|s,\theta) = \mathcal{N}(\mu(s,\theta), \sigma(s,\theta)) = \frac{1}{\sigma\sqrt{2\pi}} \exp\left(-\frac{(a-\mu)^2}{2\sigma^2}\right)$$</p>
+    <p style="margin-top: 12px; font-size: 14px;">where the neural network outputs $\mu(s,\theta)$ (mean) and $\log \sigma^2(s,\theta)$ (log variance).</p>
+  </div>
+
+  <p>The log-probability (needed for REINFORCE) is:</p>
+
+  <p style="text-align: center; color: var(--text-secondary); margin: 16px 0;">$$\ln \pi(a|s,\theta) = -\frac{1}{2}\left(\frac{a-\mu}2}{\sigma^2}\right) - \ln(\sigma\sqrt{2\pi})$$</p>
+
+  <p>And the gradient (score) is elegant:</p>
+
+  <p style="text-align: center; color: var(--text-secondary); margin: 16px 0;">$$\nabla_\theta \ln \pi(a|s,\theta) = \frac{a - \mu(s,\theta)}{\sigma^2} \nabla_\theta \mu(s,\theta)$$</p>
+
+  <p>Intuitively: if the action is above the mean ($a > \mu$), push the mean upward. If below, push downward. Proportional to how far off we were.</p>
+
+  <div class="callout insight">
+    <div class="callout-title">Advantage: Exploration</div>
+    <p>The variance $\sigma$ controls exploration. Early in training, the network keeps $\sigma$ high (explore widely). As the policy improves, $\sigma$ typically decreases (exploit). This natural curriculum emerges automatically!</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 10: ALGORITHM                                 -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="algorithm">
+  <div class="section-label algorithm"><span class="icon">🐍</span> Algorithm: REINFORCE & Actor-Critic</div>
+
+  <p>Here's annotated Python code for both algorithms. Study how each line maps to the mathematics above.</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="lang">Python</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><code>import numpy as np
+import torch
+import torch.nn as nn
+import torch.optim as optim
+
+# ═══════════════════════════════════════════════════════════
+# POLICY NETWORK (Discrete Actions, Softmax)
+# ═══════════════════════════════════════════════════════════
+class PolicyNetwork(nn.Module):
+    def __init__(self, state_dim, action_dim, hidden=64):
+        super().__init__()
+        # Maps state → action logits
+        self.net = nn.Sequential(
+            nn.Linear(state_dim, hidden),
+            nn.ReLU(),
+            nn.Linear(hidden, hidden),
+            nn.ReLU(),
+            nn.Linear(hidden, action_dim)
+        )
+
+    def forward(self, s):
+        """Returns action logits (before softmax)."""
+        return self.net(s)
+
+    def get_policy(self, s):
+        """π(a|s,θ) = softmax over logits."""
+        logits = self.forward(s)
+        return torch.softmax(logits, dim=-1)
+
+    def log_prob(self, s, a):
+        """ln π(a|s,θ) = ln(softmax[a])."""
+        logits = self.forward(s)
+        log_probs = torch.log_softmax(logits, dim=-1)
+        return log_probs[a]
+
+# ═══════════════════════════════════════════════════════════
+# VALUE NETWORK (for Critic / Baseline)
+# ═══════════════════════════════════════════════════════════
+class ValueNetwork(nn.Module):
+    def __init__(self, state_dim, hidden=64):
+        super().__init__()
+        # Maps state → scalar value estimate
+        self.net = nn.Sequential(
+            nn.Linear(state_dim, hidden),
+            nn.ReLU(),
+            nn.Linear(hidden, hidden),
+            nn.ReLU(),
+            nn.Linear(hidden, 1)
+        )
+
+    def forward(self, s):
+        """v̂(s,w) scalar value."""
+        return self.net(s).squeeze(-1)
+
+# ═══════════════════════════════════════════════════════════
+# REINFORCE: Monte Carlo Policy Gradient
+# ═══════════════════════════════════════════════════════════
+def reinforce_episode(env, policy, gamma=0.99, alpha=0.01):
+    """
+    Run one episode of REINFORCE.
+    Update rule: θ ← θ + α γ^t G_t ∇ln π(a|s,θ)
+    """
+    s, _ = env.reset()
+    log_probs = []
+    returns = []
+    reward_sum = 0
+
+    # Collect trajectory
+    for t in range(500):  # max steps per episode
+        s_tensor = torch.tensor(s, dtype=torch.float32)
+
+        # Sample action from policy
+        pi = policy.get_policy(s_tensor.unsqueeze(0))
+        a = torch.multinomial(pi, 1).item()
+
+        # Store log probability
+        log_prob = policy.log_prob(s_tensor, a)
+        log_probs.append(log_prob)
+
+        # Take step in environment
+        s_next, r, done, _, _ = env.step(a)
+        reward_sum += r
+        s = s_next
+
+        if done:
+            break
+
+    # Compute returns (backwards from end of episode)
+    G = 0
+    for t in range(len(log_probs) - 1, -1, -1):
+        G = reward_sum if t == len(log_probs) - 1 else (reward_sum * (gamma ** (len(log_probs) - 1 - t)))
+        returns.insert(0, G)
+
+    # REINFORCE update: ∇J(θ) ∝ Σ γ^t G_t ∇ln π
+    policy_loss = 0
+    for t, log_prob in enumerate(log_probs):
+        # Update: θ ← θ + α * γ^t * G_t * ∇ln π
+        policy_loss -= (gamma ** t) * returns[t] * log_prob
+
+    policy_loss.backward()
+    optimizer.step()
+    optimizer.zero_grad()
+
+    return reward_sum
+
+# ═══════════════════════════════════════════════════════════
+# ACTOR-CRITIC: Online Policy Gradient with Value Baseline
+# ═══════════════════════════════════════════════════════════
+def actor_critic_step(s, a, r, s_next, done, policy, value_net,
+                       policy_opt, value_opt, gamma=0.99, alpha=0.01, beta=0.01):
+    """
+    One step of actor-critic learning.
+    Actor update:  θ ← θ + α δ_t ∇ln π(a|s,θ)
+    Critic update: w ← w + β δ_t ∇v̂(s,w)
+    """
+    s_tensor = torch.tensor(s, dtype=torch.float32).unsqueeze(0)
+    s_next_tensor = torch.tensor(s_next, dtype=torch.float32).unsqueeze(0)
+
+    # ─────────────────────────────────────────────────────
+    # CRITIC: Compute TD error δ_t
+    # ─────────────────────────────────────────────────────
+    v_s = value_net(s_tensor)
+    v_s_next = value_net(s_next_tensor)
+
+    # TD error: δ_t = R_{t+1} + γ v̂(s',w) - v̂(s,w)
+    if done:
+        delta = torch.tensor(r, dtype=torch.float32) - v_s
+    else:
+        delta = (torch.tensor(r, dtype=torch.float32) +
+                gamma * v_s_next - v_s)
+
+    # ─────────────────────────────────────────────────────
+    # CRITIC UPDATE: w ← w + β δ_t ∇v̂(s,w)
+    # ─────────────────────────────────────────────────────
+    value_loss = -(delta.detach() * v_s).mean()
+    value_opt.zero_grad()
+    value_loss.backward()
+    value_opt.step()
+
+    # ─────────────────────────────────────────────────────
+    # ACTOR UPDATE: θ ← θ + α δ_t ∇ln π(a|s,θ)
+    # ─────────────────────────────────────────────────────
+    log_prob = policy.log_prob(s_tensor.squeeze(0), a)
+
+    # Actor loss: maximize δ_t * ln π
+    actor_loss = -(delta.detach() * log_prob).mean()
+    policy_opt.zero_grad()
+    actor_loss.backward()
+    policy_opt.step()
+
+    return float(delta.item())
+
+# ═══════════════════════════════════════════════════════════
+# MAIN TRAINING LOOP
+# ═══════════════════════════════════════════════════════════
+if __name__ == "__main__":
+    import gymnasium as gym
+
+    env = gym.make("CartPole-v1")
+    state_dim = env.observation_space.shape[0]
+    action_dim = env.action_space.n
+
+    policy = PolicyNetwork(state_dim, action_dim)
+    value_net = ValueNetwork(state_dim)
+
+    policy_opt = optim.Adam(policy.parameters(), lr=0.01)
+    value_opt = optim.Adam(value_net.parameters(), lr=0.01)
+
+    # Actor-Critic training
+    for episode in range(500):
+        s, _ = env.reset()
+        ep_return = 0
+
+        for step in range(500):
+            s_tensor = torch.tensor(s, dtype=torch.float32)
+
+            # Sample action
+            pi = policy.get_policy(s_tensor.unsqueeze(0))
+            a = torch.multinomial(pi, 1).item()
+
+            # Take step
+            s_next, r, done, _, _ = env.step(a)
+            ep_return += r
+
+            # Actor-Critic update
+            actor_critic_step(s, a, r, s_next, done, policy, value_net,
+                            policy_opt, value_opt)
+
+            if done:
+                break
+
+            s = s_next
+
+        if episode % 50 == 0:
+            print(f"Episode {episode}: Return = {ep_return}")
+
+    env.close()</code></pre>
+  </div>
+
+  <p style="color: var(--text-secondary); margin-top: 20px; font-size: 14px;"><strong>Key lines to understand:</strong></p>
+  <ul style="margin-left: 24px; color: var(--text-secondary); font-size: 14px;">
+    <li><strong>log_prob computation:</strong> Maps to $\nabla \ln \pi(a|s,\theta)$ in the theorem.</li>
+    <li><strong>delta calculation:</strong> The TD error $\delta_t = R_{t+1} + \gamma v̂(s',w) - v̂(s,w)$.</li>
+    <li><strong>Actor loss:</strong> We negate because PyTorch minimizes, but we want to maximize $\delta_t \ln \pi$.</li>
+    <li><strong>Critic loss:</strong> Standard MSE-like loss to fit the value function.</li>
+  </ul>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 11: DEEP RL BRIDGE                            -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="deep-rl-bridge">
+  <div class="section-label bridge"><span class="icon">🌉</span> Deep RL Bridge: From REINFORCE to RLHF</div>
+
+  <p>You might be thinking: "Why do I need to learn policy gradients when I could just use value methods?" Great question. Here's why policy gradients rule the modern RL world:</p>
+
+  <div class="callout analogy">
+    <div class="callout-title">Evolution of Policy Gradient Methods</div>
+    <ul style="margin-left: 20px;">
+      <li><strong>1992:</strong> REINFORCE (Williams). First policy gradient. High variance, slow.</li>
+      <li><strong>2016:</strong> A2C/A3C (Mnih et al.). Asynchronous actor-critic with multiple parallel workers. Scales to many cores.</li>
+      <li><strong>2017:</strong> PPO (Schulman et al.). Trust Region Policy Optimization made practical. Used in GPT-3 and ChatGPT training.</li>
+      <li><strong>2018–2023:</strong> RLHF (Christiano et al., Ouyang et al.). Reward learning + policy gradients. Aligns LLMs to human values. This is how you train ChatGPT.</li>
+    </ul>
+  </div>
+
+  <h3 style="font-size: 1.2rem; font-weight: 700; margin-top: 24px; margin-bottom: 12px; color: var(--text-primary);">Why Policy Gradients for LLMs?</h3>
+
+  <p>Generating text is a continuous policy problem. The "state" is the conversation so far. The "action" is the next token (from a 100K+ action space). Value-based methods struggle with this scale. Policy gradients handle it naturally.</p>
+
+  <p><strong>RLHF Pipeline:</strong></p>
+  <ol style="margin-left: 24px;">
+    <li>Train a policy network (language model) with supervised learning.</li>
+    <li>Collect human preferences (A vs B response — which is better?).</li>
+    <li>Train a reward model to predict human preference.</li>
+    <li><strong>Use policy gradients (PPO) to fine-tune the LLM using the reward model.</strong> This maximizes the learned reward while staying close to the original policy.</li>
+  </ol>
+
+  <div class="callout insight">
+    <div class="callout-title">The Moment It Clicked</div>
+    <p>ChatGPT's intelligence comes from large-scale supervised pretraining. But its ability to be helpful, harmless, and honest comes from RLHF, which is powered by policy gradients. You're learning the algorithm that aligns AI with human values.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 12: SOCRATIC SANDBOX                          -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="sandbox">
+  <div class="section-label sandbox"><span class="icon">❓</span> Socratic Sandbox</div>
+  <h2>Master Policy Gradient Theory</h2>
+
+  <p>Test your understanding with these deep questions. Click to reveal answers.</p>
+
+  <div class="socratic-q" onclick="toggleSocratic(this)">
+    <div class="socratic-q-header">
+      <div class="q-number">1</div>
+      <div class="q-text">Why do we parameterize the policy directly instead of deriving it from a value function (argmax over Q)?</div>
+      <div class="q-expand">▼</div>
+    </div>
+    <div class="socratic-a">
+      <p><strong>Short Answer:</strong> We <em>could</em>, but policy parameterization has advantages: naturally stochastic (good for exploration and multi-modal policies), works with continuous actions, and optimizes the actual objective (expected return) directly.</p>
+      <p style="margin-top: 12px;"><strong>Long Answer:</strong> In tabular settings, deriving a deterministic policy from Q (greedy action) works fine. But in function approximation, extracting a stochastic policy from deterministic action-values is awkward. You'd have to add exploration noise on top. Policy methods are cleaner: the function itself outputs probabilities. Moreover, some problems (poker, games with mixed-strategy equilibria, continuous control) require inherently stochastic policies. Policy gradients give you this for free.</p>
+    </div>
+  </div>
+
+  <div class="socratic-q" onclick="toggleSocratic(this)">
+    <div class="socratic-q-header">
+      <div class="q-number">2</div>
+      <div class="q-text">Why does subtracting a baseline reduce variance without biasing the gradient?</div>
+      <div class="q-expand">▼</div>
+    </div>
+    <div class="socratic-a">
+      <p><strong>Key Insight:</strong> The baseline $b(S_t)$ depends only on the state, not the action. So when we take the expectation:</p>
+      <p style="text-align: center; margin: 12px 0;">$\mathbb{E}_a[-b(S_t) \nabla \ln \pi(a|s,\theta) | S_t] = -b(S_t) \mathbb{E}_a[\nabla \ln \pi(a|s,\theta) | S_t]$</p>
+      <p style="text-align: center;">$= -b(S_t) \nabla \mathbb{E}_a[\ln \pi(a|s,\theta) | S_t] = 0$ (score has zero mean)</p>
+      <p style="margin-top: 12px;">The baseline cancels! But it reduces variance because $(G_t - b)$ has smaller magnitude than $G_t$ alone if $b$ is a good estimate of $\mathbb{E}[G_t | S_t]$.</p>
+    </div>
+  </div>
+
+  <div class="socratic-q" onclick="toggleSocratic(this)">
+    <div class="socratic-q-header">
+      <div class="q-number">3</div>
+      <div class="q-text">When would you use REINFORCE vs. Actor-Critic?</div>
+      <div class="q-expand">▼</div>
+    </div>
+    <div class="socratic-a">
+      <p><strong>REINFORCE:</strong> Simple, sample-efficient in the sense that you only need trajectories. Good for problems with small horizon or episodic tasks. No value network to train.</p>
+      <p style="margin-top: 12px;"><strong>Actor-Critic:</strong> Better variance, online updates (can learn from individual steps), works for continuing tasks. Requires training two networks, but the critic bootstraps from future estimates, reducing variance significantly.</p>
+      <p style="margin-top: 12px;"><strong>In Practice:</strong> Actor-Critic dominates. REINFORCE is mostly of pedagogical interest (and it's great for that!). Modern algorithms (A2C, A3C, PPO) are all actor-critic variants.</p>
+    </div>
+  </div>
+
+  <div class="socratic-q" onclick="toggleSocratic(this)">
+    <div class="socratic-q-header">
+      <div class="q-number">4</div>
+      <div class="q-text">How does a Gaussian policy for continuous actions compare to discretizing actions?</div>
+      <div class="q-expand">▼</div>
+    </div>
+    <div class="socratic-a">
+      <p><strong>Discretization:</strong> If you discretize a continuous space (e.g., robot arm angles into 100 bins), the action space explodes exponentially in dimensionality. A 5D continuous space might discretize to $100^5 = 10^{10}$ actions. Intractable.</p>
+      <p style="margin-top: 12px;"><strong>Gaussian Policy:</strong> A neural network outputs two scalars: mean $\mu$ and variance $\sigma$ for each action dimension. For a 5D arm, that's 10 outputs. Efficient and natural.</p>
+      <p style="margin-top: 12px;"><strong>Added Benefit:</strong> The variance naturally captures exploration. Early in training, $\sigma$ is large (explore). As the policy improves, $\sigma$ decreases (exploit). This emerges automatically without explicit exploration strategies.</p>
+    </div>
+  </div>
+
+  <div class="socratic-q" onclick="toggleSocratic(this)">
+    <div class="socratic-q-header">
+      <div class="q-number">5</div>
+      <div class="q-text">How is policy gradient training different from supervised learning, and why does this matter for RLHF?</div>
+      <div class="q-expand">▼</div>
+    </div>
+    <div class="socratic-a">
+      <p><strong>Supervised Learning:</strong> You have fixed targets (labels). You minimize the gap between predictions and targets. It's a one-way street: data → model → loss → update.</p>
+      <p style="margin-top: 12px;"><strong>Policy Gradients:</strong> There are no fixed targets. The "target" is the return (which depends on the policy's behavior). The reward signal comes from the environment (or a learned reward model). It's a feedback loop: policy → behavior → reward → gradient → better policy.</p>
+      <p style="margin-top: 12px;"><strong>Why It Matters for RLHF:</strong> In RLHF, you start with a supervised LLM. You can't just continue supervised learning (there are no more human labels). Instead, you use a learned reward model (human preference predictor) as the signal, then use policy gradients to optimize the LLM to maximize that reward while staying close to the original policy (via KL penalty or trust region). It's a fundamentally different learning paradigm.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 13: PART II SUMMARY                           -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="summary">
+  <div class="summary-box">
+    <h3>✓ Part II Complete: Function Approximation</h3>
+    <p>You now understand the entire function approximation pillar of RL:</p>
+    <ul style="list-style: none; color: var(--text-secondary); font-size: 15px; margin-top: 16px;">
+      <li style="margin-bottom: 8px;">✓ Ch 11: Linear function approximation and semi-gradient TD</li>
+      <li style="margin-bottom: 8px;">✓ Ch 12: Nonlinear approximation and deep learning</li>
+      <li style="margin-bottom: 8px;">✓ Ch 13: Direct policy optimization via gradients</li>
+    </ul>
+    <p style="margin-top: 20px;">From here, you can read Part III (Advanced Methods) or dive into modern algorithms: PPO, SAC, or RLHF. You have the foundation.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- NAVIGATION                                            -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="chapter-nav">
+  <a href="chapter-12.html" class="nav-btn">← Chapter 12</a>
+  <a href="chapter-14.html" class="nav-btn">Chapter 14 →</a>
+</div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// KaTeX RENDERING
+// ═══════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function() {
+  renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '$', right: '$', display: false},
+    ]
+  });
+  hljs.highlightAll();
+});
+
+// ═══════════════════════════════════════════════════════════
+// CHAPTER COMPLETION
+// ═══════════════════════════════════════════════════════════
+function markChapterComplete() {
+  const btn = document.getElementById('completeBtn');
+  if (!btn.classList.contains('done')) {
+    btn.classList.add('done');
+    btn.textContent = '✓ Complete';
+    localStorage.setItem('ch13_complete', 'true');
+  }
+}
+
+// Check if chapter was marked complete
+window.addEventListener('load', function() {
+  if (localStorage.getItem('ch13_complete') === 'true') {
+    const btn = document.getElementById('completeBtn');
+    btn.classList.add('done');
+    btn.textContent = '✓ Complete';
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+// MATH TOGGLE
+// ═══════════════════════════════════════════════════════════
+function toggleMath(element) {
+  element.classList.toggle('open');
+}
+
+// ═══════════════════════════════════════════════════════════
+// SOCRATIC QUESTIONS
+// ═══════════════════════════════════════════════════════════
+function toggleSocratic(element) {
+  element.classList.toggle('open');
+}
+
+// ═══════════════════════════════════════════════════════════
+// COPY CODE
+// ═══════════════════════════════════════════════════════════
+function copyCode(button) {
+  const code = button.closest('.code-block').querySelector('code').textContent;
+  navigator.clipboard.writeText(code);
+  button.textContent = 'Copied!';
+  setTimeout(() => {
+    button.textContent = 'Copy';
+  }, 2000);
+}
+
+// ═══════════════════════════════════════════════════════════
+// SCRUBBABLE NUMBERS
+// ═══════════════════════════════════════════════════════════
+let scrubValue = 0.01;
+let scrubElement = null;
+let scrubType = null;
+
+function startScrub(e, type) {
+  scrubElement = e.target;
+  scrubType = type;
+  document.addEventListener('mousemove', handleScrub);
+  document.addEventListener('mouseup', endScrub);
+  e.preventDefault();
+}
+
+function handleScrub(e) {
+  if (!scrubElement || !scrubType) return;
+
+  const delta = e.movementX * 0.001;
+
+  if (scrubType === 'lr') {
+    scrubValue = Math.max(0.0001, Math.min(0.1, scrubValue + delta));
+    document.getElementById('lrDisplay').textContent = scrubValue.toFixed(4);
+    updateREINFORCEChart(scrubValue);
+  }
+}
+
+function endScrub() {
+  scrubElement = null;
+  scrubType = null;
+  document.removeEventListener('mousemove', handleScrub);
+  document.removeEventListener('mouseup', endScrub);
+}
+
+// ═══════════════════════════════════════════════════════════
+// REINFORCE LEARNING CURVE
+// ═══════════════════════════════════════════════════════════
+function updateREINFORCEChart(alpha) {
+  // Simulated REINFORCE learning curve
+  const episodes = [];
+  const returns = [];
+
+  let return_val = -500;
+  for (let i = 0; i < 500; i++) {
+    episodes.push(i);
+    // Simulate learning with noise proportional to alpha
+    return_val += (300 - return_val * 0.1) * alpha * 0.5 + (Math.random() - 0.5) * 100;
+    returns.push(Math.min(500, Math.max(-500, return_val)));
+  }
+
+  const trace = {
+    x: episodes,
+    y: returns,
+    mode: 'lines',
+    name: 'Episode Return',
+    line: { color: 'rgba(129, 140, 248, 0.8)', width: 2 },
+    fill: 'tozeroy',
+    fillcolor: 'rgba(129, 140, 248, 0.1)',
+  };
+
+  const layout = {
+    title: `REINFORCE Learning (α = ${alpha.toFixed(4)})`,
+    xaxis: { title: 'Episode' },
+    yaxis: { title: 'Cumulative Return' },
+    plot_bgcolor: 'rgba(255,255,255,0.02)',
+    paper_bgcolor: 'transparent',
+    font: { color: 'rgba(241, 245, 249, 0.8)', family: 'Inter' },
+    margin: { l: 50, r: 20, t: 40, b: 40 },
+    hovermode: 'x unified',
+  };
+
+  Plotly.newPlot('reinforceChart', [trace], layout, { responsive: true });
+}
+
+// Initialize chart
+window.addEventListener('load', function() {
+  setTimeout(() => {
+    updateREINFORCEChart(0.01);
+  }, 100);
+});
+</script>
+
+</body>
+</html>

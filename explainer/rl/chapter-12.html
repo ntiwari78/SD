@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 12: Eligibility Traces — RL Interactive Curriculum</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
+<!-- KaTeX for LaTeX rendering -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<!-- Plotly for 3D viz -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+<!-- Highlight.js for code -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<style>
+:root {
+  --bg-deep: #0a0e1a;
+  --bg-card: #111827;
+  --bg-card-alt: #0f172a;
+  --bg-surface: #1e293b;
+  --border-subtle: rgba(255,255,255,0.06);
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent-indigo: #818cf8;
+  --accent-blue: #60a5fa;
+  --accent-cyan: #22d3ee;
+  --accent-emerald: #34d399;
+  --accent-amber: #fbbf24;
+  --accent-rose: #fb7185;
+  --accent-purple: #c084fc;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  line-height: 1.7;
+  font-size: 16px;
+}
+
+/* ───── Layout ───── */
+.page-wrapper {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+
+/* ───── Top Nav ───── */
+.top-nav {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(10,14,26,0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 12px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.top-nav a {
+  color: var(--text-secondary); text-decoration: none;
+  font-size: 14px; font-weight: 500;
+  display: flex; align-items: center; gap: 6px;
+  transition: color 0.2s;
+}
+.top-nav a:hover { color: var(--accent-indigo); }
+.nav-chapter-info {
+  font-size: 13px; color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.btn-complete {
+  padding: 8px 16px; border-radius: 8px; border: none;
+  background: linear-gradient(135deg, var(--accent-emerald), #10b981);
+  color: #022c22; font-weight: 600; font-size: 13px;
+  cursor: pointer; transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+.btn-complete:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(52,211,153,0.3); }
+.btn-complete.done { background: var(--bg-surface); color: var(--accent-emerald); cursor: default; }
+
+/* ───── Chapter Header ───── */
+.chapter-header {
+  text-align: center;
+  padding: 80px 0 48px;
+}
+.ch-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 14px; border-radius: 999px;
+  background: rgba(34,211,238,0.1);
+  border: 1px solid rgba(34,211,238,0.2);
+  font-size: 11px; font-weight: 700;
+  color: var(--accent-cyan);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.chapter-header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2.2rem, 5vw, 3.5rem);
+  font-weight: 900; line-height: 1.15;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #f1f5f9 0%, var(--accent-cyan) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.chapter-header .subtitle {
+  font-size: 18px; color: var(--text-secondary);
+  max-width: 580px; margin: 0 auto;
+}
+
+/* ───── Table of Contents ───── */
+.toc {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 24px 28px;
+  margin-bottom: 48px;
+}
+.toc h3 {
+  font-size: 13px; font-weight: 700;
+  color: var(--text-muted); letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.toc-list { list-style: none; }
+.toc-list li { margin-bottom: 6px; }
+.toc-list a {
+  color: var(--text-secondary); text-decoration: none;
+  font-size: 14px; font-weight: 500;
+  padding: 4px 8px; border-radius: 6px;
+  display: inline-block;
+  transition: all 0.2s;
+}
+.toc-list a:hover { color: var(--accent-indigo); background: rgba(129,140,248,0.08); }
+.toc-list .sec-num {
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  margin-right: 6px;
+}
+
+/* ───── Section Headers ───── */
+.section {
+  margin-bottom: 56px;
+}
+.section-label {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.section-label .icon { font-size: 16px; }
+.section-label.feynman { color: var(--accent-amber); }
+.section-label.technical { color: var(--accent-indigo); }
+.section-label.algorithm { color: var(--accent-emerald); }
+.section-label.sandbox { color: var(--accent-rose); }
+.section-label.interactive { color: var(--accent-cyan); }
+.section-label.history { color: var(--accent-purple); }
+
+.section h2 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800; line-height: 1.2;
+  margin-bottom: 20px;
+}
+
+.section p, .section li {
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+}
+.section p strong, .section li strong { color: var(--text-primary); font-weight: 600; }
+
+/* ───── Info Cards / Callouts ───── */
+.callout {
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin: 24px 0;
+  border-left: 3px solid;
+}
+.callout.insight {
+  background: rgba(129,140,248,0.06);
+  border-color: var(--accent-indigo);
+}
+.callout.analogy {
+  background: rgba(251,191,36,0.06);
+  border-color: var(--accent-amber);
+}
+.callout.warning {
+  background: rgba(251,113,133,0.06);
+  border-color: var(--accent-rose);
+}
+.callout.definition {
+  background: rgba(52,211,153,0.06);
+  border-color: var(--accent-emerald);
+}
+.callout-title {
+  font-size: 13px; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.callout.insight .callout-title { color: var(--accent-indigo); }
+.callout.analogy .callout-title { color: var(--accent-amber); }
+.callout.warning .callout-title { color: var(--accent-rose); }
+.callout.definition .callout-title { color: var(--accent-emerald); }
+.callout p { margin-bottom: 8px; }
+.callout p:last-child { margin-bottom: 0; }
+
+/* ───── Math Toggle ───── */
+.math-toggle {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin: 24px 0;
+  overflow: hidden;
+}
+.math-toggle-header {
+  padding: 14px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.math-toggle-header:hover { background: rgba(255,255,255,0.02); }
+.math-toggle-header .label {
+  font-size: 14px; font-weight: 600;
+  color: var(--accent-purple);
+  display: flex; align-items: center; gap: 8px;
+}
+.math-toggle-header .chevron {
+  color: var(--text-muted); font-size: 14px;
+  transition: transform 0.3s;
+}
+.math-toggle.open .chevron { transform: rotate(180deg); }
+.math-toggle-body {
+  display: none;
+  padding: 0 20px 20px;
+  border-top: 1px solid var(--border-subtle);
+}
+.math-toggle.open .math-toggle-body { display: block; padding-top: 16px; }
+
+/* ───── KaTeX ───── */
+.katex-display { margin: 20px 0; overflow-x: auto; }
+.katex { font-size: 1.1em; }
+
+/* ───── Code Blocks ───── */
+.code-block {
+  background: #0d1117;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin: 24px 0;
+  overflow: hidden;
+}
+.code-header {
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.code-header .lang {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; color: var(--text-muted); font-weight: 600;
+}
+.code-header .copy-btn {
+  padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-subtle);
+  background: transparent; color: var(--text-muted);
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s;
+}
+.code-header .copy-btn:hover { border-color: var(--accent-indigo); color: var(--accent-indigo); }
+.code-block pre {
+  padding: 16px 20px;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.code-block pre code { background: none !important; padding: 0 !important; }
+
+/* ───── Scrubbable Numbers ───── */
+.scrubbable {
+  display: inline-block;
+  color: var(--accent-cyan);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  border-bottom: 2px dashed var(--accent-cyan);
+  cursor: ew-resize;
+  user-select: none;
+  padding: 0 2px;
+  transition: color 0.2s;
+}
+.scrubbable:hover {
+  color: #67e8f9;
+  background: rgba(34,211,238,0.1);
+  border-radius: 3px;
+}
+.scrub-hint {
+  font-size: 11px; color: var(--text-muted); font-style: italic;
+  margin-top: 4px;
+}
+
+/* ───── Interactive Demo Containers ───── */
+.demo-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 24px 0;
+}
+.demo-container h4 {
+  font-size: 15px; font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+
+/* ───── Weight Visualizer ───── */
+.weight-viz {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 8px;
+  height: 200px;
+  margin: 20px 0;
+  padding: 16px;
+  background: rgba(255,255,255,0.02);
+  border-radius: 8px;
+}
+.weight-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.weight-bar-fill {
+  width: 20px;
+  background: linear-gradient(180deg, var(--accent-cyan), var(--accent-blue));
+  border-radius: 4px 4px 0 0;
+  transition: height 0.1s;
+}
+.weight-bar-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  text-align: center;
+  line-height: 1.3;
+}
+
+/* ───── Heatmap ───── */
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 2px;
+  margin: 20px 0;
+  padding: 16px;
+  background: rgba(255,255,255,0.02);
+  border-radius: 8px;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+}
+.heatmap-cell {
+  width: 50px;
+  height: 50px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--bg-surface);
+  transition: all 0.1s;
+}
+
+/* ───── Comparison Table ───── */
+.comp-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 24px 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.comp-table th {
+  padding: 14px 16px;
+  background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--border-subtle);
+  text-align: left;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.05em;
+}
+.comp-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+.comp-table tr:last-child td { border-bottom: none; }
+.comp-table td strong { color: var(--text-primary); }
+
+/* ───── Socratic Questions ───── */
+.socratic-q {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin: 16px 0;
+  overflow: hidden;
+}
+.socratic-q-header {
+  padding: 14px 20px;
+  cursor: pointer;
+  display: flex; align-items: flex-start; gap: 12px;
+  transition: background 0.2s;
+}
+.socratic-q-header:hover { background: rgba(255,255,255,0.02); }
+.q-number {
+  flex-shrink: 0;
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: rgba(251,113,133,0.1);
+  color: var(--accent-rose);
+  font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+}
+.q-text {
+  font-size: 14px; font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.5;
+  flex: 1;
+}
+.q-expand {
+  flex-shrink: 0;
+  color: var(--text-muted); font-size: 12px;
+  transition: transform 0.3s;
+  margin-top: 4px;
+}
+.socratic-q.open .q-expand { transform: rotate(180deg); }
+.socratic-a {
+  display: none;
+  padding: 0 20px 16px 60px;
+  font-size: 14px; color: var(--text-secondary);
+  line-height: 1.65;
+}
+.socratic-q.open .socratic-a { display: block; }
+
+/* ───── Navigation Links ───── */
+.nav-links {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 64px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-subtle);
+}
+.nav-links a {
+  color: var(--accent-indigo);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--accent-cyan); }
+
+/* ───── Responsive ───── */
+@media (max-width: 600px) {
+  .page-wrapper { padding: 0 16px 60px; }
+  .weight-viz { flex-wrap: wrap; height: auto; }
+  .heatmap-grid { grid-template-columns: repeat(4, 1fr); }
+  .heatmap-cell { width: 40px; height: 40px; }
+  .comp-table { font-size: 12px; }
+  .comp-table th, .comp-table td { padding: 8px 12px; }
+  .nav-links { flex-direction: column; gap: 12px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ───── Top Navigation ───── -->
+<nav class="top-nav">
+  <a href="chapter-11.html">&#x2190; Ch 11</a>
+  <span class="nav-chapter-info">Ch 12 / 17</span>
+  <button class="btn-complete" id="completeBtn" onclick="markChapterComplete()">&#x2713; Mark Complete</button>
+</nav>
+
+<div class="page-wrapper">
+
+<!-- ───── Chapter Header ───── -->
+<header class="chapter-header">
+  <div class="ch-badge">Bootstrapping &middot; Chapter 12</div>
+  <h1>Eligibility Traces</h1>
+  <p class="subtitle">Bridging forward and backward views of learning — how eligibility traces unify TD(λ) and enable efficient credit assignment across time.</p>
+</header>
+
+<!-- ───── Table of Contents ───── -->
+<div class="toc">
+  <h3>In This Chapter</h3>
+  <ol class="toc-list">
+    <li><a href="#feynman"><span class="sec-num">1</span> The Feynman Bridge: Credit at a Dinner Party</a></li>
+    <li><a href="#lambda-return"><span class="sec-num">2</span> The λ-Return and Forward View</a></li>
+    <li><a href="#backward-view"><span class="sec-num">3</span> The Backward View: Eligibility Traces</a></li>
+    <li><a href="#interactive-weights"><span class="sec-num">4</span> Interactive: λ-Return Weight Visualizer</a></li>
+    <li><a href="#interactive-heatmap"><span class="sec-num">5</span> Interactive: Eligibility Trace Heatmap</a></li>
+    <li><a href="#algorithm"><span class="sec-num">6</span> Algorithm: TD(λ) with Accumulating Traces</a></li>
+    <li><a href="#comparison"><span class="sec-num">7</span> Comparative Table: TD(0) vs TD(λ) vs MC</a></li>
+    <li><a href="#sandbox"><span class="sec-num">8</span> Socratic Sandbox: Deep Questions</a></li>
+    <li><a href="#nav"><span class="sec-num">9</span> Navigation</a></li>
+  </ol>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 1: FEYNMAN BRIDGE                              -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="feynman">
+  <div class="section-label feynman"><span class="icon">&#x1F3AF;</span> The Feynman Bridge</div>
+  <h2>Credit at a Dinner Party</h2>
+
+  <p>Imagine a dinner party where an amazing dessert is served. Everyone loved it. The question: who deserves credit?</p>
+
+  <p><strong>The baker?</strong> She made the dessert. <strong>The ingredient buyer?</strong> They selected premium chocolate. <strong>The host?</strong> They created the atmosphere and invited the right people. <strong>The sommelier?</strong> They chose the perfect wine pairing.</p>
+
+  <div class="callout analogy">
+    <div class="callout-title">The λ Parameter</div>
+    <p><strong>λ = 0 (TD)</strong>: Give all credit to the most recent contributor — the dessert baker alone.</p>
+    <p><strong>λ = 0.9</strong>: Distribute credit backward in time: 90% to the baker, 81% to the ingredient buyer, 73% to the host, etc. Older decisions matter but less.</p>
+    <p><strong>λ = 1 (Monte Carlo)</strong>: Distribute credit equally to everyone who was involved, no matter how far back you go.</p>
+  </div>
+
+  <p>In RL, <strong>eligibility traces</strong> are the "credit distribution mechanism." When the agent receives a reward (the delicious dessert), we need to decide which past states and actions were responsible. The parameter λ controls how far back in the trajectory we assign credit.</p>
+
+  <p>The magic of eligibility traces is that they provide two equivalent ways to think about this:</p>
+
+  <ul>
+    <li><strong>Forward view:</strong> After the episode ends, compute the weighted average of all n-step returns (weights controlled by λ).</li>
+    <li><strong>Backward view:</strong> At each time step, maintain a "trace" z(s) that decays over time, and apply all prediction errors to the trace (eligibility).</li>
+  </ul>
+
+  <p>Both views give the same answer—but the backward view works online, learning as you go, without waiting for the episode to end.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 2: λ-RETURN AND FORWARD VIEW                  -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="lambda-return">
+  <div class="section-label technical"><span class="icon">&#x1F4D0;</span> The Technical Ascent</div>
+  <h2>The λ-Return and Forward View</h2>
+
+  <p>In Chapter 7, we learned that an <strong>n-step return</strong> looks ahead n steps:</p>
+
+  $$G_{t:t+n} = R_{t+1} + \gamma R_{t+2} + \cdots + \gamma^{n-1} R_{t+n} + \gamma^n V(S_{t+n})$$
+
+  <p>The <strong>λ-return</strong> is a weighted average of all possible n-step returns, where the weights decay geometrically with λ:</p>
+
+  $$G_t^\lambda = (1 - \lambda) \sum_{n=1}^{T-t-1} \lambda^{n-1} G_{t:t+n} + \lambda^{T-t-1} G_t$$
+
+  <p>The factor $(1 - \lambda)$ normalizes the weights so they sum to 1 (except for the last term). Notice the pattern:</p>
+
+  <ul>
+    <li>1-step return gets weight $(1 - \lambda)$</li>
+    <li>2-step return gets weight $(1 - \lambda)\lambda$</li>
+    <li>3-step return gets weight $(1 - \lambda)\lambda^2$</li>
+    <li>n-step return gets weight $(1 - \lambda)\lambda^{n-1}$</li>
+  </ul>
+
+  <div class="math-toggle" id="mt-lambda-special">
+    <div class="math-toggle-header" onclick="toggleMath('mt-lambda-special')">
+      <span class="label">&#x1F9EE; Special Cases: λ=0 and λ=1</span>
+      <span class="chevron">&#x25BC;</span>
+    </div>
+    <div class="math-toggle-body">
+      <p style="color:var(--text-secondary);"><strong>When λ=0:</strong> All weight goes to the 1-step return (TD error):</p>
+      $$G_t^0 = G_{t:t+1} = R_{t+1} + \gamma V(S_{t+1})$$
+      <p style="color:var(--text-secondary);"><strong>When λ=1:</strong> All weight goes to the final return (Monte Carlo), weighted equally across all steps:</p>
+      $$G_t^1 = G_t = R_{t+1} + \gamma R_{t+2} + \cdots + \gamma^{T-t-1} R_T$$
+      <p style="color:var(--text-secondary);">For 0 &lt; λ &lt; 1, we interpolate between these extremes.</p>
+    </div>
+  </div>
+
+  <p>The <strong>forward view TD(λ) update</strong> uses the λ-return:</p>
+
+  $$V(S_t) \leftarrow V(S_t) + \alpha \big[ G_t^\lambda - V(S_t) \big]$$
+
+  <p>This is elegant but has one critical problem: <strong>it requires the full episode to be complete</strong> before we can compute \(G_t^\lambda\). We must wait until the end (time T) to know all future rewards. This is <strong>offline learning</strong>.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 3: BACKWARD VIEW & ELIGIBILITY TRACES           -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="backward-view">
+  <div class="section-label technical"><span class="icon">&#x1F4D0;</span> The Technical Ascent</div>
+  <h2>The Backward View: Eligibility Traces</h2>
+
+  <p>Here's the breakthrough: we can compute the same updates as the forward view, but <strong>online</strong>, using eligibility traces. The backward view maintains a trace vector z(s) for each state:</p>
+
+  <div class="callout definition">
+    <div class="callout-title">Eligibility Trace (Accumulating)</div>
+    <p>$$z_t(s) = \begin{cases} \gamma \lambda z_{t-1}(s) + 1 &\text{if } s = S_t \\ \gamma \lambda z_{t-1}(s) &\text{otherwise} \end{cases}$$</p>
+    <p>The trace z(s) tracks "how recent and how often" state s was visited. After each step, all traces decay by factor γλ. When we visit state s again, we increment its trace by 1 (add 1). The decay constant γλ means: if s was visited long ago, its trace is nearly zero; if visited recently, its trace is large.</p>
+  </div>
+
+  <p>At each time step, we observe a TD error:</p>
+
+  $$\delta_t = R_{t+1} + \gamma V(S_{t+1}) - V(S_t)$$
+
+  <p>Then we apply this error to <strong>all states in proportion to their eligibility</strong>:</p>
+
+  $$V(S) \leftarrow V(S) + \alpha \delta_t z_t(S) \quad \text{for all } S$$
+
+  <p>This is the heart of the backward view: when we get a TD error, <strong>every state that was recently visited shares in the credit/blame</strong> proportional to how recently it was visited.</p>
+
+  <div class="math-toggle" id="mt-accumulating-replacing">
+    <div class="math-toggle-header" onclick="toggleMath('mt-accumulating-replacing')">
+      <span class="label">&#x1F9EE; Accumulating vs Replacing Traces</span>
+      <span class="chevron">&#x25BC;</span>
+    </div>
+    <div class="math-toggle-body">
+      <p style="color:var(--text-secondary);"><strong>Accumulating traces</strong> (above) add 1 each time a state is visited:</p>
+      $$z_t(s) = \gamma \lambda z_{t-1}(s) + 1 \text{ if } s = S_t$$
+      <p style="color:var(--text-secondary);">If we visit the same state twice in quick succession, its trace grows. This can help when the same state appears multiple times in an episode.</p>
+      <p style="color:var(--text-secondary);"><strong>Replacing traces</strong> reset to 1 each time a state is visited:</p>
+      $$z_t(s) = \begin{cases} 1 &\text{if } s = S_t \\ \gamma \lambda z_{t-1}(s) &\text{otherwise} \end{cases}$$
+      <p style="color:var(--text-secondary);">Replacing traces can be more stable with function approximation and off-policy learning. They reset the eligibility each visit rather than accumulating it.</p>
+    </div>
+  </div>
+
+  <div class="callout insight">
+    <div class="callout-title">The Equivalence Theorem</div>
+    <p>For finite MDPs, the backward view (eligibility traces) and the forward view (λ-return) produce identical expected weight updates. This is one of the most beautiful results in RL: two conceptually different algorithms are mathematically equivalent!</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 4: INTERACTIVE - λ-RETURN WEIGHTS              -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="interactive-weights">
+  <div class="section-label interactive"><span class="icon">&#x1F39B;</span> Interactive</div>
+  <h2>λ-Return Weight Visualizer</h2>
+
+  <p>Drag the λ slider to see how the weights of different n-step returns change. Notice how:</p>
+  <ul>
+    <li><strong>λ=0</strong>: All weight on 1-step (TD)</li>
+    <li><strong>λ=1</strong>: Weights spread uniformly (Monte Carlo)</li>
+    <li><strong>0 &lt; λ &lt; 1</strong>: Weights decay as n increases</li>
+  </ul>
+
+  <div class="demo-container">
+    <h4>λ-Return Weight Distribution</h4>
+    <div style="margin-bottom: 24px;">
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">λ = <span id="lambda-display">0.9</span></div>
+      <input type="range" id="lambda-slider" min="0" max="1" step="0.01" value="0.9"
+             style="width:100%;cursor:pointer;" onchange="updateWeights()">
+      <p class="scrub-hint">&#x2194; Drag to change λ (0 = TD, 1 = MC)</p>
+    </div>
+
+    <div class="weight-viz" id="weight-bars">
+      <!-- Bars generated by JavaScript -->
+    </div>
+
+    <div style="margin-top: 16px; font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
+      <p><strong style="color: var(--text-primary);">How to read:</strong> Each bar represents the weight given to that n-step return. The sum of all bars equals 1 (they are normalized). As λ increases, the distribution flattens — older n-step returns get more weight. At λ=1, weight is uniform across all steps.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 5: INTERACTIVE - ELIGIBILITY HEATMAP            -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="interactive-heatmap">
+  <div class="section-label interactive"><span class="icon">&#x1F39B;</span> Interactive</div>
+  <h2>Eligibility Trace Heatmap</h2>
+
+  <p>This visualization shows a gridworld where an agent walks a path (dark cells). The color intensity of each cell shows its eligibility trace z(s). Adjust λ and γ to see how traces decay over time:</p>
+
+  <ul>
+    <li><strong>High λ, High γ</strong>: Traces persist longer; distant states still have credit</li>
+    <li><strong>Low λ, Low γ</strong>: Traces decay quickly; only recent states matter</li>
+  </ul>
+
+  <div class="demo-container">
+    <h4>Gridworld Agent Path with Eligibility Traces</h4>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+      <div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">λ = <span id="trace-lambda-display">0.9</span></div>
+        <input type="range" id="trace-lambda-slider" min="0" max="1" step="0.1" value="0.9"
+               style="width:100%;cursor:pointer;" onchange="updateHeatmap()">
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">γ = <span id="trace-gamma-display">0.99</span></div>
+        <input type="range" id="trace-gamma-slider" min="0" max="1" step="0.1" value="0.99"
+               style="width:100%;cursor:pointer;" onchange="updateHeatmap()">
+      </div>
+    </div>
+
+    <div class="heatmap-grid" id="heatmap">
+      <!-- Cells generated by JavaScript -->
+    </div>
+
+    <div style="margin-top: 16px; text-align: center; font-size: 12px; color: var(--text-muted);">
+      <p>Dark = agent's path. Brightness = eligibility (white = high, dark = low)</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 6: ALGORITHM IMPLEMENTATION                    -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="algorithm">
+  <div class="section-label algorithm"><span class="icon">&#x1F4BB;</span> Algorithm Implementation</div>
+  <h2>TD(λ) with Accumulating Traces</h2>
+
+  <p>Below is a complete implementation of TD(λ) for a random walk task, with accumulating eligibility traces. The algorithm updates the value function online at each time step:</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="lang">Python</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><code class="language-python">import numpy as np
+from collections import defaultdict
+
+class TDLambda:
+    """
+    TD(λ) agent with accumulating eligibility traces.
+
+    Core idea:
+      1. Maintain eligibility trace z(s) for each state
+      2. At each step, observe TD error δ_t
+      3. Update all states: V(s) += α δ_t z(s)
+      4. Decay and update traces: z(s) *= γλ, then z(S_t) += 1
+    """
+
+    def __init__(self, num_states, alpha=0.1, gamma=0.99, lambda_=0.9):
+        """
+        Args:
+          num_states: Number of states in the MDP
+          alpha: Step-size parameter (learning rate)
+          gamma: Discount factor (importance of future rewards)
+          lambda_: Trace decay parameter (λ)
+            λ=0: pure TD(0)
+            λ=1: pure Monte Carlo
+            0<λ<1: interpolate
+        """
+        self.num_states = num_states
+        self.alpha = alpha
+        self.gamma = gamma
+        self.lambda_ = lambda_
+
+        # Value function: V(s) for each state
+        self.V = np.zeros(num_states)
+
+        # Eligibility trace: z(s) for each state
+        self.z = np.zeros(num_states)
+
+    def update(self, state, reward, next_state, done=False):
+        """
+        Perform one TD(λ) update step.
+
+        Args:
+          state: current state index
+          reward: immediate reward signal
+          next_state: next state index
+          done: whether the episode terminated
+        """
+        # 1. Compute TD error: δ = r + γV(s') - V(s)
+        if done:
+            td_error = reward - self.V[state]
+        else:
+            td_error = reward + self.gamma * self.V[next_state] - self.V[state]
+
+        # 2. Update all states proportional to eligibility
+        self.V += self.alpha * td_error * self.z
+
+        # 3. Decay all traces and add current state
+        self.z *= self.gamma * self.lambda_
+        self.z[state] += 1.0
+
+        return td_error
+
+    def reset_trace(self):
+        """Reset eligibility trace at episode start."""
+        self.z = np.zeros(self.num_states)
+
+
+# Example: Learning a 5-state random walk
+def run_random_walk_episode(agent):
+    """Run one episode of a 5-state random walk."""
+    state = 2  # Start in middle
+    agent.reset_trace()
+
+    for t in range(20):
+        # Random walk: move left or right with equal probability
+        next_state = state + np.random.choice([-1, 1])
+
+        # Boundary: episode ends if we leave [0, 4]
+        if next_state < 0 or next_state >= 5:
+            reward = 1.0 if next_state >= 5 else 0.0
+            agent.update(state, reward, next_state, done=True)
+            break
+        else:
+            reward = 0.0
+            agent.update(state, reward, next_state, done=False)
+            state = next_state
+
+
+# Run multiple episodes to learn
+if __name__ == "__main__":
+    agent = TDLambda(num_states=5, alpha=0.01, gamma=0.99, lambda_=0.9)
+
+    num_episodes = 100
+    for episode in range(num_episodes):
+        run_random_walk_episode(agent)
+
+    print("Learned values:", agent.V)
+    # Expected: higher values toward the right (reward at rightmost boundary)
+</code></pre>
+  </div>
+
+  <div class="callout insight">
+    <div class="callout-title">Key Insight: Why Traces Work Online</div>
+    <p>Without eligibility traces, we could only update the current state based on the TD error. With traces, we update <em>all recently visited states</em> at once, which is equivalent to using the λ-return but without waiting for the episode to end. This is the power of the equivalence theorem.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 7: COMPARISON TABLE                             -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="comparison">
+  <div class="section-label technical"><span class="icon">&#x1F4D0;</span> Comparative Analysis</div>
+  <h2>TD(0) vs TD(λ) vs Monte Carlo</h2>
+
+  <table class="comp-table">
+    <thead>
+      <tr>
+        <th>Property</th>
+        <th>TD(0)<br>(λ=0)</th>
+        <th>TD(λ)<br>(0&lt;λ&lt;1)</th>
+        <th>MC<br>(λ=1)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Returns used</strong></td>
+        <td>1-step only</td>
+        <td>Weighted avg of n-step</td>
+        <td>Full trajectory (∞-step)</td>
+      </tr>
+      <tr>
+        <td><strong>Online/Offline</strong></td>
+        <td>Online (1-step)</td>
+        <td>Online (with traces)</td>
+        <td>Offline (episode-end)</td>
+      </tr>
+      <tr>
+        <td><strong>Variance</strong></td>
+        <td>Low (bootstrap)</td>
+        <td>Medium</td>
+        <td>High (no bootstrap)</td>
+      </tr>
+      <tr>
+        <td><strong>Bias</strong></td>
+        <td>High (initial V)</td>
+        <td>Medium</td>
+        <td>Zero (unbiased)</td>
+      </tr>
+      <tr>
+        <td><strong>Credit assignment</strong></td>
+        <td>One step back</td>
+        <td>~λ/(1-λ) steps back</td>
+        <td>Full trajectory</td>
+      </tr>
+      <tr>
+        <td><strong>Convergence</strong></td>
+        <td>Fast (low variance)</td>
+        <td>Moderate</td>
+        <td>Slower (high variance)</td>
+      </tr>
+      <tr>
+        <td><strong>Memory</strong></td>
+        <td>Low</td>
+        <td>O(num_states)</td>
+        <td>Low (batch only)</td>
+      </tr>
+      <tr>
+        <td><strong>Use case</strong></td>
+        <td>Fast updates, stability</td>
+        <td>Balanced learning</td>
+        <td>Low-variance estimates, model-free planning</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout insight">
+    <div class="callout-title">Practical Insight</div>
+    <p>TD(λ) with 0.9 ≤ λ ≤ 0.95 is often a "sweet spot" — it balances the low variance of TD(0) with the unbiased estimates of Monte Carlo. In practice, λ should be tuned as a hyperparameter alongside α.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 8: SOCRATIC SANDBOX                             -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="sandbox">
+  <div class="section-label sandbox"><span class="icon">&#x1F4E6;</span> Socratic Sandbox</div>
+  <h2>Deep Questions About Eligibility Traces</h2>
+
+  <div class="socratic-q" onclick="toggleQuestion(this)">
+    <div class="socratic-q-header">
+      <div class="q-number">1</div>
+      <div class="q-text">Why are the forward view and backward view mathematically equivalent?</div>
+      <div class="q-expand">&#x25BC;</div>
+    </div>
+    <div class="socratic-a">
+      The forward view computes a weighted average of n-step returns: \(G_t^\lambda = (1-\lambda)\sum_{n=1}^{T-t-1} \lambda^{n-1} G_{t:t+n}\). The backward view, through the eligibility trace mechanism, distributes the TD error \(\delta_t\) to all past states according to their recency. When you work through the algebra, the cumulative effect of all TD errors applied to traces produces the exact same expected updates as the forward view. This equivalence is profound: two different computational paths lead to the same destination.
+    </div>
+  </div>
+
+  <div class="socratic-q" onclick="toggleQuestion(this)">
+    <div class="socratic-q-header">
+      <div class="q-number">2</div>
+      <div class="q-text">When would λ=0.9 be better than λ=0, and why?</div>
+      <div class="q-expand">&#x25BC;</div>
+    </div>
+    <div class="socratic-a">
+      TD(0) (λ=0) only uses 1-step returns, so it converges fast and has low variance, but it may have high bias if the value function is poorly initialized. TD(0.9) looks further ahead, reducing initial bias while keeping variance reasonable. In a problem where several steps are "necessary" to understand the value of a state (e.g., the state has no immediate reward but leads to high-reward states several steps away), TD(0.9) will learn faster and more accurately than TD(0). The tradeoff: slight increase in variance for significant bias reduction.
+    </div>
+  </div>
+
+  <div class="socratic-q" onclick="toggleQuestion(this)">
+    <div class="socratic-q-header">
+      <div class="q-number">3</div>
+      <div class="q-text">What's the practical difference between accumulating and replacing traces?</div>
+      <div class="q-expand">&#x25BC;</div>
+    </div>
+    <div class="socratic-a">
+      <strong>Accumulating traces:</strong> If you visit a state twice quickly, the trace grows (z += 1 each visit). This means revisiting a state amplifies its eligibility for the next error, which can be useful if the same state appears multiple times and should receive double credit. <strong>Replacing traces:</strong> The trace resets to 1 each visit (z = 1), then decays. This is more stable with function approximation and off-policy learning, where accumulating traces can become numerically unstable or misleading. In tabular methods on-policy, accumulating traces are more faithful to the theory; replacing traces are a practical hack that often works better in practice.
+    </div>
+  </div>
+
+  <div class="socratic-q" onclick="toggleQuestion(this)">
+    <div class="socratic-q-header">
+      <div class="q-number">4</div>
+      <div class="q-text">Why is the forward view offline but the backward view is online?</div>
+      <div class="q-expand">&#x25BC;</div>
+    </div>
+    <div class="socratic-a">
+      The forward view computes \(G_t^\lambda\), which depends on all future rewards: \(R_{t+1}, R_{t+2}, \ldots, R_T\). You cannot know the full return \(G_t^\lambda\) until the episode ends at time T. So you must wait until the episode is over to update. The backward view, however, processes TD errors as they arrive. Each step computes \(\delta_t\) (which only needs \(R_{t+1}\) and \(V(S_{t+1})\)), applies it to all traced states, and updates the value function immediately. No waiting required. This is why the backward view is the practical choice for online, streaming learning.
+    </div>
+  </div>
+
+  <div class="socratic-q" onclick="toggleQuestion(this)">
+    <div class="socratic-q-header">
+      <div class="q-number">5</div>
+      <div class="q-text">How do eligibility traces solve the credit assignment problem?</div>
+      <div class="q-expand">&#x25BC;</div>
+    </div>
+    <div class="socratic-a">
+      Credit assignment asks: which actions (or states) in the past were responsible for the outcome? Eligibility traces answer this by maintaining a "memory" of recent states (the trace) and distributing the TD error proportionally to that memory. If a state was visited recently, it has a high trace and receives more of the error. If it was visited long ago, the trace has decayed and it receives less. The parameter λ controls the decay rate: high λ spreads credit far back in time; low λ concentrates it near the most recent states. This is elegant: a single scalar parameter controls the temporal scope of credit assignment.
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 9: NAVIGATION                                  -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div id="nav" style="margin-top: 64px;">
+  <div class="nav-links">
+    <a href="chapter-11.html">&#x2190; Previous: Eligibility & Q-Learning</a>
+    <a href="chapter-13.html">Next: Policy Gradient &#x2192;</a>
+  </div>
+</div>
+
+</div><!-- /.page-wrapper -->
+
+<script>
+// ───── Math rendering ─────
+document.addEventListener('DOMContentLoaded', function() {
+  renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '$', right: '$', display: false},
+      {left: '\\(', right: '\\)', display: false},
+      {left: '\\[', right: '\\]', display: true}
+    ]
+  });
+
+  // Highlight code blocks
+  document.querySelectorAll('pre code').forEach((block) => {
+    hljs.highlightElement(block);
+  });
+
+  // Initialize visualizations
+  updateWeights();
+  updateHeatmap();
+});
+
+// ───── Math toggle ─────
+function toggleMath(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.toggle('open');
+}
+
+// ───── Copy code ─────
+function copyCode(btn) {
+  const code = btn.parentElement.parentElement.querySelector('code').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = orig; }, 2000);
+  });
+}
+
+// ───── λ-Return Weights ─────
+function updateWeights() {
+  const lambda = parseFloat(document.getElementById('lambda-slider').value);
+  document.getElementById('lambda-display').textContent = lambda.toFixed(2);
+
+  const container = document.getElementById('weight-bars');
+  container.innerHTML = '';
+
+  const num_steps = 10;
+  let weights = [];
+
+  for (let n = 1; n <= num_steps; n++) {
+    let weight;
+    if (n < num_steps) {
+      weight = (1 - lambda) * Math.pow(lambda, n - 1);
+    } else {
+      weight = Math.pow(lambda, n - 1);
+    }
+    weights.push(weight);
+  }
+
+  const maxWeight = Math.max(...weights);
+
+  weights.forEach((w, i) => {
+    const barDiv = document.createElement('div');
+    barDiv.className = 'weight-bar';
+
+    const fill = document.createElement('div');
+    fill.className = 'weight-bar-fill';
+    fill.style.height = (w / maxWeight * 120) + 'px';
+
+    const label = document.createElement('div');
+    label.className = 'weight-bar-label';
+    label.innerHTML = (i + 1) + '-step<br>' + w.toFixed(3);
+
+    barDiv.appendChild(fill);
+    barDiv.appendChild(label);
+    container.appendChild(barDiv);
+  });
+}
+
+// ───── Eligibility Heatmap ─────
+function updateHeatmap() {
+  const lambda = parseFloat(document.getElementById('trace-lambda-slider').value);
+  const gamma = parseFloat(document.getElementById('trace-gamma-slider').value);
+
+  document.getElementById('trace-lambda-display').textContent = lambda.toFixed(1);
+  document.getElementById('trace-gamma-display').textContent = gamma.toFixed(2);
+
+  const container = document.getElementById('heatmap');
+  container.innerHTML = '';
+
+  // Simple path: 0 -> 1 -> 2 -> 3 -> 4 -> 5 (exits)
+  const path = [0, 1, 2, 3, 4, 5];
+  const visited = new Set(path.slice(0, -1)); // Exclude exit point
+
+  // Compute eligibility: how much time ago was each state visited?
+  const eligibility = new Map();
+  for (const s of visited) {
+    const stepsAgo = Math.max(...path.slice(0, -1).map((v, i) => v === s ? path.length - 1 - i : -1));
+    const trace = Math.pow(gamma * lambda, stepsAgo);
+    eligibility.set(s, trace);
+  }
+
+  const maxElig = Math.max(...Array.from(eligibility.values()));
+
+  for (let i = 0; i < 6; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'heatmap-cell';
+
+    if (visited.has(i)) {
+      const eValue = eligibility.get(i) / maxElig;
+      const brightness = Math.floor(eValue * 200);
+      cell.style.background = `rgb(${brightness}, ${brightness + 55}, ${255})`;
+      cell.textContent = (eValue * 100).toFixed(0) + '%';
+      cell.style.color = eValue > 0.5 ? '#000' : '#fff';
+    } else if (i === path[path.length - 1]) {
+      cell.style.background = 'var(--accent-emerald)';
+      cell.textContent = 'end';
+    } else {
+      cell.style.background = 'var(--bg-surface)';
+      cell.textContent = '—';
+    }
+
+    container.appendChild(cell);
+  }
+}
+
+// ───── Socratic Questions ─────
+function toggleQuestion(el) {
+  el.classList.toggle('open');
+}
+
+// ───── Mark Complete ─────
+function markChapterComplete() {
+  const btn = document.getElementById('completeBtn');
+  btn.classList.add('done');
+  btn.textContent = '✓ Complete';
+  localStorage.setItem('ch12-complete', 'true');
+}
+
+// Check on load
+window.addEventListener('load', () => {
+  if (localStorage.getItem('ch12-complete')) {
+    document.getElementById('completeBtn').classList.add('done');
+    document.getElementById('completeBtn').textContent = '✓ Complete';
+  }
+});
+</script>
+
+</body>
+</html>

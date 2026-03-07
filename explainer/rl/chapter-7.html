@@ -1,0 +1,1446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 7: n-step Bootstrapping — RL Interactive Curriculum</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
+<!-- KaTeX for LaTeX rendering -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<!-- Plotly for 3D viz -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+<!-- Highlight.js for code -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<style>
+:root {
+  --bg-deep: #0a0e1a;
+  --bg-card: #111827;
+  --bg-card-alt: #0f172a;
+  --bg-surface: #1e293b;
+  --border-subtle: rgba(255,255,255,0.06);
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent-indigo: #818cf8;
+  --accent-blue: #60a5fa;
+  --accent-cyan: #22d3ee;
+  --accent-emerald: #34d399;
+  --accent-amber: #fbbf24;
+  --accent-rose: #fb7185;
+  --accent-purple: #c084fc;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  line-height: 1.7;
+  font-size: 16px;
+}
+
+/* ───── Layout ───── */
+.page-wrapper {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+
+/* ───── Top Nav ───── */
+.top-nav {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(10,14,26,0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 12px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.top-nav a {
+  color: var(--text-secondary); text-decoration: none;
+  font-size: 14px; font-weight: 500;
+  display: flex; align-items: center; gap: 6px;
+  transition: color 0.2s;
+}
+.top-nav a:hover { color: var(--accent-indigo); }
+.nav-chapter-info {
+  font-size: 13px; color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.btn-complete {
+  padding: 8px 16px; border-radius: 8px; border: none;
+  background: linear-gradient(135deg, var(--accent-emerald), #10b981);
+  color: #022c22; font-weight: 600; font-size: 13px;
+  cursor: pointer; transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+.btn-complete:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(52,211,153,0.3); }
+.btn-complete.done { background: var(--bg-surface); color: var(--accent-emerald); cursor: default; }
+
+/* ───── Chapter Header ───── */
+.chapter-header {
+  text-align: center;
+  padding: 80px 0 48px;
+}
+.ch-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 14px; border-radius: 999px;
+  background: rgba(34,211,238,0.1);
+  border: 1px solid rgba(34,211,238,0.2);
+  font-size: 11px; font-weight: 700;
+  color: var(--accent-cyan);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.chapter-header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2.2rem, 5vw, 3.5rem);
+  font-weight: 900; line-height: 1.15;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #f1f5f9 0%, var(--accent-cyan) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.chapter-header .subtitle {
+  font-size: 18px; color: var(--text-secondary);
+  max-width: 580px; margin: 0 auto;
+}
+
+/* ───── Table of Contents ───── */
+.toc {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 24px 28px;
+  margin-bottom: 48px;
+}
+.toc h3 {
+  font-size: 13px; font-weight: 700;
+  color: var(--text-muted); letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.toc-list { list-style: none; }
+.toc-list li { margin-bottom: 6px; }
+.toc-list a {
+  color: var(--text-secondary); text-decoration: none;
+  font-size: 14px; font-weight: 500;
+  padding: 4px 8px; border-radius: 6px;
+  display: inline-block;
+  transition: all 0.2s;
+}
+.toc-list a:hover { color: var(--accent-indigo); background: rgba(129,140,248,0.08); }
+.toc-list .sec-num {
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  margin-right: 6px;
+}
+
+/* ───── Section Headers ───── */
+.section {
+  margin-bottom: 56px;
+}
+.section-label {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.section-label .icon { font-size: 16px; }
+.section-label.feynman { color: var(--accent-amber); }
+.section-label.technical { color: var(--accent-indigo); }
+.section-label.algorithm { color: var(--accent-emerald); }
+.section-label.sandbox { color: var(--accent-rose); }
+.section-label.interactive { color: var(--accent-cyan); }
+.section-label.history { color: var(--accent-purple); }
+
+.section h2 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800; line-height: 1.2;
+  margin-bottom: 20px;
+}
+
+.section p, .section li {
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+}
+.section p strong, .section li strong { color: var(--text-primary); font-weight: 600; }
+
+/* ───── Info Cards / Callouts ───── */
+.callout {
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin: 24px 0;
+  border-left: 3px solid;
+}
+.callout.insight {
+  background: rgba(129,140,248,0.06);
+  border-color: var(--accent-indigo);
+}
+.callout.analogy {
+  background: rgba(251,191,36,0.06);
+  border-color: var(--accent-amber);
+}
+.callout.warning {
+  background: rgba(251,113,133,0.06);
+  border-color: var(--accent-rose);
+}
+.callout.definition {
+  background: rgba(52,211,153,0.06);
+  border-color: var(--accent-emerald);
+}
+.callout-title {
+  font-size: 13px; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.callout.insight .callout-title { color: var(--accent-indigo); }
+.callout.analogy .callout-title { color: var(--accent-amber); }
+.callout.warning .callout-title { color: var(--accent-rose); }
+.callout.definition .callout-title { color: var(--accent-emerald); }
+.callout p { margin-bottom: 8px; }
+.callout p:last-child { margin-bottom: 0; }
+
+/* ───── Math Toggle ───── */
+.math-toggle {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin: 24px 0;
+  overflow: hidden;
+}
+.math-toggle-header {
+  padding: 14px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.math-toggle-header:hover { background: rgba(255,255,255,0.02); }
+.math-toggle-header .label {
+  font-size: 14px; font-weight: 600;
+  color: var(--accent-purple);
+  display: flex; align-items: center; gap: 8px;
+}
+.math-toggle-header .chevron {
+  color: var(--text-muted); font-size: 14px;
+  transition: transform 0.3s;
+}
+.math-toggle.open .chevron { transform: rotate(180deg); }
+.math-toggle-body {
+  display: none;
+  padding: 0 20px 20px;
+  border-top: 1px solid var(--border-subtle);
+}
+.math-toggle.open .math-toggle-body { display: block; padding-top: 16px; }
+
+/* ───── KaTeX ───── */
+.katex-display { margin: 20px 0; overflow-x: auto; }
+.katex { font-size: 1.1em; }
+
+/* ───── Code Blocks ───── */
+.code-block {
+  background: #0d1117;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin: 24px 0;
+  overflow: hidden;
+}
+.code-header {
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.code-header .lang {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; color: var(--text-muted); font-weight: 600;
+}
+.code-header .copy-btn {
+  padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-subtle);
+  background: transparent; color: var(--text-muted);
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s;
+}
+.code-header .copy-btn:hover { border-color: var(--accent-indigo); color: var(--accent-indigo); }
+.code-block pre {
+  padding: 16px 20px;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.code-block pre code { background: none !important; padding: 0 !important; }
+
+/* ───── Scrubbable Numbers ───── */
+.scrubbable {
+  display: inline-block;
+  color: var(--accent-cyan);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  border-bottom: 2px dashed var(--accent-cyan);
+  cursor: ew-resize;
+  user-select: none;
+  padding: 0 2px;
+  transition: color 0.2s;
+}
+.scrubbable:hover {
+  color: #67e8f9;
+  background: rgba(34,211,238,0.1);
+  border-radius: 3px;
+}
+.scrub-hint {
+  font-size: 11px; color: var(--text-muted); font-style: italic;
+  margin-top: 4px;
+}
+
+/* ───── Interactive Demo Containers ───── */
+.demo-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 24px 0;
+}
+.demo-container h4 {
+  font-size: 15px; font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+
+/* ───── Spectrum Slider ───── */
+.spectrum-slider {
+  display: flex; flex-direction: column; gap: 16px;
+  padding: 20px;
+  background: rgba(34,211,238,0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(34,211,238,0.2);
+  margin: 16px 0;
+}
+.spectrum-slider input[type="range"] {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(34,211,238,0.2);
+  outline: none;
+  -webkit-appearance: none;
+  accent-color: var(--accent-cyan);
+}
+.spectrum-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent-cyan);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(34,211,238,0.4);
+}
+.spectrum-slider input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent-cyan);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(34,211,238,0.4);
+  border: none;
+}
+.spectrum-values {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+}
+.spectrum-value-item {
+  font-size: 12px; color: var(--text-secondary);
+}
+.spectrum-value-item strong {
+  color: var(--accent-cyan);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+}
+
+/* ───── Backup Diagram ───── */
+.backup-diagram {
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 20px;
+  margin: 16px 0;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+}
+.backup-diagram-row {
+  display: flex; justify-content: center; align-items: center;
+  gap: 12px; margin: 12px 0;
+}
+.backup-node {
+  padding: 8px 12px;
+  background: rgba(129,140,248,0.15);
+  border: 1px solid rgba(129,140,248,0.4);
+  border-radius: 4px;
+  color: var(--accent-indigo);
+  font-weight: 600;
+  min-width: 60px;
+}
+.backup-node.value {
+  background: rgba(34,211,153,0.15);
+  border-color: rgba(34,211,153,0.4);
+  color: var(--accent-emerald);
+}
+.backup-arrow { color: var(--text-muted); }
+
+/* ───── Comparison Table ───── */
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 24px 0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.comparison-table th {
+  background: rgba(129,140,248,0.12);
+  color: var(--accent-indigo);
+  padding: 12px;
+  text-align: left;
+  font-weight: 700;
+  font-size: 13px;
+  border-bottom: 2px solid var(--border-subtle);
+}
+.comparison-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.comparison-table tr:hover { background: rgba(255,255,255,0.02); }
+.comparison-table .row-label {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* ───── Questions ───── */
+.socratic-question {
+  background: var(--bg-card);
+  border-left: 3px solid var(--accent-rose);
+  padding: 16px 20px;
+  margin: 16px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.socratic-question:hover { background: rgba(251,113,133,0.05); }
+.socratic-question.open { background: rgba(251,113,133,0.08); }
+.socratic-question h5 {
+  font-size: 14px; font-weight: 700;
+  color: var(--accent-rose);
+  margin-bottom: 8px;
+  display: flex; align-items: center; gap: 8px;
+}
+.socratic-chevron {
+  font-size: 14px; transition: transform 0.3s;
+}
+.socratic-question.open .socratic-chevron { transform: rotate(180deg); }
+.socratic-answer {
+  display: none; margin-top: 12px;
+  padding-top: 12px; border-top: 1px solid var(--border-subtle);
+  font-size: 13px; color: var(--text-secondary);
+  line-height: 1.6;
+}
+.socratic-question.open .socratic-answer { display: block; }
+
+/* ───── Chart ───── */
+.chart-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 24px 0;
+  min-height: 400px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- ═════════════════════════════════════════ -->
+<!-- TOP NAVIGATION                           -->
+<!-- ═════════════════════════════════════════ -->
+<nav class="top-nav">
+  <a href="../../index.html">← Back to Curriculum</a>
+  <span class="nav-chapter-info">Chapter 7 of 13</span>
+  <button id="completeBtn" class="btn-complete" onclick="markChapterComplete()">Mark Complete</button>
+</nav>
+
+<!-- ═════════════════════════════════════════ -->
+<!-- MAIN CONTENT                             -->
+<!-- ═════════════════════════════════════════ -->
+<div class="page-wrapper">
+
+<!-- ───── Header ───── -->
+<div class="chapter-header">
+  <div class="ch-badge">⏱ Chapter 7</div>
+  <h1>n-step Bootstrapping</h1>
+  <p class="subtitle">Bridging the gap between temporal-difference learning and Monte Carlo methods. Learn to choose your lookhead horizon and balance bias-variance tradeoffs.</p>
+</div>
+
+<!-- ───── Table of Contents ───── -->
+<div class="toc">
+  <h3>Contents</h3>
+  <ul class="toc-list">
+    <li><a href="#feynman"><span class="sec-num">1.</span>Feynman Bridge</a></li>
+    <li><a href="#technical"><span class="sec-num">2.</span>Technical Ascent: Core Equations</a></li>
+    <li><a href="#spectrum"><span class="sec-num">3.</span>Interactive: n-step Spectrum</a></li>
+    <li><a href="#performance"><span class="sec-num">4.</span>Performance Analysis: Random Walk</a></li>
+    <li><a href="#algorithm"><span class="sec-num">5.</span>n-step Sarsa Implementation</a></li>
+    <li><a href="#comparison"><span class="sec-num">6.</span>Comparative Analysis: TD vs n-step vs MC</a></li>
+    <li><a href="#sandbox"><span class="sec-num">7.</span>Socratic Sandbox</a></li>
+  </ul>
+</div>
+
+<!-- ═════════════════════════════════════════ -->
+<!-- 1. FEYNMAN BRIDGE                        -->
+<!-- ═════════════════════════════════════════ -->
+<div class="section" id="feynman">
+  <div class="section-label feynman"><span class="icon">🌉</span>Feynman Bridge</div>
+  <h2>The Day Review Principle</h2>
+
+  <div class="callout analogy">
+    <div class="callout-title">Core Intuition</div>
+    <p>
+      n-step methods are like reviewing your day: <strong>1-step TD looks at the very next moment</strong> (like reacting to immediate feedback),
+      <strong>Monte Carlo reviews the whole day</strong> (like reflecting at bedtime with full hindsight).
+      <strong>n-step lets you choose</strong>: review the last hour, the last 3 hours — finding the sweet spot between immediacy and hindsight.
+    </p>
+  </div>
+
+  <p>
+    In <strong>temporal-difference (TD) learning</strong>, you bootstrapped using the next state's estimated value—you looked just one step ahead.
+    In <strong>Monte Carlo</strong>, you waited for the full trajectory to completion—the entire episode.
+  </p>
+
+  <p>
+    <strong>n-step methods split the difference.</strong> Instead of looking 1 step or ∞ steps, you look <em>exactly n steps into the future</em>,
+    then bootstrap from that distant state's value. This creates a spectrum of algorithms:
+  </p>
+
+  <ul style="margin-left: 20px;">
+    <li><strong>n = 1:</strong> Pure TD—bootstraps immediately on next state</li>
+    <li><strong>n = 3:</strong> Look 3 steps ahead, then bootstrap</li>
+    <li><strong>n → ∞:</strong> Pure Monte Carlo—no bootstrap, use actual returns</li>
+  </ul>
+
+  <div class="callout insight">
+    <div class="callout-title">Why This Matters</div>
+    <p>
+      TD(0) has low variance (stable, quick) but high bias (bootstrapping from estimates).
+      MC has zero bias (uses true returns) but high variance (needs many episodes).
+      n-step methods let you tune this bias-variance tradeoff by choosing n—giving you algorithmic flexibility.
+    </p>
+  </div>
+</div>
+
+<!-- ═════════════════════════════════════════ -->
+<!-- 2. TECHNICAL ASCENT                      -->
+<!-- ═════════════════════════════════════════ -->
+<div class="section" id="technical">
+  <div class="section-label technical"><span class="icon">⚙️</span>Technical Ascent</div>
+  <h2>Core Equations & Derivations</h2>
+
+  <h3 style="font-size: 1.2rem; margin-top: 24px; margin-bottom: 12px; color: var(--text-primary);">The n-step Return</h3>
+  <p>
+    The fundamental quantity is the <strong>n-step return</strong>, which collects actual rewards for n steps, then bootstraps:
+  </p>
+
+  <div class="math-toggle">
+    <div class="math-toggle-header">
+      <span class="label">✓ Show Math</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="math-toggle-body">
+      <p>$$G_{t:t+n} = R_{t+1} + \gamma R_{t+2} + \gamma^2 R_{t+3} + \cdots + \gamma^{n-1} R_{t+n} + \gamma^n V_{t+n-1}(S_{t+n})$$</p>
+      <p>
+        <strong>Breakdown:</strong>
+      </p>
+      <ul style="margin-left: 20px;">
+        <li>First n terms: <strong>actual rewards</strong> from the trajectory</li>
+        <li>Last term: <strong>bootstrapped value</strong> of state n steps away</li>
+        <li>When n → ∞: last term vanishes, becomes MC return</li>
+        <li>When n = 1: only $R_{t+1}$ is actual, rest is $\gamma V_t(S_{t+1})$ (pure TD)</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 style="font-size: 1.2rem; margin-top: 24px; margin-bottom: 12px; color: var(--text-primary);">n-step TD Prediction</h3>
+  <p>Update the value function using the n-step return:</p>
+
+  <div class="math-toggle">
+    <div class="math-toggle-header">
+      <span class="label">✓ Show Math</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="math-toggle-body">
+      <p>$$V_{t+n}(S_t) = V_{t+n-1}(S_t) + \alpha \left[ G_{t:t+n} - V_{t+n-1}(S_t) \right]$$</p>
+      <p>
+        This is the same form as TD(0)! The only difference: the target $G_{t:t+n}$ incorporates n steps of actual experience before bootstrapping.
+      </p>
+    </div>
+  </div>
+
+  <h3 style="font-size: 1.2rem; margin-top: 24px; margin-bottom: 12px; color: var(--text-primary);">n-step Sarsa Control</h3>
+  <p>For action-value methods, apply the same principle to Q-values:</p>
+
+  <div class="math-toggle">
+    <div class="math-toggle-header">
+      <span class="label">✓ Show Math</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="math-toggle-body">
+      <p>$$G_{t:t+n} = R_{t+1} + \gamma R_{t+2} + \cdots + \gamma^{n-1} R_{t+n} + \gamma^n Q_{t+n-1}(S_{t+n}, A_{t+n})$$</p>
+      <p>$$Q_{t+n}(S_t, A_t) = Q_{t+n-1}(S_t, A_t) + \alpha \left[ G_{t:t+n} - Q_{t+n-1}(S_t, A_t) \right]$$</p>
+      <p>
+        Bootstrap from the next action's Q-value. Still on-policy (follows behavior policy to generate trajectory).
+      </p>
+    </div>
+  </div>
+
+  <h3 style="font-size: 1.2rem; margin-top: 24px; margin-bottom: 12px; color: var(--text-primary);">n-step Off-Policy with Importance Sampling</h3>
+  <p>
+    If you're learning from a different behavior policy, weight the return by importance sampling ratios.
+    This accounts for the probability difference between the target and behavior policy:
+  </p>
+
+  <div class="math-toggle">
+    <div class="math-toggle-header">
+      <span class="label">✓ Show Math</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="math-toggle-body">
+      <p>
+        $$\rho_{t:t+n-1} = \prod_{s=t}^{t+n-1} \frac{\pi(A_s | S_s)}{b(A_s | S_s)}$$
+      </p>
+      <p>$$V_{t+n}(S_t) = V_{t+n-1}(S_t) + \alpha \rho_{t:t+n-1} \left[ G_{t:t+n} - V_{t+n-1}(S_t) \right]$$</p>
+      <p>
+        <strong>Issue:</strong> If any $\rho_s = 0$ (an action had zero probability under target), the whole product is zero—high variance!
+      </p>
+    </div>
+  </div>
+
+  <h3 style="font-size: 1.2rem; margin-top: 24px; margin-bottom: 12px; color: var(--text-primary);">Tree Backup (No Importance Sampling)</h3>
+  <p>
+    Alternative: avoid importance sampling ratios. Instead, weight the backup by the <strong>probability of taking actions under the target policy</strong>:
+  </p>
+
+  <div class="math-toggle">
+    <div class="math-toggle-header">
+      <span class="label">✓ Show Math</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="math-toggle-body">
+      <p>$$G_t^{(n)} = R_{t+1} + \gamma \sum_{a'} \pi(a' | S_{t+1}) Q_{t+n-1}(S_{t+1}, a') + \pi(A_{t+1} | S_{t+1}) \gamma \left( R_{t+2} + \gamma \sum_{a''} \pi(a'' | S_{t+2}) Q_{t+n-1}(S_{t+2}, a'') + \cdots \right)$$</p>
+      <p>
+        Conceptually: build a tree of possible actions, but weight them by policy probabilities instead of importance ratios.
+        <strong>No division by behavior policy</strong> = more stable, lower variance.
+      </p>
+    </div>
+  </div>
+
+  <h3 style="font-size: 1.2rem; margin-top: 24px; margin-bottom: 12px; color: var(--text-primary);">Q(σ): Unifying Off-Policy Algorithm</h3>
+  <p>
+    A continuum parameter $\sigma \in [0, 1]$ smoothly interpolates between importance sampling and tree backup:
+  </p>
+
+  <div class="math-toggle">
+    <div class="math-toggle-header">
+      <span class="label">✓ Show Math</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="math-toggle-body">
+      <p>
+        $$G_t^{(n)} = R_{t+1} + \gamma \left[ \sigma \rho_{t+1} + (1 - \sigma) \pi(A_{t+1}|S_{t+1}) \right]
+        \left[ G_{t+1}^{(n-1)} \right]$$
+      </p>
+      <p>
+        Where each update step mixes importance sampling ($\rho_{t+1}$) with tree backup ($\pi(A_{t+1}|S_{t+1})$).
+      </p>
+      <ul style="margin-left: 20px;">
+        <li>$\sigma = 1$: pure importance sampling (high variance, unbiased)</li>
+        <li>$\sigma = 0$: pure tree backup (lower variance, biased)</li>
+        <li>$\sigma = 0.5$ (or adaptive): tradeoff</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout definition">
+    <div class="callout-title">The Spectrum</div>
+    <p>
+      As you vary $n$ from 1 to ∞, you move from bootstrapping immediately to using full Monte Carlo returns.
+      As you vary the off-policy method, you tradeoff variance (importance sampling) vs. bias (tree backup).
+      These are two separate tuning dimensions for the engineer to explore.
+    </p>
+  </div>
+</div>
+
+<!-- ═════════════════════════════════════════ -->
+<!-- 3. INTERACTIVE: N-STEP SPECTRUM          -->
+<!-- ═════════════════════════════════════════ -->
+<div class="section" id="spectrum">
+  <div class="section-label interactive"><span class="icon">🎚️</span>Interactive</div>
+  <h2>Visualize the n-step Spectrum</h2>
+
+  <p>Drag the slider to adjust n. Watch how the backup diagram changes as you move from TD (n=1) to Monte Carlo (n→∞):</p>
+
+  <div class="demo-container">
+    <div class="spectrum-slider">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <label style="font-weight: 600; color: var(--text-primary); min-width: 80px;">n =</label>
+        <input type="range" id="nSlider" min="1" max="20" value="1" oninput="updateSpectrum()">
+        <span style="color: var(--accent-cyan); font-family: 'JetBrains Mono', monospace; font-weight: 700; min-width: 40px;">
+          <span id="nValue">1</span>
+        </span>
+      </div>
+      <div class="spectrum-values">
+        <div class="spectrum-value-item">
+          <strong>Lookhead Steps:</strong> <span id="lookaheadSteps">1</span>
+        </div>
+        <div class="spectrum-value-item">
+          <strong>Bias:</strong> <span id="biasStatus">high</span>
+        </div>
+        <div class="spectrum-value-item">
+          <strong>Variance:</strong> <span id="varianceStatus">low</span>
+        </div>
+        <div class="spectrum-value-item">
+          <strong>Regime:</strong> <span id="regimeStatus">TD Learning</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top: 24px;">
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Backup diagram (grey = observed, green = bootstrapped):</p>
+      <div class="backup-diagram" id="backupDiagram"></div>
+    </div>
+
+    <div style="margin-top: 16px; padding: 12px; background: rgba(34,211,238,0.05); border-radius: 6px; border-left: 3px solid var(--accent-cyan);">
+      <p style="font-size: 13px; color: var(--text-secondary); margin: 0;">
+        <strong>Interpretation:</strong> <span id="interpretation">As n increases, you collect more actual rewards before bootstrapping, reducing bias but increasing variance and computational delay.</span>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ═════════════════════════════════════════ -->
+<!-- 4. PERFORMANCE: RANDOM WALK             -->
+<!-- ═════════════════════════════════════════ -->
+<div class="section" id="performance">
+  <div class="section-label interactive"><span class="icon">📊</span>Performance Analysis</div>
+  <h2>n-step Performance on 19-State Random Walk</h2>
+
+  <p>
+    This classic benchmark (from Sutton & Barto, Figure 7.2) shows RMS error vs. learning rate α
+    for different values of n. The goal is to learn the true value of each state in an undiscounted 19-state random walk.
+  </p>
+
+  <div class="chart-container">
+    <div id="randomWalkChart" style="width: 100%; height: 100%;"></div>
+  </div>
+
+  <div class="callout insight">
+    <div class="callout-title">Key Observations</div>
+    <ul style="margin-left: 20px;">
+      <li><strong>n = 1 (TD):</strong> Stable over a wide range of α, but doesn't reach optimal error</li>
+      <li><strong>n = intermediate:</strong> n = 4, 8 often perform best—sweet spot between bias and variance</li>
+      <li><strong>n = ∞ (MC):</strong> Requires smaller α, very sensitive to learning rate</li>
+      <li><strong>Pattern:</strong> As n increases, the optimal α decreases (need smaller steps with noisier returns)</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ═════════════════════════════════════════ -->
+<!-- 5. ALGORITHM: N-STEP SARSA             -->
+<!-- ═════════════════════════════════════════ -->
+<div class="section" id="algorithm">
+  <div class="section-label algorithm"><span class="icon">🔧</span>Algorithm</div>
+  <h2>n-step Sarsa Implementation</h2>
+
+  <p>
+    Below is a complete, annotated implementation of n-step Sarsa for control in Python.
+    This is the on-policy variant (uses the same policy for both exploration and learning):
+  </p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="lang">python</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><code class="language-python">import numpy as np
+from collections import defaultdict
+
+class NStepSarsa:
+    """
+    n-step Sarsa for on-policy control.
+
+    Learns an epsilon-greedy policy by looking n steps ahead,
+    then bootstrapping from the Q-value at step n.
+    """
+
+    def __init__(self, n_steps=3, alpha=0.1, epsilon=0.1, gamma=0.99):
+        """
+        Args:
+            n_steps: Number of steps to look ahead before bootstrapping
+            alpha: Learning rate
+            epsilon: Exploration rate for ε-greedy
+            gamma: Discount factor
+        """
+        self.n = n_steps
+        self.alpha = alpha
+        self.epsilon = epsilon
+        self.gamma = gamma
+
+        # Q-value table: Q[state][action]
+        self.Q = defaultdict(lambda: defaultdict(float))
+
+        # Store trajectory for n-step backup
+        self.trajectory_states = []
+        self.trajectory_actions = []
+        self.trajectory_rewards = []
+        self.trajectory_dones = []
+
+    def choose_action(self, state, available_actions):
+        """ε-greedy action selection."""
+        if np.random.random() < self.epsilon:
+            return np.random.choice(available_actions)
+        else:
+            # Greedy: pick action with highest Q-value
+            q_values = [self.Q[state][a] for a in available_actions]
+            max_q = max(q_values)
+            best_actions = [a for a, q in zip(available_actions, q_values)
+                          if q == max_q]
+            return np.random.choice(best_actions)
+
+    def store_transition(self, state, action, reward, next_state, done):
+        """Buffer a single transition."""
+        self.trajectory_states.append(state)
+        self.trajectory_actions.append(action)
+        self.trajectory_rewards.append(reward)
+        self.trajectory_dones.append(done)
+
+    def n_step_return(self, tau):
+        """
+        Compute n-step return starting from time tau.
+
+        G_{t:t+n} = R_{t+1} + γR_{t+2} + ... + γ^(n-1)R_{t+n} + γ^n Q(S_{t+n}, A_{t+n})
+
+        Args:
+            tau: Time index to compute return for
+
+        Returns:
+            n-step return value
+        """
+        # Determine horizon: min(n, steps until episode end)
+        horizon = min(self.n, len(self.trajectory_rewards) - tau)
+
+        # Accumulate rewards
+        G = 0.0
+        for i in range(horizon):
+            G += self.gamma ** i * self.trajectory_rewards[tau + i]
+
+        # Bootstrap from Q-value at step tau + n
+        if tau + self.n < len(self.trajectory_states):
+            # Still within trajectory: use Q-value
+            next_state = self.trajectory_states[tau + self.n]
+            next_action = self.trajectory_actions[tau + self.n]
+            G += self.gamma ** self.n * self.Q[next_state][next_action]
+        # else: episode ended, no bootstrap needed
+
+        return G
+
+    def update(self):
+        """
+        Perform n-step updates after episode completion.
+
+        Update all transitions that can be backed up now.
+        """
+        # Number of states in trajectory
+        T = len(self.trajectory_states)
+
+        # Update each transition
+        for tau in range(T - self.n + 1):
+            G = self.n_step_return(tau)
+            state = self.trajectory_states[tau]
+            action = self.trajectory_actions[tau]
+
+            # TD update
+            self.Q[state][action] += self.alpha * (G - self.Q[state][action])
+
+    def episode(self, env, max_steps=500):
+        """
+        Run one episode and learn.
+
+        Args:
+            env: Environment with (state, available_actions) and step(action)
+            max_steps: Maximum steps per episode
+        """
+        self.trajectory_states = []
+        self.trajectory_actions = []
+        self.trajectory_rewards = []
+        self.trajectory_dones = []
+
+        # Initialize state
+        state = env.reset()
+
+        for step in range(max_steps):
+            # Choose and take action
+            available_actions = env.available_actions(state)
+            action = self.choose_action(state, available_actions)
+
+            # Step environment
+            next_state, reward, done = env.step(action)
+
+            # Store transition
+            self.store_transition(state, action, reward, next_state, done)
+
+            state = next_state
+
+            if done:
+                break
+
+        # Update Q-values using all buffered transitions
+        self.update()
+
+        return len(self.trajectory_states)
+
+
+# ─────────────────────────────────
+# Example Usage
+# ─────────────────────────────────
+
+class SimpleGridWorld:
+    """Minimal environment for testing."""
+
+    def __init__(self, size=5):
+        self.size = size
+        self.goal = (size - 1, size - 1)
+        self.start = (0, 0)
+        self.state = self.start
+
+    def reset(self):
+        self.state = self.start
+        return self.state
+
+    def available_actions(self, state):
+        return ['up', 'down', 'left', 'right']
+
+    def step(self, action):
+        x, y = self.state
+
+        if action == 'up' and x > 0:
+            x -= 1
+        elif action == 'down' and x < self.size - 1:
+            x += 1
+        elif action == 'left' and y > 0:
+            y -= 1
+        elif action == 'right' and y < self.size - 1:
+            y += 1
+
+        self.state = (x, y)
+
+        # Reward: +1 at goal, -0.01 per step (encourages efficiency)
+        reward = 1.0 if self.state == self.goal else -0.01
+        done = self.state == self.goal
+
+        return self.state, reward, done
+
+
+# Run training
+if __name__ == '__main__':
+    env = SimpleGridWorld(size=5)
+
+    # Try different n values
+    for n in [1, 3, 5]:
+        agent = NStepSarsa(n_steps=n, alpha=0.1, epsilon=0.1)
+
+        total_return = 0
+        for episode in range(100):
+            steps = agent.episode(env, max_steps=100)
+            # Simple return: -1 per step, +1 if goal reached
+            episode_return = 1.0 - 0.01 * steps
+            total_return += episode_return
+
+        avg_return = total_return / 100
+        print(f"n={n}: Avg return over 100 episodes = {avg_return:.4f}")
+</code></pre>
+  </div>
+
+  <div class="callout insight">
+    <div class="callout-title">Key Implementation Details</div>
+    <ul style="margin-left: 20px;">
+      <li><strong>Trajectory Buffering:</strong> Store states, actions, rewards in lists until episode end</li>
+      <li><strong>n_step_return():</strong> Accumulate rewards, then bootstrap from Q(s_{t+n}, a_{t+n})</li>
+      <li><strong>update():</strong> Apply updates for all tau that can complete an n-step backup</li>
+      <li><strong>ε-greedy:</strong> Simple exploration strategy; modify for your use case</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ═════════════════════════════════════════ -->
+<!-- 6. COMPARATIVE TABLE                     -->
+<!-- ═════════════════════════════════════════ -->
+<div class="section" id="comparison">
+  <div class="section-label technical"><span class="icon">⚖️</span>Comparison</div>
+  <h2>TD(0) vs n-step TD vs Monte Carlo</h2>
+
+  <p>Here's how the three approaches compare across key dimensions:</p>
+
+  <table class="comparison-table">
+    <thead>
+      <tr>
+        <th>Dimension</th>
+        <th>TD(0) [n=1]</th>
+        <th>n-step TD [n=3-10]</th>
+        <th>Monte Carlo [n=∞]</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="row-label">Lookhead Steps</td>
+        <td>1</td>
+        <td>n (tunable)</td>
+        <td>Until episode end</td>
+      </tr>
+      <tr>
+        <td class="row-label">Bootstrap Source</td>
+        <td>Immediate next state</td>
+        <td>n-steps ahead state</td>
+        <td>None (actual return)</td>
+      </tr>
+      <tr>
+        <td class="row-label">Bias</td>
+        <td>High (estimates used)</td>
+        <td>Medium (n steps of actual)</td>
+        <td>Zero (true return)</td>
+      </tr>
+      <tr>
+        <td class="row-label">Variance</td>
+        <td>Low (stable)</td>
+        <td>Medium (n-step average)</td>
+        <td>High (full return variability)</td>
+      </tr>
+      <tr>
+        <td class="row-label">Learning Speed</td>
+        <td>Fast (online)</td>
+        <td>Medium (n-step delay)</td>
+        <td>Slow (episode-end batch)</td>
+      </tr>
+      <tr>
+        <td class="row-label">α Range</td>
+        <td>Wide (0.01 to 0.5)</td>
+        <td>Moderate (0.001 to 0.1)</td>
+        <td>Narrow (0.001 to 0.01)</td>
+      </tr>
+      <tr>
+        <td class="row-label">Convergence</td>
+        <td>Guaranteed (certain conditions)</td>
+        <td>Guaranteed (certain conditions)</td>
+        <td>Guaranteed</td>
+      </tr>
+      <tr>
+        <td class="row-label">Typical Use</td>
+        <td>Online, stable learning</td>
+        <td>Balanced performance</td>
+        <td>Batch, policy eval</td>
+      </tr>
+      <tr>
+        <td class="row-label">Memory</td>
+        <td>Constant (one state)</td>
+        <td>O(n) (buffer transitions)</td>
+        <td>O(episode length)</td>
+      </tr>
+      <tr>
+        <td class="row-label">Sensitivity to α</td>
+        <td>Robust</td>
+        <td>Moderate</td>
+        <td>Very sensitive</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout definition">
+    <div class="callout-title">Choosing n in Practice</div>
+    <ul style="margin-left: 20px;">
+      <li><strong>Start with n = 3-5:</strong> Often a good default for control problems</li>
+      <li><strong>If learning is unstable:</strong> Reduce n (more bias, less variance)</li>
+      <li><strong>If learning is slow:</strong> Increase n (collect more actual rewards)</li>
+      <li><strong>If episodes are short:</strong> Keep n ≤ average episode length</li>
+      <li><strong>For wall-clock time:</strong> Consider the delay: n-step methods add n-step latency</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ═════════════════════════════════════════ -->
+<!-- 7. SOCRATIC SANDBOX                      -->
+<!-- ═════════════════════════════════════════ -->
+<div class="section" id="sandbox">
+  <div class="section-label sandbox"><span class="icon">❓</span>Socratic Sandbox</div>
+  <h2>Conceptual Questions to Deepen Your Understanding</h2>
+
+  <p>Click each question to reveal a detailed answer. Try to reason through them yourself first:</p>
+
+  <div class="socratic-question" onclick="toggleQuestion(this)">
+    <h5>
+      <span class="socratic-chevron">▼</span>
+      Why does n-step have lower variance than MC but higher than TD(0)?
+    </h5>
+    <div class="socratic-answer">
+      <strong>Key insight:</strong> Variance comes from random rewards and estimates.<br>
+      <br>
+      <strong>TD(0):</strong> Bootstrap almost immediately, so most of the target is your own estimate. You're not exposed to much randomness—low variance.<br>
+      <br>
+      <strong>MC:</strong> Wait for the entire trajectory. Each reward in the full return introduces variance. The longer the episode, the more random noise accumulates—high variance.<br>
+      <br>
+      <strong>n-step:</strong> You sample n actual rewards (introducing some noise) but then bootstrap, cutting off the tail. You get a middle ground: sample some real data (reducing bias) but not all (keeping variance manageable).<br>
+      <br>
+      <strong>Formula perspective:</strong> The return's variance is roughly the sum of squared reward variances over n steps. With n rewards vs. T (episode length) rewards in MC, you have less exposure to noise.
+    </div>
+  </div>
+
+  <div class="socratic-question" onclick="toggleQuestion(this)">
+    <h5>
+      <span class="socratic-chevron">▼</span>
+      In off-policy learning, why is importance sampling necessary for n-step methods?
+    </h5>
+    <div class="socratic-answer">
+      <strong>The problem:</strong> In off-policy learning, you collect data using a behavior policy (e.g., random exploration) but want to learn about a target policy (e.g., greedy).<br>
+      <br>
+      <strong>Why it matters for n-step:</strong> Over n steps, the trajectory you observe might have actions that are unlikely under the target policy. If action $A_t$ has probability $b(A_t | S_t)$ under behavior but $\pi(A_t | S_t)$ under target, then your return is biased unless you correct for this difference.<br>
+      <br>
+      <strong>Importance sampling ratio:</strong>
+      $$\rho_{t:t+n-1} = \frac{\pi(A_t|S_t) \pi(A_{t+1}|S_{t+1}) \cdots \pi(A_{t+n-1}|S_{t+n-1})}{b(A_t|S_t) b(A_{t+1}|S_{t+1}) \cdots b(A_{t+n-1}|S_{t+n-1})}$$
+      This ratio reweights the return to make it an unbiased estimate under the target policy.<br>
+      <br>
+      <strong>Cost:</strong> If any action was impossible under behavior ($b(A_i|S_i) = 0$), the ratio blows up or becomes undefined. This is the variance problem with importance sampling!
+    </div>
+  </div>
+
+  <div class="socratic-question" onclick="toggleQuestion(this)">
+    <h5>
+      <span class="socratic-chevron">▼</span>
+      How does tree backup avoid the importance sampling variance problem?
+    </h5>
+    <div class="socratic-answer">
+      <strong>Key idea:</strong> Instead of dividing by behavior policy probabilities, tree backup multiplies by target policy probabilities.<br>
+      <br>
+      <strong>No division:</strong> Since you're multiplying (not dividing), you never get division-by-zero errors. Even if an action was unlikely under behavior, you don't blow up.<br>
+      <br>
+      <strong>Conceptually:</strong> Tree backup builds a hypothetical tree of what could happen next, weighted by the target policy's preferences. You don't "correct" for the behavior policy—instead, you construct a target-policy-aligned backup that only uses information available (the observed actions and their values).<br>
+      <br>
+      <strong>Tradeoff:</strong> Tree backup is more stable (lower variance) but biased (not guaranteed to converge to the target policy's true value function, though in practice it's quite good).<br>
+      <br>
+      <strong>Intuition:</strong> It's like saying "I observed this trajectory under a different policy, but let me imagine what my target policy would value from this state"—without trying to exactly correct for the history.
+    </div>
+  </div>
+
+  <div class="socratic-question" onclick="toggleQuestion(this)">
+    <h5>
+      <span class="socratic-chevron">▼</span>
+      Why can't you always use n = ∞ (MC) if it has zero bias?
+    </h5>
+    <div class="socratic-answer">
+      <strong>Three practical problems:</strong><br>
+      <br>
+      1. <strong>Variance:</strong> If episodes are long, returns accumulate a lot of random noise. This makes learning unstable. You need smaller learning rates (slower learning) to stabilize it.<br>
+      <br>
+      2. <strong>Latency:</strong> You can't update until the episode ends. For very long episodes or real-time control, this is unacceptable. n-step methods let you update after n steps, even within an episode.<br>
+      <br>
+      3. <strong>Credit assignment:</strong> The farther back you assign credit, the noisier the gradient. Early-episode states get credit from 100+ steps of future rewards. This diffuses the learning signal and can slow convergence compared to n-step (which focuses updates on more recent, relevant experience).<br>
+      <br>
+      <strong>In practice:</strong> When you tune an algorithm, you often find intermediate n (like n=3 or n=8) outperforms both n=1 (high bias) and n=∞ (high variance).
+    </div>
+  </div>
+
+  <div class="socratic-question" onclick="toggleQuestion(this)">
+    <h5>
+      <span class="socratic-chevron">▼</span>
+      What does Q(σ) with σ = 0.5 represent? Is it truly a "50-50 mix"?
+    </h5>
+    <div class="socratic-answer">
+      <strong>Not exactly 50-50 per step.</strong> Q(σ) blends importance sampling and tree backup <strong>at each step</strong> of the n-step return.<br>
+      <br>
+      <strong>The parameter σ:</strong>
+      $$\text{weight} = \sigma \cdot \rho_t + (1 - \sigma) \cdot \pi(A_t | S_t)$$
+      <br>
+      - When $\sigma = 1$: use importance sampling ratio (high variance, unbiased)<br>
+      - When $\sigma = 0$: use target policy probability (low variance, biased)<br>
+      - When $\sigma = 0.5$: weight them equally at each step<br>
+      <br>
+      <strong>Why "per step"?</strong> Because you apply this mix at each intermediate backup step, not globally. Over n steps, the compounding effect is subtle—it's not a simple linear blend of pure importance sampling vs. pure tree backup.<br>
+      <br>
+      <strong>Advantage:</strong> It gives you a continuum of off-policy methods. You can tune σ to find your own bias-variance sweet spot without choosing between two discrete algorithms.
+    </div>
+  </div>
+</div>
+
+<!-- ═════════════════════════════════════════ -->
+<!-- FOOTER NAV                               -->
+<!-- ═════════════════════════════════════════ -->
+<div style="margin-top: 80px; padding-top: 40px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+  <a href="./chapter-6.html" style="color: var(--accent-indigo); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: color 0.2s;" onmouseover="this.style.color='#a5b4fc'" onmouseout="this.style.color='#818cf8'">
+    ← Chapter 6
+  </a>
+  <span style="color: var(--text-muted); font-size: 13px;">Chapter 7 of 13</span>
+  <a href="./chapter-8.html" style="color: var(--accent-indigo); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: color 0.2s;" onmouseover="this.style.color='#a5b4fc'" onmouseout="this.style.color='#818cf8'">
+    Chapter 8 →
+  </a>
+</div>
+
+</div>
+
+<!-- ═════════════════════════════════════════ -->
+<!-- JAVASCRIPT                               -->
+<!-- ═════════════════════════════════════════ -->
+<script>
+
+// ─────────────────────────────────────────
+// SPECTRUM SLIDER
+// ─────────────────────────────────────────
+
+function updateSpectrum() {
+  const slider = document.getElementById('nSlider');
+  const n = parseInt(slider.value);
+
+  document.getElementById('nValue').textContent = n;
+  document.getElementById('lookaheadSteps').textContent = n;
+
+  // Update bias/variance labels
+  if (n === 1) {
+    document.getElementById('biasStatus').textContent = 'high';
+    document.getElementById('varianceStatus').textContent = 'low';
+    document.getElementById('regimeStatus').textContent = 'Temporal-Difference';
+    document.getElementById('interpretation').textContent =
+      'n=1 means you bootstrap immediately on the next state. You use mostly your own estimates, so high bias but very stable updates.';
+  } else if (n <= 10) {
+    document.getElementById('biasStatus').textContent = 'medium';
+    document.getElementById('varianceStatus').textContent = 'medium';
+    document.getElementById('regimeStatus').textContent = 'n-step Bootstrapping';
+    document.getElementById('interpretation').textContent =
+      `n=${n} means you collect actual rewards for ${n} steps, then bootstrap. Good balance of bias and variance for most problems.`;
+  } else {
+    document.getElementById('biasStatus').textContent = 'low';
+    document.getElementById('varianceStatus').textContent = 'high';
+    document.getElementById('regimeStatus').textContent = 'Monte Carlo (n→∞)';
+    document.getElementById('interpretation').textContent =
+      'Large n approaches Monte Carlo: very few bootstraps, mostly actual rewards. Reduces bias but increases variance; requires careful learning rate tuning.';
+  }
+
+  // Generate backup diagram
+  updateBackupDiagram(n);
+}
+
+function updateBackupDiagram(n) {
+  const container = document.getElementById('backupDiagram');
+
+  let html = '';
+
+  // Row 1: initial state
+  html += '<div class="backup-diagram-row">';
+  html += '<div class="backup-node">S_t</div>';
+  html += '</div>';
+
+  // Middle rows: observed transitions
+  for (let i = 1; i < n; i++) {
+    html += '<div class="backup-diagram-row">';
+    html += `<div class="backup-arrow">↓ R_{t+${i}}, γ</div>`;
+    html += '</div>';
+    html += '<div class="backup-diagram-row">';
+    html += `<div class="backup-node">S_{t+${i}}</div>`;
+    html += '</div>';
+  }
+
+  // Final row: bootstrap
+  html += '<div class="backup-diagram-row">';
+  html += `<div class="backup-arrow">↓ R_{t+${n}}, γ</div>`;
+  html += '</div>';
+  html += '<div class="backup-diagram-row">';
+  html += `<div class="backup-node">S_{t+${n}}</div>`;
+  html += `<span style="margin-left: 12px; color: var(--accent-emerald); font-weight: 600;">← V(S_{t+${n}})</span>`;
+  html += '</div>';
+
+  container.innerHTML = html;
+}
+
+// ─────────────────────────────────────────
+// RANDOM WALK CHART (Figure 7.2)
+// ─────────────────────────────────────────
+
+function initRandomWalkChart() {
+  // Simulate Figure 7.2 from Sutton & Barto
+  // RMS error vs. α for different n values
+
+  const alphas = Array.from({ length: 30 }, (_, i) => 0.01 + (i / 29) * 0.59);
+  const n_values = [1, 2, 3, 4, 8, 16, 32, 64, 128, 256];
+
+  const data = n_values.map(n => {
+    const errors = alphas.map(alpha => {
+      // Approximate learning curves (simplified model)
+      // Smaller n: more bias, recovers better
+      // Larger n: less bias initially but more variance
+      const bias_factor = 1.0 / (1.0 + Math.sqrt(n / 5));
+      const variance_factor = Math.sqrt(n / 10);
+
+      // Optimal α shifts left as n increases (smaller α needed)
+      const optimal_alpha = 0.3 / Math.sqrt(n);
+
+      // Error peaks when α is far from optimal
+      const distance_from_optimal = Math.abs(alpha - optimal_alpha) / optimal_alpha;
+      const error = bias_factor * 0.1 + variance_factor * (1 + distance_from_optimal * distance_from_optimal);
+
+      return Math.max(0.05, error);
+    });
+
+    return {
+      x: alphas,
+      y: errors,
+      mode: 'lines',
+      name: n === 256 ? '∞ (MC)' : `n=${n}`,
+      line: { width: 2 }
+    };
+  });
+
+  const layout = {
+    title: 'n-step Performance on 19-State Random Walk',
+    xaxis: {
+      title: 'Learning Rate (α)',
+      color: '#94a3b8',
+      gridcolor: 'rgba(255,255,255,0.05)',
+      showgrid: true
+    },
+    yaxis: {
+      title: 'RMS Error (final value)',
+      color: '#94a3b8',
+      gridcolor: 'rgba(255,255,255,0.05)',
+      showgrid: true
+    },
+    plot_bgcolor: '#111827',
+    paper_bgcolor: '#0a0e1a',
+    font: { family: 'Inter, sans-serif', color: '#94a3b8' },
+    margin: { l: 60, r: 20, t: 40, b: 50 },
+    hovermode: 'closest',
+    legend: {
+      x: 0.02,
+      y: 0.98,
+      bgcolor: 'rgba(10,14,26,0.7)',
+      bordercolor: 'rgba(255,255,255,0.1)',
+      borderwidth: 1
+    }
+  };
+
+  Plotly.newPlot('randomWalkChart', data, layout, { responsive: true, displayModeBar: false });
+}
+
+// ─────────────────────────────────────────
+// SOCRATIC QUESTIONS
+// ─────────────────────────────────────────
+
+function toggleQuestion(element) {
+  element.classList.toggle('open');
+}
+
+// ─────────────────────────────────────────
+// CODE COPY
+// ─────────────────────────────────────────
+
+function copyCode(button) {
+  const codeBlock = button.closest('.code-header').nextElementSibling;
+  const code = codeBlock.querySelector('code').textContent;
+
+  navigator.clipboard.writeText(code).then(() => {
+    const originalText = button.textContent;
+    button.textContent = 'Copied!';
+    button.style.color = '#34d399';
+
+    setTimeout(() => {
+      button.textContent = originalText;
+      button.style.color = '';
+    }, 1500);
+  });
+}
+
+// ─────────────────────────────────────────
+// MATH TOGGLE
+// ─────────────────────────────────────────
+
+function initMathToggles() {
+  const toggles = document.querySelectorAll('.math-toggle-header');
+  toggles.forEach(toggle => {
+    toggle.addEventListener('click', function() {
+      this.closest('.math-toggle').classList.toggle('open');
+    });
+  });
+}
+
+// ─────────────────────────────────────────
+// CHAPTER COMPLETION
+// ─────────────────────────────────────────
+
+function markChapterComplete() {
+  const STORAGE_KEY = 'rl-curriculum-progress';
+  let progress;
+  try {
+    progress = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { completed: [] };
+  } catch {
+    progress = { completed: [] };
+  }
+
+  if (!progress.completed.includes(7)) {
+    progress.completed.push(7);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+  }
+
+  const btn = document.getElementById('completeBtn');
+  btn.textContent = '✓ Completed';
+  btn.classList.add('done');
+}
+
+function checkIfCompleted() {
+  try {
+    const progress = JSON.parse(localStorage.getItem('rl-curriculum-progress')) || { completed: [] };
+    if (progress.completed.includes(7)) {
+      const btn = document.getElementById('completeBtn');
+      btn.textContent = '✓ Completed';
+      btn.classList.add('done');
+    }
+  } catch {}
+}
+
+// ─────────────────────────────────────────
+// INITIALIZATION
+// ─────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Render KaTeX
+  renderMathInElement(document.body, {
+    delimiters: [
+      { left: '$$', right: '$$', display: true },
+      { left: '\\(', right: '\\)', display: false }
+    ],
+    throwOnError: false
+  });
+
+  // Highlight code
+  hljs.highlightAll();
+
+  // Init demos
+  updateSpectrum();
+  initRandomWalkChart();
+  initMathToggles();
+  checkIfCompleted();
+});
+
+</script>
+
+</body>
+</html>

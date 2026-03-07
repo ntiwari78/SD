@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 3: Finite Markov Decision Processes — RL Interactive Curriculum</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
+<!-- KaTeX for LaTeX rendering -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<!-- Plotly for 3D viz -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+<!-- Highlight.js for code -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<style>
+:root {
+  --bg-deep: #0a0e1a;
+  --bg-card: #111827;
+  --bg-card-alt: #0f172a;
+  --bg-surface: #1e293b;
+  --border-subtle: rgba(255,255,255,0.06);
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent-indigo: #818cf8;
+  --accent-blue: #60a5fa;
+  --accent-cyan: #22d3ee;
+  --accent-emerald: #34d399;
+  --accent-amber: #fbbf24;
+  --accent-rose: #fb7185;
+  --accent-purple: #c084fc;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+a { color: var(--accent-indigo); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ───── Top Navigation ───── */
+.top-nav {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 14px 24px;
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 14px;
+}
+.top-nav a, .top-nav span {
+  color: var(--text-secondary); font-weight: 500;
+}
+.top-nav a:hover { color: var(--accent-indigo); }
+.nav-chapter-info { color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+.btn-complete {
+  padding: 6px 14px;
+  background: rgba(52,211,153,0.1);
+  border: 1px solid rgba(52,211,153,0.3);
+  border-radius: 6px;
+  color: var(--accent-emerald);
+  font-weight: 600; font-size: 12px;
+  cursor: pointer; transition: all 0.2s;
+}
+.btn-complete:hover { background: rgba(52,211,153,0.2); }
+.btn-complete.done {
+  background: rgba(52,211,153,0.2);
+  border-color: var(--accent-emerald);
+}
+
+/* ───── Page Layout ───── */
+.page-wrapper {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 48px 24px 60px;
+}
+
+/* ───── Chapter Header ───── */
+.chapter-header {
+  text-align: center;
+  margin-bottom: 52px;
+}
+.ch-badge {
+  display: inline-block;
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+.chapter-header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2.2rem, 5vw, 3.5rem);
+  font-weight: 900; line-height: 1.15;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #f1f5f9 0%, var(--accent-cyan) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.chapter-header .subtitle {
+  font-size: 18px; color: var(--text-secondary);
+  max-width: 580px; margin: 0 auto;
+}
+
+/* ───── Table of Contents ───── */
+.toc {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 24px 28px;
+  margin-bottom: 48px;
+}
+.toc h3 {
+  font-size: 13px; font-weight: 700;
+  color: var(--text-muted); letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.toc-list { list-style: none; }
+.toc-list li { margin-bottom: 6px; }
+.toc-list a {
+  color: var(--text-secondary); text-decoration: none;
+  font-size: 14px; font-weight: 500;
+  padding: 4px 8px; border-radius: 6px;
+  display: inline-block;
+  transition: all 0.2s;
+}
+.toc-list a:hover { color: var(--accent-indigo); background: rgba(129,140,248,0.08); }
+.toc-list .sec-num {
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  margin-right: 6px;
+}
+
+/* ───── Section Headers ───── */
+.section {
+  margin-bottom: 56px;
+}
+.section-label {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.section-label .icon { font-size: 16px; }
+.section-label.feynman { color: var(--accent-amber); }
+.section-label.technical { color: var(--accent-indigo); }
+.section-label.algorithm { color: var(--accent-emerald); }
+.section-label.sandbox { color: var(--accent-rose); }
+.section-label.interactive { color: var(--accent-cyan); }
+.section-label.comparative { color: var(--accent-blue); }
+
+.section h2 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800; line-height: 1.2;
+  margin-bottom: 20px;
+}
+
+.section p, .section li {
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+}
+.section p strong, .section li strong { color: var(--text-primary); font-weight: 600; }
+
+/* ───── Info Cards / Callouts ───── */
+.callout {
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin: 24px 0;
+  border-left: 3px solid;
+}
+.callout.insight {
+  background: rgba(129,140,248,0.06);
+  border-color: var(--accent-indigo);
+}
+.callout.analogy {
+  background: rgba(251,191,36,0.06);
+  border-color: var(--accent-amber);
+}
+.callout.warning {
+  background: rgba(251,113,133,0.06);
+  border-color: var(--accent-rose);
+}
+.callout.definition {
+  background: rgba(52,211,153,0.06);
+  border-color: var(--accent-emerald);
+}
+.callout-title {
+  font-size: 13px; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.callout.insight .callout-title { color: var(--accent-indigo); }
+.callout.analogy .callout-title { color: var(--accent-amber); }
+.callout.warning .callout-title { color: var(--accent-rose); }
+.callout.definition .callout-title { color: var(--accent-emerald); }
+.callout p { margin-bottom: 8px; }
+.callout p:last-child { margin-bottom: 0; }
+
+/* ───── Math Toggle ───── */
+.math-toggle {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin: 24px 0;
+  overflow: hidden;
+}
+.math-toggle-header {
+  padding: 14px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.math-toggle-header:hover { background: rgba(255,255,255,0.02); }
+.math-toggle-header .label {
+  font-size: 14px; font-weight: 600;
+  color: var(--accent-purple);
+  display: flex; align-items: center; gap: 8px;
+}
+.math-toggle-header .chevron {
+  color: var(--text-muted); font-size: 14px;
+  transition: transform 0.3s;
+}
+.math-toggle.open .chevron { transform: rotate(180deg); }
+.math-toggle-body {
+  display: none;
+  padding: 0 20px 20px;
+  border-top: 1px solid var(--border-subtle);
+}
+.math-toggle.open .math-toggle-body { display: block; padding-top: 16px; }
+
+/* ───── KaTeX ───── */
+.katex-display { margin: 20px 0; overflow-x: auto; }
+.katex { font-size: 1.1em; }
+
+/* ───── Code Blocks ───── */
+.code-block {
+  background: #0d1117;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin: 24px 0;
+  overflow: hidden;
+}
+.code-header {
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.code-header .lang {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; color: var(--text-muted); font-weight: 600;
+}
+.code-header .copy-btn {
+  padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-subtle);
+  background: transparent; color: var(--text-muted);
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s;
+}
+.code-header .copy-btn:hover { border-color: var(--accent-indigo); color: var(--accent-indigo); }
+.code-block pre {
+  padding: 16px 20px;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.code-block pre code { background: none !important; padding: 0 !important; }
+
+/* ───── Scrubbable Numbers ───── */
+.scrubbable {
+  display: inline-block;
+  color: var(--accent-cyan);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  border-bottom: 2px dashed var(--accent-cyan);
+  cursor: ew-resize;
+  user-select: none;
+  padding: 0 2px;
+  transition: color 0.2s;
+}
+.scrubbable:hover {
+  color: #67e8f9;
+  background: rgba(34,211,238,0.1);
+  border-radius: 3px;
+}
+.scrub-hint {
+  font-size: 11px; color: var(--text-muted); font-style: italic;
+  margin-top: 4px;
+}
+
+/* ───── Interactive Demo Containers ───── */
+.demo-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 24px 0;
+}
+.demo-container h4 {
+  font-size: 15px; font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+
+/* ───── MDP Graph ───── */
+.mdp-graph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin: 24px 0;
+}
+.mdp-state-node {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  border: 3px solid;
+  transition: all 0.2s;
+}
+.mdp-state-node.high {
+  background: rgba(129,140,248,0.12);
+  border-color: rgba(129,140,248,0.3);
+  color: var(--accent-indigo);
+}
+.mdp-state-node.low {
+  background: rgba(34,211,238,0.12);
+  border-color: rgba(34,211,238,0.3);
+  color: var(--accent-cyan);
+}
+.mdp-state-node:hover {
+  transform: scale(1.05);
+  filter: brightness(1.1);
+}
+
+/* ───── Gridworld ───── */
+.gridworld {
+  display: grid;
+  gap: 4px;
+  margin: 20px auto;
+  width: max-content;
+}
+.grid-cell {
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--bg-surface);
+}
+.grid-cell:hover {
+  border-color: var(--accent-indigo);
+  background: rgba(129,140,248,0.1);
+}
+.grid-cell.goal {
+  background: rgba(52,211,153,0.15);
+  border-color: var(--accent-emerald);
+}
+.grid-cell.start {
+  background: rgba(129,140,248,0.15);
+  border-color: var(--accent-indigo);
+}
+.grid-cell-value {
+  color: var(--accent-cyan);
+  font-weight: 700;
+  margin-top: 4px;
+}
+.grid-cell-info {
+  color: var(--text-muted);
+  font-size: 10px;
+  margin-top: 2px;
+}
+
+/* ───── Comparative Table ───── */
+.comp-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 24px 0;
+}
+.comp-table th {
+  padding: 12px 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  text-align: left;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+.comp-table td {
+  padding: 12px 16px;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+.comp-table tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+.comp-table tr:hover { background: rgba(129,140,248,0.05); }
+
+/* ───── Socratic Questions ───── */
+.socratic-q {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin: 16px 0;
+  overflow: hidden;
+}
+.socratic-q-header {
+  padding: 14px 20px;
+  cursor: pointer;
+  display: flex; align-items: flex-start; gap: 12px;
+  transition: background 0.2s;
+}
+.socratic-q-header:hover { background: rgba(255,255,255,0.02); }
+.q-number {
+  flex-shrink: 0;
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: rgba(251,113,133,0.1);
+  color: var(--accent-rose);
+  font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+}
+.q-text {
+  font-size: 14px; font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.5;
+  flex: 1;
+}
+.q-expand {
+  flex-shrink: 0;
+  color: var(--text-muted); font-size: 12px;
+  transition: transform 0.3s;
+  margin-top: 4px;
+}
+.socratic-q.open .q-expand { transform: rotate(180deg); }
+.socratic-a {
+  display: none;
+  padding: 0 20px 16px 60px;
+  font-size: 14px; color: var(--text-secondary);
+  line-height: 1.65;
+}
+.socratic-q.open .socratic-a { display: block; }
+
+/* ───── 3D Plot ───── */
+.plot-container {
+  margin: 24px 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+}
+
+/* ───── Responsive ───── */
+@media (max-width: 600px) {
+  .page-wrapper { padding: 0 16px 60px; }
+  .gridworld { gap: 2px; }
+  .grid-cell { width: 60px; height: 60px; font-size: 10px; }
+  .comp-table { font-size: 12px; }
+  .comp-table th, .comp-table td { padding: 8px 12px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ───── Top Navigation ───── -->
+<nav class="top-nav">
+  <a href="index.html">&#x2190; Skill Tree</a>
+  <span class="nav-chapter-info">Ch 3 / 17</span>
+  <button class="btn-complete" id="completeBtn" onclick="markChapterComplete()">&#x2713; Mark Complete</button>
+</nav>
+
+<div class="page-wrapper">
+
+<!-- ───── Chapter Header ───── -->
+<header class="chapter-header">
+  <div class="ch-badge">Core Theory &middot; Chapter 3</div>
+  <h1>Finite Markov Decision Processes</h1>
+  <p class="subtitle">The mathematical framework for sequential decision-making under uncertainty — MDPs formalize every RL problem and make the problem tractable.</p>
+</header>
+
+<!-- ───── Table of Contents ───── -->
+<div class="toc">
+  <h3>In This Chapter</h3>
+  <ol class="toc-list">
+    <li><a href="#feynman"><span class="sec-num">1</span> The Feynman Bridge: MDPs as Board Games</a></li>
+    <li><a href="#agent-env"><span class="sec-num">2</span> The Agent-Environment Interface</a></li>
+    <li><a href="#technical"><span class="sec-num">3</span> The Technical Ascent: MDP Dynamics</a></li>
+    <li><a href="#returns"><span class="sec-num">4</span> Returns, Episodes, and the Discount Factor</a></li>
+    <li><a href="#value-functions"><span class="sec-num">5</span> Policy & Value Functions</a></li>
+    <li><a href="#bellman"><span class="sec-num">6</span> The Bellman Equations</a></li>
+    <li><a href="#interactive-gridworld"><span class="sec-num">7</span> Interactive: Gridworld Value Function</a></li>
+    <li><a href="#interactive-robot"><span class="sec-num">8</span> Interactive: Recycling Robot MDP</a></li>
+    <li><a href="#comparative"><span class="sec-num">9</span> Episodic vs. Continuing Tasks</a></li>
+    <li><a href="#algorithm"><span class="sec-num">10</span> Algorithm: Iterative Policy Evaluation</a></li>
+    <li><a href="#sandbox"><span class="sec-num">11</span> Socratic Sandbox: Debugging MDP Agents</a></li>
+  </ol>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 1: THE FEYNMAN BRIDGE                         -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="feynman">
+  <div class="section-label feynman"><span class="icon">&#x1F3AF;</span> The Feynman Bridge</div>
+  <h2>An MDP Is Like a Board Game</h2>
+
+  <p>Imagine you're playing a strategy board game. You're sitting on a square (your <strong>state</strong>). You roll dice, consider your options, and choose a move (your <strong>action</strong>). The game rules—determined by probability—send you to a new square (a <strong>transition</strong>) and maybe you collect or lose coins (your <strong>reward</strong>). You want to maximize your total coins by the end of the game.</p>
+
+  <div class="callout analogy">
+    <div class="callout-title">The Core Analogy</div>
+    <p><strong>Your square</strong> = state \(s\). <strong>Your move</strong> = action \(a\). <strong>Game rules</strong> = transition probability \(p(s'|s,a)\). <strong>Coins gained/lost</strong> = reward \(r(s,a)\). <strong>Total coins at the end</strong> = return \(G_t\).</p>
+    <p>An MDP is a formal way to describe this game. The Markov property says: the next square only depends on your <em>current</em> square and your action — not on how you got there. This makes the problem mathematically tractable.</p>
+  </div>
+
+  <p>Every RL agent lives inside an MDP, though it may not know all the game rules. The agent learns by playing episodes and receiving rewards. Eventually, it figures out a good strategy (policy) — roughly: "If you're on square X, do action Y."</p>
+
+  <p>Three key reasons MDPs matter:</p>
+  <p><strong>1. Formalization:</strong> We can write down equations for what we mean by "good strategy" and "future rewards."</p>
+  <p><strong>2. Markov property:</strong> The future is conditionally independent of the past given the present state. No need to remember your entire game history — just where you are now.</p>
+  <p><strong>3. Finite:</strong> We focus on finite state and action spaces, which lets us solve some MDPs exactly (unlike infinite spaces, covered in Part II).</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 2: AGENT-ENVIRONMENT INTERFACE                -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="agent-env">
+  <div class="section-label technical"><span class="icon">&#x1F4D0;</span> The Technical Ascent</div>
+  <h2>The Agent-Environment Interface</h2>
+
+  <p>At each discrete time step \(t = 0, 1, 2, \ldots\), the agent and environment interact as follows:</p>
+
+  <ol>
+    <li>The agent receives <strong>state</strong> \(S_t \in \mathcal{S}\) from the environment.</li>
+    <li>The agent selects <strong>action</strong> \(A_t \in \mathcal{A}(S_t)\) according to its policy \(\pi\).</li>
+    <li>The environment responds with:
+      <ul>
+        <li><strong>Reward</strong> \(R_{t+1} \in \mathcal{R} \subset \mathbb{R}\) (one number, scalar feedback).</li>
+        <li><strong>Next state</strong> \(S_{t+1} \in \mathcal{S}\).</li>
+      </ul>
+    </li>
+    <li>The loop repeats until a <strong>terminal state</strong> (if episodic) or forever (if continuing).</li>
+  </ol>
+
+  <p>This is the fundamental <strong>Agent-Environment Loop</strong> that defines RL. Everything flows from this interaction.</p>
+
+  <div class="callout definition">
+    <div class="callout-title">Markov Property</div>
+    <p>An environment satisfies the Markov property if the probability of transitioning to state \(S_{t+1} = s'\) and receiving reward \(R_{t+1} = r\) depends only on the current state \(S_t = s\) and action \(A_t = a\), not on the entire history \(S_0, A_0, R_1, \ldots, S_{t-1}, A_{t-1}\).</p>
+    <p>Formally: \(P(S_{t+1}=s', R_{t+1}=r | S_t=s, A_t=a) = P(S_{t+1}=s', R_{t+1}=r | S_0, A_0, R_1, \ldots, S_t, A_t)\).</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 3: TECHNICAL ASCENT - MDP DYNAMICS            -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="technical">
+  <div class="section-label technical"><span class="icon">&#x1F9F1;</span> MDP Dynamics</div>
+  <h2>Goals, Rewards, and the MDP Dynamics Function</h2>
+
+  <p><strong>Goals and Rewards.</strong> The agent's objective is to maximize the <em>expected cumulative reward</em> over time. Rewards are immediate signals (one number per step) that guide the agent toward the goal. Designing the reward function is often the hardest part of RL in practice.</p>
+
+  <div class="math-toggle" id="mt-dynamics">
+    <div class="math-toggle-header" onclick="toggleMath('mt-dynamics')">
+      <span class="label">&#x1F9EE; Mathematical Curiosity: The Dynamics Function \(p\)</span>
+      <span class="chevron">&#x25BC;</span>
+    </div>
+    <div class="math-toggle-body">
+      <p style="color:var(--text-secondary)"><strong>The four-argument dynamics function</strong> (Eq. 3.2):</p>
+      $$p(s', r \mid s, a) := P(S_{t+1} = s', R_{t+1} = r \mid S_t = s, A_t = a)$$
+      <p style="color:var(--text-secondary)">This is the <em>joint probability distribution</em> over next states and rewards, given current state and action. It completely specifies the environment's behavior. All other quantities (transition probabilities, expected rewards) can be derived from \(p\).</p>
+
+      <p style="color:var(--text-secondary)"><strong>State-transition probabilities</strong> (Eq. 3.4):</p>
+      $$p(s' \mid s, a) := P(S_{t+1} = s' \mid S_t = s, A_t = a) = \sum_{r \in \mathcal{R}} p(s', r \mid s, a)$$
+      <p style="color:var(--text-secondary)">The probability of transitioning to \(s'\) from \(s\) via action \(a\), marginalizing over all possible rewards.</p>
+
+      <p style="color:var(--text-secondary)"><strong>Expected rewards</strong> (Eq. 3.5):</p>
+      $$r(s, a) := \mathbb{E}[R_{t+1} \mid S_t = s, A_t = a] = \sum_{r \in \mathcal{R}} r \sum_{s' \in \mathcal{S}} p(s', r \mid s, a)$$
+      <p style="color:var(--text-secondary)">The expected immediate reward for taking action \(a\) in state \(s\).</p>
+    </div>
+  </div>
+
+  <p>These functions define everything about how the environment works. With \(p(s', r | s, a)\) in hand, we can compute:</p>
+  <ul>
+    <li>How likely an action is to succeed or fail.</li>
+    <li>What rewards to expect immediately.</li>
+    <li>What states we'll end up in.</li>
+  </ul>
+
+  <p>Most real environments are unknown — the agent must learn them (model-based RL) or ignore them entirely (model-free RL).</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 4: RETURNS AND THE DISCOUNT FACTOR            -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="returns">
+  <div class="section-label technical"><span class="icon">&#x1F4CA;</span> Returns & Episodes</div>
+  <h2>The Return, Episodes, and Unified Notation</h2>
+
+  <p>The agent's goal is to maximize the <strong>expected return</strong> — the cumulative future reward. But how do we define "future"?</p>
+
+  <div class="math-toggle" id="mt-return">
+    <div class="math-toggle-header" onclick="toggleMath('mt-return')">
+      <span class="label">&#x1F9EE; Mathematical Curiosity: Computing Returns</span>
+      <span class="chevron">&#x25BC;</span>
+    </div>
+    <div class="math-toggle-body">
+      <p style="color:var(--text-secondary)"><strong>Episodic tasks</strong> terminate at a natural endpoint (e.g., a chess game ends when someone wins). For a task that ends at time \(T\):</p>
+      $$G_t := R_{t+1} + R_{t+2} + \cdots + R_T$$
+
+      <p style="color:var(--text-secondary)"><strong>Continuing tasks</strong> never terminate (e.g., a thermostat agent that runs forever). For these, we discount future rewards to avoid infinite returns (Eq. 3.8):</p>
+      $$G_t := R_{t+1} + \gamma R_{t+2} + \gamma^2 R_{t+3} + \cdots = \sum_{k=0}^{\infty} \gamma^k R_{t+k+1}$$
+
+      <p style="color:var(--text-secondary)">where \(\gamma \in [0, 1]\) is the <strong>discount factor</strong>:</p>
+      <ul style="color:var(--text-secondary);">
+        <li>\(\gamma = 0\): Agent is myopic — only cares about immediate reward.</li>
+        <li>\(\gamma = 1\): Agent is far-sighted — all future rewards weighted equally.</li>
+        <li>\(\gamma = 0.9\) or \(0.99\): Typical choice — values nearer rewards more.</li>
+      </ul>
+
+      <p style="color:var(--text-secondary)"><strong>Key recursion</strong> (Eq. 3.9):</p>
+      $$G_t = R_{t+1} + \gamma G_{t+1}$$
+      <p style="color:var(--text-secondary)">The return at time \(t\) is the immediate reward plus the discounted return from the next step. This recursive structure is the foundation of dynamic programming and temporal-difference learning.</p>
+
+      <p style="color:var(--text-secondary)"><strong>Unified notation:</strong> We can write episodic and continuing tasks with a single formula by defining a "terminal reward" state with \(V(s_{\text{terminal}}) = 0\). Both cases then use \(G_t = R_{t+1} + \gamma G_{t+1}\).</p>
+    </div>
+  </div>
+
+  <p>The discount factor \(\gamma\) is a critical hyperparameter. Small \(\gamma\) makes the agent greedy (short-term focus). Large \(\gamma\) makes it sacrifice now for distant rewards.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 5: POLICIES AND VALUE FUNCTIONS                -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="value-functions">
+  <div class="section-label technical"><span class="icon">&#x1F4DD;</span> Policies & Values</div>
+  <h2>Policies and Value Functions</h2>
+
+  <p>A <strong>policy</strong> \(\pi\) is the agent's strategy — a mapping from states to actions (or probabilities over actions). A <strong>value function</strong> estimates how good a state is under that policy.</p>
+
+  <div class="math-toggle" id="mt-value">
+    <div class="math-toggle-header" onclick="toggleMath('mt-value')">
+      <span class="label">&#x1F9EE; Mathematical Curiosity: Value Functions</span>
+      <span class="chevron">&#x25BC;</span>
+    </div>
+    <div class="math-toggle-body">
+      <p style="color:var(--text-secondary)"><strong>Deterministic policy:</strong> \(\pi(s) = a\) — always take a specific action in state \(s\).</p>
+
+      <p style="color:var(--text-secondary)"><strong>Stochastic policy:</strong> \(\pi(a|s) = P(A_t = a | S_t = s)\) — probability of taking action \(a\) in state \(s\). Useful for exploration or when the optimal policy is randomized.</p>
+
+      <p style="color:var(--text-secondary)"><strong>State-value function</strong> (Eq. 3.12):</p>
+      $$v_\pi(s) := \mathbb{E}_\pi [G_t \mid S_t = s] = \mathbb{E}_\pi \left[ \sum_{k=0}^{\infty} \gamma^k R_{t+k+1} \bigg| S_t = s \right]$$
+      <p style="color:var(--text-secondary)">The expected return starting from state \(s\) and following policy \(\pi\). "How good is it to be in this state, given my policy?"</p>
+
+      <p style="color:var(--text-secondary)"><strong>Action-value function (Q-function)</strong> (Eq. 3.13):</p>
+      $$q_\pi(s, a) := \mathbb{E}_\pi [G_t \mid S_t = s, A_t = a] = \mathbb{E}_\pi \left[ \sum_{k=0}^{\infty} \gamma^k R_{t+k+1} \bigg| S_t = s, A_t = a \right]$$
+      <p style="color:var(--text-secondary)">The expected return if you take action \(a\) in state \(s\), then follow policy \(\pi\). "How good is this state-action pair?"</p>
+
+      <p style="color:var(--text-secondary)"><strong>Relationship:</strong> \(v_\pi(s) = \sum_a \pi(a|s) q_\pi(s, a)\) — the state value is the policy-weighted average of all action values.</p>
+    </div>
+  </div>
+
+  <p>Computing value functions is the core of RL. Once we know V(s) or Q(s,a), we can act greedily: always pick the action with the highest value. This is called <strong>policy improvement</strong> (Chapter 4).</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 6: BELLMAN EQUATIONS                           -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="bellman">
+  <div class="section-label technical"><span class="icon">&#x26A1;</span> Bellman Equations</div>
+  <h2>Optimal Policies and Bellman Optimality</h2>
+
+  <p><strong>The Bellman equation</strong> is the cornerstone of dynamic programming and RL. It says that the value of a state can be recursively expressed in terms of the values of successor states.</p>
+
+  <div class="math-toggle" id="mt-bellman">
+    <div class="math-toggle-header" onclick="toggleMath('mt-bellman')">
+      <span class="label">&#x1F9EE; Mathematical Curiosity: Bellman Equations</span>
+      <span class="chevron">&#x25BC;</span>
+    </div>
+    <div class="math-toggle-body">
+      <p style="color:var(--text-secondary)"><strong>Bellman equation for \(v_\pi\)</strong> (Eq. 3.14):</p>
+      $$v_\pi(s) = \sum_a \pi(a|s) \sum_{s',r} p(s',r|s,a) [r + \gamma v_\pi(s')]$$
+      <p style="color:var(--text-secondary)">The value of state \(s\) under policy \(\pi\) is: the policy's probability of each action, times the sum over all transitions of (reward + discounted value of next state). It's recursive: V(s) depends on V(s').</p>
+
+      <p style="color:var(--text-secondary)"><strong>Bellman optimality for V*</strong> (Eq. 3.19):</p>
+      $$v_*(s) = \max_a \sum_{s',r} p(s',r|s,a) [r + \gamma v_*(s')]$$
+      <p style="color:var(--text-secondary)">The optimal state value is the maximum over all actions. Take the greedy action and recurse. This defines optimal value.</p>
+
+      <p style="color:var(--text-secondary)"><strong>Bellman optimality for Q*</strong> (Eq. 3.20):</p>
+      $$q_*(s, a) = \sum_{s',r} p(s',r|s,a) [r + \gamma \max_{a'} q_*(s',a')]$$
+      <p style="color:var(--text-secondary)">The optimal action value: take action \(a\), collect the reward and transition, then pick the best next action. The key insight for Q-learning!</p>
+
+      <p style="color:var(--text-secondary)"><strong>Optimal policy:</strong> \(\pi_*(s) = \arg\max_a q_*(s,a)\) — always take the action with the highest optimal Q-value.</p>
+    </div>
+  </div>
+
+  <p>These equations are <em>not</em> algorithms yet—they're circular definitions. But they give us a target to approximate, and they're the foundation for solving MDPs exactly (e.g., value iteration, policy iteration in Chapter 4).</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 7: INTERACTIVE GRIDWORLD                      -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="interactive-gridworld">
+  <div class="section-label interactive"><span class="icon">&#x1F39B;</span> Interactive</div>
+  <h2>Interactive Gridworld: Value Function Convergence</h2>
+
+  <p>Below is a 4×4 gridworld. The goal is the bottom-right cell. The agent starts at the top-left. Rewards: goal = +1, each step = -0.01 (cost of living). Adjust \(\gamma\) and the reward values, then click "Compute Values" to see the value function converge via iterative policy evaluation.</p>
+
+  <div class="demo-container">
+    <h4>Gridworld Parameters</h4>
+    <div style="display:flex;flex-wrap:wrap;gap:20px;margin:16px 0;">
+      <div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Discount factor γ:</div>
+        <span class="scrubbable" id="grid-gamma" data-min="0.5" data-max="0.99" data-step="0.01" data-value="0.90">0.90</span>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Goal reward:</div>
+        <span class="scrubbable" id="grid-reward" data-min="0.1" data-max="10" data-step="0.5" data-value="1.0">1.0</span>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Step cost:</div>
+        <span class="scrubbable" id="grid-cost" data-min="0" data-max="0.1" data-step="0.01" data-value="0.01">0.01</span>
+      </div>
+    </div>
+    <p class="scrub-hint">&#x2194; Drag to adjust parameters, then click Compute</p>
+    <button onclick="computeGridValues()" style="padding:10px 20px;background:var(--accent-indigo);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;margin:16px 0;transition:all 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">Compute Values</button>
+
+    <div style="background:var(--bg-surface);padding:16px;border-radius:8px;margin:16px 0;">
+      <h4 style="margin-top:0;">Value Function (Uniform Random Policy)</h4>
+      <div class="gridworld" id="gridworld-display" style="grid-template-columns:repeat(4,100px);grid-template-rows:repeat(4,100px);"></div>
+    </div>
+
+    <div style="background:var(--bg-surface);padding:16px;border-radius:8px;margin:16px 0;">
+      <h4 style="margin-top:0;">3D Value Surface</h4>
+      <div class="plot-container" id="gridworld-plot" style="height:400px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 8: INTERACTIVE RECYCLING ROBOT                -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="interactive-robot">
+  <div class="section-label interactive"><span class="icon">&#x1F916;</span> Interactive</div>
+  <h2>Interactive: Recycling Robot MDP</h2>
+
+  <p>The classic textbook example (Example 3.1). A robot picks up aluminum cans. Its battery is either High or Low. In High state: can search for cans (reward \(r_s\), prob. \(\beta\) of depletion) or wait (reward \(r_w\), safe). In Low state: can recharge or search (risky). Adjust the parameters and see how the optimal value changes.</p>
+
+  <div class="demo-container">
+    <h4>Robot Parameters</h4>
+    <div style="display:flex;flex-wrap:wrap;gap:20px;margin:16px 0;">
+      <div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">\(r_{\text{search}}\):</div>
+        <span class="scrubbable" id="robot-rs" data-min="1" data-max="20" data-step="1" data-value="3">3</span>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">\(r_{\text{wait}}\):</div>
+        <span class="scrubbable" id="robot-rw" data-min="0" data-max="10" data-step="0.5" data-value="1">1</span>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">α (depletion prob):</div>
+        <span class="scrubbable" id="robot-alpha" data-min="0" data-max="0.5" data-step="0.05" data-value="0.1">0.1</span>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">β (recharge prob):</div>
+        <span class="scrubbable" id="robot-beta" data-min="0" data-max="1" data-step="0.1" data-value="1">1</span>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">γ:</div>
+        <span class="scrubbable" id="robot-gamma" data-min="0.5" data-max="0.99" data-step="0.05" data-value="0.9">0.9</span>
+      </div>
+    </div>
+    <button onclick="computeRobotValues()" style="padding:10px 20px;background:var(--accent-indigo);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;margin:16px 0;transition:all 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">Solve MDP</button>
+
+    <div style="background:var(--bg-surface);padding:16px;border-radius:8px;margin:16px 0;">
+      <h4 style="margin-top:0;">State Values & Optimal Policy</h4>
+      <div class="mdp-graph">
+        <div class="mdp-state-node high" id="robot-high">
+          <div style="text-align:center;">
+            <div style="font-size:14px;margin-bottom:4px;">High</div>
+            <div style="font-size:20px;font-weight:800;" id="robot-v-high">0.00</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;" id="robot-policy-high">Search</div>
+          </div>
+        </div>
+        <div style="font-size:20px;color:var(--text-muted);">⇄</div>
+        <div class="mdp-state-node low" id="robot-low">
+          <div style="text-align:center;">
+            <div style="font-size:14px;margin-bottom:4px;">Low</div>
+            <div style="font-size:20px;font-weight:800;" id="robot-v-low">0.00</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;" id="robot-policy-low">Recharge</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:var(--bg-card);padding:16px;border-radius:8px;margin:16px 0;font-family:'JetBrains Mono',monospace;font-size:12px;">
+        <div style="color:var(--text-muted);margin-bottom:8px;">Transition probabilities & expected rewards:</div>
+        <div style="color:var(--text-secondary);">
+          <div id="robot-dynamics"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 9: COMPARATIVE TABLE                          -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="comparative">
+  <div class="section-label comparative"><span class="icon">&#x1F4A8;</span> Comparative Analysis</div>
+  <h2>Episodic vs. Continuing Tasks</h2>
+
+  <p>MDPs can be classified by whether they terminate or run forever. This affects how we compute returns and structure our algorithms.</p>
+
+  <table class="comp-table">
+    <tr>
+      <th>Aspect</th>
+      <th>Episodic Tasks</th>
+      <th>Continuing Tasks</th>
+    </tr>
+    <tr>
+      <td><strong>Definition</strong></td>
+      <td>Task ends at a terminal state (e.g., game ends when you win/lose)</td>
+      <td>Task runs indefinitely (e.g., robotic control, trading agent)</td>
+    </tr>
+    <tr>
+      <td><strong>Return formula</strong></td>
+      <td>\(G_t = R_{t+1} + R_{t+2} + \cdots + R_T\) (sum to terminal)</td>
+      <td>\(G_t = R_{t+1} + \gamma R_{t+2} + \gamma^2 R_{t+3} + \cdots\) (infinite with discount)</td>
+    </tr>
+    <tr>
+      <td><strong>Discount factor γ</strong></td>
+      <td>Can be 1 (all future rewards equal weight until terminal)</td>
+      <td>Must be < 1 (else \(\sum \gamma^k R_k = \infty\) may not converge)</td>
+    </tr>
+    <tr>
+      <td><strong>Value interpretation</strong></td>
+      <td>Expected score until the task ends</td>
+      <td>Expected infinite stream of rewards (weighted by discount)</td>
+    </tr>
+    <tr>
+      <td><strong>Examples</strong></td>
+      <td>Chess, Go, Tic-Tac-Toe, reaching a goal position</td>
+      <td>Inventory management, power grid control, autonomous vehicles</td>
+    </tr>
+    <tr>
+      <td><strong>Algorithm adaptation</strong></td>
+      <td>Update values after episode ends. Exploration is decoupled.</td>
+      <td>Update values continuously. Exploration must be managed (e.g., ε-greedy)</td>
+    </tr>
+    <tr>
+      <td><strong>Unified notation trick</strong></td>
+      <td>Add a dummy absorbing terminal state with V = 0. Then both use \(G_t = R_{t+1} + \gamma G_{t+1}\)</td>
+      <td>Both cases fit into the same recursive formula</td>
+    </tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 10: ALGORITHM IMPLEMENTATION                   -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="algorithm">
+  <div class="section-label algorithm"><span class="icon">&#x1F4BB;</span> Algorithm Implementation</div>
+  <h2>Iterative Policy Evaluation on a Gridworld</h2>
+
+  <p>Below is a Python implementation of iterative policy evaluation (Algorithm 4.1 preview), which computes the value function for a given policy by repeatedly applying the Bellman equation.</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="lang">Python / NumPy</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><code class="language-python">import numpy as np
+
+class GridworldMDP:
+    """
+    A finite MDP: 4x4 gridworld.
+    State: (row, col) position. Goal: (3, 3).
+    Actions: up, down, left, right (deterministic transitions).
+    Reward: +1 for reaching goal, -0.01 for each step.
+    """
+
+    def __init__(self, gamma=0.9, goal_reward=1.0, step_cost=0.01):
+        self.gamma = gamma                    # Discount factor
+        self.goal_reward = goal_reward
+        self.step_cost = step_cost
+        self.nrows, self.ncols = 4, 4
+        self.goal = (3, 3)
+        self.start = (0, 0)
+
+        # All 16 states
+        self.states = [(r, c) for r in range(self.nrows)
+                              for c in range(self.ncols)]
+        self.state_to_idx = {s: i for i, s in enumerate(self.states)}
+        self.n_states = len(self.states)
+
+        # 4 cardinal actions
+        self.actions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # up, down, left, right
+        self.n_actions = len(self.actions)
+
+    def get_next_state(self, state, action_idx):
+        """Deterministic transition: move in the chosen direction."""
+        r, c = state
+        dr, dc = self.actions[action_idx]
+        nr, nc = r + dr, c + dc
+
+        # Boundary check: stay in place if you hit a wall
+        if not (0 <= nr < self.nrows and 0 <= nc < self.ncols):
+            return state
+
+        return (nr, nc)
+
+    def get_reward(self, state, action_idx, next_state):
+        """
+        Reward = goal_reward if we just reached the goal,
+                 else -step_cost for taking a step.
+        """
+        if next_state == self.goal:
+            return self.goal_reward
+        else:
+            return -self.step_cost
+
+    def uniform_random_policy(self):
+        """
+        Return shape (n_states, n_actions):
+        pi(a|s) = 1/n_actions for all a, s.
+        """
+        return np.ones((self.n_states, self.n_actions)) / self.n_actions
+
+    def iterative_policy_evaluation(self, policy, theta=1e-4, max_iters=1000):
+        """
+        Policy Evaluation (Algorithm 4.1).
+
+        Input:
+          policy: shape (n_states, n_actions), policy(s, a) = pi(a|s)
+          theta: convergence threshold for max change in V
+
+        Output:
+          V: value function, shape (n_states,), V[s] = v_pi(s)
+        """
+        V = np.zeros(self.n_states)
+
+        for iteration in range(max_iters):
+            delta = 0  # Track largest change in V
+
+            for s_idx, state in enumerate(self.states):
+                # ────────────────────────────────────────────────────────
+                # Bellman equation: v_pi(s) = Sum_a pi(a|s) * Sum_{s',r}
+                #   p(s',r | s,a) * [r + gamma * v_pi(s')]
+                # ────────────────────────────────────────────────────────
+
+                old_v = V[s_idx]
+                new_v = 0.0
+
+                # Iterate over actions weighted by policy
+                for action_idx in range(self.n_actions):
+                    prob_action = policy[s_idx, action_idx]  # pi(a|s)
+
+                    # Deterministic environment: one next state per action
+                    next_state = self.get_next_state(state, action_idx)
+                    next_s_idx = self.state_to_idx[next_state]
+
+                    # Reward for this transition
+                    reward = self.get_reward(state, action_idx, next_state)
+
+                    # Bellman backup:
+                    # v_pi(s) += pi(a|s) * [r + gamma * v_pi(s')]
+                    new_v += prob_action * (reward + self.gamma * V[next_s_idx])
+
+                V[s_idx] = new_v
+                delta = max(delta, abs(old_v - new_v))
+
+            # Check convergence
+            if delta < theta:
+                print(f"Converged in {iteration + 1} iterations (delta={delta:.6f})")
+                break
+
+        return V
+
+    def print_value_grid(self, V):
+        """Pretty-print the 4x4 value grid."""
+        print("\nValue Function (Gridworld):")
+        for r in range(self.nrows):
+            for c in range(self.ncols):
+                s_idx = self.state_to_idx[(r, c)]
+                print(f"{V[s_idx]:7.3f}", end="  ")
+            print()
+
+
+# ════════════════════════════════════════════════════════════════
+# USAGE: Create an MDP, set a policy, evaluate it
+# ════════════════════════════════════════════════════════════════
+
+if __name__ == '__main__':
+    # Create a gridworld with gamma=0.9, goal reward=1, step cost=0.01
+    mdp = GridworldMDP(gamma=0.9, goal_reward=1.0, step_cost=0.01)
+
+    # Uniform random policy: 25% each direction in every state
+    policy = mdp.uniform_random_policy()
+
+    # Evaluate this policy
+    V = mdp.iterative_policy_evaluation(policy, theta=1e-4)
+
+    # Print the result
+    mdp.print_value_grid(V)
+
+    print(f"\nValue at start (0,0): {V[mdp.state_to_idx[(0, 0)]]:.4f}")
+    print(f"Value at goal (3,3): {V[mdp.state_to_idx[(3, 3)]]:.4f}")
+    print(f"Value at (1,1): {V[mdp.state_to_idx[(1, 1)]]:.4f}")</code></pre>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 11: SOCRATIC SANDBOX                           -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="sandbox">
+  <div class="section-label sandbox"><span class="icon">&#x1F9EA;</span> Socratic Sandbox</div>
+  <h2>Debug the MDP Agent</h2>
+
+  <p>A team is trying to deploy a robot in a warehouse. The robot must navigate a gridworld to collect items and return. You observe several issues with the learned value function. Let's diagnose them together.</p>
+
+  <div class="callout warning">
+    <div class="callout-title">Scenario: The Confused Robot</div>
+    <p>The robot's value function says that state (0,0) has value 0.05, and state (3,3) (the goal) also has value 0.05. But (3,3) should be much more valuable! The goal rewards +1, each step costs -0.01. What's wrong?</p>
+  </div>
+
+  <div class="socratic-q" onclick="toggleQ(this)">
+    <div class="socratic-q-header">
+      <span class="q-number">1</span>
+      <span class="q-text">Why might the goal state (3,3) have such a low value (0.05), despite yielding +1 reward?</span>
+      <span class="q-expand">&#x25BC;</span>
+    </div>
+    <div class="socratic-a">
+      <p>The issue is likely the <strong>value of the goal state itself</strong>. Once the robot reaches (3,3), what happens next? If it's not a terminal state, the robot must take another action—maybe it bounces back into the gridworld and incurs more step costs. If the episode doesn't end at the goal, the value of (3,3) itself is only as good as what comes after. If the policy repeatedly moves it away from the goal (e.g., bouncing it back), then V(goal) can indeed be low. The solution: either make the goal a terminal state (episode ends), or design the reward to incentivize staying near the goal.</p>
+    </div>
+  </div>
+
+  <div class="socratic-q" onclick="toggleQ(this)">
+    <div class="socratic-q-header">
+      <span class="q-number">2</span>
+      <span class="q-text">The team set \(\gamma = 0.5\). How does this affect the value landscape? Should they increase or decrease it?</span>
+      <span class="q-expand">&#x25BC;</span>
+    </div>
+    <div class="socratic-a">
+      <p>A low \(\gamma = 0.5\) makes the agent <strong>myopic</strong> — future rewards beyond 2-3 steps are nearly ignored. For a gridworld where the goal might be 6 steps away, \(\gamma = 0.5\) means the robot doesn't "care" about reaching it (rewards get discounted away). They should increase \(\gamma\) to ~0.9 or 0.99 so the robot values states many steps in the future. The tradeoff: higher \(\gamma\) also makes learning unstable if the reward function has noise, and it values long-term rewards more (which may not be desired if the task is short).</p>
+    </div>
+  </div>
+
+  <div class="socratic-q" onclick="toggleQ(this)">
+    <div class="socratic-q-header">
+      <span class="q-number">3</span>
+      <span class="q-text">The robot uses a uniform random policy (equal probability for all actions). Is this the right policy for learning values? What would happen with a better policy?</span>
+      <span class="q-expand">&#x25BC;</span>
+    </div>
+    <div class="socratic-a">
+      <p>A uniform random policy is fine for <strong>policy evaluation</strong> — you can evaluate any policy. But it's a terrible policy for the robot to <em>act</em> with! A random policy will wobble around inefficiently; it will rarely reach the goal. This is why Chapter 4 introduces <strong>policy improvement</strong>: once you've evaluated the current policy, compute a better one by acting greedily with respect to the values. With iterative policy evaluation + improvement (policy iteration), the agent converges to an optimal policy that goes straight to the goal.</p>
+    </div>
+  </div>
+
+  <div class="socratic-q" onclick="toggleQ(this)">
+    <div class="socratic-q-header">
+      <span class="q-number">4</span>
+      <span class="q-text">The reward for each step is -0.01. What happens if you increase this cost to -1? Will the value function change? Why?</span>
+      <span class="q-expand">&#x25BC;</span>
+    </div>
+    <div class="socratic-a">
+      <p>The value function <strong>will change dramatically</strong>. Rewards directly affect values via the Bellman equation: \(v_\pi(s) = \sum_a \pi(a|s) \sum_{s',r} p(s',r|s,a) [r + \gamma v_\pi(s')]\). Higher step costs mean lower values everywhere (since you pay to take steps). Specifically, states far from the goal become increasingly negative, and the agent is incentivized to reach the goal quickly. In the extreme (cost = -∞), the agent would rather take no steps at all. Reward shaping is a crucial design choice in RL.</p>
+    </div>
+  </div>
+
+  <div class="socratic-q" onclick="toggleQ(this)">
+    <div class="socratic-q-header">
+      <span class="q-number">5</span>
+      <span class="q-text">A colleague suggests: "Let's make the goal state absorbing (no further transitions possible)." How does this change the Bellman equation for (3,3)?</span>
+      <span class="q-expand">&#x25BC;</span>
+    </div>
+    <div class="socratic-a">
+      <p>If (3,3) is absorbing, its value becomes \(v_\pi(3,3) = \mathbb{E}[R | S=\text{goal}] + \gamma \cdot v_\pi(\text{goal})\). Since it doesn't transition anywhere (stays in itself), we have \(v_\pi(\text{goal}) = 1 + \gamma \cdot v_\pi(\text{goal})\), which solves to \(v_\pi(\text{goal}) = \frac{1}{1-\gamma}\). For \(\gamma=0.9\), that's \(\frac{1}{0.1} = 10\)! A much higher value, appropriately reflecting that you're in a terminal state where you can't be punished further. This is the "standard trick" for episodic tasks mentioned in the textbook.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ───── Chapter Navigation ───── -->
+<div style="display:flex;justify-content:space-between;align-items:center;margin-top:60px;padding-top:32px;border-top:1px solid var(--border-subtle);">
+  <a href="chapter-2.html" style="color:var(--text-secondary);text-decoration:none;font-size:14px;font-weight:500;">&#x2190; Chapter 2: Multi-armed Bandits</a>
+  <a href="chapter-4.html" style="color:var(--accent-indigo);text-decoration:none;font-size:14px;font-weight:600;" onclick="event.preventDefault();alert('Say \\'Unlock Chapter 4\\' to generate this page.')">Chapter 4: Dynamic Programming &#x2192;</a>
+</div>
+
+</div><!-- end page-wrapper -->
+
+<script>
+// ═══════════════════════════════════════════
+// MATH TOGGLES
+// ═══════════════════════════════════════════
+function toggleMath(id) {
+  document.getElementById(id).classList.toggle('open');
+}
+
+// ═══════════════════════════════════════════
+// SOCRATIC QUESTIONS
+// ═══════════════════════════════════════════
+function toggleQ(el) {
+  el.classList.toggle('open');
+}
+
+// ═══════════════════════════════════════════
+// CODE COPY
+// ═══════════════════════════════════════════
+function copyCode(btn) {
+  const code = btn.closest('.code-block').querySelector('code').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
+  });
+}
+
+// ═══════════════════════════════════════════
+// SCRUBBABLE NUMBERS
+// ═══════════════════════════════════════════
+document.querySelectorAll('.scrubbable').forEach(el => {
+  let startX, startVal;
+  const min = parseFloat(el.dataset.min);
+  const max = parseFloat(el.dataset.max);
+  const step = parseFloat(el.dataset.step);
+  let value = parseFloat(el.dataset.value);
+
+  function onPointerDown(e) {
+    e.preventDefault();
+    startX = e.clientX;
+    startVal = value;
+    document.addEventListener('pointermove', onPointerMove);
+    document.addEventListener('pointerup', onPointerUp);
+    el.style.cursor = 'grabbing';
+  }
+  function onPointerMove(e) {
+    const dx = e.clientX - startX;
+    const sensitivity = step < 0.1 ? 2 : 0.5;
+    value = Math.min(max, Math.max(min, startVal + dx * step * sensitivity));
+    const decimals = step < 1 ? 2 : 0;
+    el.textContent = value.toFixed(decimals);
+    el.dataset.value = value;
+  }
+  function onPointerUp() {
+    document.removeEventListener('pointermove', onPointerMove);
+    document.removeEventListener('pointerup', onPointerUp);
+    el.style.cursor = 'ew-resize';
+  }
+  el.addEventListener('pointerdown', onPointerDown);
+});
+
+// ═══════════════════════════════════════════
+// GRIDWORLD VALUE COMPUTATION
+// ═══════════════════════════════════════════
+function computeGridValues() {
+  const gamma = parseFloat(document.getElementById('grid-gamma').dataset.value);
+  const reward = parseFloat(document.getElementById('grid-reward').dataset.value);
+  const cost = parseFloat(document.getElementById('grid-cost').dataset.value);
+
+  const nrows = 4, ncols = 4;
+  const goal = [3, 3];
+  let V = Array(16).fill(0.5);
+
+  // Simple policy evaluation: uniform random (4 actions each)
+  for (let iter = 0; iter < 100; iter++) {
+    const newV = Array(16).fill(0);
+
+    for (let r = 0; r < nrows; r++) {
+      for (let c = 0; c < ncols; c++) {
+        const idx = r * ncols + c;
+        let val = 0;
+
+        // 4 actions: up, down, left, right
+        const actions = [[-1,0], [1,0], [0,-1], [0,1]];
+        for (const [dr, dc] of actions) {
+          const nr = Math.max(0, Math.min(nrows-1, r+dr));
+          const nc = Math.max(0, Math.min(ncols-1, c+dc));
+          const nidx = nr * ncols + nc;
+
+          const r_val = (nr === goal[0] && nc === goal[1]) ? reward : -cost;
+          val += 0.25 * (r_val + gamma * V[nidx]);
+        }
+        newV[idx] = val;
+      }
+    }
+    V = newV;
+  }
+
+  // Render grid
+  const display = document.getElementById('gridworld-display');
+  display.innerHTML = '';
+  for (let r = 0; r < nrows; r++) {
+    for (let c = 0; c < ncols; c++) {
+      const idx = r * ncols + c;
+      const cell = document.createElement('div');
+      cell.className = 'grid-cell' + (r===goal[0] && c===goal[1] ? ' goal' : r===0 && c===0 ? ' start' : '');
+      cell.innerHTML = `<div class="grid-cell-value">${V[idx].toFixed(3)}</div>`;
+      display.appendChild(cell);
+    }
+  }
+
+  // Plot 3D surface
+  const z = [];
+  for (let r = 0; r < nrows; r++) {
+    const row = [];
+    for (let c = 0; c < ncols; c++) {
+      row.push(V[r * ncols + c]);
+    }
+    z.push(row);
+  }
+
+  const data = [{
+    z: z,
+    type: 'surface',
+    colorscale: [
+      [0, 'rgb(10, 14, 26)'],
+      [0.25, 'rgb(99, 102, 241)'],
+      [0.5, 'rgb(34, 211, 238)'],
+      [0.75, 'rgb(52, 211, 153)'],
+      [1, 'rgb(251, 191, 36)']
+    ]
+  }];
+
+  const layout = {
+    paper_bgcolor: '#111827',
+    plot_bgcolor: '#111827',
+    margin: { l: 0, r: 0, t: 30, b: 0 },
+    scene: {
+      xaxis: { title: 'Col', color: '#64748b', gridcolor: 'rgba(255,255,255,0.05)' },
+      yaxis: { title: 'Row', color: '#64748b', gridcolor: 'rgba(255,255,255,0.05)' },
+      zaxis: { title: 'V(s)', color: '#64748b', gridcolor: 'rgba(255,255,255,0.05)' },
+      bgcolor: '#111827',
+      camera: { eye: { x: 1.5, y: 1.5, z: 1.2 } }
+    },
+    font: { family: 'Inter, sans-serif', color: '#94a3b8' },
+    title: { text: `Value Surface (γ=${gamma.toFixed(2)})`, font: { size: 14 } }
+  };
+
+  Plotly.newPlot('gridworld-plot', data, layout, { responsive: true, displayModeBar: false });
+}
+
+// ═══════════════════════════════════════════
+// RECYCLING ROBOT MDP
+// ═══════════════════════════════════════════
+function computeRobotValues() {
+  const rs = parseFloat(document.getElementById('robot-rs').dataset.value);
+  const rw = parseFloat(document.getElementById('robot-rw').dataset.value);
+  const alpha = parseFloat(document.getElementById('robot-alpha').dataset.value);
+  const beta = parseFloat(document.getElementById('robot-beta').dataset.value);
+  const gamma = parseFloat(document.getElementById('robot-gamma').dataset.value);
+
+  // Simple case: estimate values for two states given a policy
+  // Assume we evaluate a mixed policy in each state
+
+  // State High: choose search (prob 0.6) or wait (prob 0.4)
+  // search: reward rs, prob (1-alpha) stay in high, prob alpha go to low
+  // wait: reward rw, prob 1.0 stay in high
+
+  // State Low: choose recharge or search
+  // recharge: reward 0, prob beta go to high, prob (1-beta) stay in low
+  // search: reward rs, prob (1-alpha) go to high, prob alpha stay in low
+
+  // Solve Bellman equations (simplified with fixed policies)
+  // Let's just compute optimal values assuming optimal policy
+
+  // Optimal policy: in High, prefer search if rs > rw. In Low, prefer recharge.
+  let vH, vL;
+
+  // Try both policies and pick the better one
+  // For simplicity, assume greedy: High searches, Low recharges
+
+  // v_H = r_s + gamma * [ (1-alpha)*v_H + alpha*v_L ]
+  // v_L = 0 + gamma * [ beta*v_H + (1-beta)*v_L ]
+  //
+  // Rearrange:
+  // v_H - gamma*(1-alpha)*v_H - gamma*alpha*v_L = r_s
+  // v_H*(1 - gamma*(1-alpha)) - gamma*alpha*v_L = r_s
+  //
+  // -gamma*beta*v_H + v_L - gamma*(1-beta)*v_L = 0
+  // -gamma*beta*v_H + v_L*(1 - gamma*(1-beta)) = 0
+
+  const a = 1 - gamma*(1-alpha);
+  const b = -gamma*alpha;
+  const c = -gamma*beta;
+  const d = 1 - gamma*(1-beta);
+
+  const det = a*d - b*c;
+  vH = (rs*d - 0*b) / det;
+  vL = (rs*c - 0*a) / det;
+
+  document.getElementById('robot-v-high').textContent = vH.toFixed(3);
+  document.getElementById('robot-v-low').textContent = vL.toFixed(3);
+
+  // Determine policy (greedy)
+  const val_high_search = rs + gamma * ((1-alpha)*vH + alpha*vL);
+  const val_high_wait = rw + gamma * vH;
+  const policy_high = val_high_search > val_high_wait ? 'Search' : 'Wait';
+
+  const val_low_recharge = gamma * (beta*vH + (1-beta)*vL);
+  const val_low_search = rs + gamma * ((1-alpha)*vH + alpha*vL);
+  const policy_low = val_low_recharge > val_low_search ? 'Recharge' : 'Search';
+
+  document.getElementById('robot-policy-high').textContent = policy_high;
+  document.getElementById('robot-policy-low').textContent = policy_low;
+
+  // Show dynamics
+  const dyn = `
+High State:
+  Search: reward=${rs.toFixed(1)}, P(High)=${(1-alpha).toFixed(2)}, P(Low)=${alpha.toFixed(2)}
+  Wait: reward=${rw.toFixed(1)}, P(High)=1.00
+
+Low State:
+  Recharge: reward=0, P(High)=${beta.toFixed(2)}, P(Low)=${(1-beta).toFixed(2)}
+  Search: reward=${rs.toFixed(1)}, P(High)=${(1-alpha).toFixed(2)}, P(Low)=${alpha.toFixed(2)}
+  `;
+  document.getElementById('robot-dynamics').textContent = dyn;
+}
+
+// ═══════════════════════════════════════════
+// CHAPTER COMPLETION
+// ═══════════════════════════════════════════
+function markChapterComplete() {
+  const STORAGE_KEY = 'rl-curriculum-progress';
+  let progress;
+  try { progress = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { completed: [] }; }
+  catch { progress = { completed: [] }; }
+
+  if (!progress.completed.includes(3)) {
+    progress.completed.push(3);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+  }
+
+  const btn = document.getElementById('completeBtn');
+  btn.textContent = '✓ Completed';
+  btn.classList.add('done');
+}
+
+function checkIfCompleted() {
+  try {
+    const progress = JSON.parse(localStorage.getItem('rl-curriculum-progress')) || { completed: [] };
+    if (progress.completed.includes(3)) {
+      const btn = document.getElementById('completeBtn');
+      btn.textContent = '✓ Completed';
+      btn.classList.add('done');
+    }
+  } catch {}
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  // Render KaTeX
+  renderMathInElement(document.body, {
+    delimiters: [
+      { left: '$$', right: '$$', display: true },
+      { left: '\\(', right: '\\)', display: false }
+    ],
+    throwOnError: false
+  });
+
+  // Highlight code
+  hljs.highlightAll();
+
+  // Init visualizations
+  computeGridValues();
+  computeRobotValues();
+  checkIfCompleted();
+});
+</script>
+
+</body>
+</html>

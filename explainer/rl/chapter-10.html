@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 10: On-policy Control with Approximation — RL Interactive Curriculum</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
+<!-- KaTeX for LaTeX rendering -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<!-- Plotly for visualization -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+<!-- Highlight.js for code -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<style>
+:root {
+  --bg-deep: #0a0e1a;
+  --bg-card: #111827;
+  --bg-card-alt: #0f172a;
+  --bg-surface: #1e293b;
+  --border-subtle: rgba(255,255,255,0.06);
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent-indigo: #818cf8;
+  --accent-blue: #60a5fa;
+  --accent-cyan: #22d3ee;
+  --accent-emerald: #34d399;
+  --accent-amber: #fbbf24;
+  --accent-rose: #fb7185;
+  --accent-purple: #c084fc;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  line-height: 1.7;
+  font-size: 16px;
+}
+
+/* ───── Layout ───── */
+.page-wrapper {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+
+/* ───── Top Nav ───── */
+.top-nav {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(10,14,26,0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 12px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.top-nav a {
+  color: var(--text-secondary); text-decoration: none;
+  font-size: 14px; font-weight: 500;
+  display: flex; align-items: center; gap: 6px;
+  transition: color 0.2s;
+}
+.top-nav a:hover { color: var(--accent-indigo); }
+.nav-chapter-info {
+  font-size: 13px; color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.btn-complete {
+  padding: 8px 16px; border-radius: 8px; border: none;
+  background: linear-gradient(135deg, var(--accent-emerald), #10b981);
+  color: #022c22; font-weight: 600; font-size: 13px;
+  cursor: pointer; transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+.btn-complete:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(52,211,153,0.3); }
+.btn-complete.done { background: var(--bg-surface); color: var(--accent-emerald); cursor: default; }
+
+/* ───── Chapter Header ───── */
+.chapter-header {
+  text-align: center;
+  padding: 80px 0 48px;
+}
+.ch-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 14px; border-radius: 999px;
+  background: rgba(34,211,238,0.1);
+  border: 1px solid rgba(34,211,238,0.2);
+  font-size: 11px; font-weight: 700;
+  color: var(--accent-cyan);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.chapter-header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2.2rem, 5vw, 3.5rem);
+  font-weight: 900; line-height: 1.15;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #f1f5f9 0%, var(--accent-cyan) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.chapter-header .subtitle {
+  font-size: 18px; color: var(--text-secondary);
+  max-width: 580px; margin: 0 auto;
+}
+
+/* ───── Table of Contents ───── */
+.toc {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 24px 28px;
+  margin-bottom: 48px;
+}
+.toc h3 {
+  font-size: 13px; font-weight: 700;
+  color: var(--text-muted); letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.toc-list { list-style: none; }
+.toc-list li { margin-bottom: 6px; }
+.toc-list a {
+  color: var(--text-secondary); text-decoration: none;
+  font-size: 14px; font-weight: 500;
+  padding: 4px 8px; border-radius: 6px;
+  display: inline-block;
+  transition: all 0.2s;
+}
+.toc-list a:hover { color: var(--accent-indigo); background: rgba(129,140,248,0.08); }
+.toc-list .sec-num {
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  margin-right: 6px;
+}
+
+/* ───── Section Headers ───── */
+.section {
+  margin-bottom: 56px;
+}
+.section-label {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.section-label .icon { font-size: 16px; }
+.section-label.feynman { color: var(--accent-amber); }
+.section-label.technical { color: var(--accent-indigo); }
+.section-label.algorithm { color: var(--accent-emerald); }
+.section-label.sandbox { color: var(--accent-rose); }
+.section-label.interactive { color: var(--accent-cyan); }
+.section-label.bridge { color: var(--accent-purple); }
+
+.section h2 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800; line-height: 1.2;
+  margin-bottom: 20px;
+}
+
+.section p, .section li {
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+}
+.section p strong, .section li strong { color: var(--text-primary); font-weight: 600; }
+
+/* ───── Info Cards / Callouts ───── */
+.callout {
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin: 24px 0;
+  border-left: 3px solid;
+}
+.callout.insight {
+  background: rgba(129,140,248,0.06);
+  border-color: var(--accent-indigo);
+}
+.callout.analogy {
+  background: rgba(251,191,36,0.06);
+  border-color: var(--accent-amber);
+}
+.callout.warning {
+  background: rgba(251,113,133,0.06);
+  border-color: var(--accent-rose);
+}
+.callout.definition {
+  background: rgba(52,211,153,0.06);
+  border-color: var(--accent-emerald);
+}
+.callout-title {
+  font-size: 13px; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.callout.insight .callout-title { color: var(--accent-indigo); }
+.callout.analogy .callout-title { color: var(--accent-amber); }
+.callout.warning .callout-title { color: var(--accent-rose); }
+.callout.definition .callout-title { color: var(--accent-emerald); }
+.callout p { margin-bottom: 8px; }
+.callout p:last-child { margin-bottom: 0; }
+
+/* ───── Math Toggle ───── */
+.math-toggle {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin: 24px 0;
+  overflow: hidden;
+}
+.math-toggle-header {
+  padding: 14px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.math-toggle-header:hover { background: rgba(255,255,255,0.02); }
+.math-toggle-header .label {
+  font-size: 14px; font-weight: 600;
+  color: var(--accent-purple);
+  display: flex; align-items: center; gap: 8px;
+}
+.math-toggle-header .chevron {
+  color: var(--text-muted); font-size: 14px;
+  transition: transform 0.3s;
+}
+.math-toggle.open .chevron { transform: rotate(180deg); }
+.math-toggle-body {
+  display: none;
+  padding: 0 20px 20px;
+  border-top: 1px solid var(--border-subtle);
+}
+.math-toggle.open .math-toggle-body { display: block; padding-top: 16px; }
+
+/* ───── KaTeX ───── */
+.katex-display { margin: 20px 0; overflow-x: auto; }
+.katex { font-size: 1.1em; }
+
+/* ───── Code Blocks ───── */
+.code-block {
+  background: #0d1117;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin: 24px 0;
+  overflow: hidden;
+}
+.code-header {
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.code-header .lang {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; color: var(--text-muted); font-weight: 600;
+}
+.code-header .copy-btn {
+  padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-subtle);
+  background: transparent; color: var(--text-muted);
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s;
+}
+.code-header .copy-btn:hover { border-color: var(--accent-indigo); color: var(--accent-indigo); }
+.code-block pre {
+  padding: 16px 20px;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.code-block pre code { background: none !important; padding: 0 !important; }
+
+/* ───── Scrubbable Numbers ───── */
+.scrubbable {
+  display: inline-block;
+  color: var(--accent-cyan);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  border-bottom: 2px dashed var(--accent-cyan);
+  cursor: ew-resize;
+  user-select: none;
+  padding: 0 2px;
+  transition: color 0.2s;
+}
+.scrubbable:hover {
+  color: #67e8f9;
+  background: rgba(34,211,238,0.1);
+  border-radius: 3px;
+}
+.scrub-hint {
+  font-size: 11px; color: var(--text-muted); font-style: italic;
+  margin-top: 4px;
+}
+
+/* ───── Interactive Demo Containers ───── */
+.demo-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 24px 0;
+}
+.demo-container h4 {
+  font-size: 15px; font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+.control-group {
+  margin-bottom: 20px;
+}
+.control-label {
+  font-size: 13px; font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+.control-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.slider-container {
+  flex: 1;
+}
+.slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--bg-surface);
+  outline: none;
+  -webkit-appearance: none;
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent-cyan);
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(34,211,238,0.4);
+}
+.slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent-cyan);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 8px rgba(34,211,238,0.4);
+}
+.slider-value {
+  min-width: 50px;
+  text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--accent-cyan);
+  font-weight: 600;
+}
+.plot-container {
+  margin: 24px 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+}
+
+/* ───── Socratic Questions ───── */
+.socratic-q {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin: 16px 0;
+  overflow: hidden;
+}
+.socratic-q-header {
+  padding: 14px 20px;
+  cursor: pointer;
+  display: flex; align-items: flex-start; gap: 12px;
+  transition: background 0.2s;
+}
+.socratic-q-header:hover { background: rgba(255,255,255,0.02); }
+.q-number {
+  flex-shrink: 0;
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: rgba(251,113,133,0.1);
+  color: var(--accent-rose);
+  font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+}
+.q-text {
+  font-size: 14px; font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.5;
+  flex: 1;
+}
+.q-expand {
+  flex-shrink: 0;
+  color: var(--text-muted); font-size: 12px;
+  transition: transform 0.3s;
+  margin-top: 4px;
+}
+.socratic-q.open .q-expand { transform: rotate(180deg); }
+.socratic-a {
+  display: none;
+  padding: 0 20px 16px 60px;
+  font-size: 14px; color: var(--text-secondary);
+  line-height: 1.65;
+}
+.socratic-q.open .socratic-a { display: block; }
+
+/* ───── Mountain Car Canvas ───── */
+#mountainCarCanvas {
+  display: block;
+  margin: 20px auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: #000;
+}
+
+/* ───── Responsive ───── */
+@media (max-width: 600px) {
+  .page-wrapper { padding: 0 16px 60px; }
+  .control-row { flex-direction: column; }
+  .slider-value { min-width: auto; text-align: left; }
+}
+</style>
+</head>
+<body>
+
+<!-- ───── Top Navigation ───── -->
+<nav class="top-nav">
+  <a href="index.html">&#x2190; Skill Tree</a>
+  <span class="nav-chapter-info">Ch 10 / 17</span>
+  <button class="btn-complete" id="completeBtn" onclick="markChapterComplete()">&#x2713; Mark Complete</button>
+</nav>
+
+<div class="page-wrapper">
+
+<!-- ───── Chapter Header ───── -->
+<header class="chapter-header">
+  <div class="ch-badge">Approximation &middot; Chapter 10</div>
+  <h1>On-policy Control with Approximation</h1>
+  <p class="subtitle">Semi-gradient methods for continuous and large-scale problems — learning both value and policy directly from interaction without memorizing every state.</p>
+</header>
+
+<!-- ───── Table of Contents ───── -->
+<div class="toc">
+  <h3>In This Chapter</h3>
+  <ol class="toc-list">
+    <li><a href="#feynman"><span class="sec-num">1</span> The Feynman Bridge: Generalization in Control</a></li>
+    <li><a href="#technical"><span class="sec-num">2</span> Technical Ascent: Semi-gradient Control Methods</a></li>
+    <li><a href="#interactive"><span class="sec-num">3</span> Interactive: Mountain Car Learning Dynamics</a></li>
+    <li><a href="#algorithm"><span class="sec-num">4</span> Algorithm: Semi-gradient Sarsa Implementation</a></li>
+    <li><a href="#bridge"><span class="sec-num">5</span> Deep RL Bridge: Path to Modern Methods</a></li>
+    <li><a href="#sandbox"><span class="sec-num">6</span> Socratic Sandbox: Understanding Control</a></li>
+    <li><a href="#nav"><span class="sec-num">7</span> Navigation</a></li>
+  </ol>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 1: THE FEYNMAN BRIDGE                         -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="feynman">
+  <div class="section-label feynman"><span class="icon">🎯</span> The Feynman Bridge</div>
+  <h2>Control with Approximation: Generalization Under Action</h2>
+
+  <p>Imagine you're a self-driving car learning to navigate without a pre-recorded map. You can't memorize every road configuration — there are infinitely many. Instead, you must <strong>generalize from similar situations</strong>. When you learn that increasing the steering angle helps on sharp curves, you apply that insight to all sharp curves, not just the exact one you just experienced.</p>
+
+  <p>In RL, this is the core challenge of <strong>on-policy control with approximation</strong>. You don't just estimate value functions; you learn policies directly, adjusting both <strong>what you know about value</strong> (the approximator) and <strong>what you do</strong> (the policy) simultaneously.</p>
+
+  <div class="callout analogy">
+    <div class="callout-title">The Core Analogy</div>
+    <p><strong>Control with approximation is like a self-driving car that can't memorize every possible road situation — it must generalize from similar experiences, adjusting both what it knows (value) and what it does (policy) simultaneously.</strong></p>
+  </div>
+
+  <p>The challenge? You're learning your policy from incomplete, biased feedback. The car learns from its own driving, which means it might never explore regions of the road where it would crash. This is the central tension: you need exploration to learn good policies, but your approximator must stay stable as you update it.</p>
+
+  <p><strong>Semi-gradient methods</strong> solve this by treating the target (bootstrapped value) as fixed, not differentiating through it. This sacrifice — not using true gradients — buys stability and convergence.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 2: TECHNICAL ASCENT                           -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="technical">
+  <div class="section-label technical"><span class="icon">⚡</span> Technical Ascent</div>
+  <h2>Semi-gradient Control Methods</h2>
+
+  <p>We now move from prediction (estimating a given policy's value) to <strong>control</strong> (finding a better policy). The key methods form a progression:</p>
+
+  <ol>
+    <li><strong>Episodic Semi-gradient Sarsa:</strong> One-step bootstrap for episodic tasks</li>
+    <li><strong>Semi-gradient n-step Sarsa:</strong> Multi-step returns before bootstrapping</li>
+    <li><strong>Average-reward formulation:</strong> For continuing tasks without artificial termination</li>
+    <li><strong>Differential semi-gradient n-step Sarsa:</strong> Scaling average reward with temporal differences</li>
+  </ol>
+
+  <!-- ───── EQUATION 1: SEMI-GRADIENT SARSA ───── -->
+  <div class="math-toggle" id="eq1-toggle">
+    <div class="math-toggle-header" onclick="toggleMath(event)">
+      <span class="label">📐 Semi-gradient Sarsa Update Rule</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="math-toggle-body">
+      <p><strong>Episodic semi-gradient Sarsa:</strong> Update weights based on one-step bootstrapped reward.</p>
+      <div class="katex-display">
+        $$w_{t+1} = w_t + \alpha[R_{t+1} + \gamma \hat{q}(S_{t+1}, A_{t+1}, w_t) - \hat{q}(S_t, A_t, w_t)]\nabla_w \hat{q}(S_t, A_t, w_t)$$
+      </div>
+      <p><strong>Key insight:</strong> The gradient is computed at the current state-action pair. The bootstrap target is <em>held fixed</em> (not differentiated), making this "semi" gradient.</p>
+      <p><strong>Update frequency:</strong> After every action. Typically used with ε-greedy policy derived from approximate action values.</p>
+    </div>
+  </div>
+
+  <!-- ───── EQUATION 2: N-STEP SARSA ───── -->
+  <div class="math-toggle" id="eq2-toggle">
+    <div class="math-toggle-header" onclick="toggleMath(event)">
+      <span class="label">📐 Semi-gradient n-step Sarsa</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="math-toggle-body">
+      <p><strong>Multi-step bootstrapping:</strong> Wait n steps before bootstrapping.</p>
+      <div class="katex-display">
+        $$G_t^{(n)} = R_{t+1} + \gamma R_{t+2} + \cdots + \gamma^{n-1} R_{t+n} + \gamma^n \hat{q}(S_{t+n}, A_{t+n}, w_t)$$
+      </div>
+      <div class="katex-display">
+        $$w_{t+n} = w_{t+n-1} + \alpha[G_t^{(n)} - \hat{q}(S_t, A_t, w_{t+n-1})]\nabla_w \hat{q}(S_t, A_t, w_{t+n-1})$$
+      </div>
+      <p><strong>Trade-off:</strong> Larger n reduces bias (less bootstrapping) but increases variance. Optimal n depends on the task horizon and function approximation quality.</p>
+    </div>
+  </div>
+
+  <!-- ───── EQUATION 3: AVERAGE REWARD ───── -->
+  <div class="math-toggle" id="eq3-toggle">
+    <div class="math-toggle-header" onclick="toggleMath(event)">
+      <span class="label">📐 Average Reward Definition</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="math-toggle-body">
+      <p><strong>For continuing tasks:</strong> Don't discount infinitely; measure long-run average reward.</p>
+      <div class="katex-display">
+        $$r(\pi) = \lim_{h \to \infty} \frac{1}{h} \sum_{t=1}^h \mathbb{E}[R_t | S_0, A_{0:t-1} \sim \pi]$$
+      </div>
+      <p><strong>Intuition:</strong> Over a long trajectory, what is the average reward per step? This avoids the discounting artifice and is natural for continuing processes (manufacturing, robotics).</p>
+    </div>
+  </div>
+
+  <!-- ───── EQUATION 4: DIFFERENTIAL VALUE ───── -->
+  <div class="math-toggle" id="eq4-toggle">
+    <div class="math-toggle-header" onclick="toggleMath(event)">
+      <span class="label">📐 Differential Value Function</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="math-toggle-body">
+      <p><strong>Value relative to average reward:</strong> How much better/worse than the baseline?</p>
+      <div class="katex-display">
+        $$v_\pi(s) = \mathbb{E}_\pi\left[\sum_{k=1}^\infty (R_{t+k} - r(\pi)) \,\Big|\, S_t = s\right]$$
+      </div>
+      <p><strong>Meaning:</strong> The value function measures deviation from the long-run average. A state is valuable if it leads to rewards better than the steady-state average.</p>
+    </div>
+  </div>
+
+  <!-- ───── EQUATION 5: DIFFERENTIAL TD ERROR ───── -->
+  <div class="math-toggle" id="eq5-toggle">
+    <div class="math-toggle-header" onclick="toggleMath(event)">
+      <span class="label">📐 Differential Temporal Difference Error</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="math-toggle-body">
+      <p><strong>Bootstrap target adjusted for average reward:</strong></p>
+      <div class="katex-display">
+        $$\delta_t = R_{t+1} - \bar{R}_t + \hat{v}(S_{t+1}, w_t) - \hat{v}(S_t, w_t)$$
+      </div>
+      <p>where $\bar{R}_t$ is an estimate of the average reward.</p>
+      <p><strong>Use case:</strong> In continuing tasks, update the value function and the average reward estimate together. The differential error measures surprise relative to the long-run baseline.</p>
+    </div>
+  </div>
+
+  <div class="callout insight">
+    <div class="callout-title">Why Semi-Gradient?</div>
+    <p>True gradient descent would differentiate through the bootstrap target, but we typically don't know the true target. By treating the bootstrap as fixed, we sacrifice gradient accuracy but gain <strong>convergence guarantees</strong> and <strong>stability</strong>. This is a pragmatic trade-off in RL.</p>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 3: INTERACTIVE DEMO                           -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="interactive">
+  <div class="section-label interactive"><span class="icon">🎮</span> Interactive Demo</div>
+  <h2>Mountain Car: Learning to Swing Up</h2>
+
+  <p>The <strong>Mountain Car problem</strong> is a canonical control benchmark. An underpowered car must swing itself up a steep mountain. Gravity pulls it back down, so brute force doesn't work — the car must learn to <em>oscillate</em>, building momentum to crest the peak.</p>
+
+  <p>Here, a semi-gradient Sarsa agent learns through trial and error. Adjust the <strong>learning rate α</strong> and <strong>exploration ε</strong> to see how they affect learning speed and policy smoothness.</p>
+
+  <div class="demo-container">
+    <h4>Mountain Car Learning Dynamics</h4>
+
+    <div class="control-group">
+      <div class="control-label">Learning Rate (α): <span class="scrubbable" id="alphaDisplay">0.1</span></div>
+      <div class="control-row">
+        <div class="slider-container">
+          <input type="range" min="0.001" max="1" step="0.01" value="0.1" class="slider" id="alphaSlider" oninput="updateAlpha()">
+        </div>
+        <div class="scrub-hint">← Drag to adjust →</div>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <div class="control-label">Exploration (ε): <span class="scrubbable" id="epsilonDisplay">0.1</span></div>
+      <div class="control-row">
+        <div class="slider-container">
+          <input type="range" min="0.0" max="1" step="0.01" value="0.1" class="slider" id="epsilonSlider" oninput="updateEpsilon()">
+        </div>
+        <div class="scrub-hint">← Drag to adjust →</div>
+      </div>
+    </div>
+
+    <canvas id="mountainCarCanvas" width="600" height="250"></canvas>
+    <p style="font-size: 13px; color: var(--text-muted); text-align: center; margin-top: 12px;">
+      <strong>Current Episode:</strong> <span id="episodeCounter">0</span> |
+      <strong>Success Rate (last 100):</strong> <span id="successRate">0%</span>
+    </p>
+  </div>
+
+  <p><strong>Observations:</strong></p>
+  <ul style="margin-left: 20px; margin-bottom: 16px;">
+    <li>Very low α: Learning is slow; the agent needs many episodes.</li>
+    <li>Very high α: Learning is fast initially but becomes unstable and oscillates.</li>
+    <li>Low ε: The agent quickly commits to a policy, but may miss better solutions.</li>
+    <li>High ε: More exploration, but the policy remains noisy and inefficient.</li>
+  </ul>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 4: ALGORITHM                                  -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="algorithm">
+  <div class="section-label algorithm"><span class="icon">⚙️</span> Algorithm</div>
+  <h2>Semi-gradient Sarsa for Mountain Car</h2>
+
+  <p>Below is a complete, production-ready implementation of semi-gradient Sarsa on the Mountain Car problem (~110 lines).</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="lang">python</span>
+      <button class="copy-btn" onclick="copyCode()">Copy</button>
+    </div>
+    <pre><code class="language-python">import numpy as np
+from collections import defaultdict
+
+class SemiGradientSarsa:
+    """Semi-gradient Sarsa for continuous state spaces using tile coding."""
+
+    def __init__(self, alpha=0.1, epsilon=0.1, gamma=0.99, tiles=8):
+        self.alpha = alpha
+        self.epsilon = epsilon
+        self.gamma = gamma
+        self.tiles = tiles
+        self.w = defaultdict(float)
+
+    def get_tiles(self, s):
+        """Tile coding: discretize continuous state into features."""
+        position, velocity = s
+        # Normalize to [0, 1]
+        pos_norm = (position + 1.2) / 1.8
+        vel_norm = (velocity + 0.07) / 0.14
+
+        features = []
+        for i in range(self.tiles):
+            # Offset tiling
+            offset = i / self.tiles
+            pos_idx = int((pos_norm + offset) * self.tiles) % self.tiles
+            vel_idx = int((vel_norm + offset) * self.tiles) % self.tiles
+            features.append((i, pos_idx, vel_idx))
+        return features
+
+    def q_hat(self, s, a, w=None):
+        """Approximate action value using tile coding."""
+        if w is None:
+            w = self.w
+        features = self.get_tiles(s)
+        return sum(w[(f, a)] for f in features)
+
+    def grad_q_hat(self, s, a):
+        """Gradient of q_hat w.r.t. w: returns feature tiles."""
+        return self.get_tiles(s)
+
+    def select_action(self, s):
+        """ε-greedy action selection."""
+        if np.random.rand() < self.epsilon:
+            return np.random.randint(3)  # 0: left, 1: coast, 2: right
+
+        # Greedy: best of 3 actions
+        q_vals = [self.q_hat(s, a) for a in range(3)]
+        return np.argmax(q_vals)
+
+    def update(self, s, a, r, s_next, a_next):
+        """Semi-gradient Sarsa update."""
+        q_current = self.q_hat(s, a)
+        q_next = self.q_hat(s_next, a_next)
+        td_error = r + self.gamma * q_next - q_current
+
+        # Update weights: w += alpha * delta * grad_q
+        features = self.grad_q_hat(s, a)
+        for f in features:
+            self.w[(f, a)] += self.alpha * td_error
+
+    def train(self, env, episodes=500):
+        """Train the agent on Mountain Car."""
+        episode_rewards = []
+
+        for ep in range(episodes):
+            s, _ = env.reset()
+            a = self.select_action(s)
+            episode_reward = 0
+
+            for t in range(200):
+                s_next, r, done, _, _ = env.step(a)
+                episode_reward += r
+
+                a_next = self.select_action(s_next)
+                self.update(s, a, r, s_next, a_next)
+
+                s, a = s_next, a_next
+                if done:
+                    break
+
+            episode_rewards.append(episode_reward)
+
+            if (ep + 1) % 100 == 0:
+                avg_reward = np.mean(episode_rewards[-100:])
+                print(f"Episode {ep+1}: avg reward = {avg_reward:.1f}")
+
+        return episode_rewards
+
+# Example usage:
+# import gymnasium as gym
+# env = gym.make("MountainCar-v0")
+# agent = SemiGradientSarsa(alpha=0.1, epsilon=0.1)
+# rewards = agent.train(env, episodes=500)
+</code></pre>
+  </div>
+
+  <p><strong>Key implementation details:</strong></p>
+  <ul style="margin-left: 20px; margin-bottom: 16px;">
+    <li><strong>Tile coding:</strong> Discretizes the continuous state space into overlapping tiles. This creates linear features that scale well.</li>
+    <li><strong>ε-greedy policy:</strong> Balances exploration (random) and exploitation (greedy w.r.t. approximate values).</li>
+    <li><strong>Semi-gradient update:</strong> Only the current state-action gradient is used; the bootstrap target is treated as fixed.</li>
+    <li><strong>Convergence:</strong> Under suitable conditions (decreasing α, bounded rewards), the weights converge to a fixed point.</li>
+  </ul>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 5: DEEP RL BRIDGE                             -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="bridge">
+  <div class="section-label bridge"><span class="icon">🌉</span> Deep RL Bridge</div>
+  <h2>From Semi-gradient Sarsa to Modern Methods</h2>
+
+  <p>Semi-gradient Sarsa is the conceptual grandfather of modern deep reinforcement learning. Here's the progression:</p>
+
+  <div class="callout insight">
+    <div class="callout-title">The Progression</div>
+    <p><strong>Semi-gradient Sarsa</strong> (linear approximation) → <strong>DQN</strong> (non-linear, off-policy) → <strong>PPO/A3C</strong> (policy gradient)</p>
+  </div>
+
+  <p><strong>Semi-gradient Sarsa → DQN:</strong> The jump from tile coding to neural networks. DQN adds <em>experience replay</em> (decorrelate samples) and <em>target networks</em> (stabilize the bootstrap), solving the instability that pure gradient descent suffered.</p>
+
+  <p><strong>DQN → PPO:</strong> DQN learns a value function to guide action selection. PPO learns the policy <em>directly</em>, using the value function only as a baseline to reduce variance. This is more flexible and works in continuous action spaces.</p>
+
+  <p><strong>What persists:</strong> All modern methods still rely on bootstrapping (using estimated values as targets) and semi-gradient updates (not differentiating through the target). The core trade-off — stability vs. true gradient — remains central.</p>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 6: SOCRATIC SANDBOX                           -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="sandbox">
+  <div class="section-label sandbox"><span class="icon">❓</span> Socratic Sandbox</div>
+  <h2>Reflect & Explore</h2>
+
+  <p>Use these questions to deepen your understanding. Click each to reveal thinking prompts.</p>
+
+  <!-- Question 1 -->
+  <div class="socratic-q" id="q1">
+    <div class="socratic-q-header" onclick="toggleQuestion(event)">
+      <div class="q-number">1</div>
+      <div class="q-text">Why is the Mountain Car problem "hard" for a naive agent?</div>
+      <span class="q-expand">▼</span>
+    </div>
+    <div class="socratic-a">
+      <p><strong>Think first:</strong> What makes one-shot actions (always accelerate forward) insufficient? What has to happen in the environment?</p>
+      <p><strong>Answer:</strong> The Mountain Car has negative (fail) rewards until the goal is reached. Gravity pulls the car back, so the agent must learn to <em>oscillate left and right</em> to build momentum. A policy that always accelerates forward will never crest the peak. The reward signal is sparse (only at goal), so the agent must learn a long-horizon strategy. This requires credit assignment over many steps.</p>
+    </div>
+  </div>
+
+  <!-- Question 2 -->
+  <div class="socratic-q" id="q2">
+    <div class="socratic-q-header" onclick="toggleQuestion(event)">
+      <div class="q-number">2</div>
+      <div class="q-text">What is the difference between "semi-gradient" and "true gradient"?</div>
+      <span class="q-expand">▼</span>
+    </div>
+    <div class="socratic-a">
+      <p><strong>Think first:</strong> In the Sarsa update, we have a target $R_{t+1} + \gamma \hat{q}(S_{t+1}, A_{t+1}, w_t)$. What if we computed gradients through this entire expression?</p>
+      <p><strong>Answer:</strong> True gradient would differentiate through the bootstrap value, treating the target as if it depends on w. This leads to exponential blow-up in the computational graph and instability—we'd be chasing a moving target. Semi-gradient fixes the target as a constant, so we only differentiate $\hat{q}(S_t, A_t, w)$. This is "semi" because it's not a true gradient of the loss, but it's stable and converges under mild conditions.</p>
+    </div>
+  </div>
+
+  <!-- Question 3 -->
+  <div class="socratic-q" id="q3">
+    <div class="socratic-q-header" onclick="toggleQuestion(event)">
+      <div class="q-number">3</div>
+      <div class="q-text">When would you use average-reward methods instead of discounted?</div>
+      <span class="q-expand">▼</span>
+    </div>
+    <div class="socratic-a">
+      <p><strong>Think first:</strong> In what kinds of problems does an artificial discount factor feel wrong? When is the long-run average more natural than future discounting?</p>
+      <p><strong>Answer:</strong> Use average-reward for <strong>continuing tasks</strong> where there's no natural termination: a robot that must operate indefinitely, a manufacturing process, a thermostat. Discounting future rewards makes sense for finite-horizon problems (games, navigation to a goal), but for continuous operation, the long-run average reward per step is the right objective. Average-reward also avoids tuning γ, which can be hard in continuing tasks.</p>
+    </div>
+  </div>
+
+  <!-- Question 4 -->
+  <div class="socratic-q" id="q4">
+    <div class="socratic-q-header" onclick="toggleQuestion(event)">
+      <div class="q-number">4</div>
+      <div class="q-text">How does tile coding enable linear approximation in continuous spaces?</div>
+      <span class="q-expand">▼</span>
+    </div>
+    <div class="socratic-a">
+      <p><strong>Think first:</strong> A continuous state like position ∈ [-1.2, 0.6] can't be a table index. How do you turn it into discrete features?</p>
+      <p><strong>Answer:</strong> Tile coding discretizes the continuous state space into overlapping grids (tiles). Each grid has a different offset, so each continuous state falls into a small set of tiles. Each tile is then treated as a feature (a binary indicator: "is state in this tile?"). The value is a linear combination of these tile features. This is efficient, generalizes across nearby states, and allows gradient-based updates. Multiple tilings increase resolution.</p>
+    </div>
+  </div>
+
+  <!-- Question 5 -->
+  <div class="socratic-q" id="q5">
+    <div class="socratic-q-header" onclick="toggleQuestion(event)">
+      <div class="q-number">5</div>
+      <div class="q-text">What happens if you set α (learning rate) too high? Too low?</div>
+      <span class="q-expand">▼</span>
+    </div>
+    <div class="socratic-a">
+      <p><strong>Think first:</strong> In the update $w := w + \alpha \cdot \text{(TD error)} \cdot \text{(features)}$, what role does α play?</p>
+      <p><strong>Answer:</strong> α controls the step size. Too high (e.g., α=1): each update is large, causing oscillations and divergence. The agent "overshoots" and never settles. Too low (e.g., α=0.001): updates are tiny, learning is slow, and the agent may get stuck in local optima or not converge in reasonable time. The optimal α balances fast learning with stability. In practice, use a schedule: start high, decay over time.</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- NAVIGATION & COMPLETION                              -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="nav" style="margin-top: 80px; padding-top: 40px; border-top: 1px solid var(--border-subtle);">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;">
+    <a href="chapter-9.html" style="color: var(--accent-indigo); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+      &#x2190; Chapter 9: Off-policy Methods
+    </a>
+    <span style="color: var(--text-muted); font-size: 13px;">Chapter 10 of 17</span>
+    <a href="chapter-11.html" style="color: var(--accent-indigo); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+      Chapter 11: Off-policy Control &#x2192;
+    </a>
+  </div>
+</div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SCRIPTS                                               -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<script>
+// Math toggle functionality
+function toggleMath(event) {
+  const toggle = event.currentTarget.closest('.math-toggle');
+  toggle.classList.toggle('open');
+}
+
+// Socratic question toggle
+function toggleQuestion(event) {
+  const q = event.currentTarget.closest('.socratic-q');
+  q.classList.toggle('open');
+}
+
+// Copy code button
+function copyCode() {
+  const codeText = document.querySelector('.code-block pre code').innerText;
+  navigator.clipboard.writeText(codeText).then(() => {
+    const btn = event.target;
+    const original = btn.innerText;
+    btn.innerText = 'Copied!';
+    setTimeout(() => { btn.innerText = original; }, 2000);
+  });
+}
+
+// Mountain Car Simulation
+class MountainCarSim {
+  constructor() {
+    this.position = -0.5;
+    this.velocity = 0;
+    this.weights = {};
+    this.episodes = 0;
+    this.successes = 0;
+    this.last_100_success = 0;
+    this.alpha = 0.1;
+    this.epsilon = 0.1;
+  }
+
+  getTiles(pos, vel) {
+    const tiles = [];
+    const posNorm = (pos + 1.2) / 1.8;
+    const velNorm = (vel + 0.07) / 0.14;
+    const numTiles = 8;
+    for (let i = 0; i < numTiles; i++) {
+      const offset = i / numTiles;
+      const posIdx = Math.floor((posNorm + offset) * numTiles) % numTiles;
+      const velIdx = Math.floor((velNorm + offset) * numTiles) % numTiles;
+      tiles.push(`${i}-${posIdx}-${velIdx}`);
+    }
+    return tiles;
+  }
+
+  qHat(pos, vel, action) {
+    const tiles = this.getTiles(pos, vel);
+    let q = 0;
+    for (const tile of tiles) {
+      const key = `${tile}-${action}`;
+      q += this.weights[key] || 0;
+    }
+    return q;
+  }
+
+  selectAction(pos, vel) {
+    if (Math.random() < this.epsilon) {
+      return Math.floor(Math.random() * 3);
+    }
+    const q = [this.qHat(pos, vel, 0), this.qHat(pos, vel, 1), this.qHat(pos, vel, 2)];
+    return q.indexOf(Math.max(...q));
+  }
+
+  update(pos, vel, action, reward, nextPos, nextVel, nextAction) {
+    const qCurrent = this.qHat(pos, vel, action);
+    const qNext = this.qHat(nextPos, nextVel, nextAction);
+    const tdError = reward + 0.99 * qNext - qCurrent;
+
+    const tiles = this.getTiles(pos, vel);
+    for (const tile of tiles) {
+      const key = `${tile}-${action}`;
+      this.weights[key] = (this.weights[key] || 0) + this.alpha * tdError;
+    }
+  }
+
+  step() {
+    let pos = this.position;
+    let vel = this.velocity;
+    let action = this.selectAction(pos, vel);
+
+    // Physics
+    const accel = [-1, 0, 1][action] * 0.001 - 0.0025 * Math.cos(3 * pos);
+    vel += accel;
+    vel = Math.max(-0.07, Math.min(0.07, vel));
+    pos += vel;
+    pos = Math.max(-1.2, Math.min(0.6, pos));
+
+    const reward = -1;
+    const done = pos >= 0.5;
+
+    const nextAction = this.selectAction(pos, vel);
+    this.update(this.position, this.velocity, action, reward, pos, vel, nextAction);
+
+    this.position = pos;
+    this.velocity = vel;
+
+    return done;
+  }
+
+  runEpisode() {
+    this.position = -0.5;
+    this.velocity = 0;
+    let steps = 0;
+    while (steps < 200) {
+      if (this.step()) {
+        this.successes++;
+        this.last_100_success++;
+        return steps;
+      }
+      steps++;
+    }
+    return steps;
+  }
+
+  train(numEpisodes) {
+    for (let i = 0; i < numEpisodes; i++) {
+      this.runEpisode();
+      this.episodes++;
+    }
+  }
+}
+
+const sim = new MountainCarSim();
+let trainingInterval = null;
+
+function updateAlpha() {
+  sim.alpha = parseFloat(document.getElementById('alphaSlider').value);
+  document.getElementById('alphaDisplay').innerText = sim.alpha.toFixed(3);
+}
+
+function updateEpsilon() {
+  sim.epsilon = parseFloat(document.getElementById('epsilonSlider').value);
+  document.getElementById('epsilonDisplay').innerText = sim.epsilon.toFixed(2);
+}
+
+function drawMountainCar() {
+  const canvas = document.getElementById('mountainCarCanvas');
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#0a0e1a';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Draw mountain
+  ctx.strokeStyle = '#34d399';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i <= canvas.width; i++) {
+    const x = i;
+    const posNorm = (i / canvas.width) * 1.8 - 1.2;
+    const h = Math.sin(3 * posNorm) * 0.45 + 0.55;
+    const y = canvas.height - h * canvas.height * 0.5;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Draw car
+  const carX = ((sim.position + 1.2) / 1.8) * canvas.width;
+  const carH = Math.sin(3 * sim.position) * 0.45 + 0.55;
+  const carY = canvas.height - carH * canvas.height * 0.5;
+
+  ctx.fillStyle = '#818cf8';
+  ctx.fillRect(carX - 12, carY - 8, 24, 16);
+  ctx.fillStyle = '#22d3ee';
+  ctx.fillRect(carX - 8, carY - 6, 5, 5);
+  ctx.fillRect(carX + 3, carY - 6, 5, 5);
+
+  // Goal marker
+  ctx.fillStyle = '#fbbf24';
+  ctx.fillRect(canvas.width - 20, canvas.height - 80, 20, 80);
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = '12px JetBrains Mono';
+  ctx.fillText('GOAL', canvas.width - 50, canvas.height - 30);
+
+  document.getElementById('episodeCounter').innerText = sim.episodes;
+  const successPct = sim.episodes > 0 ? Math.round((sim.successes / sim.episodes) * 100) : 0;
+  document.getElementById('successRate').innerText = successPct + '%';
+}
+
+function animateLearning() {
+  sim.train(1);
+  drawMountainCar();
+}
+
+// Start training loop
+trainingInterval = setInterval(animateLearning, 50);
+
+// Initial draw
+drawMountainCar();
+
+// Render KaTeX
+document.addEventListener('DOMContentLoaded', function() {
+  renderMathInElement(document.body, {
+    delimiters: [
+      { left: '$$', right: '$$', display: true },
+      { left: '$', right: '$', display: false }
+    ]
+  });
+});
+
+// Mark chapter complete
+function markChapterComplete() {
+  const btn = document.getElementById('completeBtn');
+  btn.classList.add('done');
+  btn.innerText = '✓ Completed';
+  // In a real app, save to backend
+  localStorage.setItem('ch10-complete', 'true');
+}
+
+// Check if already completed
+if (localStorage.getItem('ch10-complete')) {
+  document.getElementById('completeBtn').classList.add('done');
+  document.getElementById('completeBtn').innerText = '✓ Completed';
+}
+
+// Highlight code on load
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('pre code').forEach(block => {
+    hljs.highlightElement(block);
+  });
+});
+</script>
+
+</body>
+</html>

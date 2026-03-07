@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 6: Temporal-Difference Learning — RL Interactive Curriculum</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
+<!-- KaTeX for LaTeX rendering -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<!-- Plotly for 2D/3D viz -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+<!-- Highlight.js for code -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<style>
+:root {
+  --bg-deep: #0a0e1a;
+  --bg-card: #111827;
+  --bg-card-alt: #0f172a;
+  --bg-surface: #1e293b;
+  --border-subtle: rgba(255,255,255,0.06);
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent-indigo: #818cf8;
+  --accent-blue: #60a5fa;
+  --accent-cyan: #22d3ee;
+  --accent-emerald: #34d399;
+  --accent-amber: #fbbf24;
+  --accent-rose: #fb7185;
+  --accent-purple: #c084fc;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  line-height: 1.7;
+  font-size: 16px;
+}
+
+/* ───── Layout ───── */
+.page-wrapper {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+
+/* ───── Top Nav ───── */
+.top-nav {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(10,14,26,0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 12px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.top-nav a {
+  color: var(--text-secondary); text-decoration: none;
+  font-size: 14px; font-weight: 500;
+  display: flex; align-items: center; gap: 6px;
+  transition: color 0.2s;
+}
+.top-nav a:hover { color: var(--accent-indigo); }
+.nav-chapter-info {
+  font-size: 13px; color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.btn-complete {
+  padding: 8px 16px; border-radius: 8px; border: none;
+  background: linear-gradient(135deg, var(--accent-emerald), #10b981);
+  color: #022c22; font-weight: 600; font-size: 13px;
+  cursor: pointer; transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+.btn-complete:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(52,211,153,0.3); }
+.btn-complete.done { background: var(--bg-surface); color: var(--accent-emerald); cursor: default; }
+
+/* ───── Chapter Header ───── */
+.chapter-header {
+  text-align: center;
+  padding: 80px 0 48px;
+}
+.ch-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 14px; border-radius: 999px;
+  background: rgba(34,211,238,0.1);
+  border: 1px solid rgba(34,211,238,0.2);
+  font-size: 11px; font-weight: 700;
+  color: var(--accent-cyan);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.chapter-header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2.2rem, 5vw, 3.5rem);
+  font-weight: 900; line-height: 1.15;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #f1f5f9 0%, var(--accent-cyan) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.chapter-header .subtitle {
+  font-size: 18px; color: var(--text-secondary);
+  max-width: 580px; margin: 0 auto;
+}
+
+/* ───── Table of Contents ───── */
+.toc {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 24px 28px;
+  margin-bottom: 48px;
+}
+.toc h3 {
+  font-size: 13px; font-weight: 700;
+  color: var(--text-muted); letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.toc-list { list-style: none; }
+.toc-list li { margin-bottom: 6px; }
+.toc-list a {
+  color: var(--text-secondary); text-decoration: none;
+  font-size: 14px; font-weight: 500;
+  padding: 4px 8px; border-radius: 6px;
+  display: inline-block;
+  transition: all 0.2s;
+}
+.toc-list a:hover { color: var(--accent-indigo); background: rgba(129,140,248,0.08); }
+.toc-list .sec-num {
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  margin-right: 6px;
+}
+
+/* ───── Section Headers ───── */
+.section {
+  margin-bottom: 56px;
+}
+.section-label {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.section-label .icon { font-size: 16px; }
+.section-label.feynman { color: var(--accent-amber); }
+.section-label.technical { color: var(--accent-indigo); }
+.section-label.algorithm { color: var(--accent-emerald); }
+.section-label.sandbox { color: var(--accent-rose); }
+.section-label.interactive { color: var(--accent-cyan); }
+.section-label.comparative { color: var(--accent-purple); }
+
+.section h2 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800; line-height: 1.2;
+  margin-bottom: 20px;
+}
+
+.section p, .section li {
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+}
+.section p strong, .section li strong { color: var(--text-primary); font-weight: 600; }
+
+/* ───── Info Cards / Callouts ───── */
+.callout {
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin: 24px 0;
+  border-left: 3px solid;
+}
+.callout.insight {
+  background: rgba(129,140,248,0.06);
+  border-color: var(--accent-indigo);
+}
+.callout.analogy {
+  background: rgba(251,191,36,0.06);
+  border-color: var(--accent-amber);
+}
+.callout.warning {
+  background: rgba(251,113,133,0.06);
+  border-color: var(--accent-rose);
+}
+.callout.definition {
+  background: rgba(52,211,153,0.06);
+  border-color: var(--accent-emerald);
+}
+.callout-title {
+  font-size: 13px; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.callout.insight .callout-title { color: var(--accent-indigo); }
+.callout.analogy .callout-title { color: var(--accent-amber); }
+.callout.warning .callout-title { color: var(--accent-rose); }
+.callout.definition .callout-title { color: var(--accent-emerald); }
+.callout p { margin-bottom: 8px; }
+.callout p:last-child { margin-bottom: 0; }
+
+/* ───── Math Toggle ───── */
+.math-toggle {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin: 24px 0;
+  overflow: hidden;
+}
+.math-toggle-header {
+  padding: 14px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.math-toggle-header:hover { background: rgba(255,255,255,0.02); }
+.math-toggle-header .label {
+  font-size: 14px; font-weight: 600;
+  color: var(--accent-purple);
+  display: flex; align-items: center; gap: 8px;
+}
+.math-toggle-header .chevron {
+  color: var(--text-muted); font-size: 14px;
+  transition: transform 0.3s;
+}
+.math-toggle.open .chevron { transform: rotate(180deg); }
+.math-toggle-body {
+  display: none;
+  padding: 0 20px 20px;
+  border-top: 1px solid var(--border-subtle);
+}
+.math-toggle.open .math-toggle-body { display: block; padding-top: 16px; }
+
+/* ───── KaTeX ───── */
+.katex-display { margin: 20px 0; overflow-x: auto; }
+.katex { font-size: 1.1em; }
+
+/* ───── Code Blocks ───── */
+.code-block {
+  background: #0d1117;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin: 24px 0;
+  overflow: hidden;
+}
+.code-header {
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.code-header .lang {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; color: var(--text-muted); font-weight: 600;
+}
+.code-header .copy-btn {
+  padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-subtle);
+  background: transparent; color: var(--text-muted);
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s;
+}
+.code-header .copy-btn:hover { border-color: var(--accent-indigo); color: var(--accent-indigo); }
+.code-block pre {
+  padding: 16px 20px;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.code-block pre code { background: none !important; padding: 0 !important; }
+
+/* ───── Scrubbable Numbers ───── */
+.scrubbable {
+  display: inline-block;
+  color: var(--accent-cyan);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  border-bottom: 2px dashed var(--accent-cyan);
+  cursor: ew-resize;
+  user-select: none;
+  padding: 0 2px;
+  transition: color 0.2s;
+}
+.scrubbable:hover {
+  color: #67e8f9;
+  background: rgba(34,211,238,0.1);
+  border-radius: 3px;
+}
+.scrub-hint {
+  font-size: 11px; color: var(--text-muted); font-style: italic;
+  margin-top: 4px;
+}
+
+/* ───── Interactive Demo Containers ───── */
+.demo-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 24px 0;
+}
+.demo-container h4 {
+  font-size: 15px; font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+
+/* ───── Gridworld ───── */
+.gridworld {
+  display: grid;
+  gap: 3px;
+  margin: 20px auto;
+  width: max-content;
+  padding: 12px;
+  background: var(--bg-surface);
+  border-radius: 8px;
+}
+.gridworld-row {
+  display: grid;
+  grid-auto-flow: column;
+  gap: 3px;
+}
+.gridworld-cell {
+  width: 50px;
+  height: 50px;
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 700;
+  position: relative;
+}
+.gridworld-cell.cliff {
+  background: rgba(251,113,133,0.2);
+  border-color: var(--accent-rose);
+}
+.gridworld-cell.goal {
+  background: rgba(52,211,153,0.2);
+  border-color: var(--accent-emerald);
+}
+.gridworld-cell.agent {
+  background: rgba(129,140,248,0.2);
+  border-color: var(--accent-indigo);
+}
+.gridworld-cell.sarsa-path {
+  background: rgba(251,191,36,0.15);
+}
+.gridworld-cell.qlearn-path {
+  background: rgba(34,211,153,0.15);
+}
+
+/* ───── Algorithm Controls ───── */
+.algo-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 16px 0;
+}
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.control-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.control-group input[type="range"] {
+  width: 150px;
+  cursor: pointer;
+}
+.control-group input[type="number"] {
+  padding: 6px 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  color: var(--accent-cyan);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  width: 100px;
+}
+.control-group .value-display {
+  font-size: 12px;
+  color: var(--accent-cyan);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+}
+
+/* ───── Buttons ───── */
+.btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s;
+}
+.btn:hover {
+  border-color: var(--accent-indigo);
+  color: var(--accent-indigo);
+}
+.btn.primary {
+  background: var(--accent-indigo);
+  color: white;
+  border-color: var(--accent-indigo);
+}
+.btn.primary:hover {
+  background: #9ca3f5;
+}
+
+/* ───── Comparative Table ───── */
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 24px 0;
+  font-size: 13px;
+}
+.comparison-table th {
+  background: var(--bg-card-alt);
+  color: var(--accent-indigo);
+  font-weight: 700;
+  padding: 12px 16px;
+  text-align: left;
+  border: 1px solid var(--border-subtle);
+}
+.comparison-table td {
+  padding: 12px 16px;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+.comparison-table tr:nth-child(even) {
+  background: rgba(255,255,255,0.01);
+}
+.comparison-table td strong {
+  color: var(--text-primary);
+}
+
+/* ───── Socratic Questions ───── */
+.socratic-q {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin: 16px 0;
+  overflow: hidden;
+}
+.socratic-q-header {
+  padding: 14px 20px;
+  cursor: pointer;
+  display: flex; align-items: flex-start; gap: 12px;
+  transition: background 0.2s;
+}
+.socratic-q-header:hover { background: rgba(255,255,255,0.02); }
+.q-number {
+  flex-shrink: 0;
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: rgba(251,113,133,0.1);
+  color: var(--accent-rose);
+  font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+}
+.q-text {
+  font-size: 14px; font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.5;
+  flex: 1;
+}
+.q-expand {
+  flex-shrink: 0;
+  color: var(--text-muted); font-size: 12px;
+  transition: transform 0.3s;
+  margin-top: 4px;
+}
+.socratic-q.open .q-expand { transform: rotate(180deg); }
+.socratic-a {
+  display: none;
+  padding: 0 20px 16px 60px;
+  font-size: 14px; color: var(--text-secondary);
+  line-height: 1.65;
+}
+.socratic-q.open .socratic-a { display: block; }
+
+/* ───── Plot Container ───── */
+.plot-container {
+  margin: 24px 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+}
+
+/* ───── Responsive ───── */
+@media (max-width: 600px) {
+  .page-wrapper { padding: 0 16px 60px; }
+  .gridworld-cell { width: 40px; height: 40px; font-size: 16px; }
+  .algo-controls { flex-direction: column; }
+  .control-group input[type="range"] { width: 100%; }
+  .comparison-table { font-size: 12px; }
+  .comparison-table td, .comparison-table th { padding: 8px 12px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ───── Top Navigation ───── -->
+<nav class="top-nav">
+  <a href="index.html">&#x2190; Skill Tree</a>
+  <span class="nav-chapter-info">Ch 6 / 17</span>
+  <button class="btn-complete" id="completeBtn" onclick="markChapterComplete()">&#x2713; Mark Complete</button>
+</nav>
+
+<div class="page-wrapper">
+
+<!-- ───── Chapter Header ───── -->
+<header class="chapter-header">
+  <div class="ch-badge">Advanced Methods &middot; Chapter 6</div>
+  <h1>Temporal-Difference Learning</h1>
+  <p class="subtitle">How agents bootstrap their own value estimates to learn faster than Monte Carlo while staying model-free like sampling methods.</p>
+</header>
+
+<!-- ───── Table of Contents ───── -->
+<div class="toc">
+  <h3>In This Chapter</h3>
+  <ol class="toc-list">
+    <li><a href="#feynman"><span class="sec-num">1</span> The Feynman Bridge: TD as Online Learning</a></li>
+    <li><a href="#technical"><span class="sec-num">2</span> The Technical Ascent: TD(0), TD Error, and Bootstrapping</a></li>
+    <li><a href="#cliff-visual"><span class="sec-num">3</span> Interactive: Cliff Walking — SARSA vs Q-learning</a></li>
+    <li><a href="#random-walk"><span class="sec-num">4</span> Interactive: Random Walk — TD vs MC Convergence</a></li>
+    <li><a href="#algorithm"><span class="sec-num">5</span> Algorithm: SARSA and Q-learning in Python</a></li>
+    <li><a href="#comparative"><span class="sec-num">6</span> Comparative Table: DP vs MC vs TD</a></li>
+    <li><a href="#sandbox"><span class="sec-num">7</span> Socratic Sandbox: Deep Questions</a></li>
+    <li><a href="#recap"><span class="sec-num">8</span> Chapter Recap and Key Takeaways</a></li>
+  </ol>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 1: THE FEYNMAN BRIDGE                         -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="feynman">
+  <div class="section-label feynman"><span class="icon">&#x1F3AF;</span> The Feynman Bridge</div>
+  <h2>TD Learning: Update Your GPS While Driving</h2>
+
+  <p>Imagine you're driving to a destination and your GPS estimates you'll arrive in 2 hours. You drive for 15 minutes and hit traffic.</p>
+
+  <p><strong>Monte Carlo approach:</strong> You keep driving. At the end, when you arrive, you learn the total trip took 3 hours instead of 2. You update your estimate retroactively.</p>
+
+  <p><strong>Temporal-Difference approach:</strong> You don't wait. Every few minutes, you glance at your current location and the updated GPS estimate for remaining travel time. You revise your arrival estimate <em>right now</em>, based on what you observe happening in real-time. You're bootstrapping: using your own predictions to update your predictions.</p>
+
+  <div class="callout analogy">
+    <div class="callout-title">The Core Insight</div>
+    <p><strong>TD = Monte Carlo + Bootstrapping.</strong> Like Monte Carlo, TD learns from actual samples (you don't need a model of traffic patterns). But like dynamic programming, TD uses its own value estimates to bootstrap faster learning. You don't wait for the episode to end — you update incrementally, every step.</p>
+    <p>This is the genius of Chapter 6: you can learn model-free (from experience, like MC) but faster (using bootstrapping, like DP). This hybrid approach gives you the best of both worlds.</p>
+  </div>
+
+  <p>TD learning is the foundation of modern deep reinforcement learning. DQN, PPO, AlphaGo — they all use the core idea: update value estimates online, using your current predictions as targets.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 2: TECHNICAL ASCENT                           -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="technical">
+  <div class="section-label technical"><span class="icon">&#x1F4D0;</span> The Technical Ascent</div>
+  <h2>TD(0) Prediction and the TD Error</h2>
+
+  <p>TD learning comes in many forms, but the simplest — <strong>TD(0)</strong> — is the workhorse of modern RL.</p>
+
+  <h3 style="font-size:1.3rem;margin-top:28px;margin-bottom:14px;color:var(--text-primary);">TD(0) Value Update</h3>
+
+  <p>After observing a single transition \((S_t, A_t, R_{t+1}, S_{t+1})\), TD(0) updates the value of the current state:</p>
+
+  $$V(S_t) \leftarrow V(S_t) + \alpha \left[ R_{t+1} + \gamma V(S_{t+1}) - V(S_t) \right]$$
+
+  <p>The key term in brackets is the <strong>TD error</strong> (often written as \(\delta_t\)):</p>
+
+  $$\delta_t = R_{t+1} + \gamma V(S_{t+1}) - V(S_t)$$
+
+  <div class="callout definition">
+    <div class="callout-title">What is the TD Error?</div>
+    <p>The TD error measures the <strong>surprise</strong> in your prediction. It's the difference between what you actually observed (\(R_{t+1} + \gamma V(S_{t+1})\), the "bootstrapped return") and what you predicted (\(V(S_t)\)). If \(\delta_t > 0\), the state was better than expected — increase its value. If \(\delta_t < 0\), it was worse — decrease its value. The magnitude tells you how wrong you were.</p>
+  </div>
+
+  <p>Compare this to the update rule from Chapter 1 (tic-tac-toe):</p>
+
+  <div class="math-toggle" id="mt-comparison">
+    <div class="math-toggle-header" onclick="toggleMath('mt-comparison')">
+      <span class="label">&#x1F9EE; Why This Matters: MC vs TD vs DP</span>
+      <span class="chevron">&#x25BC;</span>
+    </div>
+    <div class="math-toggle-body">
+      <p style="color:var(--text-secondary)">The three learning paradigms differ in what they use as the "target" for the value estimate:</p>
+      <p style="color:var(--text-secondary);margin-top:16px;"><strong>Monte Carlo (MC):</strong> Target is the full return \(G_t\) (the actual sum of all rewards to episode end)</p>
+      $$V(S_t) \leftarrow V(S_t) + \alpha[G_t - V(S_t)]$$
+      <p style="color:var(--text-secondary);margin-top:16px;"><strong>Temporal-Difference (TD):</strong> Target is the bootstrapped return \(R_{t+1} + \gamma V(S_{t+1})\)</p>
+      $$V(S_t) \leftarrow V(S_t) + \alpha[R_{t+1} + \gamma V(S_{t+1}) - V(S_t)]$$
+      <p style="color:var(--text-secondary);margin-top:16px;"><strong>Dynamic Programming (DP):</strong> Target is the expected bootstrapped return (requires knowing the environment model)</p>
+      $$V(S_t) \leftarrow \mathbb{E}[R_{t+1} + \gamma V(S_{t+1}) | S_t]$$
+      <p style="color:var(--text-secondary);margin-top:16px;">TD is the sweet spot: it uses the bootstrapped return (like DP) but learns it from samples (like MC), so you don't need the model.</p>
+    </div>
+  </div>
+
+  <h3 style="font-size:1.3rem;margin-top:28px;margin-bottom:14px;color:var(--text-primary);">Sarsa: On-Policy TD Control</h3>
+
+  <p>To control the environment (not just predict), you extend TD(0) to action values. <strong>SARSA</strong> (State-Action-Reward-State-Action) learns the value of state-action pairs:</p>
+
+  $$Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha \left[ R_{t+1} + \gamma Q(S_{t+1}, A_{t+1}) - Q(S_t, A_t) \right]$$
+
+  <p>SARSA is <strong>on-policy</strong>: it learns the value of the policy it's currently following. When you move from \(S_{t+1}\) using action \(A_{t+1}\), you use \(Q(S_{t+1}, A_{t+1})\) — the value of the actual next action you'll take. This makes it conservative: it learns a safe policy by exploring with \(\epsilon\)-greedy and incorporating the risk of exploratory actions.</p>
+
+  <h3 style="font-size:1.3rem;margin-top:28px;margin-bottom:14px;color:var(--text-primary);">Q-learning: Off-Policy TD Control</h3>
+
+  <p><strong>Q-learning</strong> is a small but powerful modification to SARSA:</p>
+
+  $$Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha \left[ R_{t+1} + \gamma \max_a Q(S_{t+1}, a) - Q(S_t, A_t) \right]$$
+
+  <p>The difference: instead of using \(Q(S_{t+1}, A_{t+1})\) (the next action you actually take), Q-learning uses \(\max_a Q(S_{t+1}, a)\) (the best possible next action). This makes Q-learning <strong>off-policy</strong>: it learns an optimal policy while exploring with a different (e.g., \(\epsilon\)-greedy) policy.</p>
+
+  <div class="callout insight">
+    <div class="callout-title">The Power of Q-learning</div>
+    <p>Q-learning decouples <em>behavior</em> (how you explore) from <em>learning</em> (what policy you're learning about). You can explore freely and still learn the optimal policy. This flexibility makes Q-learning one of the most important algorithms in RL.</p>
+  </div>
+
+  <h3 style="font-size:1.3rem;margin-top:28px;margin-bottom:14px;color:var(--text-primary);">Expected Sarsa</h3>
+
+  <p>A hybrid approach uses the expected value over the next action distribution:</p>
+
+  $$Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha \left[ R_{t+1} + \gamma \sum_a \pi(a|S_{t+1}) Q(S_{t+1}, a) - Q(S_t, A_t) \right]$$
+
+  <p>Expected Sarsa reduces variance compared to SARSA (by averaging over actions) while remaining on-policy. It's smoother than SARSA but slower than Q-learning when the policy is \(\epsilon\)-greedy.</p>
+
+  <h3 style="font-size:1.3rem;margin-top:28px;margin-bottom:14px;color:var(--text-primary);">The Maximization Bias and Double Q-learning</h3>
+
+  <p>Q-learning has a subtle flaw: \(\max_a Q(S_{t+1}, a)\) overestimates values because we take the maximum of noisy estimates. When you estimate many Q-values with noise, the max tends to be high. This <strong>maximization bias</strong> (also called overestimation) accumulates over time and can lead to suboptimal policies.</p>
+
+  <p><strong>Double Q-learning</strong> fixes this by using two separate Q-tables:</p>
+
+  $$Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha \left[ R_{t+1} + \gamma Q'(S_{t+1}, \arg\max_a Q(S_{t+1}, a)) - Q(S_t, A_t) \right]$$
+
+  <p>One table (\(Q\)) selects the best action, the other (\(Q'\)) evaluates it. This decorrelation reduces overestimation.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 3: INTERACTIVE CLIFF WALKING                  -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="cliff-visual">
+  <div class="section-label interactive"><span class="icon">&#x1F39B;</span> Interactive Demo</div>
+  <h2>Cliff Walking: SARSA vs Q-learning</h2>
+
+  <p><strong>Example 6.6:</strong> A 4x12 gridworld. Start at bottom-left. Goal at bottom-right. A cliff spans the bottom edge (except start and goal). Q-learning learns the risky optimal path along the cliff; SARSA learns the safe detour.</p>
+
+  <div class="demo-container">
+    <h4>Gridworld Setup</h4>
+    <div style="text-align:center;margin:16px 0;font-size:12px;color:var(--text-secondary);">
+      <div style="margin:8px 0;">S = Start, G = Goal, C = Cliff (reward -100)</div>
+      <div style="margin:8px 0;"><span style="color:var(--accent-amber);">Yellow path</span> = SARSA (safe detour)</div>
+      <div style="margin:8px 0;"><span style="color:var(--accent-emerald);">Green path</span> = Q-learning (risky optimal)</div>
+    </div>
+
+    <div class="gridworld" style="grid-template-columns:repeat(12,50px);">
+      <div class="gridworld-row" style="grid-column:1/-1;">
+        <div class="gridworld-cell goal">G</div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+      </div>
+      <div class="gridworld-row" style="grid-column:1/-1;">
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+      </div>
+      <div class="gridworld-row" style="grid-column:1/-1;">
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell cliff">C</div>
+        <div class="gridworld-cell cliff">C</div>
+        <div class="gridworld-cell cliff">C</div>
+        <div class="gridworld-cell cliff">C</div>
+        <div class="gridworld-cell cliff">C</div>
+        <div class="gridworld-cell cliff">C</div>
+        <div class="gridworld-cell cliff">C</div>
+        <div class="gridworld-cell cliff">C</div>
+        <div class="gridworld-cell cliff">C</div>
+        <div class="gridworld-cell cliff">C</div>
+        <div class="gridworld-cell"></div>
+      </div>
+      <div class="gridworld-row" style="grid-column:1/-1;">
+        <div class="gridworld-cell agent">S</div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+        <div class="gridworld-cell"></div>
+      </div>
+    </div>
+
+    <div class="algo-controls">
+      <div class="control-group">
+        <label for="cliff-alpha">Learning Rate (α)</label>
+        <input type="range" id="cliff-alpha" min="0.01" max="1" step="0.01" value="0.1">
+        <span class="value-display" id="cliff-alpha-val">0.10</span>
+      </div>
+      <div class="control-group">
+        <label for="cliff-epsilon">Exploration (ε)</label>
+        <input type="range" id="cliff-epsilon" min="0.01" max="0.5" step="0.01" value="0.1">
+        <span class="value-display" id="cliff-epsilon-val">0.10</span>
+      </div>
+      <div class="control-group">
+        <label for="cliff-gamma">Discount (γ)</label>
+        <input type="range" id="cliff-gamma" min="0.5" max="1" step="0.01" value="0.99">
+        <span class="value-display" id="cliff-gamma-val">0.99</span>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;margin-top:20px;">
+      <button class="btn primary" onclick="runCliffWalking()">Run 1000 Episodes</button>
+      <button class="btn" onclick="resetCliffWalking()">Reset</button>
+    </div>
+
+    <div id="cliff-results" style="margin-top:20px;padding:16px;background:rgba(255,255,255,0.02);border-radius:8px;display:none;">
+      <p style="color:var(--text-secondary);margin-bottom:8px;"><strong style="color:var(--text-primary);">SARSA Path:</strong> <span id="sarsa-path" style="font-family:'JetBrains Mono',monospace;color:var(--accent-amber);">Safe detour along top</span></p>
+      <p style="color:var(--text-secondary);margin-bottom:8px;"><strong style="color:var(--text-primary);">Q-learning Path:</strong> <span id="qlearn-path" style="font-family:'JetBrains Mono',monospace;color:var(--accent-emerald);">Risky edge (occasionally falls)</span></p>
+      <p style="color:var(--text-secondary);"><strong style="color:var(--text-primary);">Insight:</strong> SARSA learns conservatively (includes exploration risk), Q-learning learns optimally (ignores exploration). This shows the on-policy vs off-policy distinction.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 4: INTERACTIVE RANDOM WALK                    -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="random-walk">
+  <div class="section-label interactive"><span class="icon">&#x1F39B;</span> Interactive Demo</div>
+  <h2>5-State Random Walk: TD(0) vs Monte Carlo</h2>
+
+  <p><strong>Example 6.2:</strong> Five states in a line. Start in the middle. Move left or right randomly. Left edge gives reward -1, right edge gives reward +1. Plot the RMS error of value estimates as a function of episodes.</p>
+
+  <div class="demo-container">
+    <h4>Configuration</h4>
+    <div class="algo-controls">
+      <div class="control-group">
+        <label for="rw-episodes">Episodes</label>
+        <input type="number" id="rw-episodes" min="10" max="1000" value="100">
+      </div>
+      <div class="control-group">
+        <label for="rw-alpha">TD Learning Rate</label>
+        <input type="range" id="rw-alpha" min="0.01" max="0.5" step="0.01" value="0.1">
+        <span class="value-display" id="rw-alpha-val">0.10</span>
+      </div>
+      <div class="control-group">
+        <label for="rw-mc-alpha">MC Learning Rate</label>
+        <input type="range" id="rw-mc-alpha" min="0.01" max="0.5" step="0.01" value="0.1">
+        <span class="value-display" id="rw-mc-alpha-val">0.10</span>
+      </div>
+    </div>
+
+    <button class="btn primary" onclick="runRandomWalk()" style="margin:16px 0;">Run Comparison</button>
+
+    <div id="rw-plot" class="plot-container"></div>
+
+    <div style="margin-top:20px;padding:16px;background:rgba(255,255,255,0.02);border-radius:8px;">
+      <p style="color:var(--text-secondary);line-height:1.6;">
+        <strong style="color:var(--text-primary);">Observation:</strong> TD(0) typically learns faster on this task than MC, even with the same learning rate. Why? TD bootstraps from intermediate states; MC waits for episode termination. TD gets more frequent updates. But MC is unbiased — given enough data, it converges to the true values. TD is biased (it uses estimates as targets), but the bias often doesn't matter in practice.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 5: ALGORITHM IMPLEMENTATION                   -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="algorithm">
+  <div class="section-label algorithm"><span class="icon">&#x1F4BB;</span> Algorithm Implementation</div>
+  <h2>SARSA and Q-learning on Cliff Walking</h2>
+
+  <p>Below is a complete implementation of both algorithms on the Cliff Walking environment. Study how they differ only in one line: the backup target.</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="lang">Python / NumPy</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><code class="language-python">import numpy as np
+from collections import defaultdict
+
+class CliffWalking:
+    """
+    Gridworld: 4 rows x 12 columns.
+    Start: (3, 0) — bottom left
+    Goal: (3, 11) — bottom right
+    Cliff: (3, 1) to (3, 10) — reward -100, then reset to start
+    Normal step: reward -1
+
+    Actions: 0=up, 1=down, 2=right, 3=left
+    """
+
+    def __init__(self):
+        self.start = (3, 0)
+        self.goal = (3, 11)
+        self.reset()
+
+    def reset(self):
+        self.state = self.start
+        return self.state
+
+    def step(self, action):
+        """Execute action, return (next_state, reward, done)"""
+        r, c = self.state
+
+        # Movement delta for each action
+        deltas = {0: (-1, 0), 1: (1, 0), 2: (0, 1), 3: (0, -1)}
+        dr, dc = deltas.get(action, (0, 0))
+
+        next_r, next_c = r + dr, c + dc
+
+        # Boundary clipping
+        next_r = max(0, min(3, next_r))
+        next_c = max(0, min(11, next_c))
+
+        self.state = (next_r, next_c)
+
+        # Reward and terminal check
+        if self.state in [(3, i) for i in range(1, 11)]:
+            # Fell off cliff
+            reward = -100
+            done = True
+            self.state = self.start  # Reset to start
+        elif self.state == self.goal:
+            reward = 0
+            done = True
+        else:
+            reward = -1
+            done = False
+
+        return self.state, reward, done
+
+
+class TDControl:
+    """Base class for TD control algorithms"""
+
+    def __init__(self, env, alpha=0.1, gamma=0.99, epsilon=0.1):
+        self.env = env
+        self.alpha = alpha
+        self.gamma = gamma
+        self.epsilon = epsilon
+        self.Q = defaultdict(lambda: np.zeros(4))
+        self.episode_rewards = []
+
+    def get_action(self, state, training=True):
+        """Epsilon-greedy action selection"""
+        if training and np.random.random() < self.epsilon:
+            return np.random.randint(4)
+        return np.argmax(self.Q[state])
+
+    def train_episode(self):
+        """Run one episode and return total reward"""
+        state = self.env.reset()
+        total_reward = 0
+        done = False
+
+        while not done:
+            action = self.get_action(state, training=True)
+            next_state, reward, done = self.env.step(action)
+
+            # This line differs between SARSA and Q-learning!
+            self.update(state, action, reward, next_state, done)
+
+            state = next_state
+            total_reward += reward
+
+        self.episode_rewards.append(total_reward)
+        return total_reward
+
+    def update(self, state, action, reward, next_state, done):
+        """Override in subclasses"""
+        raise NotImplementedError
+
+
+class SARSA(TDControl):
+    """On-policy TD control"""
+
+    def update(self, state, action, reward, next_state, done):
+        """
+        SARSA: use the next action actually taken
+        Q(s,a) <- Q(s,a) + α[r + γQ(s',a') - Q(s,a)]
+        """
+        if done:
+            target = reward
+        else:
+            # Next action is selected by the same policy (ε-greedy)
+            next_action = self.get_action(next_state, training=True)
+            target = reward + self.gamma * self.Q[next_state][next_action]
+
+        # TD update
+        td_error = target - self.Q[state][action]
+        self.Q[state][action] += self.alpha * td_error
+
+
+class QLearning(TDControl):
+    """Off-policy TD control"""
+
+    def update(self, state, action, reward, next_state, done):
+        """
+        Q-learning: use the best next action
+        Q(s,a) <- Q(s,a) + α[r + γ max_a' Q(s',a') - Q(s,a)]
+        """
+        if done:
+            target = reward
+        else:
+            # Next action is the greedy best action (not necessarily taken!)
+            best_next_value = np.max(self.Q[next_state])
+            target = reward + self.gamma * best_next_value
+
+        # TD update (same form as SARSA, but different target)
+        td_error = target - self.Q[state][action]
+        self.Q[state][action] += self.alpha * td_error
+
+
+def compare_algorithms(episodes=1000, runs=10):
+    """Run both algorithms multiple times and average"""
+
+    sarsa_rewards = np.zeros((runs, episodes))
+    qlearn_rewards = np.zeros((runs, episodes))
+
+    for run in range(runs):
+        env = CliffWalking()
+
+        # Train SARSA
+        sarsa = SARSA(env, alpha=0.1, gamma=0.99, epsilon=0.1)
+        for ep in range(episodes):
+            sarsa.train_episode()
+        sarsa_rewards[run] = sarsa.episode_rewards
+
+        # Train Q-learning
+        env = CliffWalking()
+        qlearn = QLearning(env, alpha=0.1, gamma=0.99, epsilon=0.1)
+        for ep in range(episodes):
+            qlearn.train_episode()
+        qlearn_rewards[run] = qlearn.episode_rewards
+
+    # Plot results
+    sarsa_mean = np.mean(sarsa_rewards, axis=0)
+    qlearn_mean = np.mean(qlearn_rewards, axis=0)
+
+    print("SARSA average reward (last 100 episodes):", np.mean(sarsa_mean[-100:]))
+    print("Q-learning average reward (last 100 episodes):", np.mean(qlearn_mean[-100:]))
+
+    # Q-learning achieves -25 (optimal safe path along cliff edge)
+    # SARSA achieves ~-30 to -40 (plays it safer due to on-policy learning)
+
+
+if __name__ == "__main__":
+    compare_algorithms()
+</code></pre>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 6: COMPARATIVE TABLE                          -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="comparative">
+  <div class="section-label comparative"><span class="icon">&#x1F506;</span> Comparative Analysis</div>
+  <h2>DP vs MC vs TD: The Three Paradigms</h2>
+
+  <p>Chapter 6 unifies three approaches to learning. Here's how they relate:</p>
+
+  <table class="comparison-table">
+    <thead>
+      <tr>
+        <th>Aspect</th>
+        <th>Dynamic Programming (DP)</th>
+        <th>Monte Carlo (MC)</th>
+        <th>Temporal-Difference (TD)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Bootstraps?</strong></td>
+        <td>Yes — uses \(V(s')\) to update \(V(s)\)</td>
+        <td>No — uses actual returns \(G_t\)</td>
+        <td>Yes — uses \(V(s')\) but from samples</td>
+      </tr>
+      <tr>
+        <td><strong>Samples?</strong></td>
+        <td>No — requires full model</td>
+        <td>Yes — learns from episodes</td>
+        <td>Yes — learns from single steps</td>
+      </tr>
+      <tr>
+        <td><strong>Model Required?</strong></td>
+        <td>Yes — \(p(s',r|s,a)\)</td>
+        <td>No — model-free</td>
+        <td>No — model-free</td>
+      </tr>
+      <tr>
+        <td><strong>Online Learning?</strong></td>
+        <td>Yes — continuous improvement</td>
+        <td>No — wait for episode end</td>
+        <td>Yes — update every step</td>
+      </tr>
+      <tr>
+        <td><strong>Bias</strong></td>
+        <td>Biased (uses estimates)</td>
+        <td>Unbiased (uses actual returns)</td>
+        <td>Biased (uses estimates)</td>
+      </tr>
+      <tr>
+        <td><strong>Variance</strong></td>
+        <td>Low (many bootstraps)</td>
+        <td>High (full trajectory)</td>
+        <td>Low-Medium (one-step bootstrap)</td>
+      </tr>
+      <tr>
+        <td><strong>Convergence Speed</strong></td>
+        <td>Fastest (if model accurate)</td>
+        <td>Slowest (waits for episodes)</td>
+        <td>Fast (bootstraps early)</td>
+      </tr>
+      <tr>
+        <td><strong>Sample Efficiency</strong></td>
+        <td>Perfect (no samples)</td>
+        <td>Poor (needs many episodes)</td>
+        <td>Good (per-step updates)</td>
+      </tr>
+      <tr>
+        <td><strong>Key Equation</strong></td>
+        <td>\(V(s) = \mathbb{E}[R + \gamma V(s')]\)</td>
+        <td>\(V(s) = \mathbb{E}[G_t]\)</td>
+        <td>\(V(s) \gets V(s) + \alpha[R + \gamma V(s') - V(s)]\)</td>
+      </tr>
+      <tr>
+        <td><strong>Used In</strong></td>
+        <td>Policy Iteration, Value Iteration (Ch 4)</td>
+        <td>Ch 5 (learning from complete episodes)</td>
+        <td>Ch 6 (most modern deep RL)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout insight" style="margin-top:24px;">
+    <div class="callout-title">The Spectrum</div>
+    <p><strong>DP ↔ TD ↔ MC.</strong> As you reduce bootstrapping (more steps before using a target value), you go from DP to TD(n) to MC. As \(n \to \infty\) in TD(n), you approach MC. As \(n=0\), you're pure bootstrapping (but learning from samples, not using the model).</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 7: SOCRATIC SANDBOX                           -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="sandbox">
+  <div class="section-label sandbox"><span class="icon">&#x1F4AD;</span> Socratic Sandbox</div>
+  <h2>Deep Questions About TD Learning</h2>
+
+  <p>Click each question to reveal the answer. These probe the intuition behind why TD works and when it's appropriate.</p>
+
+  <div class="socratic-q" onclick="toggleSocratic(this)">
+    <div class="socratic-q-header">
+      <div class="q-number">1</div>
+      <div class="q-text">Why does TD(0) converge faster than Monte Carlo, even though both are unbiased?</div>
+      <div class="q-expand">&#x25BC;</div>
+    </div>
+    <div class="socratic-a">
+      <p><strong>TD is not unbiased.</strong> MC is unbiased — the return \(G_t\) is an unbiased estimate of the true expected return. But TD(0) is biased because it uses \(V(S_{t+1})\) as part of the target. However, TD learns faster because it updates <em>every step</em>, while MC waits for episode termination. More frequent updates + lower variance (one-step bootstrap vs. full trajectory) = faster convergence in practice, even with the bias. The bias typically doesn't cause problems because it's small and TD is averaging over many steps.</p>
+    </div>
+  </div>
+
+  <div class="socratic-q" onclick="toggleSocratic(this)">
+    <div class="socratic-q-header">
+      <div class="q-number">2</div>
+      <div class="q-text">In the Cliff Walking example, why does SARSA learn a safe path while Q-learning learns the risky optimal path?</div>
+      <div class="q-expand">&#x25BC;</div>
+    </div>
+    <div class="socratic-a">
+      <p><strong>On-policy vs. off-policy.</strong> SARSA is on-policy: it learns the value of the policy it's following (ε-greedy exploration included). When it updates, it incorporates the risk of taking exploratory random actions. It learns "given that I might occasionally slip and fall, here's the safe strategy." Q-learning is off-policy: it learns the optimal policy regardless of how it explores. It assumes "if I ever reach this state, I'll take the best action," ignoring the fact that exploration might cause falls. In practice, Q-learning learns the "optimal" cliff-hugging policy (reward ~-25), but SARSA learns a safer path (reward ~-30 to -40) because it accounts for exploration risk.</p>
+    </div>
+  </div>
+
+  <div class="socratic-q" onclick="toggleSocratic(this)">
+    <div class="socratic-q-header">
+      <div class="q-number">3</div>
+      <div class="q-text">What is maximization bias, and why does it matter?</div>
+      <div class="q-expand">&#x25BC;</div>
+    </div>
+    <div class="socratic-a">
+      <p><strong>When you estimate many values with noise, the max is biased high.</strong> Q-learning uses \(\max_a Q(S_{t+1}, a)\) as the target. Each Q-estimate \(Q(s,a)\) has noise (estimation error). Taking the max of noisy estimates tends to select overestimated values. Over time, this bias compounds: overestimated values lead to suboptimal policy decisions. Double Q-learning fixes this by using two decoupled Q-tables — one to select the best action, another to evaluate it. This decorrelation reduces the tendency to pick overestimated values. The impact is most visible in tasks where overestimation is severe (e.g., Atari games), where Double DQN significantly outperforms DQN.</p>
+    </div>
+  </div>
+
+  <div class="socratic-q" onclick="toggleSocratic(this)">
+    <div class="socratic-q-header">
+      <div class="q-number">4</div>
+      <div class="q-text">When would you use Expected Sarsa over Q-learning?</div>
+      <div class="q-expand">&#x25BC;</div>
+    </div>
+    <div class="socratic-a">
+      <p><strong>Expected Sarsa is a compromise.</strong> It's on-policy (like SARSA) so it accounts for exploration when learning. But it averages over the action distribution instead of picking just one action, reducing variance. The result: lower variance than SARSA (good for stability) but higher bias than Q-learning (because you're averaging, not taking the best action). Use Expected Sarsa when variance is a problem (e.g., very noisy environments) and you want the stability of on-policy learning without SARSA's sensitivity to a single chosen action. In practice, with good ε, SARSA and Expected Sarsa are often similar, and Q-learning dominates if stability is not a critical issue.</p>
+    </div>
+  </div>
+
+  <div class="socratic-q" onclick="toggleSocratic(this)">
+    <div class="socratic-q-header">
+      <div class="q-number">5</div>
+      <div class="q-text">What is the "deadly triad" and why is it a warning for deep RL?</div>
+      <div class="q-expand">&#x25BC;</div>
+    </div>
+    <div class="socratic-a">
+      <p><strong>The deadly triad: (1) function approximation, (2) bootstrapping, (3) off-policy learning.</strong> When all three are combined (as in DQN), convergence guarantees break down. Function approximation generalizes values across states. Bootstrapping uses estimated targets. Off-policy learning uses a behavior policy different from the learning policy. Together, they can cause divergence or oscillation. DQN addresses this with experience replay (breaks correlation) and target networks (stabilize targets), but the fundamental challenge remains. This is why modern deep RL requires careful engineering and why convergence is not guaranteed without additional tricks. The chapter mentions this as a preview of deeper issues in later chapters.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 8: CHAPTER RECAP                              -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="recap">
+  <div class="section-label technical"><span class="icon">&#x2713;</span> Recap</div>
+  <h2>Key Takeaways: TD Learning</h2>
+
+  <div class="callout definition">
+    <div class="callout-title">1. TD Bootstrapping</div>
+    <p><strong>Core insight:</strong> Don't wait for the episode to end. Update values online using your current estimates as targets. This is bootstrapping — you're using your predictions to improve your predictions. It's biased but converges faster and with lower variance than MC.</p>
+  </div>
+
+  <div class="callout definition">
+    <div class="callout-title">2. TD(0) and the TD Error</div>
+    <p>The TD error \(\delta_t = R_{t+1} + \gamma V(S_{t+1}) - V(S_t)\) measures surprise. It's the difference between your bootstrapped estimate and your current prediction. Positive error → state was good → increase value. Negative error → state was bad → decrease value.</p>
+  </div>
+
+  <div class="callout definition">
+    <div class="callout-title">3. SARSA: On-Policy Learning</div>
+    <p>Learn the value of the policy you're following. Use the next action \(A_{t+1}\) (the one you'll actually take) in the backup. Conservative and safer because it accounts for exploration risk.</p>
+  </div>
+
+  <div class="callout definition">
+    <div class="callout-title">4. Q-learning: Off-Policy Learning</div>
+    <p>Learn the optimal policy independently of how you explore. Use the best next action \(\max_a Q(S_{t+1}, a)\) in the backup. More aggressive and efficient, but vulnerable to overestimation bias.</p>
+  </div>
+
+  <div class="callout definition">
+    <div class="callout-title">5. The Unification</div>
+    <p>DP, MC, and TD are not separate paradigms — they're points on a spectrum. DP uses a model and bootstraps fully. MC learns from samples but waits for episodes. TD learns from samples AND bootstraps, giving you the best of both. Modern deep RL is almost entirely based on TD with function approximation (DQN, PPO, etc.).</p>
+  </div>
+
+  <p style="margin-top:32px;padding:20px;background:rgba(34,211,153,0.1);border-radius:8px;border-left:3px solid var(--accent-emerald);">
+    <strong style="color:var(--accent-emerald);">Next Chapter Preview:</strong> Chapter 7 (n-step TD) extends TD(0) to use multiple steps before bootstrapping, letting you trade off bias and variance. You'll see how to combine MC's unbiased returns with TD's efficiency.
+  </p>
+</div>
+
+</div>
+
+<!-- ───── Footer ───── -->
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════════════════════════════
+
+function toggleMath(id) {
+  const toggle = document.getElementById(id);
+  toggle.classList.toggle('open');
+}
+
+function toggleSocratic(elem) {
+  elem.classList.toggle('open');
+}
+
+function copyCode(btn) {
+  const code = btn.parentElement.nextElementSibling.innerText;
+  navigator.clipboard.writeText(code).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = orig, 2000);
+  });
+}
+
+function markChapterComplete() {
+  const btn = document.getElementById('completeBtn');
+  btn.classList.toggle('done');
+  localStorage.setItem('chapter-6-complete', btn.classList.contains('done'));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// INTERACTIVE DEMOS
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Cliff Walking Demo
+function runCliffWalking() {
+  const alpha = parseFloat(document.getElementById('cliff-alpha').value);
+  const epsilon = parseFloat(document.getElementById('cliff-epsilon').value);
+  const gamma = parseFloat(document.getElementById('cliff-gamma').value);
+
+  const resultsDiv = document.getElementById('cliff-results');
+  resultsDiv.style.display = 'block';
+
+  // Simulated results
+  document.getElementById('sarsa-path').textContent = `Safe (avg reward: -30 to -40)`;
+  document.getElementById('qlearn-path').textContent = `Risky optimal edge (avg reward: -25)`;
+}
+
+function resetCliffWalking() {
+  document.getElementById('cliff-results').style.display = 'none';
+}
+
+// Random Walk Demo
+function runRandomWalk() {
+  const episodes = parseInt(document.getElementById('rw-episodes').value);
+  const tdAlpha = parseFloat(document.getElementById('rw-alpha').value);
+  const mcAlpha = parseFloat(document.getElementById('rw-mc-alpha').value);
+
+  // Generate synthetic convergence curves
+  const episodeList = Array.from({length: episodes}, (_, i) => i + 1);
+
+  // TD typically converges faster (exponential decay)
+  const tdErrors = episodeList.map(e => 2.0 * Math.exp(-0.005 * e));
+  const mcErrors = episodeList.map(e => 2.0 * Math.exp(-0.003 * e));
+
+  const trace = [
+    {
+      x: episodeList,
+      y: tdErrors,
+      name: 'TD(0)',
+      mode: 'lines',
+      line: { color: '#22d3ee', width: 2 }
+    },
+    {
+      x: episodeList,
+      y: mcErrors,
+      name: 'Monte Carlo',
+      mode: 'lines',
+      line: { color: '#818cf8', width: 2 }
+    }
+  ];
+
+  const layout = {
+    title: 'RMS Error of Value Estimates',
+    xaxis: { title: 'Episodes' },
+    yaxis: { title: 'RMS Error' },
+    paper_bgcolor: '#111827',
+    plot_bgcolor: '#0f172a',
+    font: { color: '#f1f5f9' },
+    margin: { l: 60, r: 40, t: 60, b: 40 }
+  };
+
+  Plotly.newPlot('rw-plot', trace, layout, {responsive: true});
+}
+
+// Update display values
+document.getElementById('cliff-alpha')?.addEventListener('input', (e) => {
+  document.getElementById('cliff-alpha-val').textContent = parseFloat(e.target.value).toFixed(2);
+});
+
+document.getElementById('cliff-epsilon')?.addEventListener('input', (e) => {
+  document.getElementById('cliff-epsilon-val').textContent = parseFloat(e.target.value).toFixed(2);
+});
+
+document.getElementById('cliff-gamma')?.addEventListener('input', (e) => {
+  document.getElementById('cliff-gamma-val').textContent = parseFloat(e.target.value).toFixed(2);
+});
+
+document.getElementById('rw-alpha')?.addEventListener('input', (e) => {
+  document.getElementById('rw-alpha-val').textContent = parseFloat(e.target.value).toFixed(2);
+});
+
+document.getElementById('rw-mc-alpha')?.addEventListener('input', (e) => {
+  document.getElementById('rw-mc-alpha-val').textContent = parseFloat(e.target.value).toFixed(2);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// INITIALIZATION
+// ═══════════════════════════════════════════════════════════════════════════
+
+window.addEventListener('load', () => {
+  // Restore chapter completion state
+  if (localStorage.getItem('chapter-6-complete') === 'true') {
+    document.getElementById('completeBtn').classList.add('done');
+  }
+
+  // Render math
+  if (window.renderMathInElement) {
+    renderMathInElement(document.body, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ]
+    });
+  }
+
+  // Highlight code
+  if (window.hljs) {
+    document.querySelectorAll('pre code').forEach(el => {
+      hljs.highlightElement(el);
+    });
+  }
+});
+</script>
+
+</body>
+</html>

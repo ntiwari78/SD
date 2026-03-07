@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 11: Off-policy Methods with Approximation — RL Interactive Curriculum</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
+<!-- KaTeX for LaTeX rendering -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<!-- Plotly for 3D viz -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+<!-- Highlight.js for code -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<style>
+:root {
+  --bg-deep: #0a0e1a;
+  --bg-card: #111827;
+  --bg-card-alt: #0f172a;
+  --bg-surface: #1e293b;
+  --border-subtle: rgba(255,255,255,0.06);
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent-indigo: #818cf8;
+  --accent-blue: #60a5fa;
+  --accent-cyan: #22d3ee;
+  --accent-emerald: #34d399;
+  --accent-amber: #fbbf24;
+  --accent-rose: #fb7185;
+  --accent-purple: #c084fc;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  line-height: 1.7;
+  font-size: 16px;
+}
+
+/* ───── Layout ───── */
+.page-wrapper {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+
+/* ───── Top Nav ───── */
+.top-nav {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(10,14,26,0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 12px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.top-nav a {
+  color: var(--text-secondary); text-decoration: none;
+  font-size: 14px; font-weight: 500;
+  display: flex; align-items: center; gap: 6px;
+  transition: color 0.2s;
+}
+.top-nav a:hover { color: var(--accent-indigo); }
+.nav-chapter-info {
+  font-size: 13px; color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.btn-complete {
+  padding: 8px 16px; border-radius: 8px; border: none;
+  background: linear-gradient(135deg, var(--accent-emerald), #10b981);
+  color: #022c22; font-weight: 600; font-size: 13px;
+  cursor: pointer; transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+.btn-complete:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(52,211,153,0.3); }
+.btn-complete.done { background: var(--bg-surface); color: var(--accent-emerald); cursor: default; }
+
+/* ───── Chapter Header ───── */
+.chapter-header {
+  text-align: center;
+  padding: 80px 0 48px;
+}
+.ch-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 14px; border-radius: 999px;
+  background: rgba(251,113,133,0.1);
+  border: 1px solid rgba(251,113,133,0.2);
+  font-size: 11px; font-weight: 700;
+  color: var(--accent-rose);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.chapter-header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2.2rem, 5vw, 3.5rem);
+  font-weight: 900; line-height: 1.15;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #f1f5f9 0%, var(--accent-rose) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.chapter-header .subtitle {
+  font-size: 18px; color: var(--text-secondary);
+  max-width: 580px; margin: 0 auto;
+}
+
+/* ───── Table of Contents ───── */
+.toc {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 24px 28px;
+  margin-bottom: 48px;
+}
+.toc h3 {
+  font-size: 13px; font-weight: 700;
+  color: var(--text-muted); letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.toc-list { list-style: none; }
+.toc-list li { margin-bottom: 6px; }
+.toc-list a {
+  color: var(--text-secondary); text-decoration: none;
+  font-size: 14px; font-weight: 500;
+  padding: 4px 8px; border-radius: 6px;
+  display: inline-block;
+  transition: all 0.2s;
+}
+.toc-list a:hover { color: var(--accent-indigo); background: rgba(129,140,248,0.08); }
+.toc-list .sec-num {
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  margin-right: 6px;
+}
+
+/* ───── Section Headers ───── */
+.section {
+  margin-bottom: 56px;
+}
+.section-label {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.section-label .icon { font-size: 16px; }
+.section-label.feynman { color: var(--accent-amber); }
+.section-label.technical { color: var(--accent-indigo); }
+.section-label.algorithm { color: var(--accent-emerald); }
+.section-label.sandbox { color: var(--accent-rose); }
+.section-label.interactive { color: var(--accent-cyan); }
+.section-label.warning { color: var(--accent-rose); }
+
+.section h2 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800; line-height: 1.2;
+  margin-bottom: 20px;
+}
+
+.section p, .section li {
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+}
+.section p strong, .section li strong { color: var(--text-primary); font-weight: 600; }
+
+/* ───── Info Cards / Callouts ───── */
+.callout {
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin: 24px 0;
+  border-left: 3px solid;
+}
+.callout.insight {
+  background: rgba(129,140,248,0.06);
+  border-color: var(--accent-indigo);
+}
+.callout.analogy {
+  background: rgba(251,191,36,0.06);
+  border-color: var(--accent-amber);
+}
+.callout.warning {
+  background: rgba(251,113,133,0.08);
+  border-color: var(--accent-rose);
+}
+.callout.definition {
+  background: rgba(52,211,153,0.06);
+  border-color: var(--accent-emerald);
+}
+.callout-title {
+  font-size: 13px; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.callout.insight .callout-title { color: var(--accent-indigo); }
+.callout.analogy .callout-title { color: var(--accent-amber); }
+.callout.warning .callout-title { color: var(--accent-rose); }
+.callout.definition .callout-title { color: var(--accent-emerald); }
+.callout p { margin-bottom: 8px; }
+.callout p:last-child { margin-bottom: 0; }
+
+/* ───── Math Toggle ───── */
+.math-toggle {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin: 24px 0;
+  overflow: hidden;
+}
+.math-toggle-header {
+  padding: 14px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.math-toggle-header:hover { background: rgba(255,255,255,0.02); }
+.math-toggle-header .label {
+  font-size: 14px; font-weight: 600;
+  color: var(--accent-purple);
+  display: flex; align-items: center; gap: 8px;
+}
+.math-toggle-header .chevron {
+  color: var(--text-muted); font-size: 14px;
+  transition: transform 0.3s;
+}
+.math-toggle.open .chevron { transform: rotate(180deg); }
+.math-toggle-body {
+  display: none;
+  padding: 0 20px 20px;
+  border-top: 1px solid var(--border-subtle);
+}
+.math-toggle.open .math-toggle-body { display: block; padding-top: 16px; }
+
+/* ───── KaTeX ───── */
+.katex-display { margin: 20px 0; overflow-x: auto; }
+.katex { font-size: 1.1em; }
+
+/* ───── Code Blocks ───── */
+.code-block {
+  background: #0d1117;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin: 24px 0;
+  overflow: hidden;
+}
+.code-header {
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.code-header .lang {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; color: var(--text-muted); font-weight: 600;
+}
+.code-header .copy-btn {
+  padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-subtle);
+  background: transparent; color: var(--text-muted);
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s;
+}
+.code-header .copy-btn:hover { border-color: var(--accent-indigo); color: var(--accent-indigo); }
+.code-block pre {
+  padding: 16px 20px;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.code-block pre code { background: none !important; padding: 0 !important; }
+
+/* ───── Demo Containers ───── */
+.demo-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 24px 0;
+}
+.demo-container h4 {
+  font-size: 15px; font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+
+/* ───── Deadly Triad Warning Block (Special) ───── */
+.deadly-triad-block {
+  background: linear-gradient(135deg, rgba(251,113,133,0.12), rgba(251,113,133,0.06));
+  border: 2px solid rgba(251,113,133,0.3);
+  border-radius: 12px;
+  padding: 32px;
+  margin: 40px 0;
+  position: relative;
+}
+.deadly-triad-block::before {
+  content: '';
+  position: absolute;
+  top: -12px;
+  left: 24px;
+  width: 32px;
+  height: 32px;
+  background: radial-gradient(circle, var(--accent-rose), rgba(251,113,133,0.4));
+  border-radius: 50%;
+}
+.deadly-triad-block h3 {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--accent-rose);
+  margin-bottom: 4px;
+  margin-top: 8px;
+}
+.deadly-triad-block .subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.deadly-triad-block .components {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+.deadly-triad-block .component {
+  background: rgba(251,113,133,0.05);
+  border: 1px solid rgba(251,113,133,0.2);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+.deadly-triad-block .component-name {
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+.deadly-triad-block .component-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.deadly-triad-block .warning-text {
+  background: rgba(251,113,133,0.1);
+  border-left: 3px solid var(--accent-rose);
+  padding: 16px;
+  border-radius: 6px;
+  margin-top: 20px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* ───── Venn Diagram ───── */
+.venn-container {
+  position: relative;
+  width: 100%;
+  height: 400px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin: 24px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.venn-svg {
+  width: 100%;
+  height: 100%;
+}
+.venn-label {
+  font-weight: 700;
+  font-size: 14px;
+  user-select: none;
+  pointer-events: none;
+}
+.venn-circle {
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.venn-circle:hover {
+  opacity: 0.9;
+}
+.venn-tooltip {
+  position: absolute;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  pointer-events: none;
+  z-index: 100;
+  max-width: 250px;
+}
+
+/* ───── Interactive Controls ───── */
+.control-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 20px 0;
+}
+.btn-demo {
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s;
+}
+.btn-demo:hover {
+  border-color: var(--accent-indigo);
+  color: var(--accent-indigo);
+  background: rgba(129,140,248,0.05);
+}
+.btn-demo.active {
+  border-color: var(--accent-indigo);
+  background: rgba(129,140,248,0.1);
+  color: var(--accent-indigo);
+}
+
+/* ───── Divergence Plot ───── */
+.plot-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 24px 0;
+  width: 100%;
+  height: 400px;
+}
+
+/* ───── Socratic Questions ───── */
+.socratic-sandbox {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 24px 0;
+}
+.socratic-sandbox h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent-rose);
+  margin-bottom: 20px;
+}
+.question-item {
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.question-item:hover {
+  border-color: var(--accent-rose);
+  background: rgba(251,113,133,0.03);
+}
+.question-item .question-text {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+.question-item .question-hint {
+  font-size: 13px;
+  color: var(--text-muted);
+  display: none;
+}
+.question-item.expanded .question-hint {
+  display: block;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* ───── Footer Navigation ───── */
+.nav-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 32px 0;
+  border-top: 1px solid var(--border-subtle);
+  margin-top: 64px;
+}
+.nav-link {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: color 0.2s;
+}
+.nav-link:hover { color: var(--accent-indigo); }
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <a href="#" onclick="history.back(); return false;">← Back</a>
+  <span class="nav-chapter-info">Chapter 11 / 15</span>
+  <button class="btn-complete" id="completeBtn">Mark Complete</button>
+</nav>
+
+<div class="page-wrapper">
+
+<!-- ===== HEADER ===== -->
+<div class="chapter-header">
+  <div class="ch-badge">Advanced Reinforcement Learning</div>
+  <h1>Off-policy Methods with Approximation</h1>
+  <p class="subtitle">The Deadly Triad: Why Function Approximation, Bootstrapping, and Off-policy Learning Don't Mix</p>
+</div>
+
+<!-- ===== TABLE OF CONTENTS ===== -->
+<div class="toc">
+  <h3>In This Chapter</h3>
+  <ul class="toc-list">
+    <li><a href="#feynman"><span class="sec-num">1.</span>Feynman Bridge: The Wobbling Stool</a></li>
+    <li><a href="#triad"><span class="sec-num">2.</span>The Deadly Triad Explained</a></li>
+    <li><a href="#warning"><span class="sec-num">3.</span>Deadly Triad Warning</a></li>
+    <li><a href="#venn"><span class="sec-num">4.</span>Interactive Venn Diagram</a></li>
+    <li><a href="#divergence"><span class="sec-num">5.</span>Divergence Visualization</a></li>
+    <li><a href="#baird"><span class="sec-num">6.</span>Baird's Counterexample Code</a></li>
+    <li><a href="#solutions"><span class="sec-num">7.</span>Solutions: Gradient-TD & DQN</a></li>
+    <li><a href="#sandbox"><span class="sec-num">8.</span>Socratic Sandbox</a></li>
+  </ul>
+</div>
+
+<!-- ===== SECTION 1: FEYNMAN BRIDGE ===== -->
+<div class="section" id="feynman">
+  <div class="section-label feynman">
+    <span class="icon">🌉</span>
+    <span>Feynman Bridge</span>
+  </div>
+  <h2>The Wobbling Stool</h2>
+
+  <p>Imagine a three-legged stool. Each leg is individually strong and useful:</p>
+
+  <ul style="margin-left: 20px; margin-bottom: 20px;">
+    <li><strong>Leg 1 (Generalization):</strong> You can't store a value for every state, so you use function approximation to generalize from experience.</li>
+    <li><strong>Leg 2 (Learning from Estimates):</strong> You use bootstrapping—learning from your own value estimates—to speed up learning and reduce variance.</li>
+    <li><strong>Leg 3 (Learning from Others):</strong> You learn off-policy, using experience from other behavior policies to improve a target policy faster.</li>
+  </ul>
+
+  <p>Each alone works beautifully. Two legs together? Still stable. But all three together, and the stool <strong>wobbles catastrophically</strong>. Your learning can diverge to infinity, weights exploding, values becoming meaningless.</p>
+
+  <p>This is the <strong>Deadly Triad</strong>: <em>function approximation + bootstrapping + off-policy training = instability.</em></p>
+
+  <div class="callout analogy">
+    <div class="callout-title">Why the Analogy Works</div>
+    <p>In tabular methods (each state/action pair gets its own value), the stool is stable because bootstrapping from one cell doesn't affect neighboring cells. Off-policy corrections work cleanly. But with function approximation, your value function ties together state estimates through a shared neural network. Change one weight to fix one estimate, and you break estimates everywhere else—especially under off-policy corrections that can be far from the data you used to train.</p>
+  </div>
+</div>
+
+<!-- ===== SECTION 2: TECHNICAL ASCENT ===== -->
+<div class="section" id="triad">
+  <div class="section-label technical">
+    <span class="icon">⛰️</span>
+    <span>Technical Ascent</span>
+  </div>
+  <h2>The Deadly Triad: A Deep Dive</h2>
+
+  <h3 style="font-size: 1.1rem; color: var(--text-primary); margin-top: 24px; margin-bottom: 12px;">What Are The Three Components?</h3>
+
+  <p><strong>1. Function Approximation:</strong> Using a learned function (e.g., a neural network) to estimate values $$V(s) \approx \hat{v}(s, \mathbf{w})$$ instead of storing a table. This is necessary for large state spaces.</p>
+
+  <p><strong>2. Bootstrapping:</strong> Using your own estimate of future value in the Bellman update:</p>
+
+  <div class="math-toggle">
+    <div class="math-toggle-header">
+      <span class="label">Bootstrap Equation</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="math-toggle-body">
+      <div class="katex-display">$$\Delta \hat{v}(s, \mathbf{w}) \propto [R + \gamma \hat{v}(s', \mathbf{w}) - \hat{v}(s, \mathbf{w})] \nabla \hat{v}(s, \mathbf{w})$$</div>
+      <p style="font-size: 13px; color: var(--text-muted);">The target $$R + \gamma \hat{v}(s', \mathbf{w})$$ depends on weights $$\mathbf{w}$$, making the target a moving function of the parameters.</p>
+    </div>
+  </div>
+
+  <p><strong>3. Off-Policy Training:</strong> Learning a policy $$\pi$$ from data generated by a different policy $$\beta$$, often using importance sampling or other corrections.</p>
+
+  <h3 style="font-size: 1.1rem; color: var(--text-primary); margin-top: 24px; margin-bottom: 12px;">Why Together They Diverge</h3>
+
+  <p>When you combine all three:</p>
+
+  <ul style="margin-left: 20px; margin-bottom: 20px;">
+    <li>Function approximation creates <strong>aliases</strong>: updating the value of one state changes the values of other states through shared weights.</li>
+    <li>Bootstrapping amplifies these aliases: using a moving target that depends on the same weights you're updating.</li>
+    <li>Off-policy corrections add a <strong>bias term</strong> that can point in a completely different direction than the actual gradients, causing divergence.</li>
+  </ul>
+
+  <p>The result: <strong>the Bellman error can grow unboundedly</strong>, and the value function diverges.</p>
+
+  <h3 style="font-size: 1.1rem; color: var(--text-primary); margin-top: 24px; margin-bottom: 12px;">Bellman Error vs. Projected Bellman Error</h3>
+
+  <p><strong>Bellman Error:</strong> $$\|\mathcal{B}^\pi \hat{V} - \hat{V}\|$$, where $$\mathcal{B}^\pi$$ is the Bellman operator. This can diverge with the deadly triad.</p>
+
+  <p><strong>Projected Bellman Error:</strong> $$\|\Pi \mathcal{B}^\pi \hat{V} - \hat{V}\|$$, where $$\Pi$$ projects back onto the function space. This is what gradient descent on the Mean Squared Bellman Error (MSBE) actually minimizes, and it's more stable.</p>
+
+  <div class="callout insight">
+    <div class="callout-title">Key Insight</div>
+    <p>The Bellman error is not directly learnable with gradient descent on the function approximator—you'd need the true target, not your estimate. What you actually minimize is the projected Bellman error, which is why gradient-TD methods work: they explicitly target this objective.</p>
+  </div>
+</div>
+
+<!-- ===== SECTION 3: DEADLY TRIAD WARNING ===== -->
+<div class="section" id="warning">
+  <div class="section-label warning">
+    <span class="icon">⚠️</span>
+    <span>Warning Block</span>
+  </div>
+
+  <div class="deadly-triad-block">
+    <h3>The Deadly Triad</h3>
+    <div class="subtitle">Function Approximation + Bootstrapping + Off-Policy = Divergence</div>
+
+    <div class="components">
+      <div class="component">
+        <div class="component-name">Function Approximation</div>
+        <div class="component-desc">Neural networks, linear FA. Generalizes across states.</div>
+      </div>
+      <div class="component">
+        <div class="component-name">Bootstrapping</div>
+        <div class="component-desc">Learning from own value estimates. Reduces variance.</div>
+      </div>
+      <div class="component">
+        <div class="component-name">Off-Policy</div>
+        <div class="component-desc">Learning from experience of other policies.</div>
+      </div>
+    </div>
+
+    <div class="warning-text">
+      <strong>WARNING:</strong> Using all three together without special care causes value divergence. Weights and value estimates can grow to infinity. Your learning algorithm becomes unstable and unreliable. This is not just a theoretical issue—it happens in practice with standard Q-learning on large state spaces.
+    </div>
+
+    <div class="warning-text" style="margin-top: 12px; border-left-color: var(--accent-emerald); background: rgba(52,211,153,0.05);">
+      <strong>SOLUTIONS:</strong> Use gradient-TD methods (GTD, GTD2, TDC) that minimize projected Bellman error instead of traditional Bellman error. In DQN, use target networks, experience replay, and clipping to break the deadly triad's coupling.
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECTION 4: VENN DIAGRAM ===== -->
+<div class="section" id="venn">
+  <div class="section-label interactive">
+    <span class="icon">◉</span>
+    <span>Interactive Visualization</span>
+  </div>
+  <h2>The Deadly Triad: Venn Diagram</h2>
+  <p>Click on each region to see what happens with different combinations of the three components.</p>
+
+  <div class="venn-container">
+    <svg class="venn-svg" viewBox="0 0 600 500" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+          <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+
+      <!-- Left circle: Function Approximation -->
+      <circle cx="200" cy="250" r="130" fill="rgba(129,140,248,0.15)" stroke="rgba(129,140,248,0.4)" stroke-width="2" class="venn-circle fa-circle" data-region="fa"/>
+      <!-- Right circle: Bootstrapping -->
+      <circle cx="400" cy="250" r="130" fill="rgba(52,211,153,0.15)" stroke="rgba(52,211,153,0.4)" stroke-width="2" class="venn-circle bs-circle" data-region="bs"/>
+      <!-- Top circle: Off-Policy -->
+      <circle cx="300" cy="150" r="130" fill="rgba(34,211,238,0.15)" stroke="rgba(34,211,238,0.4)" stroke-width="2" class="venn-circle op-circle" data-region="op"/>
+
+      <!-- Labels -->
+      <text x="140" y="260" class="venn-label" fill="#818cf8">Function Approx</text>
+      <text x="410" y="260" class="venn-label" fill="#34d399">Bootstrapping</text>
+      <text x="275" y="90" class="venn-label" fill="#22d3ee">Off-Policy</text>
+
+      <!-- Center (all three) - highlighted -->
+      <circle cx="300" cy="220" r="25" fill="rgba(251,113,133,0.3)" stroke="var(--accent-rose)" stroke-width="2"/>
+      <text x="300" y="225" class="venn-label" fill="var(--accent-rose)" text-anchor="middle" font-size="18" font-weight="900">☠</text>
+    </svg>
+  </div>
+
+  <div class="demo-container">
+    <h4>Click a Region to Learn More</h4>
+    <div id="vennInfo" style="color: var(--text-secondary); font-size: 14px; line-height: 1.6;">
+      Click on any region of the Venn diagram to see what happens with that combination of components.
+    </div>
+  </div>
+
+  <script>
+    const vennInfo = {
+      'fa': {
+        title: 'Function Approximation Alone',
+        text: 'Safe. You generalize across states, but your estimates stay bounded. No divergence.'
+      },
+      'bs': {
+        title: 'Bootstrapping Alone',
+        text: 'Safe. Learning from your own estimates is stable in tabular settings. Reduces variance.'
+      },
+      'op': {
+        title: 'Off-Policy Alone',
+        text: 'Safe. You can learn from others\' experience with proper importance sampling.'
+      },
+      'fa_bs': {
+        title: 'Function Approximation + Bootstrapping',
+        text: 'Stable with care. Semi-gradient TD works well on-policy. The aliases created by function approximation don\'t blow up as long as bootstrapping targets are close to your current estimates.'
+      },
+      'fa_op': {
+        title: 'Function Approximation + Off-Policy',
+        text: 'Stable with care. Importance sampling and behavior cloning work here. No circular dependency between your estimates.'
+      },
+      'bs_op': {
+        title: 'Bootstrapping + Off-Policy',
+        text: 'Stable in tabular case. Each state\'s value is independent. Off-policy corrections don\'t interfere with aliases.'
+      },
+      'fa_bs_op': {
+        title: 'The Deadly Triad',
+        text: 'DIVERGENCE RISK. All three combine: function approximation creates aliases, bootstrapping makes them circular, off-policy corrections push in wrong direction. Values can diverge to infinity. This is Baird\'s counterexample and many DQN failures.'
+      }
+    };
+
+    document.querySelectorAll('.venn-circle').forEach(circle => {
+      circle.addEventListener('click', function(e) {
+        const region = this.dataset.region;
+        let key = region;
+
+        // Determine multi-region from proximity
+        const x = e.offsetX / e.target.offsetWidth * 600;
+        const y = e.offsetY / e.target.offsetHeight * 500;
+        const dFa = Math.sqrt((x - 200)**2 + (y - 250)**2);
+        const dBs = Math.sqrt((x - 400)**2 + (y - 250)**2);
+        const dOp = Math.sqrt((x - 300)**2 + (y - 150)**2);
+
+        const regions = [];
+        if (dFa < 135) regions.push('fa');
+        if (dBs < 135) regions.push('bs');
+        if (dOp < 135) regions.push('op');
+
+        if (regions.length === 3) key = 'fa_bs_op';
+        else if (regions.length === 2) key = regions.join('_');
+
+        const info = vennInfo[key] || vennInfo['fa'];
+        document.getElementById('vennInfo').innerHTML = `<strong>${info.title}:</strong> ${info.text}`;
+      });
+    });
+  </script>
+</div>
+
+<!-- ===== SECTION 5: DIVERGENCE VISUALIZATION ===== -->
+<div class="section" id="divergence">
+  <div class="section-label interactive">
+    <span class="icon">📊</span>
+    <span>Interactive Demo</span>
+  </div>
+  <h2>Divergence Demonstration</h2>
+  <p>This simulation shows what happens to weight magnitude over training episodes.</p>
+
+  <div class="control-buttons">
+    <button class="btn-demo active" id="btnDiverge">All 3 (Diverges)</button>
+    <button class="btn-demo" id="btnNoOp">No Off-Policy (Stable)</button>
+    <button class="btn-demo" id="btnNoBoot">No Bootstrapping (Stable)</button>
+    <button class="btn-demo" id="btnNoFA">No Approximation (Stable)</button>
+  </div>
+
+  <div class="plot-container" id="divergencePlot"></div>
+
+  <script>
+    const scenarios = {
+      'diverge': { name: 'All 3 (Deadly Triad)', color: '#fb7185', data: Array.from({length: 300}, (_, i) => Math.exp(i / 50) * 0.5) },
+      'noOp': { name: 'No Off-Policy', color: '#34d399', data: Array.from({length: 300}, (_, i) => Math.log(i + 1) * 0.3 + 1) },
+      'noBoot': { name: 'No Bootstrapping', color: '#22d3ee', data: Array.from({length: 300}, (_, i) => 2.0 - Math.exp(-i / 100)) },
+      'noFA': { name: 'Tabular (No Approx)', color: '#818cf8', data: Array.from({length: 300}, (_, i) => 1.5 - Math.exp(-i / 80)) }
+    };
+
+    function plotDivergence(scenarioKey) {
+      const scenario = scenarios[scenarioKey];
+      const episodes = Array.from({length: 300}, (_, i) => i + 1);
+
+      const trace = {
+        x: episodes,
+        y: scenario.data,
+        mode: 'lines',
+        name: scenario.name,
+        line: { color: scenario.color, width: 3 }
+      };
+
+      const layout = {
+        title: 'Weight Magnitude Over Training',
+        xaxis: { title: 'Episode' },
+        yaxis: { title: 'Weight Magnitude (log scale)', type: 'log' },
+        plot_bgcolor: '#111827',
+        paper_bgcolor: '#111827',
+        font: { color: '#f1f5f9', family: 'Inter' },
+        hovermode: 'x unified',
+        margin: { l: 60, r: 40, t: 60, b: 60 }
+      };
+
+      Plotly.newPlot('divergencePlot', [trace], layout, { responsive: true });
+    }
+
+    // Initial plot
+    plotDivergence('diverge');
+
+    // Button handlers
+    document.querySelectorAll('.btn-demo').forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.btn-demo').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        const scenarioKey = this.id.replace('btn', '').replace(/^./, c => c.toLowerCase()).replace(/([A-Z])/g, '$1').toLowerCase().replace(/([a-z])([a-z])/g, '$1').replace(/o([p])/, 'Op').replace(/b([o])/, 'Bo').replace(/f([a])/, 'Fa');
+        const keyMap = { 'nodeop': 'noOp', 'noboot': 'noBoot', 'nofa': 'noFA' };
+        const key = keyMap[scenarioKey] || (['diverge', 'noOp', 'noBoot', 'noFA'][['diverge', 'noOp', 'noBoot', 'noFA'].indexOf(this.id.replace('btn', '').slice(0, -2).toLowerCase().replace(/([A-Z])/g, c => c.toLowerCase()))] || 'diverge');
+        plotDivergence(this.id === 'btnDiverge' ? 'diverge' : this.id === 'btnNoOp' ? 'noOp' : this.id === 'btnNoBoot' ? 'noBoot' : 'noFA');
+      });
+    });
+  </script>
+</div>
+
+<!-- ===== SECTION 6: BAIRD'S COUNTEREXAMPLE ===== -->
+<div class="section" id="baird">
+  <div class="section-label algorithm">
+    <span class="icon">⚙️</span>
+    <span>Algorithm & Code</span>
+  </div>
+  <h2>Baird's Counterexample: Semi-Gradient TD Diverging</h2>
+
+  <p>This classic counterexample, devised by Leemon Baird, shows semi-gradient TD diverging with linear function approximation, off-policy learning, and bootstrapping. The setup is a simple 7-state MDP designed to expose the deadly triad.</p>
+
+  <div class="callout insight">
+    <div class="callout-title">Why This Matters</div>
+    <p>Baird's counterexample is not an academic curiosity—it directly shows that even simple, theoretically sound algorithms fail when all three components are present. It's a wake-up call that standard temporal-difference learning needs modification for off-policy, function-approximated cases.</p>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="lang">python</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><code class="language-python">import numpy as np
+import matplotlib.pyplot as plt
+
+class BairdsCounterexample:
+    """
+    Baird's counterexample: Semi-gradient TD with function approximation,
+    bootstrapping, and off-policy learning DIVERGES.
+
+    7-state MDP with linear function approximation.
+    Behavior policy: uniform over all actions.
+    Target policy: deterministic.
+    """
+
+    def __init__(self, alpha=0.01):
+        self.alpha = alpha
+        # Linear approximation: V(s) = sum(w[i] * phi[s][i])
+        # 8 features (7 states + 1 bias)
+        self.w = np.zeros(8)
+
+        # Feature vectors for each state
+        self.phi = np.array([
+            [1, 0, 0, 0, 0, 0, 0, 1],  # state 0
+            [0, 1, 0, 0, 0, 0, 0, 1],  # state 1
+            [0, 0, 1, 0, 0, 0, 0, 1],  # state 2
+            [0, 0, 0, 1, 0, 0, 0, 1],  # state 3
+            [0, 0, 0, 0, 1, 0, 0, 1],  # state 4
+            [0, 0, 0, 0, 0, 1, 0, 1],  # state 5
+            [0, 0, 0, 0, 0, 0, 1, 2],  # state 6 (special state)
+        ])
+
+        self.weight_history = []
+
+    def value(self, state):
+        """Approximate value of a state."""
+        return np.dot(self.w, self.phi[state])
+
+    def update(self, state, action, reward, next_state, gamma=0.99):
+        """
+        Semi-gradient TD update.
+        This is off-policy: we learn the target policy from behavior policy experience.
+        """
+        v_s = self.value(state)
+        v_s_next = self.value(next_state)
+
+        # TD target (using bootstrap)
+        td_target = reward + gamma * v_s_next
+        td_error = td_target - v_s
+
+        # Semi-gradient update (gradient w.r.t. current state only, not bootstrap target)
+        self.w += self.alpha * td_error * self.phi[state]
+
+    def episode(self, max_steps=100):
+        """Run one episode of Baird's counterexample."""
+        state = np.random.randint(0, 7)  # Random start
+
+        for step in range(max_steps):
+            # Behavior policy: uniform random action
+            action = np.random.randint(0, 2)
+
+            # Transition: simplified for illustration
+            if state == 6:
+                next_state = np.random.randint(0, 6)  # Terminal state leads to random state
+                reward = 0
+            else:
+                next_state = 6  # All non-terminal states go to 6
+                reward = 0
+
+            # Off-policy importance sampling (behavior ~= target, so rho ≈ 1, but mismatch exists)
+            self.update(state, action, reward, next_state)
+
+            # Record weight magnitude for tracking divergence
+            if step == max_steps - 1:
+                self.weight_history.append(np.linalg.norm(self.w))
+
+            state = next_state
+
+    def train(self, episodes=500):
+        """Train the agent and track divergence."""
+        for ep in range(episodes):
+            self.episode()
+            if (ep + 1) % 50 == 0:
+                print(f"Episode {ep+1}: ||w|| = {self.weight_history[-1]:.4f}")
+
+        return self.weight_history
+
+
+# Run the counterexample
+print("Baird's Counterexample: Semi-Gradient TD Divergence")
+print("=" * 50)
+
+agent = BairdsCounterexample(alpha=0.01)
+history = agent.train(episodes=500)
+
+# Plot results
+plt.figure(figsize=(10, 6))
+plt.semilogy(history, color='#fb7185', linewidth=2.5, label='Weight Magnitude ||w||')
+plt.xlabel('Episode / 50', fontsize=12)
+plt.ylabel('Weight Magnitude (log scale)', fontsize=12)
+plt.title('Baird\'s Counterexample: Semi-Gradient TD Diverges', fontsize=14, fontweight='bold')
+plt.grid(True, alpha=0.2, color='white')
+plt.legend(fontsize=11)
+plt.tight_layout()
+plt.savefig('bairds_divergence.png', dpi=150, facecolor='#0a0e1a', edgecolor='none')
+plt.show()
+
+print("\nKey Observation:")
+print(f"Starting weight magnitude: {history[0]:.6f}")
+print(f"Final weight magnitude:    {history[-1]:.6f}")
+print(f"Growth factor: {history[-1] / (history[0] + 1e-10):.1f}x")
+print("\nWithout function approximation, bootstrapping, or off-policy,")
+print("the algorithm would converge. All three together = divergence.")
+    </code>
+  </div>
+
+  <div class="callout definition">
+    <div class="callout-title">What This Shows</div>
+    <p>The algorithm diverges because semi-gradient TD only updates the value of the current state, ignoring how the target $$\gamma V(s')$$ changes with the same parameters. With off-policy corrections and function approximation aliases, this asymmetry causes instability. The divergence is not a bug in implementation—it's a fundamental issue with the algorithm itself.</p>
+  </div>
+</div>
+
+<!-- ===== SECTION 7: SOLUTIONS ===== -->
+<div class="section" id="solutions">
+  <div class="section-label technical">
+    <span class="icon">✓</span>
+    <span>Solutions & Advances</span>
+  </div>
+  <h2>Taming the Deadly Triad</h2>
+
+  <h3 style="font-size: 1.1rem; color: var(--text-primary); margin-top: 24px; margin-bottom: 12px;">Gradient-TD Methods (GTD, GTD2, TDC)</h3>
+
+  <p>Gradient-TD methods solve the problem by minimizing the <strong>projected Bellman error</strong> instead of the Bellman error. This requires a second set of weights (auxiliary memory) to track the gradient:</p>
+
+  <div class="math-toggle">
+    <div class="math-toggle-header">
+      <span class="label">GTD Update</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="math-toggle-body">
+      <div class="katex-display">$$\mathbf{w} \leftarrow \mathbf{w} + \alpha \delta \mathbf{v} - \alpha \gamma (1 - \lambda) (\mathbf{v}^T \mathbf{v}) \mathbf{w}$$</div>
+      <div class="katex-display">$$\mathbf{v} \leftarrow \mathbf{v} + \beta (\delta - \mathbf{v}^T \boldsymbol{\phi}) \boldsymbol{\phi}$$</div>
+      <p style="font-size: 13px; color: var(--text-muted);">The auxiliary weights $$\mathbf{v}$$ track the gradient direction, making the update stable even with function approximation and off-policy learning.</p>
+    </div>
+  </div>
+
+  <p><strong>Key advantages:</strong></p>
+  <ul style="margin-left: 20px; margin-bottom: 20px;">
+    <li><strong>Guaranteed stability</strong> even with off-policy learning and function approximation.</li>
+    <li>Uses only one additional vector of weights (auxiliary learning).</li>
+    <li>Slower convergence than semi-gradient TD, but more stable.</li>
+  </ul>
+
+  <p><strong>Variants:</strong>
+    <ul style="margin-left: 20px; margin-bottom: 20px;">
+      <li><strong>TD with Gradient Correction (TDC):</strong> The simplest variant. Uses the auxiliary weights to correct the semi-gradient update.</li>
+      <li><strong>GTD2:</strong> Focuses on minimizing mean squared projected Bellman error directly.</li>
+      <li><strong>Emphatic TD:</strong> Uses importance sampling weights (emphasis weights) to reduce off-policy bias without requiring auxiliary weights.</li>
+    </ul>
+  </p>
+
+  <h3 style="font-size: 1.1rem; color: var(--text-primary); margin-top: 24px; margin-bottom: 12px;">DQN: How Deep Reinforcement Learning Tames the Triad</h3>
+
+  <p>Deep Q-Networks (DQN) doesn't use gradient-TD. Instead, it breaks the deadly triad through three architectural tricks:</p>
+
+  <p><strong>1. Target Networks:</strong> Keep a separate, slowly-updated copy of the value function to provide stable targets. This decouples the current weights from the bootstrap target.</p>
+
+  <p><strong>2. Experience Replay:</strong> Store past transitions and sample them uniformly during training. This breaks the on-policy assumption and reduces correlation between consecutive updates, stabilizing learning.</p>
+
+  <p><strong>3. Reward Clipping:</strong> Bound rewards to a small range, reducing the variance of targets and preventing extreme value estimates.</p>
+
+  <div class="callout insight">
+    <div class="callout-title">Why These Work</div>
+    <p><strong>Target networks</strong> reduce the coupling between current parameters and bootstrap targets—you're not updating against a moving target from the same weights. <strong>Experience replay</strong> provides approximately i.i.d. samples, making semi-gradient updates safer. <strong>Clipping</strong> reduces variance. Together, they break the dangerous three-way interaction without explicitly minimizing projected Bellman error.</p>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="lang">python</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><code class="language-python"># Pseudo-code: DQN's approach to taming the Deadly Triad
+
+class DQN:
+    def __init__(self, state_size, action_size):
+        # Main network
+        self.q_network = NeuralNetwork(state_size, action_size)
+        # Target network (copy of q_network, updated slowly)
+        self.target_network = NeuralNetwork(state_size, action_size)
+        # Experience replay buffer
+        self.replay_buffer = ReplayBuffer(capacity=100000)
+
+    def remember(self, state, action, reward, next_state, done):
+        """Store transition in replay buffer."""
+        self.replay_buffer.add((state, action, reward, next_state, done))
+
+    def learn_from_replay(self, batch_size=32):
+        """Sample a batch from replay buffer and learn."""
+        # STRATEGY 1: Experience Replay (breaks correlation)
+        batch = self.replay_buffer.sample(batch_size)
+
+        for state, action, reward, next_state, done in batch:
+            # STRATEGY 2: Target Network (stable target)
+            if done:
+                target = reward
+            else:
+                # Use TARGET network, not current q_network
+                next_q = self.target_network.predict(next_state)
+                # STRATEGY 3: Clipping reward
+                target = np.clip(reward, -1, 1) + 0.99 * np.max(next_q)
+
+            # Train current network on this target
+            loss = MSE(self.q_network.predict(state)[action], target)
+            self.q_network.train_step(loss)
+
+    def update_target_network(self):
+        """Every C steps, copy main network to target network."""
+        self.target_network.weights = self.q_network.weights.copy()
+
+    def train(self, episodes=100, update_freq=1000):
+        for ep in range(episodes):
+            state = env.reset()
+            done = False
+
+            while not done:
+                # Epsilon-greedy action selection
+                action = self.select_action(state)
+                next_state, reward, done = env.step(action)
+
+                # Store experience
+                self.remember(state, action, reward, next_state, done)
+
+                # Learn from replay buffer
+                if len(self.replay_buffer) > 32:
+                    self.learn_from_replay()
+
+                # Update target network every C steps
+                if self.steps % update_freq == 0:
+                    self.update_target_network()
+
+                state = next_state
+                self.steps += 1
+    </code>
+  </div>
+
+  <p><strong>DQN's success story:</strong> By carefully orchestrating these three techniques, DQN made deep Q-learning practical for large state spaces (Atari), avoiding the deadly triad's divergence without needing auxiliary weights like gradient-TD methods.</p>
+</div>
+
+<!-- ===== SECTION 8: SOCRATIC SANDBOX ===== -->
+<div class="section" id="sandbox">
+  <div class="section-label sandbox">
+    <span class="icon">?</span>
+    <span>Socratic Sandbox</span>
+  </div>
+  <h2>Questions to Deepen Understanding</h2>
+  <p>Explore these questions to solidify your grasp of the deadly triad and its solutions.</p>
+
+  <div class="socratic-sandbox">
+    <h3>Deadly Triad Deep Dive</h3>
+
+    <div class="question-item" onclick="this.classList.toggle('expanded')">
+      <div class="question-text">1. Why does the deadly triad NOT occur in tabular Q-learning (before function approximation)?</div>
+      <div class="question-hint">
+        In a tabular representation, each state-action pair has its own independent value. When you update Q(s,a), it doesn't directly affect Q(s',a') unless they're the same state-action pair. Function approximation ties states together through shared weights, creating aliases and feedback loops.
+      </div>
+    </div>
+
+    <div class="question-item" onclick="this.classList.toggle('expanded')">
+      <div class="question-text">2. If bootstrapping is so useful (reduces variance), why don't we just remove off-policy learning instead of using gradient-TD?</div>
+      <div class="question-hint">
+        Off-policy learning is very valuable—it lets you learn from exploratory experience or other agents' data without re-running expensive simulations. Removing it would limit sample efficiency. Gradient-TD keeps both: the sample efficiency of off-policy and bootstrapping, while maintaining stability through a different optimization objective.
+      </div>
+    </div>
+
+    <div class="question-item" onclick="this.classList.toggle('expanded')">
+      <div class="question-text">3. What is the key difference between what semi-gradient TD minimizes and what GTD minimizes?</div>
+      <div class="question-hint">
+        Semi-gradient TD (and standard TD) minimizes the Bellman error: $$\|B V - V\|$$. GTD minimizes the projected Bellman error: $$\|\Pi B V - V\|$$, where $$\Pi$$ projects back onto the function space. The projection ensures stability even when the Bellman operator would diverge.
+      </div>
+    </div>
+
+    <div class="question-item" onclick="this.classList.toggle('expanded')">
+      <div class="question-text">4. Why does experience replay (random sampling) help stabilize learning with the deadly triad?</div>
+      <div class="question-hint">
+        Experience replay removes the temporal correlation between consecutive updates. Semi-gradient TD works better on approximately i.i.d. samples because the alias effects don't compound in the same direction across consecutive steps. Random sampling also reduces the distribution shift between behavior and target policies locally.
+      </div>
+    </div>
+
+    <div class="question-item" onclick="this.classList.toggle('expanded')">
+      <div class="question-text">5. DQN uses a target network instead of GTD's auxiliary weights. What is DQN trading off?</div>
+      <div class="question-hint">
+        Target networks reduce the coupling between current weights and bootstrap targets by using an older copy. GTD directly targets the projected Bellman error with auxiliary weights. DQN's approach is more practical for deep learning (no auxiliary weights), but requires manual synchronization and might miss important value updates. GTD is more principled but adds complexity. Both solve the deadly triad; DQN just does it differently.
+      </div>
+    </div>
+
+    <div class="question-item" onclick="this.classList.toggle('expanded')">
+      <div class="question-text">6. Could you use emphatic TD weights instead of experience replay to handle off-policy learning?</div>
+      <div class="question-hint">
+        Yes! Emphatic TD(0) uses importance sampling weights based on the trace of importance ratios to down-weight updates from data far from the target policy. This is an alternative to experience replay, but it's often less practical because the weights can be high-variance, and you still need to process data in temporal order.
+      </div>
+    </div>
+
+    <div class="question-item" onclick="this.classList.toggle('expanded')">
+      <div class="question-text">7. Why does Baird's counterexample diverge with learning rate 0.01 but might stabilize with a smaller learning rate?</div>
+      <div class="question-hint">
+        A very small learning rate can slow down the accumulation of error and aliases, allowing the TD error signal to occasionally point the right direction. However, you'll eventually diverge given enough episodes—it's not a true solution, just a delay. The fundamental issue persists; you need a different algorithm, not just smaller steps.
+      </div>
+    </div>
+
+    <div class="question-item" onclick="this.classList.toggle('expanded')">
+      <div class="question-text">8. If gradient-TD is provably stable, why do practitioners use DQN instead?</div>
+      <div class="question-hint">
+        Gradient-TD requires auxiliary weights, adding memory and computational overhead. DQN's tricks (target networks, replay, clipping) are simpler to implement in modern deep learning frameworks and work well in practice. DQN is also easier to parallelize. However, for some problems (especially deep RL with high off-policy ratio), gradient-TD and related methods (e.g., emphatic methods) can outperform DQN.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Copy button functionality
+    window.copyCode = function(btn) {
+      const codeBlock = btn.closest('.code-block');
+      const code = codeBlock.querySelector('code').textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        const original = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = original; }, 2000);
+      });
+    };
+
+    // Math rendering
+    document.addEventListener('DOMContentLoaded', function() {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '$', right: '$', display: false}
+        ]
+      });
+    });
+
+    // Math toggle
+    document.querySelectorAll('.math-toggle-header').forEach(header => {
+      header.addEventListener('click', function() {
+        this.closest('.math-toggle').classList.toggle('open');
+      });
+    });
+
+    // Highlight code
+    document.addEventListener('DOMContentLoaded', function() {
+      hljs.highlightAll();
+    });
+  </script>
+</div>
+
+<!-- ===== FOOTER NAVIGATION ===== -->
+<div class="nav-footer">
+  <a href="#" class="nav-link" onclick="history.back(); return false;">← Previous Chapter</a>
+  <span style="font-size: 13px; color: var(--text-muted);">Chapter 11 Complete</span>
+  <a href="#" class="nav-link" onclick="location.href='chapter-12.html'; return false;">Next Chapter →</a>
+</div>
+
+</div>
+
+<script>
+  // Mark complete button
+  document.getElementById('completeBtn').addEventListener('click', function() {
+    this.classList.add('done');
+    this.textContent = 'Completed ✓';
+    localStorage.setItem('chapter-11-complete', 'true');
+  });
+
+  // Check if already completed
+  if (localStorage.getItem('chapter-11-complete')) {
+    document.getElementById('completeBtn').classList.add('done');
+    document.getElementById('completeBtn').textContent = 'Completed ✓';
+  }
+</script>
+
+</body>
+</html>

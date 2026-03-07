@@ -1,0 +1,1581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 4: Dynamic Programming — RL Interactive Curriculum</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
+<!-- KaTeX for LaTeX rendering -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<!-- Plotly for 3D viz -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+<!-- Highlight.js for code -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<style>
+:root {
+  --bg-deep: #0a0e1a;
+  --bg-card: #111827;
+  --bg-card-alt: #0f172a;
+  --bg-surface: #1e293b;
+  --border-subtle: rgba(255,255,255,0.06);
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent-indigo: #818cf8;
+  --accent-blue: #60a5fa;
+  --accent-cyan: #22d3ee;
+  --accent-emerald: #34d399;
+  --accent-amber: #fbbf24;
+  --accent-rose: #fb7185;
+  --accent-purple: #c084fc;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  line-height: 1.7;
+  font-size: 16px;
+}
+
+/* ───── Layout ───── */
+.page-wrapper {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+
+/* ───── Top Nav ───── */
+.top-nav {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(10,14,26,0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 12px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.top-nav a {
+  color: var(--text-secondary); text-decoration: none;
+  font-size: 14px; font-weight: 500;
+  display: flex; align-items: center; gap: 6px;
+  transition: color 0.2s;
+}
+.top-nav a:hover { color: var(--accent-indigo); }
+.nav-chapter-info {
+  font-size: 13px; color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.btn-complete {
+  padding: 8px 16px; border-radius: 8px; border: none;
+  background: linear-gradient(135deg, var(--accent-emerald), #10b981);
+  color: #022c22; font-weight: 600; font-size: 13px;
+  cursor: pointer; transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+.btn-complete:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(52,211,153,0.3); }
+.btn-complete.done { background: var(--bg-surface); color: var(--accent-emerald); cursor: default; }
+
+/* ───── Chapter Header ───── */
+.chapter-header {
+  text-align: center;
+  padding: 80px 0 48px;
+}
+.ch-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 14px; border-radius: 999px;
+  background: rgba(34,211,238,0.1);
+  border: 1px solid rgba(34,211,238,0.2);
+  font-size: 11px; font-weight: 700;
+  color: var(--accent-cyan);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.chapter-header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2.2rem, 5vw, 3.5rem);
+  font-weight: 900; line-height: 1.15;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #f1f5f9 0%, var(--accent-cyan) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.chapter-header .subtitle {
+  font-size: 18px; color: var(--text-secondary);
+  max-width: 580px; margin: 0 auto;
+}
+
+/* ───── Table of Contents ───── */
+.toc {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 24px 28px;
+  margin-bottom: 48px;
+}
+.toc h3 {
+  font-size: 13px; font-weight: 700;
+  color: var(--text-muted); letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.toc-list { list-style: none; }
+.toc-list li { margin-bottom: 6px; }
+.toc-list a {
+  color: var(--text-secondary); text-decoration: none;
+  font-size: 14px; font-weight: 500;
+  padding: 4px 8px; border-radius: 6px;
+  display: inline-block;
+  transition: all 0.2s;
+}
+.toc-list a:hover { color: var(--accent-indigo); background: rgba(129,140,248,0.08); }
+.toc-list .sec-num {
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  margin-right: 6px;
+}
+
+/* ───── Section Headers ───── */
+.section {
+  margin-bottom: 56px;
+}
+.section-label {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.section-label .icon { font-size: 16px; }
+.section-label.feynman { color: var(--accent-amber); }
+.section-label.technical { color: var(--accent-indigo); }
+.section-label.algorithm { color: var(--accent-emerald); }
+.section-label.sandbox { color: var(--accent-rose); }
+.section-label.interactive { color: var(--accent-cyan); }
+.section-label.comparative { color: var(--accent-blue); }
+
+.section h2 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800; line-height: 1.2;
+  margin-bottom: 20px;
+}
+
+.section p, .section li {
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+}
+.section p strong, .section li strong { color: var(--text-primary); font-weight: 600; }
+
+/* ───── Info Cards / Callouts ───── */
+.callout {
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin: 24px 0;
+  border-left: 3px solid;
+}
+.callout.insight {
+  background: rgba(129,140,248,0.06);
+  border-color: var(--accent-indigo);
+}
+.callout.analogy {
+  background: rgba(251,191,36,0.06);
+  border-color: var(--accent-amber);
+}
+.callout.warning {
+  background: rgba(251,113,133,0.06);
+  border-color: var(--accent-rose);
+}
+.callout.definition {
+  background: rgba(52,211,153,0.06);
+  border-color: var(--accent-emerald);
+}
+.callout-title {
+  font-size: 13px; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.callout.insight .callout-title { color: var(--accent-indigo); }
+.callout.analogy .callout-title { color: var(--accent-amber); }
+.callout.warning .callout-title { color: var(--accent-rose); }
+.callout.definition .callout-title { color: var(--accent-emerald); }
+.callout p { margin-bottom: 8px; }
+.callout p:last-child { margin-bottom: 0; }
+
+/* ───── Math Toggle ───── */
+.math-toggle {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin: 24px 0;
+  overflow: hidden;
+}
+.math-toggle-header {
+  padding: 14px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.math-toggle-header:hover { background: rgba(255,255,255,0.02); }
+.math-toggle-header .label {
+  font-size: 14px; font-weight: 600;
+  color: var(--accent-purple);
+  display: flex; align-items: center; gap: 8px;
+}
+.math-toggle-header .chevron {
+  color: var(--text-muted); font-size: 14px;
+  transition: transform 0.3s;
+}
+.math-toggle.open .chevron { transform: rotate(180deg); }
+.math-toggle-body {
+  display: none;
+  padding: 0 20px 20px;
+  border-top: 1px solid var(--border-subtle);
+}
+.math-toggle.open .math-toggle-body { display: block; padding-top: 16px; }
+
+/* ───── KaTeX ───── */
+.katex-display { margin: 20px 0; overflow-x: auto; }
+.katex { font-size: 1.1em; }
+
+/* ───── Code Blocks ───── */
+.code-block {
+  background: #0d1117;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin: 24px 0;
+  overflow: hidden;
+}
+.code-header {
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.code-header .lang {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; color: var(--text-muted); font-weight: 600;
+}
+.code-header .copy-btn {
+  padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-subtle);
+  background: transparent; color: var(--text-muted);
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s;
+}
+.code-header .copy-btn:hover { border-color: var(--accent-indigo); color: var(--accent-indigo); }
+.code-block pre {
+  padding: 16px 20px;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.code-block pre code { background: none !important; padding: 0 !important; }
+
+/* ───── Scrubbable Numbers ───── */
+.scrubbable {
+  display: inline-block;
+  color: var(--accent-cyan);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  border-bottom: 2px dashed var(--accent-cyan);
+  cursor: ew-resize;
+  user-select: none;
+  padding: 0 2px;
+  transition: color 0.2s;
+}
+.scrubbable:hover {
+  color: #67e8f9;
+  background: rgba(34,211,238,0.1);
+  border-radius: 3px;
+}
+.scrub-hint {
+  font-size: 11px; color: var(--text-muted); font-style: italic;
+  margin-top: 4px;
+}
+
+/* ───── Interactive Demo Containers ───── */
+.demo-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 24px 0;
+}
+.demo-container h4 {
+  font-size: 15px; font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+
+/* ───── Gridworld Visualization ───── */
+.gridworld {
+  display: inline-grid;
+  gap: 2px;
+  margin: 16px auto;
+  padding: 8px;
+  background: var(--bg-surface);
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+}
+.grid-cell {
+  width: 50px; height: 50px;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: default;
+  user-select: none;
+  transition: all 0.15s;
+  font-family: 'JetBrains Mono', monospace;
+  position: relative;
+}
+.grid-cell.goal {
+  background: var(--accent-emerald);
+  color: #022c22;
+  box-shadow: 0 0 12px rgba(52,211,153,0.4);
+}
+.grid-cell.start {
+  border: 2px solid var(--accent-indigo);
+  background: rgba(129,140,248,0.1);
+  color: var(--accent-indigo);
+}
+.grid-cell.obstacle {
+  background: var(--accent-rose);
+  color: white;
+}
+.grid-cell.empty {
+  background: var(--bg-card-alt);
+  color: var(--text-muted);
+}
+.grid-cell-value {
+  font-size: 10px;
+  color: var(--accent-cyan);
+}
+.grid-cell-arrow {
+  font-size: 14px;
+  color: var(--accent-indigo);
+  position: absolute;
+  top: 2px;
+}
+
+/* ───── Heatmap ───── */
+.heatmap-container {
+  margin: 20px 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+}
+
+/* ───── Comparison Table ───── */
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 24px 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.comparison-table th {
+  background: var(--bg-surface);
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--border-subtle);
+}
+.comparison-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+.comparison-table tr:last-child td { border-bottom: none; }
+.comparison-table tbody tr:hover { background: rgba(129,140,248,0.03); }
+.comparison-table .metric { color: var(--text-primary); font-weight: 600; }
+
+/* ───── Socratic Questions ───── */
+.socratic-q {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin: 16px 0;
+  overflow: hidden;
+}
+.socratic-q-header {
+  padding: 14px 20px;
+  cursor: pointer;
+  display: flex; align-items: flex-start; gap: 12px;
+  transition: background 0.2s;
+}
+.socratic-q-header:hover { background: rgba(255,255,255,0.02); }
+.q-number {
+  flex-shrink: 0;
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: rgba(251,113,133,0.1);
+  color: var(--accent-rose);
+  font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+}
+.q-text {
+  font-size: 14px; font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.5;
+  flex: 1;
+}
+.q-expand {
+  flex-shrink: 0;
+  color: var(--text-muted); font-size: 12px;
+  transition: transform 0.3s;
+  margin-top: 4px;
+}
+.socratic-q.open .q-expand { transform: rotate(180deg); }
+.socratic-a {
+  display: none;
+  padding: 0 20px 16px 60px;
+  font-size: 14px; color: var(--text-secondary);
+  line-height: 1.65;
+}
+.socratic-q.open .socratic-a { display: block; }
+
+/* ───── GPI Diagram ───── */
+.gpi-diagram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin: 32px 0;
+  flex-wrap: wrap;
+}
+.gpi-box {
+  padding: 20px 28px;
+  border-radius: 12px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 15px;
+  min-width: 160px;
+}
+.gpi-box.eval {
+  background: rgba(129,140,248,0.12);
+  border: 2px solid rgba(129,140,248,0.3);
+  color: var(--accent-indigo);
+}
+.gpi-box.improve {
+  background: rgba(52,211,153,0.12);
+  border: 2px solid rgba(52,211,153,0.3);
+  color: var(--accent-emerald);
+}
+.gpi-arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 12px;
+  gap: 4px;
+}
+.gpi-arrow .arrow-line {
+  font-size: 24px;
+  color: var(--text-muted);
+  line-height: 1;
+}
+.gpi-arrow .arrow-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ───── Progress Tracker ───── */
+.progress-bar {
+  height: 4px;
+  background: var(--bg-surface);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-indigo), var(--accent-cyan));
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* ───── Responsive ───── */
+@media (max-width: 600px) {
+  .page-wrapper { padding: 0 16px 60px; }
+  .gpi-diagram { flex-direction: column; }
+  .gpi-arrow { transform: rotate(90deg); padding: 8px 0; }
+  .grid-cell { width: 40px; height: 40px; font-size: 9px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ───── Top Navigation ───── -->
+<nav class="top-nav">
+  <a href="index.html">&#x2190; Skill Tree</a>
+  <span class="nav-chapter-info">Ch 4 / 17</span>
+  <button class="btn-complete" id="completeBtn" onclick="markChapterComplete()">&#x2713; Mark Complete</button>
+</nav>
+
+<div class="page-wrapper">
+
+<!-- ───── Chapter Header ───── -->
+<header class="chapter-header">
+  <div class="ch-badge">Planning & Control &middot; Chapter 4</div>
+  <h1>Dynamic Programming</h1>
+  <p class="subtitle">How to plan with a perfect model. Policy Iteration, Value Iteration, and the dance between evaluation and improvement.</p>
+</header>
+
+<!-- ───── Table of Contents ───── -->
+<div class="toc">
+  <h3>In This Chapter</h3>
+  <ol class="toc-list">
+    <li><a href="#feynman"><span class="sec-num">1</span> The Feynman Bridge: RL as Trip Planning</a></li>
+    <li><a href="#technical"><span class="sec-num">2</span> The Technical Ascent: Policy Evaluation & Improvement</a></li>
+    <li><a href="#policy-iter"><span class="sec-num">3</span> Interactive: Policy Iteration on a 4×4 Gridworld</a></li>
+    <li><a href="#value-iter"><span class="sec-num">4</span> Interactive: Value Iteration Visualizer</a></li>
+    <li><a href="#gpi"><span class="sec-num">5</span> Interactive: Generalized Policy Iteration (GPI)</a></li>
+    <li><a href="#algorithm"><span class="sec-num">6</span> Algorithm Implementation: Python Code</a></li>
+    <li><a href="#comparison"><span class="sec-num">7</span> Comparative Table: PI vs VI</a></li>
+    <li><a href="#sandbox"><span class="sec-num">8</span> Socratic Sandbox: Deep Dives</a></li>
+    <li><a href="#nav"><span class="sec-num">9</span> Chapter Navigation</a></li>
+  </ol>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 1: THE FEYNMAN BRIDGE                         -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="feynman">
+  <div class="section-label feynman"><span class="icon">🎯</span> The Feynman Bridge</div>
+  <h2>Dynamic Programming Is Like Planning a Road Trip</h2>
+
+  <p>Imagine you're planning a road trip from New York to Los Angeles. You have a <strong>perfect map</strong>. You know every route, every toll booth cost, every scenic view along the way. You can sit at home and work backwards from LA to figure out the optimal route from anywhere.</p>
+
+  <p>This is <strong>Dynamic Programming (DP)</strong>. You don't need to actually drive the routes to learn them — you know the model (the map). You can <em>plan</em> ahead using this model, computing the value of being in each location and the best action to take from each location.</p>
+
+  <div class="callout analogy">
+    <div class="callout-title">The Core Insight</div>
+    <p><strong>You have a map</strong> = you have the <em>full model</em> of the environment (transition probabilities \(p(s'|s,a)\) and reward function \(r(s,a)\)). <strong>You compute backwards</strong> = you use the Bellman equation to work backwards from the goal. <strong>You plan without driving</strong> = you find optimal policies <em>before</em> actually taking actions in the environment.</p>
+    <p>The catch? You need the <em>complete</em> map. In Chapters 5–6, we'll drop this assumption and learn from experience alone.</p>
+  </div>
+
+  <p>Dynamic Programming breaks the optimal control problem into two interacting processes:</p>
+
+  <p><strong>1. Policy Evaluation (Prediction):</strong> Given a policy \(\pi\), compute its value function \(V^\pi(s)\) — how good is it to be in state \(s\) and then follow policy \(\pi\) forever?</p>
+
+  <p><strong>2. Policy Improvement (Control):</strong> Given the value function, find a <em>better</em> policy by greedily selecting actions that lead to higher-valued states.</p>
+
+  <p>Repeat these two steps, and you converge to the optimal policy. This is the <em>dance</em> of Generalized Policy Iteration (GPI) — evaluation and improvement spiraling around each other toward optimality.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 2: TECHNICAL ASCENT                            -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="technical">
+  <div class="section-label technical"><span class="icon">📐</span> The Technical Ascent</div>
+  <h2>Policy Evaluation, Improvement, and Iteration</h2>
+
+  <p>At the heart of DP are two equations working in tandem: the <strong>Bellman expectation equation</strong> (for evaluation) and the <strong>Bellman optimality equation</strong> (for control).</p>
+
+  <!-- Policy Evaluation -->
+  <h3 style="font-size:1.3rem;margin:28px 0 16px;color:var(--text-primary);font-weight:700;">Policy Evaluation</h3>
+
+  <p>Given a policy \(\pi\), compute its value function by iteratively applying the Bellman expectation equation:</p>
+
+  $$v_{k+1}(s) = \sum_a \pi(a|s) \sum_{s',r} p(s',r|s,a) \left[ r + \gamma v_k(s') \right]$$
+
+  <p>This says: the value of state \(s\) under policy \(\pi\) is the expected immediate reward plus the discounted value of the next state. Repeat this update for all states until the values converge.</p>
+
+  <div class="math-toggle" id="mt-pe-proof">
+    <div class="math-toggle-header" onclick="toggleMath('mt-pe-proof')">
+      <span class="label">🧮 Why Policy Evaluation Converges</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="math-toggle-body">
+      <p style="color:var(--text-secondary);">The iterative policy evaluation update is a contraction mapping. In operator form:</p>
+      $$v_{k+1} = T^\pi v_k$$
+      <p style="color:var(--text-secondary);">where \(T^\pi\) is the Bellman operator. The key property: for any two value functions \(v\) and \(v'\):</p>
+      $$\|T^\pi v - T^\pi v'\|_\infty \leq \gamma \|v - v'\|_\infty$$
+      <p style="color:var(--text-secondary);">Since \(\gamma < 1\), repeated application of \(T^\pi\) shrinks differences exponentially. By the Banach fixed point theorem, \(v_k \to v^\pi\), the true value function under policy \(\pi\).</p>
+    </div>
+  </div>
+
+  <!-- Policy Improvement -->
+  <h3 style="font-size:1.3rem;margin:28px 0 16px;color:var(--text-primary);font-weight:700;">Policy Improvement</h3>
+
+  <p>Given a value function \(v\), compute a better policy by acting greedily with respect to the current value estimates:</p>
+
+  $$\pi'(s) = \arg\max_a \sum_{s',r} p(s',r|s,a) \left[ r + \gamma v(s') \right]$$
+
+  <p>This greedy policy is guaranteed to be at least as good as the old policy. Why? Because of the <strong>Policy Improvement Theorem</strong>:</p>
+
+  <div class="callout definition">
+    <div class="callout-title">The Policy Improvement Theorem</div>
+    <p>If the action-value of the greedy action in state \(s\) is at least as good as the action-value under the current policy, then the new policy is at least as good overall:</p>
+    <p style="margin-top:12px;font-family:'JetBrains Mono',monospace;text-align:center;">\(\pi'(s) = \arg\max_a q_\pi(s,a) \geq v_\pi(s)\) for all \(s\)</p>
+    <p style="margin-top:12px;">\(\Rightarrow v_{\pi'}(s) \geq v_\pi(s)\) for all \(s\)</p>
+  </div>
+
+  <div class="math-toggle" id="mt-imp-proof">
+    <div class="math-toggle-header" onclick="toggleMath('mt-imp-proof')">
+      <span class="label">🧮 Proof Sketch of Policy Improvement Theorem</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="math-toggle-body">
+      <p style="color:var(--text-secondary);">Denote the old policy as \(\pi\) and the new (greedy) policy as \(\pi'\). For any state \(s\):</p>
+      $$v_{\pi}(s) \leq q_\pi(s, \pi'(s)) = \mathbb{E}[R_{t+1} + \gamma V_\pi(S_{t+1}) | S_t = s, A_t = \pi'(s)]$$
+      <p style="color:var(--text-secondary);">By the Bellman equation for \(\pi'\):</p>
+      $$q_\pi(s, \pi'(s)) = \mathbb{E}[R_{t+1}] + \gamma \mathbb{E}[V_\pi(S_{t+1})]$$
+      <p style="color:var(--text-secondary);">Now apply the Bellman equation again, viewing it from the perspective of \(\pi'\) starting from state \(S_{t+1}\):</p>
+      $$= \mathbb{E}[R_{t+1}] + \gamma \mathbb{E}[q_\pi(S_{t+1}, \pi'(S_{t+1}))] \leq \mathbb{E}[R_{t+1}] + \gamma \mathbb{E}[V_{\pi'}(S_{t+1})] = V_{\pi'}(s)$$
+      <p style="color:var(--text-secondary);">Therefore \(V_{\pi'}(s) \geq V_\pi(s)\) for all \(s\).</p>
+    </div>
+  </div>
+
+  <!-- Policy Iteration -->
+  <h3 style="font-size:1.3rem;margin:28px 0 16px;color:var(--text-primary);font-weight:700;">Policy Iteration</h3>
+
+  <p>Combine evaluation and improvement: starting with an arbitrary policy, evaluate it, improve it, evaluate the new policy, improve again, and repeat until convergence:</p>
+
+  $$\pi_0 \xrightarrow{\text{E}} V_{\pi_0} \xrightarrow{\text{I}} \pi_1 \xrightarrow{\text{E}} V_{\pi_1} \xrightarrow{\text{I}} \pi_2 \xrightarrow{\text{E}} \cdots \rightarrow \pi^*$$
+
+  <p>This converges to the <strong>optimal policy</strong> in a finite number of iterations (for finite state/action spaces).</p>
+
+  <!-- Value Iteration -->
+  <h3 style="font-size:1.3rem;margin:28px 0 16px;color:var(--text-primary);font-weight:700;">Value Iteration</h3>
+
+  <p>An alternative: skip full policy evaluation and just do one sweep of the Bellman optimality equation at each step:</p>
+
+  $$v_{k+1}(s) = \max_a \sum_{s',r} p(s',r|s,a) \left[ r + \gamma v_k(s') \right]$$
+
+  <p>This also converges to the optimal value function, but typically requires more total updates (though fewer "policy evaluation loops").</p>
+
+  <div class="math-toggle" id="mt-vi-convergence">
+    <div class="math-toggle-header" onclick="toggleMath('mt-vi-convergence')">
+      <span class="label">🧮 Value Iteration Convergence</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="math-toggle-body">
+      <p style="color:var(--text-secondary);">Value iteration uses the Bellman optimality operator:</p>
+      $$v_{k+1} = T^* v_k, \quad (T^* v)(s) = \max_a \mathbb{E}[R + \gamma V(S')]$$
+      <p style="color:var(--text-secondary);">This is also a contraction with factor \(\gamma\):</p>
+      $$\|T^* v - T^* v'\|_\infty \leq \gamma \|v - v'\|_\infty$$
+      <p style="color:var(--text-secondary);">So \(v_k \to v^*\) exponentially fast. The optimal policy is then \(\pi^*(s) = \arg\max_a q^*(s,a)\).</p>
+    </div>
+  </div>
+
+  <!-- Asynchronous DP -->
+  <h3 style="font-size:1.3rem;margin:28px 0 16px;color:var(--text-primary);font-weight:700;">Asynchronous DP</h3>
+
+  <p>In practice, you don't need to update <em>all</em> states in lockstep. <strong>Asynchronous DP</strong> updates states in any order, even repeatedly sampling the same states, and still converges. This is more flexible and can focus computation on relevant states.</p>
+
+  <!-- Generalized Policy Iteration -->
+  <h3 style="font-size:1.3rem;margin:28px 0 16px;color:var(--text-primary);font-weight:700;">Generalized Policy Iteration (GPI)</h3>
+
+  <p>Both policy iteration and value iteration are instances of <strong>Generalized Policy Iteration</strong>: the general pattern of alternating between evaluation and improvement.</p>
+
+  <div class="callout insight">
+    <div class="callout-title">The GPI Convergence Guarantee</div>
+    <p>As long as both processes make progress toward their respective goals, GPI converges to the optimal policy and value function. You don't need to fully evaluate the policy or fully optimize the values — even approximate updates eventually converge.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 3: INTERACTIVE POLICY ITERATION                -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="policy-iter">
+  <div class="section-label interactive"><span class="icon">🎮</span> Interactive</div>
+  <h2>Policy Iteration on a 4×4 Gridworld</h2>
+
+  <p>Watch policy iteration converge step-by-step. The grid shows the current value function with a heatmap, and policy arrows show the greedy policy. Adjust \(\gamma\) to see how the discount factor affects convergence.</p>
+
+  <div class="demo-container">
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Discount factor γ:</div>
+        <span class="scrubbable" id="scrub-gamma-pi" data-min="0.1" data-max="0.99" data-step="0.05" data-value="0.90">0.90</span>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Evaluation sweeps per iteration:</div>
+        <span class="scrubbable" id="scrub-eval-sweeps" data-min="1" data-max="10" data-step="1" data-value="3">3</span>
+      </div>
+    </div>
+    <p class="scrub-hint">▬ Drag to adjust. Click buttons to run steps.</p>
+
+    <h4 style="margin-top:20px;margin-bottom:12px;">Value Function (Color = Value)</h4>
+    <div id="gridworld-pi" style="text-align:center;margin:16px 0;"></div>
+
+    <div style="text-align:center;margin:20px 0;">
+      <button onclick="runPolicyIterationStep()" style="padding:10px 20px;margin:0 8px;border-radius:8px;border:1px solid var(--border-subtle);background:var(--bg-surface);color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent-indigo)';this.style.color='var(--accent-indigo)';" onmouseout="this.style.borderColor='var(--border-subtle)';this.style.color='var(--text-secondary)';">Step Forward</button>
+      <button onclick="runPolicyIterationFull()" style="padding:10px 20px;margin:0 8px;border-radius:8px;border:1px solid var(--border-subtle);background:var(--bg-surface);color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent-indigo)';this.style.color='var(--accent-indigo)';" onmouseout="this.style.borderColor='var(--border-subtle)';this.style.color='var(--text-secondary)';">Run to Convergence</button>
+      <button onclick="resetPolicyIteration()" style="padding:10px 20px;margin:0 8px;border-radius:8px;border:1px solid var(--border-subtle);background:var(--bg-surface);color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent-rose)';this.style.color='var(--accent-rose)';" onmouseout="this.style.borderColor='var(--border-subtle)';this.style.color='var(--text-secondary)';">Reset</button>
+    </div>
+
+    <div style="font-size:13px;color:var(--text-secondary);text-align:center;margin-top:16px;padding:12px;background:rgba(129,140,248,0.05);border-radius:6px;border:1px solid rgba(129,140,248,0.1);">
+      <span id="pi-status">Iteration 0 | Policy Stable: False</span>
+    </div>
+
+    <div style="margin-top:20px;font-size:12px;color:var(--text-secondary);line-height:1.6;">
+      <strong style="color:var(--text-primary);">Legend:</strong> The four corner cell is the goal (bright green). Light blue = low value, dark blue = high value. Arrows show the greedy policy direction. The algorithm alternates between policy evaluation and improvement until the policy stabilizes.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 4: INTERACTIVE VALUE ITERATION                -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="value-iter">
+  <div class="section-label interactive"><span class="icon">⚡</span> Interactive</div>
+  <h2>Value Iteration Visualizer</h2>
+
+  <p>Value iteration uses the max operator directly, without explicit policy evaluation. Watch the value function improve with each sweep. Typically converges faster in wall-clock time but may require more total updates.</p>
+
+  <div class="demo-container">
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Discount factor γ:</div>
+        <span class="scrubbable" id="scrub-gamma-vi" data-min="0.1" data-max="0.99" data-step="0.05" data-value="0.90">0.90</span>
+      </div>
+    </div>
+    <p class="scrub-hint">▬ Drag to adjust.</p>
+
+    <h4 style="margin-top:20px;margin-bottom:12px;">Value Function Heatmap</h4>
+    <div id="gridworld-vi" style="text-align:center;margin:16px 0;"></div>
+
+    <div style="text-align:center;margin:20px 0;">
+      <button onclick="runValueIterationStep()" style="padding:10px 20px;margin:0 8px;border-radius:8px;border:1px solid var(--border-subtle);background:var(--bg-surface);color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent-cyan)';this.style.color='var(--accent-cyan)';" onmouseout="this.style.borderColor='var(--border-subtle)';this.style.color='var(--text-secondary)';">Step Forward</button>
+      <button onclick="runValueIterationFull()" style="padding:10px 20px;margin:0 8px;border-radius:8px;border:1px solid var(--bg-surface);background:var(--bg-surface);color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent-cyan)';this.style.color='var(--accent-cyan)';" onmouseout="this.style.borderColor='var(--border-subtle)';this.style.color='var(--text-secondary)';">Run to Convergence</button>
+      <button onclick="resetValueIteration()" style="padding:10px 20px;margin:0 8px;border-radius:8px;border:1px solid var(--border-subtle);background:var(--bg-surface);color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent-rose)';this.style.color='var(--accent-rose)';" onmouseout="this.style.borderColor='var(--border-subtle)';this.style.color='var(--text-secondary)';">Reset</button>
+    </div>
+
+    <div style="font-size:13px;color:var(--text-secondary);text-align:center;margin-top:16px;padding:12px;background:rgba(34,211,238,0.05);border-radius:6px;border:1px solid rgba(34,211,238,0.1);">
+      <span id="vi-status">Iteration 0 | Max Change: ∞</span>
+    </div>
+
+    <div style="margin-top:20px;font-size:12px;color:var(--text-secondary);line-height:1.6;">
+      <strong style="color:var(--text-primary);">How to read:</strong> Each iteration applies the max operator once to all states. The value propagates outward from the goal. When max change drops below a threshold, the algorithm has converged.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 5: INTERACTIVE GPI DIAGRAM                     -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="gpi">
+  <div class="section-label interactive"><span class="icon">🔄</span> Interactive</div>
+  <h2>Generalized Policy Iteration (GPI)</h2>
+
+  <p>GPI is the unified framework. All DP algorithms — policy iteration, value iteration, and beyond — are instances of evaluation and improvement interacting. This diagram shows the conceptual flow:</p>
+
+  <div class="demo-container">
+    <div class="gpi-diagram">
+      <div class="gpi-box eval" id="gpi-eval">
+        <strong>Policy Evaluation</strong><br>
+        <span style="font-size:12px;font-weight:400;">Compute \(V_\pi\)</span>
+      </div>
+      <div class="gpi-arrow">
+        <span class="arrow-label">Evaluate</span>
+        <span class="arrow-line">→</span>
+      </div>
+      <div class="gpi-box improve" id="gpi-improve">
+        <strong>Policy Improvement</strong><br>
+        <span style="font-size:12px;font-weight:400;">Act greedily</span>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:8px;font-size:11px;color:var(--text-muted);">↓ ↑ (Arrows point both directions — convergence spiral)</div>
+
+    <div style="margin-top:24px;padding:16px;background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.2);border-radius:8px;">
+      <p style="margin:0;font-size:14px;color:var(--text-secondary);"><strong style="color:var(--accent-emerald);">Key Property:</strong> As evaluation and improvement iterate, the policy and value function spiral toward the optimal policy \(\pi^*\) and value function \(V^*\). Neither process needs to be perfect — only that both make progress.</p>
+    </div>
+
+    <div style="margin-top:20px;">
+      <h4 style="margin-bottom:12px;">Which Algorithms Are These?</h4>
+      <ul style="margin-left:20px;color:var(--text-secondary);font-size:14px;">
+        <li style="margin-bottom:8px;"><strong>Policy Iteration (PI):</strong> Full evaluation \(\rightarrow\) single improvement sweep \(\rightarrow\) repeat</li>
+        <li style="margin-bottom:8px;"><strong>Value Iteration (VI):</strong> One-step lookahead (implicit improvement) in each sweep</li>
+        <li><strong>Asynchronous DP:</strong> Update states in any order, not synchronously</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 6: ALGORITHM IMPLEMENTATION                    -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="algorithm">
+  <div class="section-label algorithm"><span class="icon">💻</span> Algorithm Implementation</div>
+  <h2>Policy Iteration & Value Iteration in Python</h2>
+
+  <p>Below is a complete, annotated implementation of both algorithms on a gridworld, mapping each line to the theory above:</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="lang">Python / NumPy</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><code class="language-python">import numpy as np
+from collections import defaultdict
+
+class GridworldDP:
+    """
+    Dynamic Programming solver for gridworld environment.
+    Implements both Policy Iteration and Value Iteration.
+
+    Environment: 4x4 grid with goal at (0,3) top-right.
+    """
+
+    def __init__(self, size=4, gamma=0.9, theta=1e-6):
+        # size: grid dimensions
+        # gamma (γ): discount factor
+        # theta (θ): convergence threshold for policy evaluation
+        self.size = size
+        self.gamma = gamma
+        self.theta = theta
+
+        # State space: (row, col) for each cell
+        self.states = [(i, j) for i in range(size) for j in range(size)]
+        self.goal = (0, size - 1)
+
+        # Action space: up, down, left, right
+        self.actions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        self.action_names = ['↑', '↓', '←', '→']
+
+        # Value function V(s)
+        self.V = {s: 0.0 for s in self.states}
+        self.V[self.goal] = 1.0  # Terminal state has value 1
+
+        # Policy π(a|s): uniform random initially
+        self.policy = {s: [0.25] * len(self.actions) for s in self.states}
+        self.policy[self.goal] = [0] * len(self.actions)  # No actions from goal
+
+    def get_transitions(self, state, action):
+        """
+        Deterministic transitions (for now).
+        state: (row, col)
+        action: index into self.actions
+
+        Returns: next_state, reward
+        """
+        if state == self.goal:
+            return state, 0  # Absorbing state
+
+        dr, dc = self.actions[action]
+        next_row = state[0] + dr
+        next_col = state[1] + dc
+
+        # Boundary handling: bounce back to same state
+        if not (0 <= next_row < self.size) or not (0 <= next_col < self.size):
+            next_row, next_col = state
+
+        next_state = (next_row, next_col)
+
+        # Reward: -1 for each step (path length penalty), +1 at goal
+        reward = -1.0
+        if next_state == self.goal:
+            reward = 1.0
+
+        return next_state, reward
+
+    # ───────────────────────────────────────────────────────
+    # POLICY EVALUATION (Prediction)
+    # ───────────────────────────────────────────────────────
+
+    def policy_evaluation(self, eval_sweeps=3):
+        """
+        ALGORITHM: Iterative Policy Evaluation
+
+        Equation: v_{k+1}(s) = Σ_a π(a|s) Σ_{s',r} p(s',r|s,a)[r + γv_k(s')]
+
+        Args:
+            eval_sweeps: number of sweeps (default 3 per PI iteration)
+        """
+        for sweep in range(eval_sweeps):
+            delta = 0  # Track maximum change
+
+            for state in self.states:
+                if state == self.goal:
+                    continue  # Skip goal state
+
+                # Old value estimate
+                v_old = self.V[state]
+
+                # Compute new value using Bellman expectation equation
+                v_new = 0.0
+
+                for action_idx, pi_prob in enumerate(self.policy[state]):
+                    # Probability of this action under the policy
+                    if pi_prob == 0:
+                        continue
+
+                    # Get next state and reward for this action
+                    next_state, reward = self.get_transitions(state, action_idx)
+
+                    # Bellman expectation: r + γV(s')
+                    # Line below maps directly to the equation above:
+                    v_new += pi_prob * (reward + self.gamma * self.V[next_state])
+
+                # Update value
+                self.V[state] = v_new
+                delta = max(delta, abs(v_old - v_new))
+
+            # Convergence check
+            if delta < self.theta:
+                break
+
+    # ───────────────────────────────────────────────────────
+    # POLICY IMPROVEMENT (Control)
+    # ───────────────────────────────────────────────────────
+
+    def policy_improvement(self):
+        """
+        ALGORITHM: Policy Improvement
+
+        π'(s) = arg_max_a Σ_{s',r} p(s',r|s,a)[r + γV(s')]
+
+        Returns True if policy has stabilized (converged).
+        """
+        policy_stable = True
+
+        for state in self.states:
+            if state == self.goal:
+                continue
+
+            # Old greedy action
+            old_action = np.argmax(self.policy[state])
+
+            # Compute action values q(s, a) for all actions
+            action_values = []
+
+            for action_idx in range(len(self.actions)):
+                next_state, reward = self.get_transitions(state, action_idx)
+
+                # Action-value function:
+                # q(s,a) = Σ_{s',r} p(s',r|s,a)[r + γV(s')]
+                q_value = reward + self.gamma * self.V[next_state]
+                action_values.append(q_value)
+
+            # Greedy action with respect to current value function
+            best_action = np.argmax(action_values)
+
+            # Create new deterministic policy
+            new_policy = [0.0] * len(self.actions)
+            new_policy[best_action] = 1.0
+
+            # Check if policy changed
+            if old_action != best_action:
+                policy_stable = False
+
+            self.policy[state] = new_policy
+
+        return policy_stable
+
+    # ───────────────────────────────────────────────────────
+    # POLICY ITERATION
+    # ───────────────────────────────────────────────────────
+
+    def policy_iteration(self):
+        """
+        ALGORITHM: Policy Iteration
+
+        π_0 --E--> V_{π_0} --I--> π_1 --E--> V_{π_1} --I--> ... ---> π*
+
+        Alternates between policy evaluation and policy improvement
+        until the policy stabilizes.
+        """
+        iteration = 0
+
+        while True:
+            # E: Evaluate current policy
+            self.policy_evaluation(eval_sweeps=3)
+
+            # I: Improve the policy
+            policy_stable = self.policy_improvement()
+
+            iteration += 1
+
+            if policy_stable:
+                break
+
+        return iteration
+
+    # ───────────────────────────────────────────────────────
+    # VALUE ITERATION
+    # ───────────────────────────────────────────────────────
+
+    def value_iteration(self):
+        """
+        ALGORITHM: Value Iteration
+
+        v_{k+1}(s) = max_a Σ_{s',r} p(s',r|s,a)[r + γv_k(s')]
+
+        Directly applies the Bellman optimality equation without
+        explicit policy evaluation steps.
+        """
+        iteration = 0
+
+        while True:
+            delta = 0
+
+            for state in self.states:
+                if state == self.goal:
+                    continue
+
+                v_old = self.V[state]
+
+                # Compute max_a q(s,a)
+                max_q = -np.inf
+
+                for action_idx in range(len(self.actions)):
+                    next_state, reward = self.get_transitions(state, action_idx)
+
+                    # One-step lookahead with max operator
+                    q_value = reward + self.gamma * self.V[next_state]
+                    max_q = max(max_q, q_value)
+
+                self.V[state] = max_q
+                delta = max(delta, abs(v_old - self.V[state]))
+
+            iteration += 1
+
+            # Stop when values have converged
+            if delta < self.theta:
+                break
+
+        # Reconstruct optimal policy from converged values
+        for state in self.states:
+            if state == self.goal:
+                continue
+
+            action_values = []
+            for action_idx in range(len(self.actions)):
+                next_state, reward = self.get_transitions(state, action_idx)
+                q_value = reward + self.gamma * self.V[next_state]
+                action_values.append(q_value)
+
+            best_action = np.argmax(action_values)
+            new_policy = [0.0] * len(self.actions)
+            new_policy[best_action] = 1.0
+            self.policy[state] = new_policy
+
+        return iteration
+
+    def get_greedy_action(self, state):
+        """Return the greedy action in state."""
+        return np.argmax(self.policy[state])
+
+
+# ═══════════════════════════════════════════════════════
+# USAGE EXAMPLE
+# ═══════════════════════════════════════════════════════
+
+if __name__ == '__main__':
+    print("=== Policy Iteration ===")
+    solver_pi = GridworldDP(gamma=0.9)
+    iters_pi = solver_pi.policy_iteration()
+    print(f"Converged in {iters_pi} iterations")
+    print(f"Final policy: {solver_pi.policy}")
+
+    print("\n=== Value Iteration ===")
+    solver_vi = GridworldDP(gamma=0.9)
+    iters_vi = solver_vi.value_iteration()
+    print(f"Converged in {iters_vi} iterations")
+    print(f"Final policy: {solver_vi.policy}")</code></pre>
+  </div>
+
+  <p style="margin-top:20px;font-size:13px;color:var(--text-secondary);"><strong style="color:var(--text-primary);">Note:</strong> The code above uses deterministic dynamics for clarity. In the full Sutton & Barto text, the transition function \(p(s',r|s,a)\) may be stochastic. The algorithms work identically — just sum over all possible outcomes.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 7: COMPARATIVE TABLE                          -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="comparison">
+  <div class="section-label comparative"><span class="icon">📊</span> Comparative Analysis</div>
+  <h2>Policy Iteration vs. Value Iteration</h2>
+
+  <p>Both algorithms converge to the optimal policy, but they differ in computational cost, convergence rate, and practical considerations:</p>
+
+  <table class="comparison-table">
+    <thead>
+      <tr>
+        <th style="width:25%;">Aspect</th>
+        <th style="width:37.5%;">Policy Iteration</th>
+        <th style="width:37.5%;">Value Iteration</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="metric">Inner Loop</td>
+        <td>Full policy evaluation (multiple sweeps until convergence)</td>
+        <td>Single Bellman update sweep</td>
+      </tr>
+      <tr>
+        <td class="metric">Sweeps per Iteration</td>
+        <td>K sweeps (K ≥ 1), often 3–10</td>
+        <td>Exactly 1 sweep</td>
+      </tr>
+      <tr>
+        <td class="metric">Total Updates</td>
+        <td>Fewer policy iterations, more state updates</td>
+        <td>More value iterations, fewer state updates per iteration</td>
+      </tr>
+      <tr>
+        <td class="metric">Convergence</td>
+        <td>Finite iterations (guaranteed for tabular, finite S×A)</td>
+        <td>Asymptotic, exponential convergence</td>
+      </tr>
+      <tr>
+        <td class="metric">Wall-Clock Time</td>
+        <td>Often slower (deep evaluation)</td>
+        <td>Often faster (shallower passes)</td>
+      </tr>
+      <tr>
+        <td class="metric">Memory</td>
+        <td>Requires current and previous value tables during eval</td>
+        <td>Single value table</td>
+      </tr>
+      <tr>
+        <td class="metric">Asynchronous?</td>
+        <td>Harder (policy eval needs convergence)</td>
+        <td>Easier (one-step lookahead)</td>
+      </tr>
+      <tr>
+        <td class="metric">Use When...</td>
+        <td>Small state space, want fewer policy checks</td>
+        <td>Large state space, or anytime policy (asynchronous)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout insight">
+    <div class="callout-title">Practical Rule of Thumb</div>
+    <p><strong>Value Iteration</strong> is typically preferred in practice because each iteration is faster (one sweep), making wall-clock time shorter even though convergence in iterations may be slower. <strong>Policy Iteration</strong> is elegant and has a clean finite-iteration guarantee, but the deep evaluation per iteration can be expensive.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 8: SOCRATIC SANDBOX                            -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="sandbox">
+  <div class="section-label sandbox"><span class="icon">🧠</span> Socratic Sandbox</div>
+  <h2>Deep Dives & Debugging</h2>
+
+  <p>Test your understanding with these questions. They cover edge cases, convergence, and the limits of the DP assumption.</p>
+
+  <div class="socratic-q" onclick="toggleQ(this)">
+    <div class="socratic-q-header">
+      <span class="q-number">1</span>
+      <span class="q-text">Why does policy iteration converge to the optimal policy in a finite number of iterations (for finite state/action spaces), but value iteration only converges asymptotically?</span>
+      <span class="q-expand">▼</span>
+    </div>
+    <div class="socratic-a">
+      <p>Policy iteration converges finitely because the policy space is finite — there are at most \(|A|^{|S|}\) possible deterministic policies. Each policy improvement step either keeps the policy unchanged (convergence) or strictly improves it by the Policy Improvement Theorem. Since the value function is monotonically increasing under each improvement and there are finitely many policies, we must eventually reach a stable policy.</p>
+      <p style="margin-top:8px;">Value iteration, by contrast, solves the Bellman optimality equation \(v = T^* v\) where \(T^*\) is a contraction mapping. Banach's fixed-point theorem guarantees convergence, but only in the limit. Each iteration brings us closer (exponentially) but never exactly to the solution in finite time.</p>
+    </div>
+  </div>
+
+  <div class="socratic-q" onclick="toggleQ(this)">
+    <div class="socratic-q-header">
+      <span class="q-number">2</span>
+      <span class="q-text">What happens to the optimal policy when \(\gamma = 0\)? And when \(\gamma = 1\)?</span>
+      <span class="q-expand">▼</span>
+    </div>
+    <div class="socratic-a">
+      <p><strong>γ = 0:</strong> The agent is completely myopic — it only cares about immediate reward. The optimal policy is to greedily maximize the one-step reward from the current state, ignoring all future consequences. In many settings, this leads to poor long-term behavior.</p>
+      <p style="margin-top:8px;"><strong>γ = 1:</strong> The agent weights all future rewards equally with the present. This can lead to non-stationary value functions (the return might not converge). In continuing tasks (infinite horizon), the return can be infinite, making the problem ill-posed. The Bellman equation may not have a unique solution. In practice, γ should be strictly less than 1 for continuing tasks, typically 0.9–0.99.</p>
+    </div>
+  </div>
+
+  <div class="socratic-q" onclick="toggleQ(this)">
+    <div class="socratic-q-header">
+      <span class="q-number">3</span>
+      <span class="q-text">When is asynchronous DP (updating states in any order, possibly repeatedly) better than synchronous DP (updating all states each sweep)?</span>
+      <span class="q-expand">▼</span>
+    </div>
+    <div class="socratic-a">
+      <p>Asynchronous DP is better when:</p>
+      <ul style="margin-top:8px;margin-left:20px;">
+        <li><strong>States have different relevance:</strong> Focus computation on reachable or important states (e.g., near the goal), avoiding wasted updates on irrelevant states.</li>
+        <li><strong>Real-time planning:</strong> Don't wait for a full sweep; update based on recent experience and provide a useful (suboptimal) policy anytime.</li>
+        <li><strong>Large state spaces:</strong> Synchronous DP requires storing and iterating all \(|S|\) states. Asynchronous can visit a subset.</li>
+        <li><strong>Changing environment:</strong> If the model changes slightly, you can focus async updates on affected states rather than redoing everything.</li>
+      </ul>
+      <p style="margin-top:8px;">The key insight: as long as every state is updated infinitely often (which the algorithm guarantees), convergence is maintained.</p>
+    </div>
+  </div>
+
+  <div class="socratic-q" onclick="toggleQ(this)">
+    <div class="socratic-q-header">
+      <span class="q-number">4</span>
+      <span class="q-text">What breaks without a model? Why can't we use policy iteration or value iteration to learn directly from experience?</span>
+      <span class="q-expand">▼</span>
+    </div>
+    <div class="socratic-a">
+      <p>Both PI and VI require the <strong>full model:</strong> knowing \(p(s',r|s,a)\) — the transition probabilities and reward function for every state-action pair. With a model, we can simulate outcomes and compute expected values without ever stepping into the environment.</p>
+      <p style="margin-top:8px;">Without a model, we have three problems:</p>
+      <ul style="margin-top:8px;margin-left:20px;">
+        <li><strong>Can't compute expectations:</strong> We don't know what next states or rewards are possible, so we can't evaluate \(\sum p(s',r|s,a)[r + \gamma V(s')]\).</li>
+        <li><strong>Can't explore intelligently:</strong> We can't plan which actions to try. We're stuck with trial-and-error.</li>
+        <li><strong>Exploration-exploitation tradeoff:</strong> Every action we take costs (in time or reward). We have to learn from the consequences.</li>
+      </ul>
+      <p style="margin-top:8px;">This is where <strong>Temporal Difference (TD) Learning</strong> (Chapters 5–6) comes in. It learns the model implicitly from experience, updating estimates based on actual outcomes rather than imagined ones.</p>
+    </div>
+  </div>
+
+  <div class="socratic-q" onclick="toggleQ(this)">
+    <div class="socratic-q-header">
+      <span class="q-number">5</span>
+      <span class="q-text">How does GPI generalize beyond tabular RL? What happens when we use function approximation (e.g., a neural network as \(V_\theta(s)\))?</span>
+      <span class="q-expand">▼</span>
+    </div>
+    <div class="socratic-a">
+      <p>GPI is beautifully general. Even with function approximation:</p>
+      <ul style="margin-top:8px;margin-left:20px;">
+        <li><strong>Evaluation:</strong> Instead of updating a table entry, update the parameters \(\theta\) of a neural network to minimize TD error or fit the Bellman equation.</li>
+        <li><strong>Improvement:</strong> Greedily select actions based on \(V_\theta(s)\), even though \(V_\theta\) is an approximation and may not perfectly represent the true value.</li>
+      </ul>
+      <p style="margin-top:8px;">The guarantee <em>weakens</em>: convergence is no longer guaranteed. The approximator might oscillate or diverge. But in practice, with careful hyperparameter tuning and regularization, GPI with function approximation (e.g., DQN, policy gradient methods) achieves remarkable results on complex domains.</p>
+      <p style="margin-top:8px;">See Part II of the book for the theory and practice of function approximation in RL.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ───── Chapter Navigation ───── -->
+<div id="nav" style="display:flex;justify-content:space-between;align-items:center;margin-top:60px;padding-top:32px;border-top:1px solid var(--border-subtle);">
+  <a href="index.html" style="color:var(--text-secondary);text-decoration:none;font-size:14px;font-weight:500;">&#x2190; Back to Skill Tree</a>
+  <a href="chapter-5.html" style="color:var(--accent-indigo);text-decoration:none;font-size:14px;font-weight:600;" onclick="event.preventDefault();alert('Say \\'Unlock Chapter 5\\' to generate this page.')">Chapter 5: Temporal Difference Learning &#x2192;</a>
+</div>
+
+</div><!-- end page-wrapper -->
+
+<script>
+// ═══════════════════════════════════════════
+// MATH TOGGLES
+// ═══════════════════════════════════════════
+function toggleMath(id) {
+  document.getElementById(id).classList.toggle('open');
+}
+
+// ═══════════════════════════════════════════
+// SOCRATIC QUESTIONS
+// ═══════════════════════════════════════════
+function toggleQ(el) {
+  el.classList.toggle('open');
+}
+
+// ═══════════════════════════════════════════
+// CODE COPY
+// ═══════════════════════════════════════════
+function copyCode(btn) {
+  const code = btn.closest('.code-block').querySelector('code').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
+  });
+}
+
+// ═══════════════════════════════════════════
+// SCRUBBABLE NUMBERS
+// ═══════════════════════════════════════════
+document.querySelectorAll('.scrubbable').forEach(el => {
+  let startX, startVal;
+  const min = parseFloat(el.dataset.min);
+  const max = parseFloat(el.dataset.max);
+  const step = parseFloat(el.dataset.step);
+  let value = parseFloat(el.dataset.value);
+
+  function onPointerDown(e) {
+    e.preventDefault();
+    startX = e.clientX;
+    startVal = value;
+    document.addEventListener('pointermove', onPointerMove);
+    document.addEventListener('pointerup', onPointerUp);
+    el.style.cursor = 'grabbing';
+  }
+  function onPointerMove(e) {
+    const dx = e.clientX - startX;
+    const sensitivity = step < 0.1 ? 2 : 0.5;
+    value = Math.min(max, Math.max(min, startVal + dx * step * sensitivity));
+    const decimals = step < 1 ? 2 : 0;
+    el.textContent = value.toFixed(decimals);
+    el.dataset.value = value;
+  }
+  function onPointerUp() {
+    document.removeEventListener('pointermove', onPointerMove);
+    document.removeEventListener('pointerup', onPointerUp);
+    el.style.cursor = 'ew-resize';
+  }
+  el.addEventListener('pointerdown', onPointerDown);
+});
+
+// ═══════════════════════════════════════════
+// GRIDWORLD UTILITIES
+// ═══════════════════════════════════════════
+function initGridworld(size = 4) {
+  const grid = [];
+  for (let i = 0; i < size; i++) {
+    for (let j = 0; j < size; j++) {
+      grid.push({ pos: [i, j], value: 0, policy: [0.25, 0.25, 0.25, 0.25] });
+    }
+  }
+  grid[size * (size - 1) - 1].value = 1.0; // Goal at bottom-right
+  return grid;
+}
+
+function renderGridworld(grid, containerId, showArrows = true) {
+  const container = document.getElementById(containerId);
+  const size = Math.sqrt(grid.length);
+  const maxValue = Math.max(...grid.map(c => c.value));
+  const minValue = Math.min(...grid.map(c => c.value));
+
+  container.innerHTML = '';
+  container.style.display = 'inline-grid';
+  container.style.gridTemplateColumns = `repeat(${size}, 50px)`;
+  container.style.gap = '2px';
+  container.style.padding = '8px';
+  container.style.background = 'var(--bg-surface)';
+  container.style.borderRadius = '8px';
+  container.style.border = '1px solid var(--border-subtle)';
+
+  grid.forEach((cell, idx) => {
+    const div = document.createElement('div');
+    div.className = 'grid-cell';
+
+    const isGoal = cell.pos[0] === 0 && cell.pos[1] === 3;
+    const norm = maxValue > minValue ? (cell.value - minValue) / (maxValue - minValue) : 0.5;
+    const hue = 200 - norm * 80; // Blue to cyan
+    const sat = 50 + norm * 30;
+
+    if (isGoal) {
+      div.style.background = 'var(--accent-emerald)';
+      div.style.color = '#022c22';
+      div.textContent = '✓';
+      div.style.fontSize = '18px';
+    } else {
+      div.style.background = `hsl(${hue}, ${sat}%, ${20 + norm * 30}%)`;
+      div.style.color = 'var(--accent-cyan)';
+      div.textContent = cell.value.toFixed(2);
+
+      if (showArrows) {
+        const bestAction = cell.policy.indexOf(Math.max(...cell.policy));
+        const arrows = ['↑', '↓', '←', '→'];
+        const arrowDiv = document.createElement('div');
+        arrowDiv.className = 'grid-cell-arrow';
+        arrowDiv.textContent = arrows[bestAction];
+        div.appendChild(arrowDiv);
+      }
+    }
+
+    container.appendChild(div);
+  });
+}
+
+// ═══════════════════════════════════════════
+// POLICY ITERATION DEMO
+// ═══════════════════════════════════════════
+let piState = { grid: initGridworld(4), iteration: 0, converged: false };
+
+function runPolicyIterationStep() {
+  if (piState.converged) return;
+
+  const gamma = parseFloat(document.getElementById('scrub-gamma-pi').dataset.value);
+  const evalSweeps = parseInt(document.getElementById('scrub-eval-sweeps').dataset.value);
+
+  // Simulate one policy iteration step
+  // Policy evaluation sweeps
+  for (let sweep = 0; sweep < evalSweeps; sweep++) {
+    piState.grid.forEach(cell => {
+      if (cell.pos[0] === 0 && cell.pos[1] === 3) return; // Skip goal
+
+      let vNew = 0;
+      for (let a = 0; a < 4; a++) {
+        const dr = [[-1,0],[1,0],[0,-1],[0,1]][a];
+        let nr = cell.pos[0] + dr[0];
+        let nc = cell.pos[1] + dr[1];
+        if (nr < 0 || nr >= 4 || nc < 0 || nc >= 4) { nr = cell.pos[0]; nc = cell.pos[1]; }
+
+        const nextCell = piState.grid.find(c => c.pos[0] === nr && c.pos[1] === nc);
+        const r = (nr === 0 && nc === 3) ? 1.0 : -1.0;
+        vNew += cell.policy[a] * (r + gamma * nextCell.value);
+      }
+      cell.value = vNew;
+    });
+  }
+
+  // Policy improvement
+  let policyStable = true;
+  piState.grid.forEach(cell => {
+    if (cell.pos[0] === 0 && cell.pos[1] === 3) return;
+
+    let bestA = 0, bestQ = -Infinity;
+    for (let a = 0; a < 4; a++) {
+      const dr = [[-1,0],[1,0],[0,-1],[0,1]][a];
+      let nr = cell.pos[0] + dr[0];
+      let nc = cell.pos[1] + dr[1];
+      if (nr < 0 || nr >= 4 || nc < 0 || nc >= 4) { nr = cell.pos[0]; nc = cell.pos[1]; }
+
+      const nextCell = piState.grid.find(c => c.pos[0] === nr && c.pos[1] === nc);
+      const r = (nr === 0 && nc === 3) ? 1.0 : -1.0;
+      const q = r + gamma * nextCell.value;
+      if (q > bestQ) { bestQ = q; bestA = a; }
+    }
+
+    const oldPolicy = [...cell.policy];
+    cell.policy = [0, 0, 0, 0];
+    cell.policy[bestA] = 1;
+    if (oldPolicy.indexOf(Math.max(...oldPolicy)) !== bestA) policyStable = false;
+  });
+
+  piState.iteration++;
+  piState.converged = policyStable;
+
+  renderGridworld(piState.grid, 'gridworld-pi', true);
+  document.getElementById('pi-status').textContent =
+    `Iteration ${piState.iteration} | Policy Stable: ${policyStable}`;
+}
+
+function runPolicyIterationFull() {
+  while (!piState.converged) {
+    runPolicyIterationStep();
+  }
+}
+
+function resetPolicyIteration() {
+  piState = { grid: initGridworld(4), iteration: 0, converged: false };
+  renderGridworld(piState.grid, 'gridworld-pi', true);
+  document.getElementById('pi-status').textContent = 'Iteration 0 | Policy Stable: False';
+}
+
+// ═══════════════════════════════════════════
+// VALUE ITERATION DEMO
+// ═══════════════════════════════════════════
+let viState = { grid: initGridworld(4), iteration: 0, maxChange: Infinity };
+
+function runValueIterationStep() {
+  if (viState.maxChange < 1e-4) return;
+
+  const gamma = parseFloat(document.getElementById('scrub-gamma-vi').dataset.value);
+
+  let maxChange = 0;
+  const newValues = {};
+
+  viState.grid.forEach((cell, idx) => {
+    if (cell.pos[0] === 0 && cell.pos[1] === 3) {
+      newValues[idx] = cell.value;
+      return;
+    }
+
+    let bestQ = -Infinity;
+    for (let a = 0; a < 4; a++) {
+      const dr = [[-1,0],[1,0],[0,-1],[0,1]][a];
+      let nr = cell.pos[0] + dr[0];
+      let nc = cell.pos[1] + dr[1];
+      if (nr < 0 || nr >= 4 || nc < 0 || nc >= 4) { nr = cell.pos[0]; nc = cell.pos[1]; }
+
+      const nextCell = viState.grid.find(c => c.pos[0] === nr && c.pos[1] === nc);
+      const r = (nr === 0 && nc === 3) ? 1.0 : -1.0;
+      const q = r + gamma * nextCell.value;
+      bestQ = Math.max(bestQ, q);
+    }
+
+    const change = Math.abs(bestQ - cell.value);
+    maxChange = Math.max(maxChange, change);
+    newValues[idx] = bestQ;
+  });
+
+  viState.grid.forEach((cell, idx) => { cell.value = newValues[idx]; });
+
+  // Extract greedy policy
+  viState.grid.forEach(cell => {
+    if (cell.pos[0] === 0 && cell.pos[1] === 3) return;
+
+    let bestA = 0, bestQ = -Infinity;
+    for (let a = 0; a < 4; a++) {
+      const dr = [[-1,0],[1,0],[0,-1],[0,1]][a];
+      let nr = cell.pos[0] + dr[0];
+      let nc = cell.pos[1] + dr[1];
+      if (nr < 0 || nr >= 4 || nc < 0 || nc >= 4) { nr = cell.pos[0]; nc = cell.pos[1]; }
+
+      const nextCell = viState.grid.find(c => c.pos[0] === nr && c.pos[1] === nc);
+      const r = (nr === 0 && nc === 3) ? 1.0 : -1.0;
+      const q = r + gamma * nextCell.value;
+      if (q > bestQ) { bestQ = q; bestA = a; }
+    }
+
+    cell.policy = [0, 0, 0, 0];
+    cell.policy[bestA] = 1;
+  });
+
+  viState.iteration++;
+  viState.maxChange = maxChange;
+
+  renderGridworld(viState.grid, 'gridworld-vi', true);
+  document.getElementById('vi-status').textContent =
+    `Iteration ${viState.iteration} | Max Change: ${maxChange.toFixed(6)}`;
+}
+
+function runValueIterationFull() {
+  while (viState.maxChange >= 1e-4) {
+    runValueIterationStep();
+  }
+}
+
+function resetValueIteration() {
+  viState = { grid: initGridworld(4), iteration: 0, maxChange: Infinity };
+  renderGridworld(viState.grid, 'gridworld-vi', true);
+  document.getElementById('vi-status').textContent = 'Iteration 0 | Max Change: ∞';
+}
+
+// ═══════════════════════════════════════════
+// CHAPTER COMPLETION
+// ═══════════════════════════════════════════
+function markChapterComplete() {
+  const btn = document.getElementById('completeBtn');
+  if (btn.classList.contains('done')) return;
+  btn.classList.add('done');
+  btn.textContent = '✓ Completed';
+  localStorage.setItem('chapter-4-complete', 'true');
+}
+
+// Check on load
+window.addEventListener('load', () => {
+  if (localStorage.getItem('chapter-4-complete')) {
+    document.getElementById('completeBtn').classList.add('done');
+    document.getElementById('completeBtn').textContent = '✓ Completed';
+  }
+
+  // Initialize gridworlds
+  resetPolicyIteration();
+  resetValueIteration();
+
+  // Render KaTeX
+  if (typeof renderMathInElement !== 'undefined') {
+    renderMathInElement(document.body, {
+      delimiters: [
+        { left: '$$', right: '$$', display: true },
+        { left: '$', right: '$', display: false },
+        { left: '\\[', right: '\\]', display: true },
+        { left: '\\(', right: '\\)', display: false }
+      ],
+      ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+    });
+  }
+});
+</script>
+
+</body>
+</html>

@@ -1,1 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RL: An Interactive Exploration — Sutton & Barto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-deep: #0a0e1a;
+  --bg-card: #111827;
+  --bg-card-hover: #1a2234;
+  --border-subtle: rgba(255,255,255,0.06);
+  --border-glow: rgba(99,102,241,0.4);
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent-indigo: #818cf8;
+  --accent-blue: #60a5fa;
+  --accent-cyan: #22d3ee;
+  --accent-emerald: #34d399;
+  --accent-amber: #fbbf24;
+  --accent-rose: #fb7185;
+  --accent-purple: #c084fc;
+  --glow-indigo: rgba(129,140,248,0.15);
+  --glow-blue: rgba(96,165,250,0.15);
+  --glow-emerald: rgba(52,211,153,0.15);
+  --glow-amber: rgba(251,191,36,0.15);
+  --glow-rose: rgba(251,113,133,0.15);
+  --node-size: 72px;
+  --connector-color: rgba(99,102,241,0.25);
+}
 
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ───── Animated Background ───── */
+.bg-grid {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99,102,241,0.12), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 60%, rgba(34,211,153,0.06), transparent),
+    radial-gradient(ellipse 60% 40% at 20% 80%, rgba(251,113,133,0.06), transparent);
+}
+.bg-grid::after {
+  content: '';
+  position: absolute; inset: 0;
+  background-image: linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+                     linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* ───── Floating Particles ───── */
+.particles { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.particle {
+  position: absolute; border-radius: 50%;
+  animation: particleFloat linear infinite;
+  opacity: 0;
+}
+@keyframes particleFloat {
+  0%   { transform: translateY(100vh) scale(0); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+}
+
+/* ───── Header ───── */
+.hero {
+  position: relative; z-index: 1;
+  text-align: center;
+  padding: 80px 20px 40px;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 16px; border-radius: 999px;
+  background: rgba(129,140,248,0.1);
+  border: 1px solid rgba(129,140,248,0.2);
+  font-size: 12px; font-weight: 600;
+  color: var(--accent-indigo);
+  letter-spacing: 0.08em; text-transform: uppercase;
+  margin-bottom: 24px;
+}
+.hero-badge .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent-emerald);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(52,211,153,0.4); }
+  50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(52,211,153,0); }
+}
+.hero h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  font-weight: 900;
+  line-height: 1.1;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #f1f5f9 0%, #818cf8 50%, #22d3ee 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero .subtitle {
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  color: var(--text-secondary);
+  max-width: 640px; margin: 0 auto 12px;
+  line-height: 1.6;
+}
+.hero .authors {
+  font-size: 14px; color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* ───── Progress Bar ───── */
+.progress-section {
+  position: relative; z-index: 1;
+  max-width: 600px; margin: 32px auto 0; padding: 0 20px;
+}
+.progress-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 8px;
+}
+.progress-header span { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+.progress-header .count { color: var(--accent-indigo); font-family: 'JetBrains Mono', monospace; }
+.progress-bar {
+  height: 6px; border-radius: 3px;
+  background: rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%; border-radius: 3px;
+  background: linear-gradient(90deg, var(--accent-indigo), var(--accent-cyan));
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 12px rgba(129,140,248,0.4);
+}
+
+/* ───── Legend ───── */
+.legend {
+  position: relative; z-index: 1;
+  display: flex; justify-content: center; gap: 24px; flex-wrap: wrap;
+  margin: 24px auto 0; padding: 0 20px;
+}
+.legend-item {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--text-muted); font-weight: 500;
+}
+.legend-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+}
+.legend-dot.unlocked { background: var(--accent-indigo); box-shadow: 0 0 8px rgba(129,140,248,0.5); }
+.legend-dot.available { background: var(--accent-emerald); box-shadow: 0 0 8px rgba(52,211,153,0.5); }
+.legend-dot.locked { background: var(--text-muted); opacity: 0.4; }
+
+/* ───── Skill Tree Container ───── */
+.tree-container {
+  position: relative; z-index: 1;
+  max-width: 1200px; margin: 60px auto 80px;
+  padding: 0 20px;
+}
+
+/* ───── Part Headers ───── */
+.part-section { margin-bottom: 80px; }
+.part-header {
+  display: flex; align-items: center; gap: 16px;
+  margin-bottom: 40px;
+  padding-left: 8px;
+}
+.part-number {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 4px;
+}
+.part-number.part-0 { color: var(--accent-cyan); background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.2); }
+.part-number.part-1 { color: var(--accent-indigo); background: rgba(129,140,248,0.1); border: 1px solid rgba(129,140,248,0.2); }
+.part-number.part-2 { color: var(--accent-amber); background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.2); }
+.part-number.part-3 { color: var(--accent-rose); background: rgba(251,113,133,0.1); border: 1px solid rgba(251,113,133,0.2); }
+.part-title {
+  font-size: clamp(1.2rem, 3vw, 1.6rem);
+  font-weight: 700; color: var(--text-primary);
+}
+
+/* ───── Chapter Grid ───── */
+.chapter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+/* ───── Chapter Cards ───── */
+.chapter-card {
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 28px;
+  cursor: pointer;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+.chapter-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  border-radius: 16px 16px 0 0;
+  opacity: 0;
+  transition: opacity 0.35s;
+}
+.chapter-card:hover {
+  border-color: var(--border-glow);
+  background: var(--bg-card-hover);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.3), 0 0 0 1px rgba(99,102,241,0.1);
+}
+.chapter-card:hover::before { opacity: 1; }
+
+/* Card accent colors per part */
+.chapter-card[data-part="0"]::before { background: linear-gradient(90deg, var(--accent-cyan), var(--accent-blue)); }
+.chapter-card[data-part="1"]::before { background: linear-gradient(90deg, var(--accent-indigo), var(--accent-purple)); }
+.chapter-card[data-part="2"]::before { background: linear-gradient(90deg, var(--accent-amber), var(--accent-emerald)); }
+.chapter-card[data-part="3"]::before { background: linear-gradient(90deg, var(--accent-rose), var(--accent-purple)); }
+
+/* Locked state */
+.chapter-card.locked {
+  opacity: 0.45;
+  cursor: default;
+  filter: grayscale(0.3);
+}
+.chapter-card.locked:hover {
+  transform: none;
+  border-color: var(--border-subtle);
+  background: var(--bg-card);
+  box-shadow: none;
+}
+.chapter-card.locked:hover::before { opacity: 0; }
+
+/* Unlocked/available state */
+.chapter-card.available {
+  border-color: rgba(52,211,153,0.2);
+  box-shadow: 0 0 20px rgba(52,211,153,0.05);
+}
+.chapter-card.available::after {
+  content: 'READY';
+  position: absolute; top: 16px; right: 16px;
+  font-size: 9px; font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 3px 8px; border-radius: 4px;
+  background: rgba(52,211,153,0.15);
+  color: var(--accent-emerald);
+  border: 1px solid rgba(52,211,153,0.2);
+}
+
+.chapter-card.completed {
+  border-color: rgba(129,140,248,0.2);
+}
+.chapter-card.completed::after {
+  content: '✓ COMPLETE';
+  position: absolute; top: 16px; right: 16px;
+  font-size: 9px; font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 3px 8px; border-radius: 4px;
+  background: rgba(129,140,248,0.15);
+  color: var(--accent-indigo);
+  border: 1px solid rgba(129,140,248,0.2);
+}
+
+/* Card internals */
+.card-icon {
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  margin-bottom: 16px;
+}
+.chapter-card[data-part="0"] .card-icon { background: rgba(34,211,238,0.1); }
+.chapter-card[data-part="1"] .card-icon { background: rgba(129,140,248,0.1); }
+.chapter-card[data-part="2"] .card-icon { background: rgba(251,191,36,0.1); }
+.chapter-card[data-part="3"] .card-icon { background: rgba(251,113,133,0.1); }
+
+.card-chapter-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+.card-title {
+  font-size: 17px; font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+.card-desc {
+  font-size: 13px; color: var(--text-secondary);
+  line-height: 1.55;
+  margin-bottom: 16px;
+}
+.card-topics {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.topic-tag {
+  font-size: 11px; font-weight: 500;
+  padding: 3px 10px; border-radius: 6px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.chapter-card:hover .topic-tag {
+  border-color: rgba(255,255,255,0.1);
+  color: var(--text-secondary);
+}
+
+/* Lock icon overlay */
+.lock-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.3s;
+  background: rgba(10,14,26,0.6);
+  border-radius: 16px;
+}
+.chapter-card.locked:hover .lock-overlay { opacity: 1; }
+.lock-overlay span {
+  font-size: 13px; font-weight: 600;
+  color: var(--text-muted);
+  display: flex; align-items: center; gap: 6px;
+}
+
+/* ───── Connection Lines (SVG) ───── */
+.connections-svg {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none; z-index: 0;
+}
+
+/* ───── Footer ───── */
+.footer {
+  position: relative; z-index: 1;
+  text-align: center;
+  padding: 40px 20px 60px;
+  border-top: 1px solid var(--border-subtle);
+}
+.footer p {
+  font-size: 13px; color: var(--text-muted); line-height: 1.6;
+}
+.footer a {
+  color: var(--accent-indigo);
+  text-decoration: none;
+}
+.footer a:hover { text-decoration: underline; }
+
+/* ───── Tooltip ───── */
+.tooltip {
+  position: fixed;
+  background: #1e293b;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 14px 18px;
+  max-width: 300px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.2s, transform 0.2s;
+  z-index: 100;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+}
+.tooltip.show { opacity: 1; transform: translateY(0); }
+.tooltip h4 { font-size: 14px; margin-bottom: 6px; color: var(--text-primary); }
+.tooltip p { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+
+/* ───── Responsive ───── */
+@media (max-width: 700px) {
+  .chapter-grid { grid-template-columns: 1fr; }
+  .hero { padding: 60px 16px 30px; }
+  .part-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+}
+
+/* ───── Animations ───── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.chapter-card {
+  animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.chapter-card:nth-child(1) { animation-delay: 0.05s; }
+.chapter-card:nth-child(2) { animation-delay: 0.1s; }
+.chapter-card:nth-child(3) { animation-delay: 0.15s; }
+.chapter-card:nth-child(4) { animation-delay: 0.2s; }
+.chapter-card:nth-child(5) { animation-delay: 0.25s; }
+.chapter-card:nth-child(6) { animation-delay: 0.3s; }
+.chapter-card:nth-child(7) { animation-delay: 0.35s; }
+.chapter-card:nth-child(8) { animation-delay: 0.4s; }
+
+/* ───── Search / Filter Bar ───── */
+.controls {
+  position: relative; z-index: 1;
+  max-width: 600px; margin: 32px auto 0; padding: 0 20px;
+  display: flex; gap: 12px;
+}
+.search-box {
+  flex: 1; position: relative;
+}
+.search-box input {
+  width: 100%;
+  padding: 10px 16px 10px 40px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.search-box input::placeholder { color: var(--text-muted); }
+.search-box input:focus { border-color: var(--accent-indigo); }
+.search-box .search-icon {
+  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+  color: var(--text-muted); font-size: 14px; pointer-events: none;
+}
+.filter-btn {
+  padding: 10px 16px; border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 13px; font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
+  white-space: nowrap;
+}
+.filter-btn:hover, .filter-btn.active {
+  border-color: var(--accent-indigo);
+  color: var(--accent-indigo);
+  background: rgba(129,140,248,0.05);
+}
+</style>
+</head>
+<body>
+
+<!-- Background effects -->
+<div class="bg-grid"></div>
+<div class="particles" id="particles"></div>
+
+<!-- ───── Hero ───── -->
+<header class="hero">
+  <div class="hero-badge"><span class="dot"></span> Interactive Curriculum</div>
+  <h1>Reinforcement Learning</h1>
+  <p class="subtitle">An interactive exploration of Sutton & Barto's foundational text — from bandits to deep policy gradients.</p>
+  <p class="authors">Richard S. Sutton &amp; Andrew G. Barto · 2nd Edition, 2018</p>
+</header>
+
+<!-- ───── Progress ───── -->
+<div class="progress-section">
+  <div class="progress-header">
+    <span>Curriculum Progress</span>
+    <span class="count" id="progressCount">0 / 17 chapters</span>
+  </div>
+  <div class="progress-bar">
+    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+  </div>
+</div>
+
+<!-- ───── Search & Filter ───── -->
+<div class="controls">
+  <div class="search-box">
+    <span class="search-icon">&#x1F50D;</span>
+    <input type="text" id="searchInput" placeholder="Search chapters, topics...">
+  </div>
+  <button class="filter-btn active" data-filter="all" onclick="filterCards('all', this)">All</button>
+  <button class="filter-btn" data-filter="available" onclick="filterCards('available', this)">Available</button>
+  <button class="filter-btn" data-filter="completed" onclick="filterCards('completed', this)">Done</button>
+</div>
+
+<!-- ───── Legend ───── -->
+<div class="legend">
+  <div class="legend-item"><span class="legend-dot unlocked"></span> Completed</div>
+  <div class="legend-item"><span class="legend-dot available"></span> Available</div>
+  <div class="legend-item"><span class="legend-dot locked"></span> Locked</div>
+</div>
+
+<!-- ───── Skill Tree ───── -->
+<div class="tree-container">
+
+  <!-- ═══ INTRODUCTION ═══ -->
+  <div class="part-section" data-part="introduction">
+    <div class="part-header">
+      <span class="part-number part-0">Foundation</span>
+      <span class="part-title">Introduction</span>
+    </div>
+    <div class="chapter-grid">
+
+      <div class="chapter-card available" data-part="0" data-chapter="1" data-search="introduction rl problem history reinforcement learning examples elements tic-tac-toe" onclick="openChapter(1)">
+        <div class="card-icon">&#x1F3AF;</div>
+        <div class="card-chapter-num">CHAPTER 1</div>
+        <div class="card-title">Introduction</div>
+        <div class="card-desc">The RL problem framed: agents, environments, rewards, and the fundamental trade-off between exploration and exploitation.</div>
+        <div class="card-topics">
+          <span class="topic-tag">RL Problem</span>
+          <span class="topic-tag">Agent-Environment</span>
+          <span class="topic-tag">History</span>
+          <span class="topic-tag">Tic-Tac-Toe</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ PART I: TABULAR SOLUTION METHODS ═══ -->
+  <div class="part-section" data-part="tabular">
+    <div class="part-header">
+      <span class="part-number part-1">Part I</span>
+      <span class="part-title">Tabular Solution Methods</span>
+    </div>
+    <div class="chapter-grid">
+
+      <div class="chapter-card locked" data-part="1" data-chapter="2" data-search="multi-armed bandits k-armed bandit action-value methods epsilon-greedy ucb gradient bandit exploration exploitation" data-prereq="1">
+        <div class="card-icon">&#x1F3B0;</div>
+        <div class="card-chapter-num">CHAPTER 2</div>
+        <div class="card-title">Multi-armed Bandits</div>
+        <div class="card-desc">The casino dilemma: how to choose between slot machines with unknown payoffs. The birthplace of explore vs. exploit.</div>
+        <div class="card-topics">
+          <span class="topic-tag">ε-greedy</span>
+          <span class="topic-tag">UCB</span>
+          <span class="topic-tag">Gradient Bandits</span>
+          <span class="topic-tag">Optimistic Init</span>
+        </div>
+        <div class="lock-overlay"><span>&#x1F512; Complete Ch. 1 to unlock</span></div>
+      </div>
+
+      <div class="chapter-card locked" data-part="1" data-chapter="3" data-search="finite markov decision processes mdp agent environment rewards returns policies value functions bellman equation" data-prereq="2">
+        <div class="card-icon">&#x1F5FA;</div>
+        <div class="card-chapter-num">CHAPTER 3</div>
+        <div class="card-title">Finite Markov Decision Processes</div>
+        <div class="card-desc">The mathematical backbone of RL: states, actions, transition probabilities, and the Bellman equations that tie it all together.</div>
+        <div class="card-topics">
+          <span class="topic-tag">MDPs</span>
+          <span class="topic-tag">Bellman Eq.</span>
+          <span class="topic-tag">Value Functions</span>
+          <span class="topic-tag">Policies</span>
+        </div>
+        <div class="lock-overlay"><span>&#x1F512; Complete Ch. 2 to unlock</span></div>
+      </div>
+
+      <div class="chapter-card locked" data-part="1" data-chapter="4" data-search="dynamic programming policy evaluation improvement iteration value iteration generalized policy iteration gpi" data-prereq="3">
+        <div class="card-icon">&#x1F4CA;</div>
+        <div class="card-chapter-num">CHAPTER 4</div>
+        <div class="card-title">Dynamic Programming</div>
+        <div class="card-desc">Solving MDPs when the model is known: sweeping through state spaces with policy iteration and value iteration.</div>
+        <div class="card-topics">
+          <span class="topic-tag">Policy Iteration</span>
+          <span class="topic-tag">Value Iteration</span>
+          <span class="topic-tag">GPI</span>
+          <span class="topic-tag">Async DP</span>
+        </div>
+        <div class="lock-overlay"><span>&#x1F512; Complete Ch. 3 to unlock</span></div>
+      </div>
+
+      <div class="chapter-card locked" data-part="1" data-chapter="5" data-search="monte carlo methods prediction control first-visit every-visit exploring starts off-policy importance sampling" data-prereq="4">
+        <div class="card-icon">&#x1F3B2;</div>
+        <div class="card-chapter-num">CHAPTER 5</div>
+        <div class="card-title">Monte Carlo Methods</div>
+        <div class="card-desc">Learning from complete episodes without a model — averaging sampled returns to estimate value functions.</div>
+        <div class="card-topics">
+          <span class="topic-tag">MC Prediction</span>
+          <span class="topic-tag">MC Control</span>
+          <span class="topic-tag">Importance Sampling</span>
+          <span class="topic-tag">Off-policy</span>
+        </div>
+        <div class="lock-overlay"><span>&#x1F512; Complete Ch. 4 to unlock</span></div>
+      </div>
+
+      <div class="chapter-card locked" data-part="1" data-chapter="6" data-search="temporal-difference learning td sarsa q-learning td0 expected sarsa double learning maximization bias" data-prereq="5">
+        <div class="card-icon">&#x26A1;</div>
+        <div class="card-chapter-num">CHAPTER 6</div>
+        <div class="card-title">Temporal-Difference Learning</div>
+        <div class="card-desc">The magic of bootstrapping: learning from incomplete episodes. TD(0), SARSA, Q-learning — the algorithms that changed everything.</div>
+        <div class="card-topics">
+          <span class="topic-tag">TD(0)</span>
+          <span class="topic-tag">SARSA</span>
+          <span class="topic-tag">Q-Learning</span>
+          <span class="topic-tag">Double Learning</span>
+        </div>
+        <div class="lock-overlay"><span>&#x1F512; Complete Ch. 5 to unlock</span></div>
+      </div>
+
+      <div class="chapter-card locked" data-part="1" data-chapter="7" data-search="n-step bootstrapping n-step td sarsa off-policy tree backup" data-prereq="6">
+        <div class="card-icon">&#x1F4F6;</div>
+        <div class="card-chapter-num">CHAPTER 7</div>
+        <div class="card-title">n-step Bootstrapping</div>
+        <div class="card-desc">Bridging MC and TD: using n steps of real reward before bootstrapping. The spectrum between pure sampling and pure bootstrapping.</div>
+        <div class="card-topics">
+          <span class="topic-tag">n-step TD</span>
+          <span class="topic-tag">n-step SARSA</span>
+          <span class="topic-tag">Tree Backup</span>
+          <span class="topic-tag">Q(σ)</span>
+        </div>
+        <div class="lock-overlay"><span>&#x1F512; Complete Ch. 6 to unlock</span></div>
+      </div>
+
+      <div class="chapter-card locked" data-part="1" data-chapter="8" data-search="planning learning tabular methods dyna dyna-q model-based prioritized sweeping mcts rollout trajectory sampling" data-prereq="7">
+        <div class="card-icon">&#x1F9E0;</div>
+        <div class="card-chapter-num">CHAPTER 8</div>
+        <div class="card-title">Planning and Learning with Tabular Methods</div>
+        <div class="card-desc">Unifying model-free and model-based RL: the Dyna architecture, where the agent learns from both real and simulated experience.</div>
+        <div class="card-topics">
+          <span class="topic-tag">Dyna-Q</span>
+          <span class="topic-tag">Model-Based</span>
+          <span class="topic-tag">MCTS</span>
+          <span class="topic-tag">Priority Sweep</span>
+        </div>
+        <div class="lock-overlay"><span>&#x1F512; Complete Ch. 7 to unlock</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ PART II: APPROXIMATE SOLUTION METHODS ═══ -->
+  <div class="part-section" data-part="approximate">
+    <div class="part-header">
+      <span class="part-number part-2">Part II</span>
+      <span class="part-title">Approximate Solution Methods</span>
+    </div>
+    <div class="chapter-grid">
+
+      <div class="chapter-card locked" data-part="2" data-chapter="9" data-search="on-policy prediction approximation sgd semi-gradient linear methods tile coding fourier basis neural networks" data-prereq="8">
+        <div class="card-icon">&#x1F4C8;</div>
+        <div class="card-chapter-num">CHAPTER 9</div>
+        <div class="card-title">On-policy Prediction with Approximation</div>
+        <div class="card-desc">Scaling RL beyond tables: using function approximation (linear, tile coding, neural nets) to generalize across massive state spaces.</div>
+        <div class="card-topics">
+          <span class="topic-tag">SGD</span>
+          <span class="topic-tag">Linear Methods</span>
+          <span class="topic-tag">Tile Coding</span>
+          <span class="topic-tag">Neural Nets</span>
+        </div>
+        <div class="lock-overlay"><span>&#x1F512; Complete Ch. 8 to unlock</span></div>
+      </div>
+
+      <div class="chapter-card locked" data-part="2" data-chapter="10" data-search="on-policy control approximation episodic semi-gradient sarsa average reward continuing tasks" data-prereq="9">
+        <div class="card-icon">&#x1F3AE;</div>
+        <div class="card-chapter-num">CHAPTER 10</div>
+        <div class="card-title">On-policy Control with Approximation</div>
+        <div class="card-desc">Combining function approximation with control: episodic semi-gradient SARSA and the average-reward formulation.</div>
+        <div class="card-topics">
+          <span class="topic-tag">Semi-gradient SARSA</span>
+          <span class="topic-tag">Avg Reward</span>
+          <span class="topic-tag">Continuing Tasks</span>
+        </div>
+        <div class="lock-overlay"><span>&#x1F512; Complete Ch. 9 to unlock</span></div>
+      </div>
+
+      <div class="chapter-card locked" data-part="2" data-chapter="11" data-search="off-policy methods approximation deadly triad divergence semi-gradient gradient-td emphatic-td bellman error" data-prereq="10">
+        <div class="card-icon">&#x26A0;</div>
+        <div class="card-chapter-num">CHAPTER 11</div>
+        <div class="card-title">Off-policy Methods with Approximation</div>
+        <div class="card-desc">Here be dragons: the Deadly Triad of function approximation + bootstrapping + off-policy. Why convergence breaks down.</div>
+        <div class="card-topics">
+          <span class="topic-tag">Deadly Triad ⚠</span>
+          <span class="topic-tag">Divergence</span>
+          <span class="topic-tag">Gradient-TD</span>
+          <span class="topic-tag">Emphatic-TD</span>
+        </div>
+        <div class="lock-overlay"><span>&#x1F512; Complete Ch. 10 to unlock</span></div>
+      </div>
+
+      <div class="chapter-card locked" data-part="2" data-chapter="12" data-search="eligibility traces lambda returns td-lambda forward backward view dutch traces sarsa-lambda" data-prereq="11">
+        <div class="card-icon">&#x1F300;</div>
+        <div class="card-chapter-num">CHAPTER 12</div>
+        <div class="card-title">Eligibility Traces</div>
+        <div class="card-desc">The elegant unification: λ-returns bridge MC and TD via fading memory traces, enabling efficient online learning.</div>
+        <div class="card-topics">
+          <span class="topic-tag">λ-returns</span>
+          <span class="topic-tag">TD(λ)</span>
+          <span class="topic-tag">Sarsa(λ)</span>
+          <span class="topic-tag">True Online TD</span>
+        </div>
+        <div class="lock-overlay"><span>&#x1F512; Complete Ch. 11 to unlock</span></div>
+      </div>
+
+      <div class="chapter-card locked" data-part="2" data-chapter="13" data-search="policy gradient methods reinforce actor-critic baseline advantage policy parameterization continuous actions" data-prereq="12">
+        <div class="card-icon">&#x1F680;</div>
+        <div class="card-chapter-num">CHAPTER 13</div>
+        <div class="card-title">Policy Gradient Methods</div>
+        <div class="card-desc">Directly optimizing the policy: the Policy Gradient Theorem, REINFORCE, and the Actor-Critic framework that powers modern deep RL.</div>
+        <div class="card-topics">
+          <span class="topic-tag">REINFORCE</span>
+          <span class="topic-tag">Actor-Critic</span>
+          <span class="topic-tag">Policy Gradient Thm</span>
+          <span class="topic-tag">Baseline</span>
+        </div>
+        <div class="lock-overlay"><span>&#x1F512; Complete Ch. 12 to unlock</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ PART III: LOOKING DEEPER ═══ -->
+  <div class="part-section" data-part="deeper">
+    <div class="part-header">
+      <span class="part-number part-3">Part III</span>
+      <span class="part-title">Looking Deeper</span>
+    </div>
+    <div class="chapter-grid">
+
+      <div class="chapter-card locked" data-part="3" data-chapter="14" data-search="psychology prediction control classical conditioning rescorla wagner td model instrumental delayed reinforcement cognitive maps habitual goal-directed" data-prereq="13">
+        <div class="card-icon">&#x1F9E9;</div>
+        <div class="card-chapter-num">CHAPTER 14</div>
+        <div class="card-title">Psychology</div>
+        <div class="card-desc">RL's roots in animal learning: classical conditioning, the Rescorla-Wagner model, and the link between habit and goal-directed behavior.</div>
+        <div class="card-topics">
+          <span class="topic-tag">Classical Conditioning</span>
+          <span class="topic-tag">Rescorla-Wagner</span>
+          <span class="topic-tag">Cognitive Maps</span>
+        </div>
+        <div class="lock-overlay"><span>&#x1F512; Complete Ch. 13 to unlock</span></div>
+      </div>
+
+      <div class="chapter-card locked" data-part="3" data-chapter="15" data-search="neuroscience dopamine reward prediction error basal ganglia actor-critic neural hedonistic addiction" data-prereq="13">
+        <div class="card-icon">&#x1FA7A;</div>
+        <div class="card-chapter-num">CHAPTER 15</div>
+        <div class="card-title">Neuroscience</div>
+        <div class="card-desc">The dopamine connection: how TD error maps onto dopamine neuron firing, and the neural basis of the actor-critic architecture.</div>
+        <div class="card-topics">
+          <span class="topic-tag">Dopamine</span>
+          <span class="topic-tag">Reward Prediction Error</span>
+          <span class="topic-tag">Neural Actor-Critic</span>
+        </div>
+        <div class="lock-overlay"><span>&#x1F512; Complete Ch. 13 to unlock</span></div>
+      </div>
+
+      <div class="chapter-card locked" data-part="3" data-chapter="16" data-search="applications case studies td-gammon samuel checkers watson alphago alphago-zero atari dqn video games" data-prereq="13">
+        <div class="card-icon">&#x1F3C6;</div>
+        <div class="card-chapter-num">CHAPTER 16</div>
+        <div class="card-title">Applications and Case Studies</div>
+        <div class="card-desc">From backgammon to Go: TD-Gammon, Samuel's Checkers, Atari DQN, AlphaGo, and the triumphs of RL in the real world.</div>
+        <div class="card-topics">
+          <span class="topic-tag">TD-Gammon</span>
+          <span class="topic-tag">AlphaGo</span>
+          <span class="topic-tag">Atari DQN</span>
+          <span class="topic-tag">Thermal Soaring</span>
+        </div>
+        <div class="lock-overlay"><span>&#x1F512; Complete Ch. 13 to unlock</span></div>
+      </div>
+
+      <div class="chapter-card locked" data-part="3" data-chapter="17" data-search="frontiers general value functions options temporal abstraction reward design future artificial intelligence" data-prereq="13">
+        <div class="card-icon">&#x1F52D;</div>
+        <div class="card-chapter-num">CHAPTER 17</div>
+        <div class="card-title">Frontiers</div>
+        <div class="card-desc">The road ahead: general value functions, options framework, temporal abstraction, reward shaping, and the future of AI.</div>
+        <div class="card-topics">
+          <span class="topic-tag">GVFs</span>
+          <span class="topic-tag">Options</span>
+          <span class="topic-tag">Reward Design</span>
+          <span class="topic-tag">Future of AI</span>
+        </div>
+        <div class="lock-overlay"><span>&#x1F512; Complete Ch. 13 to unlock</span></div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- ───── Footer ───── -->
+<footer class="footer">
+  <p>Based on <em>Reinforcement Learning: An Introduction</em> by Sutton &amp; Barto (MIT Press, 2018).<br>
+  Interactive curriculum inspired by <a href="https://paraschopra.github.io/explainers/" target="_blank" rel="noopener">Paras Chopra's Explainers</a>.<br>
+  <span style="color:var(--text-muted); font-size: 12px; margin-top: 4px; display: inline-block;">Say <code style="background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px;">Unlock Chapter N</code> to generate a full interactive chapter page.</span>
+  </p>
+</footer>
+
+<!-- ───── Tooltip ───── -->
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ═══════════════════════════════════════════
+// STATE MANAGEMENT
+// ═══════════════════════════════════════════
+const STORAGE_KEY = 'rl-curriculum-progress';
+
+function getProgress() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || { completed: [] };
+  } catch { return { completed: [] }; }
+}
+
+function saveProgress(progress) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+}
+
+function isCompleted(ch) {
+  return getProgress().completed.includes(ch);
+}
+
+function markCompleted(ch) {
+  const p = getProgress();
+  if (!p.completed.includes(ch)) {
+    p.completed.push(ch);
+    saveProgress(p);
+  }
+  refreshUI();
+}
+
+// ═══════════════════════════════════════════
+// UI REFRESH
+// ═══════════════════════════════════════════
+function refreshUI() {
+  const progress = getProgress();
+  const cards = document.querySelectorAll('.chapter-card');
+  let completedCount = 0;
+
+  cards.forEach(card => {
+    const ch = parseInt(card.dataset.chapter);
+    const prereq = card.dataset.prereq ? parseInt(card.dataset.prereq) : null;
+
+    card.classList.remove('completed', 'available', 'locked');
+
+    if (progress.completed.includes(ch)) {
+      card.classList.add('completed');
+      completedCount++;
+    } else if (!prereq || progress.completed.includes(prereq)) {
+      card.classList.add('available');
+    } else {
+      card.classList.add('locked');
+    }
+  });
+
+  // Update progress bar
+  const pct = (completedCount / 17) * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressCount').textContent = completedCount + ' / 17 chapters';
+}
+
+// ═══════════════════════════════════════════
+// CHAPTER NAVIGATION
+// ═══════════════════════════════════════════
+function openChapter(ch) {
+  const card = document.querySelector(`[data-chapter="${ch}"]`);
+  if (card && card.classList.contains('locked')) return;
+
+  // Navigate to chapter page (will be generated on demand)
+  const pageName = `chapter-${ch}.html`;
+
+  // Check if page exists via a quick fetch; if not, show a message
+  fetch(pageName, { method: 'HEAD' })
+    .then(res => {
+      if (res.ok) {
+        window.location.href = pageName;
+      } else {
+        showChapterPrompt(ch);
+      }
+    })
+    .catch(() => showChapterPrompt(ch));
+}
+
+function showChapterPrompt(ch) {
+  const titles = {
+    1: 'Introduction', 2: 'Multi-armed Bandits', 3: 'Finite Markov Decision Processes',
+    4: 'Dynamic Programming', 5: 'Monte Carlo Methods', 6: 'Temporal-Difference Learning',
+    7: 'n-step Bootstrapping', 8: 'Planning and Learning with Tabular Methods',
+    9: 'On-policy Prediction with Approximation', 10: 'On-policy Control with Approximation',
+    11: 'Off-policy Methods with Approximation', 12: 'Eligibility Traces',
+    13: 'Policy Gradient Methods', 14: 'Psychology', 15: 'Neuroscience',
+    16: 'Applications and Case Studies', 17: 'Frontiers'
+  };
+
+  // Create modal
+  const modal = document.createElement('div');
+  modal.style.cssText = `position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);`;
+  modal.innerHTML = `
+    <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:32px;max-width:440px;text-align:center;box-shadow:0 24px 48px rgba(0,0,0,0.5);">
+      <div style="font-size:40px;margin-bottom:16px;">&#x1F4D6;</div>
+      <h3 style="font-size:20px;margin-bottom:8px;color:#f1f5f9;">Chapter ${ch}: ${titles[ch]}</h3>
+      <p style="font-size:14px;color:#94a3b8;line-height:1.6;margin-bottom:24px;">
+        This chapter page hasn't been generated yet.<br>
+        Say <strong style="color:#818cf8;">"Unlock Chapter ${ch}"</strong> to build it.
+      </p>
+      <button onclick="this.closest('div').parentElement.remove()" style="padding:10px 24px;border-radius:8px;border:none;background:linear-gradient(135deg,#818cf8,#6366f1);color:white;font-weight:600;font-size:14px;cursor:pointer;font-family:'Inter',sans-serif;">Got it</button>
+    </div>
+  `;
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+// ═══════════════════════════════════════════
+// SEARCH & FILTER
+// ═══════════════════════════════════════════
+document.getElementById('searchInput').addEventListener('input', function() {
+  const query = this.value.toLowerCase().trim();
+  const cards = document.querySelectorAll('.chapter-card');
+
+  cards.forEach(card => {
+    const searchText = (card.dataset.search || '') + ' ' + card.querySelector('.card-title').textContent.toLowerCase();
+    card.style.display = (!query || searchText.includes(query)) ? '' : 'none';
+  });
+});
+
+function filterCards(filter, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  const cards = document.querySelectorAll('.chapter-card');
+  cards.forEach(card => {
+    if (filter === 'all') {
+      card.style.display = '';
+    } else if (filter === 'available') {
+      card.style.display = (card.classList.contains('available') || card.classList.contains('completed')) ? '' : 'none';
+    } else if (filter === 'completed') {
+      card.style.display = card.classList.contains('completed') ? '' : 'none';
+    }
+  });
+}
+
+// ═══════════════════════════════════════════
+// PARTICLES
+// ═══════════════════════════════════════════
+function createParticles() {
+  const container = document.getElementById('particles');
+  const colors = ['rgba(129,140,248,0.3)', 'rgba(52,211,153,0.3)', 'rgba(251,191,36,0.2)', 'rgba(34,211,238,0.3)'];
+
+  for (let i = 0; i < 25; i++) {
+    const p = document.createElement('div');
+    p.classList.add('particle');
+    const size = Math.random() * 3 + 1;
+    p.style.width = size + 'px';
+    p.style.height = size + 'px';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.background = colors[Math.floor(Math.random() * colors.length)];
+    p.style.animationDuration = (Math.random() * 15 + 10) + 's';
+    p.style.animationDelay = (Math.random() * 10) + 's';
+    container.appendChild(p);
+  }
+}
+
+// ═══════════════════════════════════════════
+// KEYBOARD SHORTCUT: Ctrl+Shift+R to reset
+// ═══════════════════════════════════════════
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.shiftKey && e.key === 'R') {
+    e.preventDefault();
+    if (confirm('Reset all progress? This cannot be undone.')) {
+      localStorage.removeItem(STORAGE_KEY);
+      refreshUI();
+    }
+  }
+});
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+createParticles();
+refreshUI();
+
+// Expose markCompleted globally for dev/debug
+window.markCompleted = markCompleted;
+window.resetProgress = () => { localStorage.removeItem(STORAGE_KEY); refreshUI(); };
+</script>
+
+</body>
+</html>
