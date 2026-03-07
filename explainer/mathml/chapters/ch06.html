@@ -1,0 +1,1423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 6: Eigenvalues and Eigenvectors — Math for ML</title>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,500&family=Figtree:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- KaTeX -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\[', right: '\\]', display: true},
+      {left: '\\(', right: '\\)', display: false}
+    ],
+    throwOnError: false
+  });"></script>
+
+<!-- Prism.js -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css">
+
+<style>
+/* ═══════════════════════════════════════════════════════════
+   DESIGN SYSTEM — Chapter Page
+   ═══════════════════════════════════════════════════════════ */
+:root {
+  --bg:           #FAF9F7;
+  --bg-card:      #FFFFFF;
+  --bg-warm:      #F7F6F3;
+  --text:         #2D2D2D;
+  --text-2:       #555555;
+  --text-3:       #888888;
+  --border:       #E5E5E0;
+  --border-hover: #D0D0CA;
+  --blue:         #4A6CF7;
+  --blue-light:   #EEF2FF;
+  --blue-dim:     rgba(74,108,247,0.08);
+  --indigo:       #6366F1;
+  --green:        #22C55E;
+  --green-light:  #F0FDF4;
+  --red:          #EF4444;
+  --red-light:    #FFF5F5;
+  --amber:        #F59E0B;
+  --amber-light:  #FFFBEB;
+  --purple:       #8B5CF6;
+  --purple-light: #F5F3FF;
+  --cyan:         #06B6D4;
+  --grad-part1:   linear-gradient(135deg, #4A6CF7 0%, #6366F1 100%);
+  --font-serif:   'Newsreader', Georgia, serif;
+  --font-sans:    'Figtree', -apple-system, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Fira Code', monospace;
+  --radius:       12px;
+  --radius-sm:    8px;
+  --shadow-sm:    0 1px 3px rgba(0,0,0,0.04);
+  --shadow-md:    0 4px 16px rgba(0,0,0,0.06);
+  --shadow-lg:    0 8px 32px rgba(0,0,0,0.08);
+  --content-w:    740px;
+  --layout-w:     1120px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 90px; }
+
+body {
+  font-family: var(--font-serif);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.75;
+  font-size: 17px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Reading Progress Bar ──────────────────────────── */
+.reading-progress {
+  position: fixed; top: 0; left: 0; z-index: 1000;
+  width: 0%; height: 3px;
+  background: var(--grad-part1);
+  transition: width 0.1s linear;
+}
+
+/* ── Layout ────────────────────────────────────────── */
+.page-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  max-width: var(--layout-w);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+@media (min-width: 1060px) {
+  .page-layout {
+    grid-template-columns: 220px 1fr;
+    gap: 48px;
+  }
+}
+
+/* ── Sticky TOC (sidebar) ──────────────────────────── */
+.toc-sidebar { display: none; }
+
+@media (min-width: 1060px) {
+  .toc-sidebar {
+    display: block;
+    position: sticky;
+    top: 24px;
+    align-self: start;
+    padding-top: 32px;
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+  }
+}
+
+.toc-label {
+  font-family: var(--font-sans);
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text-3); margin-bottom: 16px;
+}
+
+.toc-list { list-style: none; }
+.toc-list li { margin: 0; }
+
+.toc-list a {
+  display: block; padding: 6px 0 6px 14px;
+  font-family: var(--font-sans); font-size: 13px; font-weight: 400;
+  color: var(--text-3); text-decoration: none;
+  border-left: 2px solid transparent;
+  transition: all 0.2s ease; line-height: 1.5;
+}
+
+.toc-list a:hover { color: var(--blue); border-left-color: var(--blue); }
+.toc-list a.active { color: var(--blue); border-left-color: var(--blue); font-weight: 600; }
+.toc-list .sub { padding-left: 28px; font-size: 12px; }
+
+/* ── Mobile TOC ────────────────────────────────────── */
+.mobile-toc { display: block; margin: 16px 0 32px; }
+@media (min-width: 1060px) { .mobile-toc { display: none; } }
+
+.mobile-toc-toggle {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 12px 16px; background: var(--bg-card);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-family: var(--font-sans); font-size: 14px; font-weight: 500;
+  color: var(--text-2); cursor: pointer;
+}
+
+.mobile-toc-toggle .chevron { margin-left: auto; transition: transform 0.2s; }
+.mobile-toc-toggle.open .chevron { transform: rotate(180deg); }
+
+.mobile-toc-list {
+  display: none; list-style: none; background: var(--bg-card);
+  border: 1px solid var(--border); border-top: 0;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm); padding: 8px 0;
+}
+
+.mobile-toc-list.open { display: block; }
+
+.mobile-toc-list a {
+  display: block; padding: 8px 20px; font-family: var(--font-sans);
+  font-size: 14px; color: var(--text-2); text-decoration: none;
+}
+
+.mobile-toc-list a:hover { color: var(--blue); background: var(--blue-dim); }
+
+/* ── Content Area ──────────────────────────────────── */
+.content { max-width: var(--content-w); padding: 32px 0 80px; min-width: 0; }
+
+/* ── Breadcrumb ────────────────────────────────────── */
+.breadcrumb {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+  font-family: var(--font-sans); font-size: 13px; color: var(--text-3);
+  margin-bottom: 32px;
+}
+
+.breadcrumb a { color: var(--text-3); text-decoration: none; transition: color 0.15s; }
+.breadcrumb a:hover { color: var(--blue); }
+.breadcrumb .sep { color: var(--border); }
+.breadcrumb .current { color: var(--text-2); font-weight: 500; }
+
+/* ── Chapter Header ────────────────────────────────── */
+.ch-header { margin-bottom: 48px; }
+
+.ch-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 56px; height: 56px; border-radius: var(--radius);
+  background: var(--grad-part1); color: #fff;
+  font-family: var(--font-sans); font-size: 22px; font-weight: 700;
+  margin-bottom: 20px; box-shadow: 0 4px 12px rgba(74,108,247,0.25);
+}
+
+.ch-title {
+  font-family: var(--font-serif); font-size: clamp(28px, 5vw, 40px);
+  font-weight: 700; line-height: 1.15; letter-spacing: -0.02em;
+  color: var(--text); margin-bottom: 8px;
+}
+
+.ch-subtitle {
+  font-family: var(--font-serif); font-size: 18px; font-style: italic;
+  color: var(--text-2); margin-bottom: 16px;
+}
+
+.ch-meta { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+
+.ch-meta-item {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--font-sans); font-size: 13px; color: var(--text-3);
+}
+
+.ch-meta-item svg { width: 15px; height: 15px; }
+
+/* ── Mark Complete ─────────────────────────────────── */
+.complete-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 20px; background: var(--bg-card);
+  border: 2px solid var(--border); border-radius: 100px;
+  font-family: var(--font-sans); font-size: 14px; font-weight: 600;
+  color: var(--text-2); cursor: pointer; transition: all 0.25s ease;
+}
+
+.complete-btn:hover { border-color: var(--green); color: var(--green); }
+.complete-btn.done { background: var(--green); border-color: var(--green); color: #fff; }
+.complete-btn svg { width: 16px; height: 16px; }
+
+/* ── Section Styling ───────────────────────────────── */
+.section { margin-top: 56px; scroll-margin-top: 80px; }
+
+.section-divider { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+.section-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+.section-num {
+  font-family: var(--font-sans); font-size: 12px; font-weight: 700;
+  letter-spacing: 0.06em; color: var(--blue); text-transform: uppercase; white-space: nowrap;
+}
+
+.section h2 {
+  font-family: var(--font-serif); font-size: clamp(22px, 4vw, 28px);
+  font-weight: 700; line-height: 1.25; letter-spacing: -0.01em;
+  color: var(--text); margin-bottom: 20px;
+}
+
+.section h3 {
+  font-family: var(--font-serif); font-size: 20px; font-weight: 600;
+  color: var(--text); margin: 36px 0 14px; scroll-margin-top: 80px;
+}
+
+.section h4 {
+  font-family: var(--font-serif); font-size: 17px; font-weight: 600;
+  color: var(--text); margin: 28px 0 10px;
+}
+
+p { margin: 14px 0; }
+
+/* ── Mental Model (Feynman Bridge) ─────────────────── */
+.feynman-bridge {
+  background: linear-gradient(135deg, #FFF7ED 0%, #FFFBEB 40%, #F0FDF4 100%);
+  border: 1px solid #FDE68A; border-radius: var(--radius);
+  padding: 32px; margin: 32px 0 48px; position: relative; overflow: hidden;
+}
+
+.feynman-bridge::before {
+  content: '\1F4A1'; position: absolute; top: -8px; right: 16px;
+  font-size: 48px; opacity: 0.15;
+}
+
+.feynman-label {
+  font-family: var(--font-sans); font-size: 11px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--amber); margin-bottom: 12px;
+}
+
+.feynman-bridge h3 {
+  font-family: var(--font-serif); font-size: 22px; font-weight: 600;
+  color: var(--text); margin: 0 0 16px;
+}
+
+.feynman-bridge p { font-size: 17px; line-height: 1.85; color: #444; }
+
+/* ── Definition Box ────────────────────────────────── */
+.def-box {
+  background: var(--blue-light); border-left: 4px solid var(--blue);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 20px 24px; margin: 24px 0;
+}
+
+.def-box .box-label {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-sans); font-size: 12px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--blue); margin-bottom: 10px;
+}
+
+.def-box .box-label::before {
+  content: ''; width: 8px; height: 8px; border-radius: 2px; background: var(--blue);
+}
+
+.def-box .box-title {
+  font-family: var(--font-serif); font-size: 16px; font-weight: 600;
+  color: var(--text); margin-bottom: 8px;
+}
+
+.def-box p, .def-box li { font-size: 15.5px; line-height: 1.7; color: var(--text); }
+.def-box ul { margin-left: 20px; margin-top: 8px; }
+.def-box li { margin: 6px 0; }
+
+/* ── Theorem Box ───────────────────────────────────── */
+.thm-box {
+  background: var(--red-light); border-left: 4px solid var(--red);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 20px 24px; margin: 24px 0;
+}
+
+.thm-box .box-label {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-sans); font-size: 12px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--red); margin-bottom: 10px;
+}
+
+.thm-box .box-label::before {
+  content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--red);
+}
+
+.thm-box p { font-size: 15.5px; line-height: 1.7; }
+
+/* ── Proposition Box ───────────────────────────────── */
+.prop-box {
+  background: var(--purple-light); border-left: 4px solid var(--purple);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 20px 24px; margin: 24px 0;
+}
+
+.prop-box .box-label {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-sans); font-size: 12px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--purple);
+  margin-bottom: 10px;
+}
+
+.prop-box .box-label::before {
+  content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--purple);
+}
+
+.prop-box p { font-size: 15.5px; line-height: 1.7; }
+
+/* ── Proof Toggle ──────────────────────────────────── */
+.proof-toggle {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 16px; background: var(--bg-warm);
+  border: 1px solid var(--border); border-radius: 100px;
+  font-family: var(--font-sans); font-size: 13px; font-weight: 600;
+  color: var(--text-2); cursor: pointer; transition: all 0.2s; margin: 12px 0;
+}
+
+.proof-toggle:hover { border-color: var(--blue); color: var(--blue); }
+.proof-toggle .arrow { transition: transform 0.3s ease; font-size: 10px; }
+.proof-toggle.open .arrow { transform: rotate(90deg); }
+
+.proof-body {
+  max-height: 0; overflow: hidden;
+  transition: max-height 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.proof-body.open { max-height: 2000px; }
+
+.proof-inner {
+  background: #F9FAFB; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 20px 24px;
+  margin: 8px 0 16px; font-size: 15px; line-height: 1.75; color: var(--text-2);
+}
+
+.proof-inner em { font-style: italic; }
+
+/* ── Code Blocks ───────────────────────────────────── */
+pre[class*="language-"] {
+  background: #1a1b2e !important; border-radius: var(--radius) !important;
+  border: 1px solid #2a2b42 !important; padding: 0 !important;
+  margin: 24px 0 !important; overflow: hidden;
+  box-shadow: var(--shadow-md); position: relative;
+}
+
+.code-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 20px; background: #12132a;
+  border-bottom: 1px solid #2a2b42;
+  font-family: var(--font-sans); font-size: 12px;
+}
+
+.code-lang { color: #7dd3fc; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+
+.copy-btn {
+  background: none; border: 1px solid #3a3b52; border-radius: 6px;
+  padding: 4px 12px; color: #888; font-family: var(--font-sans);
+  font-size: 11px; font-weight: 500; cursor: pointer; transition: all 0.15s;
+}
+
+.copy-btn:hover { border-color: #7dd3fc; color: #7dd3fc; }
+.copy-btn.copied { border-color: var(--green); color: var(--green); }
+
+pre[class*="language-"] > code {
+  display: block; padding: 20px 24px !important;
+  font-family: var(--font-mono) !important; font-size: 13.5px !important;
+  line-height: 1.7 !important; color: #e2e8f0 !important;
+  background: none !important; overflow-x: auto;
+}
+
+.token.comment, .token.prolog, .token.doctype { color: #6b7280 !important; font-style: italic; }
+.token.keyword { color: #c084fc !important; }
+.token.string { color: #86efac !important; }
+.token.number { color: #fbbf24 !important; }
+.token.function { color: #7dd3fc !important; }
+.token.boolean { color: #fb923c !important; }
+.token.operator { color: #94a3b8 !important; }
+.token.builtin { color: #67e8f9 !important; }
+.token.class-name { color: #fca5a5 !important; }
+.token.punctuation { color: #94a3b8 !important; }
+
+:not(pre) > code {
+  font-family: var(--font-mono); font-size: 0.88em;
+  background: #F0EFEC; padding: 2px 7px; border-radius: 4px; color: #C2410C;
+}
+
+/* ── KaTeX Overrides ───────────────────────────────── */
+.katex-display { margin: 24px 0 !important; padding: 16px 0; }
+.katex { font-size: 1.08em !important; }
+
+/* ── Callout ───────────────────────────────────────── */
+.callout {
+  background: linear-gradient(135deg, var(--blue-light) 0%, var(--purple-light) 100%);
+  border: 1px solid #D1D5EB; border-radius: var(--radius);
+  padding: 24px 28px; margin: 28px 0;
+}
+
+.callout .callout-label {
+  font-family: var(--font-sans); font-size: 12px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--blue); margin-bottom: 8px;
+}
+
+.callout p { font-size: 15.5px; line-height: 1.7; }
+
+/* ── Performance Deep-Dive ─────────────────────────── */
+.perf-dive {
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+  border-radius: var(--radius); padding: 28px 28px 20px; margin: 28px 0;
+  color: #e2e8f0; position: relative; overflow: hidden;
+}
+
+.perf-dive::before {
+  content: '\26A1'; position: absolute; top: -6px; right: 12px;
+  font-size: 56px; opacity: 0.08;
+}
+
+.perf-dive .perf-label {
+  font-family: var(--font-sans); font-size: 11px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: #fbbf24; margin-bottom: 8px;
+}
+
+.perf-dive h4 { color: #fff; font-size: 18px; margin: 0 0 12px; }
+.perf-dive p { color: #94a3b8; font-size: 15px; line-height: 1.7; }
+
+.perf-dive pre[class*="language-"] {
+  border: 1px solid #334155 !important; margin-top: 16px !important;
+}
+
+/* ── Why This Matters Box ──────────────────────────── */
+.why-ai {
+  background: linear-gradient(135deg, var(--blue-light) 0%, #F0FDFA 100%);
+  border: 2px solid var(--blue); border-radius: var(--radius);
+  padding: 28px 28px; margin: 36px 0;
+}
+
+.why-ai .why-label {
+  font-family: var(--font-sans); font-size: 12px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--blue); margin-bottom: 12px;
+}
+
+.why-ai h3 { font-size: 20px; margin: 0 0 12px; }
+.why-ai ul { margin-left: 18px; }
+.why-ai li { margin: 10px 0; font-size: 15.5px; line-height: 1.7; }
+.why-ai li strong { color: var(--blue); }
+
+/* ── Socratic Section ──────────────────────────────── */
+.socratic { margin-top: 56px; scroll-margin-top: 80px; }
+
+.socratic-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+
+.socratic-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--amber) 0%, #F97316 100%);
+  display: flex; align-items: center; justify-content: center; font-size: 20px;
+}
+
+.socratic h2 { margin: 0; font-size: 24px; }
+
+.socratic-scenario {
+  background: var(--amber-light); border: 1px solid #FDE68A;
+  border-radius: var(--radius); padding: 20px 24px; margin-bottom: 24px;
+  font-style: italic; color: var(--text-2); font-size: 15.5px; line-height: 1.75;
+}
+
+.q-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px 24px;
+  margin-bottom: 14px; transition: box-shadow 0.2s;
+}
+
+.q-card:hover { box-shadow: var(--shadow-md); }
+
+.q-top { display: flex; align-items: flex-start; gap: 14px; }
+
+.q-num {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--grad-part1); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-sans); font-size: 13px; font-weight: 700; flex-shrink: 0;
+}
+
+.q-text { font-weight: 500; font-size: 15.5px; line-height: 1.6; flex: 1; }
+
+.reveal-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 12px; padding: 6px 14px; background: none;
+  border: 1px solid var(--blue); border-radius: 100px;
+  font-family: var(--font-sans); font-size: 12px; font-weight: 600;
+  color: var(--blue); cursor: pointer; transition: all 0.2s;
+}
+
+.reveal-btn:hover { background: var(--blue); color: #fff; }
+.reveal-btn.open { background: var(--blue); color: #fff; }
+
+.q-answer {
+  max-height: 0; overflow: hidden;
+  transition: max-height 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.q-answer.open { max-height: 500px; }
+
+.q-answer-inner {
+  background: var(--blue-light); border-radius: var(--radius-sm);
+  padding: 14px 18px; margin-top: 14px;
+  font-size: 15px; line-height: 1.7; color: var(--text-2);
+}
+
+/* ── Chapter Navigation ────────────────────────────── */
+.ch-nav {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 16px; margin-top: 56px; padding-top: 28px;
+  border-top: 1px solid var(--border);
+}
+
+.nav-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 20px; background: var(--bg-card);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-family: var(--font-sans); font-size: 14px; font-weight: 600;
+  color: var(--text-2); text-decoration: none; transition: all 0.2s;
+}
+
+.nav-btn:hover { border-color: var(--blue); color: var(--blue); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+.nav-btn.disabled { opacity: 0.4; pointer-events: none; }
+
+/* ── Back to Top ───────────────────────────────────── */
+.back-top {
+  position: fixed; bottom: 28px; right: 28px; width: 42px; height: 42px;
+  border-radius: 50%; background: var(--bg-card);
+  border: 1px solid var(--border); box-shadow: var(--shadow-md);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; opacity: 0; transform: translateY(10px);
+  transition: all 0.3s; z-index: 100;
+}
+
+.back-top.visible { opacity: 1; transform: translateY(0); }
+.back-top:hover { border-color: var(--blue); }
+.back-top svg { width: 18px; height: 18px; color: var(--text-2); }
+
+/* ── Footer ────────────────────────────────────────── */
+.ch-footer {
+  text-align: center; padding: 32px 0;
+  border-top: 1px solid var(--border);
+  font-family: var(--font-sans); font-size: 13px;
+  color: var(--text-3); margin-top: 32px;
+}
+
+@media (max-width: 600px) {
+  .ch-nav { flex-direction: column; }
+  .nav-btn { width: 100%; justify-content: center; }
+}
+</style>
+</head>
+<body>
+
+<!-- Reading Progress -->
+<div class="reading-progress" id="readingProgress"></div>
+
+<div class="page-layout">
+
+  <!-- ═══ SIDEBAR TOC ═══════════════════════════════ -->
+  <aside class="toc-sidebar">
+    <div class="toc-label">On this page</div>
+    <ul class="toc-list" id="tocList">
+      <li><a href="#s6-1" data-section="s6-1">6.1 Eigenvalues and Eigenvectors</a></li>
+      <li class="sub"><a href="#s6-1-def" data-section="s6-1-def">Definition</a></li>
+      <li class="sub"><a href="#s6-1-char" data-section="s6-1-char">Characteristic Polynomial</a></li>
+      <li><a href="#s6-2" data-section="s6-2">6.2 Computing Eigenvalues</a></li>
+      <li class="sub"><a href="#s6-2-small" data-section="s6-2-small">Small Matrices</a></li>
+      <li class="sub"><a href="#s6-2-numpy" data-section="s6-2-numpy">NumPy in Practice</a></li>
+      <li><a href="#s6-3" data-section="s6-3">6.3 Eigenspaces</a></li>
+      <li class="sub"><a href="#s6-3-geom" data-section="s6-3-geom">Geometric Multiplicity</a></li>
+      <li class="sub"><a href="#s6-3-diag" data-section="s6-3-diag">Diagonalisation</a></li>
+      <li><a href="#s6-4" data-section="s6-4">6.4 Special Eigenvalue Properties</a></li>
+      <li><a href="#s6-5" data-section="s6-5">6.5 Summary</a></li>
+      <li><a href="#socratic" data-section="socratic">Knowledge Check</a></li>
+    </ul>
+  </aside>
+
+  <!-- ═══ MAIN CONTENT ══════════════════════════════ -->
+  <main class="content">
+
+    <!-- Mobile TOC -->
+    <div class="mobile-toc">
+      <button class="mobile-toc-toggle" id="mobileTocToggle">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+        Table of Contents
+        <span class="chevron">▾</span>
+      </button>
+      <ul class="mobile-toc-list" id="mobileTocList">
+        <li><a href="#s6-1">6.1 Eigenvalues and Eigenvectors</a></li>
+        <li><a href="#s6-2">6.2 Computing Eigenvalues</a></li>
+        <li><a href="#s6-3">6.3 Eigenspaces</a></li>
+        <li><a href="#s6-4">6.4 Special Eigenvalue Properties</a></li>
+        <li><a href="#s6-5">6.5 Summary</a></li>
+        <li><a href="#socratic">Knowledge Check</a></li>
+      </ul>
+    </div>
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb">
+      <a href="../index.html">Curriculum</a>
+      <span class="sep">/</span>
+      <span class="current">Chapter 6</span>
+    </nav>
+
+    <!-- Chapter Header -->
+    <header class="ch-header">
+      <div class="ch-badge">6</div>
+      <h1 class="ch-title">Eigenvalues and Eigenvectors</h1>
+      <p class="ch-subtitle">The characteristic polynomial, finding eigenvalue–eigenvector pairs, eigenspaces, and their geometric meaning</p>
+      <div class="ch-meta">
+        <span class="ch-meta-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+          Part I — Linear Algebra
+        </span>
+        <span class="ch-meta-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          ~40 min read
+        </span>
+        <button class="complete-btn" id="completeBtn" onclick="toggleChapterComplete()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+          <span id="completeBtnText">Mark as Complete</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ═══ FEYNMAN BRIDGE ════════════════════════════ -->
+    <div class="feynman-bridge">
+      <div class="feynman-label">Mental Model</div>
+      <h3>The "Stubborn Directions" of a Transformation</h3>
+      <p>
+        Imagine pushing a rubber sheet through a machine that stretches and shears it in complicated ways. Most points end up somewhere unexpected. But a few special directions survive the transformation unchanged — they may get longer or shorter, even flip, but they stay on the same line. These are the <strong>eigenvectors</strong>, and the scale factor along each direction is the <strong>eigenvalue</strong>. In ML, these stubborn directions reveal the intrinsic structure of your data: the principal components in PCA, the steady-state distribution of a Markov chain, and the spectral modes that graph neural networks rely on.
+      </p>
+    </div>
+
+    <!-- ═══ SECTION 6.1 ═══════════════════════════════ -->
+    <section class="section" id="s6-1">
+      <div class="section-divider"><span class="section-num">Section 6.1</span></div>
+      <h2>Eigenvalues and Eigenvectors</h2>
+
+      <h3 id="s6-1-def">Definition</h3>
+
+      <p>
+        We begin with the fundamental definition that drives almost everything in spectral analysis.
+      </p>
+
+      <div class="def-box">
+        <div class="box-label">Definition 6.1 — Eigenvalue and Eigenvector</div>
+        <div class="box-title">Eigen-pair of a Square Matrix</div>
+        <p>
+          Let \(A \in \mathbb{R}^{n \times n}\). A scalar \(\lambda \in \mathbb{C}\) is an <strong>eigenvalue</strong> of \(A\) if there exists a non-zero vector \(\mathbf{v} \in \mathbb{C}^{n}\), called the corresponding <strong>eigenvector</strong>, such that
+        </p>
+        <p>$$A\mathbf{v} = \lambda \mathbf{v}.$$</p>
+        <p>
+          Equivalently, \(\mathbf{v}\) lies in the null space of \(A - \lambda I\):
+        </p>
+        <p>$$(A - \lambda I)\mathbf{v} = \mathbf{0}, \quad \mathbf{v} \neq \mathbf{0}.$$</p>
+      </div>
+
+      <p>
+        The requirement \(\mathbf{v} \neq \mathbf{0}\) is essential — the zero vector trivially satisfies \(A\mathbf{0} = \lambda \mathbf{0}\) for any \(\lambda\), so it carries no information. Notice also that if \(\mathbf{v}\) is an eigenvector, so is \(\alpha \mathbf{v}\) for every non-zero scalar \(\alpha\). Eigenvectors are therefore defined only up to a scalar multiple.
+      </p>
+
+      <div class="callout">
+        <div class="callout-label">Geometric Intuition</div>
+        <p>
+          When a matrix \(A\) acts on an eigenvector \(\mathbf{v}\), it produces a vector that points in the same direction (or exactly opposite if \(\lambda &lt; 0\)). The eigenvalue \(\lambda\) tells you by how much the vector is scaled: \(\lambda > 1\) means stretching, \(0 &lt; \lambda &lt; 1\) means compression, and \(\lambda = 0\) means collapse onto a lower-dimensional subspace.
+        </p>
+      </div>
+
+      <h3 id="s6-1-char">The Characteristic Polynomial</h3>
+
+      <p>
+        How do we find eigenvalues? The equation \((A - \lambda I)\mathbf{v} = \mathbf{0}\) has a non-trivial solution if and only if the matrix \(A - \lambda I\) is singular, which is equivalent to requiring its determinant to be zero.
+      </p>
+
+      <div class="thm-box">
+        <div class="box-label">Theorem 6.1 — Characteristic Polynomial</div>
+        <p>
+          The <strong>characteristic polynomial</strong> of \(A \in \mathbb{R}^{n \times n}\) is
+        </p>
+        <p>$$p(\lambda) = \det(A - \lambda I).$$</p>
+        <p>
+          This is a polynomial of degree \(n\) in \(\lambda\). The eigenvalues of \(A\) are exactly the roots of \(p(\lambda) = 0\). By the Fundamental Theorem of Algebra, \(A\) has exactly \(n\) eigenvalues counted with multiplicity (possibly complex).
+        </p>
+      </div>
+
+      <button class="proof-toggle" onclick="toggleProof('proof6-1')">
+        <span>Show Proof</span> <span class="arrow">▸</span>
+      </button>
+      <div class="proof-body" id="proof6-1">
+        <div class="proof-inner">
+          <p>
+            <em>Proof.</em> The equation \(A\mathbf{v} = \lambda\mathbf{v}\) can be rewritten as \((A - \lambda I)\mathbf{v} = \mathbf{0}\). A non-trivial solution exists iff \(\ker(A - \lambda I) \neq \{\mathbf{0}\}\), which happens iff \(A - \lambda I\) is singular, i.e., \(\det(A - \lambda I) = 0\).
+          </p>
+          <p>
+            Each entry of \(A - \lambda I\) is either constant or linear in \(\lambda\) (the diagonal entries are \(a_{ii} - \lambda\)). The Leibniz formula for the determinant shows that \(\det(A - \lambda I)\) is a sum of products of \(n\) such entries, each product containing at most \(n\) factors of the form \((a_{ii} - \lambda)\). The unique term with the highest power of \(\lambda\) comes from the product of all diagonal entries:
+          </p>
+          <p>$$\prod_{i=1}^{n}(a_{ii} - \lambda) = (-\lambda)^n + \cdots$$</p>
+          <p>
+            so \(p(\lambda)\) is a polynomial of degree \(n\) with leading coefficient \((-1)^n\). By the Fundamental Theorem of Algebra, \(p\) has exactly \(n\) roots in \(\mathbb{C}\) (with multiplicity). \(\blacksquare\)
+          </p>
+        </div>
+      </div>
+
+      <div class="def-box">
+        <div class="box-label">Definition 6.2 — Algebraic Multiplicity</div>
+        <div class="box-title">Multiplicity of an Eigenvalue</div>
+        <p>
+          The <strong>algebraic multiplicity</strong> \(\mu_A(\lambda)\) of an eigenvalue \(\lambda\) is its multiplicity as a root of the characteristic polynomial. If \(p(\lambda_0) = 0\) and \((\lambda - \lambda_0)^k\) divides \(p(\lambda)\) but \((\lambda - \lambda_0)^{k+1}\) does not, then \(\mu_A(\lambda_0) = k\).
+        </p>
+      </div>
+
+      <p>
+        For a \(2 \times 2\) matrix \(A = \begin{pmatrix} a & b \\ c & d \end{pmatrix}\), the characteristic polynomial is straightforward:
+      </p>
+
+      <p>$$p(\lambda) = \det\begin{pmatrix} a - \lambda & b \\ c & d - \lambda \end{pmatrix} = \lambda^2 - (a + d)\lambda + (ad - bc) = \lambda^2 - \text{tr}(A)\lambda + \det(A).$$</p>
+
+      <p>
+        This reveals an elegant connection: the sum of the eigenvalues equals the trace, and the product of the eigenvalues equals the determinant.
+      </p>
+
+      <div class="prop-box">
+        <div class="box-label">Proposition 6.1 — Trace-Determinant Relations</div>
+        <p>For \(A \in \mathbb{R}^{n \times n}\) with eigenvalues \(\lambda_1, \ldots, \lambda_n\) (counted with algebraic multiplicity):</p>
+        <p>$$\text{tr}(A) = \sum_{i=1}^n \lambda_i, \qquad \det(A) = \prod_{i=1}^n \lambda_i.$$</p>
+      </div>
+
+      <button class="proof-toggle" onclick="toggleProof('proof6-1b')">
+        <span>Show Proof</span> <span class="arrow">▸</span>
+      </button>
+      <div class="proof-body" id="proof6-1b">
+        <div class="proof-inner">
+          <p>
+            <em>Proof.</em> Since \(p(\lambda) = (-1)^n(\lambda - \lambda_1)(\lambda - \lambda_2)\cdots(\lambda - \lambda_n)\), expanding gives:
+          </p>
+          <p>$$p(\lambda) = (-1)^n \lambda^n + (-1)^{n-1}(\lambda_1 + \cdots + \lambda_n)\lambda^{n-1} + \cdots + \lambda_1\lambda_2\cdots\lambda_n.$$</p>
+          <p>
+            Comparing the coefficient of \(\lambda^{n-1}\) with that from the Leibniz expansion yields \(\text{tr}(A) = \sum_i \lambda_i\). Setting \(\lambda = 0\) gives \(p(0) = \det(A) = \prod_i \lambda_i\). \(\blacksquare\)
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ SECTION 6.2 ═══════════════════════════════ -->
+    <section class="section" id="s6-2">
+      <div class="section-divider"><span class="section-num">Section 6.2</span></div>
+      <h2>Computing Eigenvalues</h2>
+
+      <h3 id="s6-2-small">Small Matrices by Hand</h3>
+
+      <p>
+        For \(2 \times 2\) matrices, the quadratic formula gives eigenvalues directly. Let's work through a concrete example.
+      </p>
+
+      <p>Consider \(A = \begin{pmatrix} 4 & 2 \\ 1 & 3 \end{pmatrix}\). The characteristic polynomial is:</p>
+
+      <p>$$p(\lambda) = \lambda^2 - 7\lambda + 10 = (\lambda - 5)(\lambda - 2).$$</p>
+
+      <p>So \(\lambda_1 = 5\) and \(\lambda_2 = 2\). To find the eigenvectors, we solve \((A - \lambda I)\mathbf{v} = \mathbf{0}\) for each:</p>
+
+      <p>
+        For \(\lambda_1 = 5\): \((A - 5I)\mathbf{v} = \begin{pmatrix} -1 & 2 \\ 1 & -2 \end{pmatrix}\mathbf{v} = \mathbf{0}\), giving \(v_1 = 2v_2\), so \(\mathbf{v}_1 = \begin{pmatrix} 2 \\ 1 \end{pmatrix}\).
+      </p>
+      <p>
+        For \(\lambda_2 = 2\): \((A - 2I)\mathbf{v} = \begin{pmatrix} 2 & 2 \\ 1 & 1 \end{pmatrix}\mathbf{v} = \mathbf{0}\), giving \(v_1 = -v_2\), so \(\mathbf{v}_2 = \begin{pmatrix} -1 \\ 1 \end{pmatrix}\).
+      </p>
+
+      <p>For \(3 \times 3\) matrices we must factor a cubic, which is tedious but doable. For larger matrices, analytic approaches are impractical — this is where numerical algorithms take over.</p>
+
+      <h3 id="s6-2-numpy">NumPy in Practice</h3>
+
+      <p>
+        In practice we never compute eigenvalues by forming the characteristic polynomial and finding its roots. Root-finding for high-degree polynomials is notoriously ill-conditioned — Wilkinson's polynomial is the classic cautionary tale. Instead, modern libraries use iterative algorithms (the QR algorithm or divide-and-conquer methods) that work directly on the matrix.
+      </p>
+
+      <div class="code-block">
+        <pre class="language-python"><div class="code-header"><span class="code-lang">Python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><code>import numpy as np
+
+# Example: eigenvalues and eigenvectors of a 2x2 matrix
+A = np.array([[4, 2],
+              [1, 3]])
+
+eigenvalues, eigenvectors = np.linalg.eig(A)
+
+print("Eigenvalues:", eigenvalues)
+print("Eigenvectors (columns):")
+print(eigenvectors)
+print()
+
+# Verify: A @ v = lambda * v
+for i in range(len(eigenvalues)):
+    lam = eigenvalues[i]
+    v = eigenvectors[:, i]
+    residual = np.linalg.norm(A @ v - lam * v)
+    print(f"λ_{i+1} = {lam:.4f}, residual = {residual:.2e}")</code></pre>
+      </div>
+
+      <div class="callout">
+        <div class="callout-label">Important Caveat</div>
+        <p>
+          <code>np.linalg.eig</code> returns eigenvectors as <em>columns</em> of the output matrix. The \(i\)-th eigenvector is <code>eigenvectors[:, i]</code>, not <code>eigenvectors[i]</code>. This is a frequent source of bugs. Also, eigenvectors are normalised to unit length — they may differ from the "simplest" form you'd write by hand.
+        </p>
+      </div>
+
+      <p>
+        For real symmetric matrices, a specialised routine exists that is both faster and more numerically stable:
+      </p>
+
+      <div class="code-block">
+        <pre class="language-python"><div class="code-header"><span class="code-lang">Python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><code>import numpy as np
+
+# Symmetric matrix — always has real eigenvalues
+S = np.array([[5, 2, 1],
+              [2, 6, 3],
+              [1, 3, 7]])
+
+# eigh is for Hermitian (or real symmetric) matrices
+eigenvalues, eigenvectors = np.linalg.eigh(S)
+
+print("Eigenvalues (sorted ascending):", eigenvalues)
+print()
+
+# Verify orthogonality: Q^T Q = I
+Q = eigenvectors
+print("Q^T Q (should be identity):")
+print(np.round(Q.T @ Q, 12))
+print()
+
+# Verify spectral decomposition: A = Q Λ Q^T
+Lambda = np.diag(eigenvalues)
+reconstructed = Q @ Lambda @ Q.T
+print("Max reconstruction error:", np.max(np.abs(S - reconstructed)))</code></pre>
+      </div>
+
+      <div class="perf-dive">
+        <div class="perf-label">Performance Deep-Dive</div>
+        <h4>eig vs eigh: When Symmetry Matters</h4>
+        <p>
+          For an \(n \times n\) symmetric matrix, <code>eigh</code> runs roughly <strong>3–5× faster</strong> than <code>eig</code> and guarantees real eigenvalues and orthogonal eigenvectors. Under the hood, <code>eigh</code> uses a tridiagonal reduction followed by divide-and-conquer, while <code>eig</code> uses the full QR algorithm. Always use <code>eigh</code> when you know your matrix is symmetric — which is the case for covariance matrices, graph Laplacians, and kernel matrices in ML.
+        </p>
+        <pre class="language-python"><div class="code-header"><span class="code-lang">Python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><code>import numpy as np
+import time
+
+for n in [100, 500, 1000, 2000]:
+    M = np.random.randn(n, n)
+    S = M.T @ M  # symmetric positive definite
+
+    t0 = time.perf_counter()
+    np.linalg.eig(S)
+    t_eig = time.perf_counter() - t0
+
+    t0 = time.perf_counter()
+    np.linalg.eigh(S)
+    t_eigh = time.perf_counter() - t0
+
+    print(f"n={n:4d}  eig: {t_eig:.4f}s  eigh: {t_eigh:.4f}s  "
+          f"speedup: {t_eig / t_eigh:.1f}×")</code></pre>
+      </div>
+    </section>
+
+    <!-- ═══ SECTION 6.3 ═══════════════════════════════ -->
+    <section class="section" id="s6-3">
+      <div class="section-divider"><span class="section-num">Section 6.3</span></div>
+      <h2>Eigenspaces and Diagonalisation</h2>
+
+      <h3 id="s6-3-geom">Eigenspaces and Geometric Multiplicity</h3>
+
+      <p>
+        Given an eigenvalue \(\lambda\), the set of all eigenvectors corresponding to \(\lambda\) (together with the zero vector) forms a subspace.
+      </p>
+
+      <div class="def-box">
+        <div class="box-label">Definition 6.3 — Eigenspace</div>
+        <div class="box-title">Eigenspace</div>
+        <p>
+          The <strong>eigenspace</strong> associated with eigenvalue \(\lambda\) is the null space of \(A - \lambda I\):
+        </p>
+        <p>$$E_\lambda = \ker(A - \lambda I) = \{\mathbf{v} \in \mathbb{R}^n : A\mathbf{v} = \lambda\mathbf{v}\}.$$</p>
+        <p>
+          The dimension of this eigenspace, \(\dim(E_\lambda)\), is called the <strong>geometric multiplicity</strong> \(\mu_G(\lambda)\) of the eigenvalue.
+        </p>
+      </div>
+
+      <div class="prop-box">
+        <div class="box-label">Proposition 6.2 — Multiplicity Inequality</div>
+        <p>
+          For every eigenvalue \(\lambda\) of a matrix \(A\):
+        </p>
+        <p>$$1 \leq \mu_G(\lambda) \leq \mu_A(\lambda).$$</p>
+        <p>
+          The geometric multiplicity is at least 1 (there's at least one eigenvector) and at most the algebraic multiplicity.
+        </p>
+      </div>
+
+      <p>
+        When \(\mu_G(\lambda) &lt; \mu_A(\lambda)\), we say the eigenvalue is <strong>defective</strong>. This gap has real consequences: a defective matrix cannot be diagonalised.
+      </p>
+
+      <p>Consider a classic defective example:</p>
+
+      <p>$$A = \begin{pmatrix} 2 & 1 \\ 0 & 2 \end{pmatrix}.$$</p>
+
+      <p>
+        The characteristic polynomial is \(p(\lambda) = (\lambda - 2)^2\), so \(\lambda = 2\) has algebraic multiplicity 2. But \(A - 2I = \begin{pmatrix} 0 & 1 \\ 0 & 0 \end{pmatrix}\), whose null space is spanned by \(\begin{pmatrix} 1 \\ 0 \end{pmatrix}\) alone — geometric multiplicity 1. We are "missing" an eigenvector.
+      </p>
+
+      <div class="code-block">
+        <pre class="language-python"><div class="code-header"><span class="code-lang">Python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><code>import numpy as np
+
+# Defective matrix
+A = np.array([[2, 1],
+              [0, 2]])
+
+eigenvalues, eigenvectors = np.linalg.eig(A)
+print("Eigenvalues:", eigenvalues)
+print("Eigenvectors (columns):")
+print(eigenvectors)
+print()
+
+# Check if eigenvectors are linearly independent
+det_V = np.linalg.det(eigenvectors)
+print(f"det(V) = {det_V:.6f}")
+print("Eigenvectors are", "independent" if abs(det_V) > 1e-10 else "DEPENDENT (defective)")
+print()
+
+# Rank of eigenspace for lambda = 2
+null_dim = 2 - np.linalg.matrix_rank(A - 2 * np.eye(2))
+print(f"Geometric multiplicity of λ=2: {null_dim}")
+print(f"Algebraic multiplicity of λ=2: 2")</code></pre>
+      </div>
+
+      <h3 id="s6-3-diag">Diagonalisation</h3>
+
+      <p>
+        The eigenvector decomposition is one of the most powerful tools in linear algebra. If a matrix has "enough" linearly independent eigenvectors, we can decompose it into a simple diagonal form.
+      </p>
+
+      <div class="thm-box">
+        <div class="box-label">Theorem 6.2 — Diagonalisation</div>
+        <p>
+          An \(n \times n\) matrix \(A\) is <strong>diagonalisable</strong> if and only if it has \(n\) linearly independent eigenvectors. In this case,
+        </p>
+        <p>$$A = P \Lambda P^{-1}$$</p>
+        <p>
+          where \(P = [\mathbf{v}_1 \mid \mathbf{v}_2 \mid \cdots \mid \mathbf{v}_n]\) is the matrix whose columns are the eigenvectors, and \(\Lambda = \text{diag}(\lambda_1, \ldots, \lambda_n)\).
+        </p>
+      </div>
+
+      <button class="proof-toggle" onclick="toggleProof('proof6-2')">
+        <span>Show Proof</span> <span class="arrow">▸</span>
+      </button>
+      <div class="proof-body" id="proof6-2">
+        <div class="proof-inner">
+          <p>
+            <em>Proof.</em> If \(A\mathbf{v}_i = \lambda_i \mathbf{v}_i\) for \(i = 1, \ldots, n\) and the \(\mathbf{v}_i\) are linearly independent, then \(P\) is invertible and:
+          </p>
+          <p>$$AP = A[\mathbf{v}_1 \mid \cdots \mid \mathbf{v}_n] = [\lambda_1\mathbf{v}_1 \mid \cdots \mid \lambda_n\mathbf{v}_n] = P\Lambda.$$</p>
+          <p>
+            Multiplying on the right by \(P^{-1}\) gives \(A = P\Lambda P^{-1}\).
+          </p>
+          <p>
+            Conversely, if \(A = P\Lambda P^{-1}\) with \(P\) invertible and \(\Lambda\) diagonal, then \(AP = P\Lambda\), so the columns of \(P\) are eigenvectors and the diagonal entries of \(\Lambda\) are the eigenvalues. \(\blacksquare\)
+          </p>
+        </div>
+      </div>
+
+      <p>
+        The practical power of diagonalisation is that it makes matrix powers trivial: \(A^k = P\Lambda^k P^{-1}\), and \(\Lambda^k = \text{diag}(\lambda_1^k, \ldots, \lambda_n^k)\). This is what makes eigendecomposition essential for Markov chains, recurrence relations, and dynamical systems.
+      </p>
+
+      <div class="code-block">
+        <pre class="language-python"><div class="code-header"><span class="code-lang">Python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><code>import numpy as np
+
+A = np.array([[4, 2],
+              [1, 3]])
+
+eigenvalues, P = np.linalg.eig(A)
+Lambda = np.diag(eigenvalues)
+P_inv = np.linalg.inv(P)
+
+# Verify decomposition
+print("A = P Λ P⁻¹ ?")
+print("Max error:", np.max(np.abs(A - P @ Lambda @ P_inv)))
+print()
+
+# Matrix powers via eigendecomposition
+k = 10
+A_k_direct = np.linalg.matrix_power(A, k)
+A_k_eigen = P @ np.diag(eigenvalues**k) @ P_inv
+
+print(f"A^{k} via direct multiplication:")
+print(np.round(A_k_direct, 2))
+print(f"\nA^{k} via eigendecomposition:")
+print(np.round(A_k_eigen.real, 2))
+print(f"\nMax difference: {np.max(np.abs(A_k_direct - A_k_eigen.real)):.2e}")</code></pre>
+      </div>
+
+      <div class="callout">
+        <div class="callout-label">Sufficient Condition</div>
+        <p>
+          A matrix with \(n\) <em>distinct</em> eigenvalues is always diagonalisable (distinct eigenvalues produce linearly independent eigenvectors). But the converse is false: the \(n \times n\) identity matrix has only the eigenvalue 1 (with multiplicity \(n\)), yet it is trivially diagonalisable.
+        </p>
+      </div>
+    </section>
+
+    <!-- ═══ SECTION 6.4 ═══════════════════════════════ -->
+    <section class="section" id="s6-4">
+      <div class="section-divider"><span class="section-num">Section 6.4</span></div>
+      <h2>Special Eigenvalue Properties</h2>
+
+      <p>Certain classes of matrices have eigenvalue structures that are especially nice. These show up constantly in ML.</p>
+
+      <div class="thm-box">
+        <div class="box-label">Theorem 6.3 — Spectral Theorem (Real Symmetric Case)</div>
+        <p>
+          If \(A \in \mathbb{R}^{n \times n}\) is symmetric (\(A = A^\top\)), then:
+        </p>
+        <p>(a) All eigenvalues of \(A\) are real.</p>
+        <p>(b) Eigenvectors corresponding to distinct eigenvalues are orthogonal.</p>
+        <p>(c) \(A\) is always diagonalisable, and there exists an orthogonal matrix \(Q\) such that \(A = Q\Lambda Q^\top\).</p>
+      </div>
+
+      <button class="proof-toggle" onclick="toggleProof('proof6-3')">
+        <span>Show Proof</span> <span class="arrow">▸</span>
+      </button>
+      <div class="proof-body" id="proof6-3">
+        <div class="proof-inner">
+          <p>
+            <em>Proof of (a).</em> Let \(A\mathbf{v} = \lambda \mathbf{v}\) with \(\mathbf{v} \neq \mathbf{0}\). Taking the conjugate transpose of both sides:
+          </p>
+          <p>$$\bar{\mathbf{v}}^\top A^\top = \bar{\lambda}\,\bar{\mathbf{v}}^\top.$$</p>
+          <p>
+            Since \(A = A^\top\), multiply on the right by \(\mathbf{v}\):
+          </p>
+          <p>$$\bar{\mathbf{v}}^\top A \mathbf{v} = \bar{\lambda}\,\bar{\mathbf{v}}^\top \mathbf{v}.$$</p>
+          <p>
+            But also \(\bar{\mathbf{v}}^\top A \mathbf{v} = \bar{\mathbf{v}}^\top (\lambda \mathbf{v}) = \lambda\,\bar{\mathbf{v}}^\top \mathbf{v}\). Since \(\bar{\mathbf{v}}^\top \mathbf{v} = \|\mathbf{v}\|^2 > 0\), we get \(\lambda = \bar{\lambda}\), so \(\lambda \in \mathbb{R}\).
+          </p>
+          <p>
+            <em>Proof of (b).</em> If \(A\mathbf{v}_1 = \lambda_1 \mathbf{v}_1\) and \(A\mathbf{v}_2 = \lambda_2 \mathbf{v}_2\) with \(\lambda_1 \neq \lambda_2\), then:
+          </p>
+          <p>$$\lambda_1 \mathbf{v}_1^\top \mathbf{v}_2 = (A\mathbf{v}_1)^\top \mathbf{v}_2 = \mathbf{v}_1^\top A^\top \mathbf{v}_2 = \mathbf{v}_1^\top A \mathbf{v}_2 = \lambda_2 \mathbf{v}_1^\top \mathbf{v}_2.$$</p>
+          <p>
+            So \((\lambda_1 - \lambda_2)\mathbf{v}_1^\top \mathbf{v}_2 = 0\). Since \(\lambda_1 \neq \lambda_2\), we have \(\mathbf{v}_1^\top \mathbf{v}_2 = 0\). \(\blacksquare\)
+          </p>
+        </div>
+      </div>
+
+      <p>
+        The Spectral Theorem is arguably the single most important result for machine learning mathematics. PCA, spectral clustering, kernel methods, and graph neural networks all depend on it.
+      </p>
+
+      <div class="prop-box">
+        <div class="box-label">Proposition 6.3 — Eigenvalues of Special Matrices</div>
+        <p>
+          Several matrix types encountered in ML have constrained eigenvalue structures:
+        </p>
+        <ul style="margin-left: 18px; margin-top: 8px;">
+          <li style="margin: 8px 0; font-size: 15.5px;"><strong>Positive definite</strong>: all eigenvalues are strictly positive (\(\lambda_i > 0\)).</li>
+          <li style="margin: 8px 0; font-size: 15.5px;"><strong>Positive semi-definite</strong>: all eigenvalues are non-negative (\(\lambda_i \geq 0\)).</li>
+          <li style="margin: 8px 0; font-size: 15.5px;"><strong>Orthogonal matrices</strong>: all eigenvalues have \(|\lambda_i| = 1\).</li>
+          <li style="margin: 8px 0; font-size: 15.5px;"><strong>Idempotent</strong> (\(A^2 = A\)): eigenvalues are either 0 or 1.</li>
+          <li style="margin: 8px 0; font-size: 15.5px;"><strong>Nilpotent</strong> (\(A^k = 0\) for some \(k\)): all eigenvalues are 0.</li>
+        </ul>
+      </div>
+
+      <p>The relationship between eigenvalues and matrix invertibility is fundamental:</p>
+
+      <div class="thm-box">
+        <div class="box-label">Theorem 6.4 — Invertibility via Eigenvalues</div>
+        <p>A square matrix \(A\) is invertible if and only if \(0\) is <em>not</em> an eigenvalue. Moreover, if \(\lambda\) is an eigenvalue of \(A\) with eigenvector \(\mathbf{v}\), then \(\lambda^{-1}\) is an eigenvalue of \(A^{-1}\) with the same eigenvector \(\mathbf{v}\).</p>
+      </div>
+
+      <p>Let's verify these properties computationally:</p>
+
+      <div class="code-block">
+        <pre class="language-python"><div class="code-header"><span class="code-lang">Python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><code>import numpy as np
+
+np.random.seed(42)
+
+# --- Positive definite matrix ---
+M = np.random.randn(4, 4)
+S = M.T @ M  # S = M^T M is positive semi-definite; add εI for definite
+S += 0.1 * np.eye(4)
+eigs_S = np.linalg.eigvalsh(S)
+print("Positive definite eigenvalues:", np.round(eigs_S, 4))
+print("All positive?", np.all(eigs_S > 0))
+print()
+
+# --- Orthogonal matrix ---
+Q, _ = np.linalg.qr(np.random.randn(4, 4))
+eigs_Q = np.linalg.eigvals(Q)
+print("Orthogonal matrix eigenvalues:", np.round(eigs_Q, 4))
+print("|λ| values:", np.round(np.abs(eigs_Q), 10))
+print()
+
+# --- Idempotent (projection) matrix ---
+v = np.array([1, 2, 3, 4], dtype=float)
+v /= np.linalg.norm(v)
+P = np.outer(v, v)  # rank-1 projection
+eigs_P = np.linalg.eigvalsh(P)
+print("Projection matrix eigenvalues:", np.round(eigs_P, 10))
+print("All 0 or 1?", np.allclose(eigs_P * (1 - eigs_P), 0))
+print()
+
+# --- Eigenvalues of inverse ---
+A = np.random.randn(3, 3) + 3 * np.eye(3)  # shift to ensure invertibility
+eigs_A = np.linalg.eigvals(A)
+eigs_Ainv = np.linalg.eigvals(np.linalg.inv(A))
+print("λ(A):", np.sort(np.round(eigs_A, 6)))
+print("λ(A⁻¹):", np.sort(np.round(eigs_Ainv, 6)))
+print("1/λ(A):", np.sort(np.round(1 / eigs_A, 6)))</code></pre>
+      </div>
+
+      <p>
+        One last eigenvalue identity that proves essential for matrix calculus and optimization:
+      </p>
+
+      <div class="prop-box">
+        <div class="box-label">Proposition 6.4 — Eigenvalues under Shift and Scale</div>
+        <p>
+          If \(\lambda\) is an eigenvalue of \(A\), then:
+        </p>
+        <ul style="margin-left: 18px; margin-top: 8px;">
+          <li style="margin: 8px 0; font-size: 15.5px;">\(\alpha\lambda\) is an eigenvalue of \(\alpha A\) for any scalar \(\alpha\).</li>
+          <li style="margin: 8px 0; font-size: 15.5px;">\(\lambda + \alpha\) is an eigenvalue of \(A + \alpha I\).</li>
+          <li style="margin: 8px 0; font-size: 15.5px;">\(\lambda^k\) is an eigenvalue of \(A^k\) for any positive integer \(k\).</li>
+        </ul>
+        <p style="margin-top: 12px;">
+          All three share the same eigenvector as the original pair \((\lambda, \mathbf{v})\).
+        </p>
+      </div>
+
+      <p>
+        The shift property \(A + \alpha I\) is the mathematical foundation of ridge regularization. Adding \(\alpha I\) to \(X^\top X\) shifts every eigenvalue by \(\alpha\), ensuring the matrix is invertible even when \(X^\top X\) is singular or near-singular.
+      </p>
+    </section>
+
+    <!-- ═══ SECTION 6.5 — SUMMARY ═════════════════════ -->
+    <section class="section" id="s6-5">
+      <div class="section-divider"><span class="section-num">Section 6.5</span></div>
+      <h2>Summary</h2>
+
+      <p>
+        This chapter introduced the eigen-decomposition — the factorisation of a matrix into its fundamental directions and scale factors. We defined eigenvalues via the characteristic polynomial, distinguished algebraic from geometric multiplicity, and showed when and how a matrix can be diagonalised. The Spectral Theorem for symmetric matrices ensures that the most important matrices in ML (covariance matrices, kernels, graph Laplacians) always have real eigenvalues and orthogonal eigenvectors.
+      </p>
+
+      <div class="why-ai">
+        <div class="why-label">Why This Matters for AI</div>
+        <h3>Eigenvalues Are Everywhere in Machine Learning</h3>
+        <ul>
+          <li><strong>PCA (Principal Component Analysis)</strong> — finds the eigenvectors of the covariance matrix to identify the directions of maximum variance. The eigenvalues quantify the explained variance along each component.</li>
+          <li><strong>Spectral clustering</strong> — embeds data points using eigenvectors of the graph Laplacian, then clusters in this lower-dimensional space. The smallest eigenvalues reveal the connected components.</li>
+          <li><strong>Markov chains and PageRank</strong> — the stationary distribution is the eigenvector of the transition matrix corresponding to eigenvalue 1. Convergence speed is governed by the second-largest eigenvalue.</li>
+          <li><strong>Ridge regression</strong> — regularization adds \(\alpha I\) to the Gram matrix, shifting all eigenvalues by \(\alpha\). This controls ill-conditioning and prevents overfitting.</li>
+          <li><strong>Condition numbers</strong> — the ratio \(\lambda_{\max} / \lambda_{\min}\) of a positive definite matrix determines how sensitive the solution to \(Ax = b\) is to perturbations, and how fast gradient descent converges.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ═══ SOCRATIC KNOWLEDGE CHECK ════════════════════ -->
+    <section class="socratic" id="socratic">
+      <div class="socratic-header">
+        <div class="socratic-icon">?</div>
+        <h2>Socratic Knowledge Check</h2>
+      </div>
+
+      <div class="socratic-scenario">
+        You are building a recommendation system. The user-item interaction matrix is large and sparse, and you plan to use spectral methods (eigendecomposition) to extract latent factors. Think through these questions to solidify your understanding.
+      </div>
+
+      <!-- Q1 -->
+      <div class="q-card">
+        <div class="q-top">
+          <div class="q-num">1</div>
+          <div class="q-text">
+            Your covariance matrix \(\Sigma\) has eigenvalues \(\{50, 12, 3, 0.5, 0.01, 0.001\}\). How many principal components would you keep, and what fraction of total variance do they explain?
+          </div>
+        </div>
+        <button class="reveal-btn" onclick="toggleAnswer('a1')"><span>Reveal Thinking</span></button>
+        <div class="q-answer" id="a1">
+          <div class="q-answer-inner">
+            The total variance is the sum of all eigenvalues: \(50 + 12 + 3 + 0.5 + 0.01 + 0.001 = 65.511\). The top 3 components capture \((50 + 12 + 3)/65.511 \approx 99.2\%\) of the variance, which is well above the conventional 95% threshold. Keeping 3 out of 6 components reduces dimensionality by half while preserving essentially all the signal. The remaining eigenvalues (0.5, 0.01, 0.001) represent noise.
+          </div>
+        </div>
+      </div>
+
+      <!-- Q2 -->
+      <div class="q-card">
+        <div class="q-top">
+          <div class="q-num">2</div>
+          <div class="q-text">
+            The Gram matrix \(X^\top X\) has a condition number of \(10^{12}\). What does this tell you about fitting a linear regression, and how would you fix it?
+          </div>
+        </div>
+        <button class="reveal-btn" onclick="toggleAnswer('a2')"><span>Reveal Thinking</span></button>
+        <div class="q-answer" id="a2">
+          <div class="q-answer-inner">
+            A condition number of \(10^{12}\) means \(\lambda_{\max}/\lambda_{\min} = 10^{12}\), so the smallest eigenvalue is about \(10^{12}\) times smaller than the largest. This makes the normal equations \(X^\top X \boldsymbol{\beta} = X^\top \mathbf{y}\) catastrophically ill-conditioned: small perturbations in the data will cause huge swings in the solution. Ridge regression fixes this by adding \(\alpha I\), changing the condition number to \((\lambda_{\max} + \alpha)/(\lambda_{\min} + \alpha)\). Even a small \(\alpha\) (say \(10^{-4}\)) can dramatically improve conditioning.
+          </div>
+        </div>
+      </div>
+
+      <!-- Q3 -->
+      <div class="q-card">
+        <div class="q-top">
+          <div class="q-num">3</div>
+          <div class="q-text">
+            You're told a matrix is symmetric and all its eigenvalues are non-negative. Can you guarantee it's a valid covariance matrix? What additional condition (if any) would you check?
+          </div>
+        </div>
+        <button class="reveal-btn" onclick="toggleAnswer('a3')"><span>Reveal Thinking</span></button>
+        <div class="q-answer" id="a3">
+          <div class="q-answer-inner">
+            A covariance matrix must be symmetric and positive semi-definite, which is exactly what "symmetric with non-negative eigenvalues" means. So yes, mathematically it could serve as a covariance matrix. In practice you'd also check that the diagonal entries are non-negative (they represent variances) and that the matrix is consistent with observed data. Numerical issues can create tiny negative eigenvalues in computed covariance matrices — in that case, you can project onto the positive semi-definite cone by clamping negative eigenvalues to zero.
+          </div>
+        </div>
+      </div>
+
+      <!-- Q4 -->
+      <div class="q-card">
+        <div class="q-top">
+          <div class="q-num">4</div>
+          <div class="q-text">
+            A graph Laplacian \(L\) of a network has eigenvalues \(\{0, 0, 0.3, 1.2, 2.5, 3.8\}\). What can you infer about the graph's structure from the multiplicity of the zero eigenvalue?
+          </div>
+        </div>
+        <button class="reveal-btn" onclick="toggleAnswer('a4')"><span>Reveal Thinking</span></button>
+        <div class="q-answer" id="a4">
+          <div class="q-answer-inner">
+            The number of zero eigenvalues of the graph Laplacian equals the number of connected components. With two zero eigenvalues, the graph has exactly 2 connected components. The corresponding eigenvectors are indicator vectors for each component. The smallest non-zero eigenvalue (0.3, called the Fiedler value or algebraic connectivity) measures how well-connected the graph is — a small Fiedler value suggests a near-disconnection or "bottleneck" in the graph, which spectral clustering exploits to find communities.
+          </div>
+        </div>
+      </div>
+
+      <!-- Q5 -->
+      <div class="q-card">
+        <div class="q-top">
+          <div class="q-num">5</div>
+          <div class="q-text">
+            Why does <code>np.linalg.eigh</code> return eigenvalues in ascending order, while <code>np.linalg.eig</code> returns them in no particular order? When does the ordering matter for your ML pipeline?
+          </div>
+        </div>
+        <button class="reveal-btn" onclick="toggleAnswer('a5')"><span>Reveal Thinking</span></button>
+        <div class="q-answer" id="a5">
+          <div class="q-answer-inner">
+            <code>eigh</code> uses a specialised algorithm (tridiagonal reduction + divide-and-conquer) that naturally produces eigenvalues in sorted order because it exploits the symmetric structure. <code>eig</code> uses the general QR algorithm, which converges to eigenvalues in an order determined by their magnitude and the matrix structure, not by value. Ordering matters in PCA (you want the <em>largest</em> eigenvalues first), spectral clustering (you want the <em>smallest</em> non-zero eigenvalues), and truncated eigendecompositions. With <code>eigh</code> you can simply slice from the end for PCA: <code>eigvecs[:, -k:]</code>.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ CHAPTER NAVIGATION ═════════════════════ -->
+    <nav class="ch-nav">
+      <a class="nav-btn" href="ch05.html">← Chapter 5: Matrices and Equations</a>
+      <a class="nav-btn" href="ch07.html">Chapter 7: Matrix Factorizations →</a>
+    </nav>
+
+    <footer class="ch-footer">
+      Based on <em>Mathematics of Machine Learning</em> by Tivadar Danka (Packt, 2025).
+    </footer>
+
+  </main>
+</div>
+
+<!-- Back to Top -->
+<button class="back-top" id="backTop" onclick="window.scrollTo({top:0})">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 15l-6-6-6 6"/></svg>
+</button>
+
+<!-- ═══ JAVASCRIPT ═════════════════════════════════════ -->
+<script>
+(function() {
+  const progressBar = document.getElementById('readingProgress');
+  window.addEventListener('scroll', () => {
+    const h = document.documentElement;
+    const pct = (h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100;
+    progressBar.style.width = Math.min(pct, 100) + '%';
+  });
+
+  const backTop = document.getElementById('backTop');
+  window.addEventListener('scroll', () => {
+    backTop.classList.toggle('visible', window.scrollY > 400);
+  });
+
+  const tocLinks = document.querySelectorAll('#tocList a');
+  const sections = [];
+  tocLinks.forEach(a => {
+    const id = a.getAttribute('data-section');
+    const el = document.getElementById(id);
+    if (el) sections.push({ el, a });
+  });
+
+  function updateActiveToc() {
+    let current = sections[0];
+    for (const s of sections) {
+      if (s.el.getBoundingClientRect().top <= 120) current = s;
+    }
+    tocLinks.forEach(a => a.classList.remove('active'));
+    if (current) current.a.classList.add('active');
+  }
+  window.addEventListener('scroll', updateActiveToc);
+  updateActiveToc();
+
+  const mToggle = document.getElementById('mobileTocToggle');
+  const mList = document.getElementById('mobileTocList');
+  mToggle.addEventListener('click', () => {
+    mToggle.classList.toggle('open');
+    mList.classList.toggle('open');
+  });
+  mList.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+    mToggle.classList.remove('open');
+    mList.classList.remove('open');
+  }));
+
+  window.toggleProof = function(id) {
+    const body = document.getElementById(id);
+    const btn = body.previousElementSibling;
+    body.classList.toggle('open');
+    btn.classList.toggle('open');
+    btn.querySelector('span').textContent = body.classList.contains('open') ? 'Hide Proof' : 'Show Proof';
+  };
+
+  window.toggleAnswer = function(id) {
+    const el = document.getElementById(id);
+    const btn = el.previousElementSibling;
+    el.classList.toggle('open');
+    btn.classList.toggle('open');
+    btn.querySelector('span').textContent = el.classList.contains('open') ? 'Hide' : 'Reveal Thinking';
+  };
+
+  window.copyCode = function(btn) {
+    const code = btn.closest('.code-block, .perf-dive').querySelector('code').textContent;
+    navigator.clipboard.writeText(code).then(() => {
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+    });
+  };
+
+  const STORAGE_KEY = 'mathml_completed';
+  let completed = new Set();
+  try {
+    const s = localStorage.getItem(STORAGE_KEY);
+    if (s) completed = new Set(JSON.parse(s));
+  } catch(e) {}
+
+  const btn = document.getElementById('completeBtn');
+  const btnText = document.getElementById('completeBtnText');
+
+  function syncBtn() {
+    if (completed.has('6')) {
+      btn.classList.add('done');
+      btnText.textContent = 'Completed';
+    } else {
+      btn.classList.remove('done');
+      btnText.textContent = 'Mark as Complete';
+    }
+  }
+  syncBtn();
+
+  window.toggleChapterComplete = function() {
+    if (completed.has('6')) completed.delete('6');
+    else completed.add('6');
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify([...completed])); } catch(e) {}
+    syncBtn();
+  };
+})();
+</script>
+
+</body>
+</html>

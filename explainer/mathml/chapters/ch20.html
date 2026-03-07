@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 20: The Expected Value — Math for ML</title>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,500&family=Figtree:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- KaTeX -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\[', right: '\\]', display: true},
+      {left: '\\(', right: '\\)', display: false}
+    ],
+    throwOnError: false
+  });"></script>
+
+<!-- Prism.js -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css">
+
+<style>
+:root {
+  --bg:#FAF9F7;--bg-card:#FFFFFF;--bg-warm:#F7F6F3;--text:#2D2D2D;--text-2:#555555;--text-3:#888888;
+  --border:#E5E5E0;--border-hover:#D0D0CA;--blue:#4A6CF7;--blue-light:#EEF2FF;--blue-dim:rgba(74,108,247,0.08);
+  --indigo:#6366F1;--green:#22C55E;--green-light:#F0FDF4;--red:#EF4444;--red-light:#FFF5F5;
+  --amber:#F59E0B;--amber-light:#FFFBEB;--purple:#8B5CF6;--purple-light:#F5F3FF;--cyan:#06B6D4;
+  --grad-part4:linear-gradient(135deg,#8B5CF6 0%,#A78BFA 100%);
+  --accent:#8B5CF6;--accent-light:#F5F3FF;--accent-hover:rgba(139,92,246,0.06);
+  --font-serif:'Newsreader',Georgia,serif;--font-sans:'Figtree',-apple-system,sans-serif;--font-mono:'JetBrains Mono','Fira Code',monospace;
+  --radius:12px;--radius-sm:8px;--shadow-sm:0 1px 3px rgba(0,0,0,0.04);--shadow-md:0 4px 16px rgba(0,0,0,0.06);--shadow-lg:0 8px 32px rgba(0,0,0,0.08);
+  --content-w:740px;--layout-w:1120px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:90px}
+body{font-family:var(--font-serif);background:var(--bg);color:var(--text);line-height:1.75;font-size:17px;-webkit-font-smoothing:antialiased}
+.reading-progress{position:fixed;top:0;left:0;z-index:1000;width:0%;height:3px;background:var(--grad-part4);transition:width 0.1s linear}
+.page-layout{display:grid;grid-template-columns:1fr;max-width:var(--layout-w);margin:0 auto;padding:0 24px}
+@media(min-width:1060px){.page-layout{grid-template-columns:220px 1fr;gap:48px}}
+.toc-sidebar{display:none}
+@media(min-width:1060px){.toc-sidebar{display:block;position:sticky;top:24px;align-self:start;padding-top:32px;max-height:calc(100vh - 48px);overflow-y:auto}}
+.toc-label{font-family:var(--font-sans);font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-3);margin-bottom:16px}
+.toc-list{list-style:none}.toc-list li{margin:0}
+.toc-list a{display:block;padding:6px 0 6px 14px;font-family:var(--font-sans);font-size:13px;font-weight:400;color:var(--text-3);text-decoration:none;border-left:2px solid transparent;transition:all 0.2s ease;line-height:1.5}
+.toc-list a:hover{color:var(--accent);border-left-color:var(--accent)}
+.toc-list a.active{color:var(--accent);border-left-color:var(--accent);font-weight:600}
+.toc-list .sub{padding-left:28px;font-size:12px}
+.mobile-toc{display:block;margin:16px 0 32px}
+@media(min-width:1060px){.mobile-toc{display:none}}
+.mobile-toc-toggle{display:flex;align-items:center;gap:8px;width:100%;padding:12px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-sans);font-size:14px;font-weight:500;color:var(--text-2);cursor:pointer}
+.mobile-toc-toggle .chevron{margin-left:auto;transition:transform 0.2s}
+.mobile-toc-toggle.open .chevron{transform:rotate(180deg)}
+.mobile-toc-list{display:none;list-style:none;background:var(--bg-card);border:1px solid var(--border);border-top:0;border-radius:0 0 var(--radius-sm) var(--radius-sm);padding:8px 0}
+.mobile-toc-list.open{display:block}
+.mobile-toc-list a{display:block;padding:8px 20px;font-family:var(--font-sans);font-size:14px;color:var(--text-2);text-decoration:none}
+.mobile-toc-list a:hover{color:var(--accent);background:var(--accent-hover)}
+.content{max-width:var(--content-w);padding:32px 0 80px;min-width:0}
+.breadcrumb{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-family:var(--font-sans);font-size:13px;color:var(--text-3);margin-bottom:32px}
+.breadcrumb a{color:var(--text-3);text-decoration:none;transition:color 0.15s}
+.breadcrumb a:hover{color:var(--accent)}
+.breadcrumb .sep{color:var(--border)}.breadcrumb .current{color:var(--text-2);font-weight:500}
+.ch-header{margin-bottom:48px}
+.ch-badge{display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:var(--radius);background:var(--grad-part4);color:#fff;font-family:var(--font-sans);font-size:20px;font-weight:700;margin-bottom:20px;box-shadow:0 4px 12px rgba(139,92,246,0.25)}
+.ch-title{font-family:var(--font-serif);font-size:clamp(28px,5vw,40px);font-weight:700;line-height:1.15;letter-spacing:-0.02em;color:var(--text);margin-bottom:8px}
+.ch-subtitle{font-family:var(--font-serif);font-size:18px;font-style:italic;color:var(--text-2);margin-bottom:16px}
+.ch-meta{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.ch-meta-item{display:flex;align-items:center;gap:6px;font-family:var(--font-sans);font-size:13px;color:var(--text-3)}
+.ch-meta-item svg{width:15px;height:15px}
+.complete-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:var(--bg-card);border:2px solid var(--border);border-radius:100px;font-family:var(--font-sans);font-size:14px;font-weight:600;color:var(--text-2);cursor:pointer;transition:all 0.25s ease}
+.complete-btn:hover{border-color:var(--purple);color:var(--purple)}
+.complete-btn.done{background:var(--purple);border-color:var(--purple);color:#fff}
+.complete-btn svg{width:16px;height:16px}
+.section{margin-top:56px;scroll-margin-top:80px}
+.section-divider{display:flex;align-items:center;gap:16px;margin-bottom:24px}
+.section-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.section-num{font-family:var(--font-sans);font-size:12px;font-weight:700;letter-spacing:0.06em;color:var(--accent);text-transform:uppercase;white-space:nowrap}
+.section h2{font-family:var(--font-serif);font-size:clamp(22px,4vw,28px);font-weight:700;line-height:1.25;letter-spacing:-0.01em;color:var(--text);margin-bottom:20px}
+.section h3{font-family:var(--font-serif);font-size:20px;font-weight:600;color:var(--text);margin:36px 0 14px;scroll-margin-top:80px}
+.section h4{font-family:var(--font-serif);font-size:17px;font-weight:600;color:var(--text);margin:28px 0 10px}
+p{margin:14px 0}
+.feynman-bridge{background:linear-gradient(135deg,#FFF7ED 0%,#FFFBEB 40%,#F5F3FF 100%);border:1px solid #FDE68A;border-radius:var(--radius);padding:32px;margin:32px 0 48px;position:relative;overflow:hidden}
+.feynman-bridge::before{content:'\1F4A1';position:absolute;top:-8px;right:16px;font-size:48px;opacity:0.15}
+.feynman-label{font-family:var(--font-sans);font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--amber);margin-bottom:12px}
+.feynman-bridge h3{font-family:var(--font-serif);font-size:22px;font-weight:600;color:var(--text);margin:0 0 16px}
+.feynman-bridge p{font-size:17px;line-height:1.85;color:#444}
+.def-box{background:var(--blue-light);border-left:4px solid var(--blue);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:20px 24px;margin:24px 0}
+.def-box .box-label{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-sans);font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--blue);margin-bottom:10px}
+.def-box .box-label::before{content:'';width:8px;height:8px;border-radius:2px;background:var(--blue)}
+.def-box .box-title{font-family:var(--font-serif);font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px}
+.def-box p,.def-box li{font-size:15.5px;line-height:1.7;color:var(--text)}
+.def-box ul{margin-left:20px;margin-top:8px}.def-box li{margin:6px 0}
+.thm-box{background:var(--red-light);border-left:4px solid var(--red);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:20px 24px;margin:24px 0}
+.thm-box .box-label{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-sans);font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--red);margin-bottom:10px}
+.thm-box .box-label::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--red)}
+.thm-box p{font-size:15.5px;line-height:1.7}
+.prop-box{background:var(--purple-light);border-left:4px solid var(--purple);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:20px 24px;margin:24px 0}
+.prop-box .box-label{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-sans);font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--purple);margin-bottom:10px}
+.prop-box .box-label::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--purple)}
+.prop-box p{font-size:15.5px;line-height:1.7}
+.proof-toggle{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;background:var(--bg-warm);border:1px solid var(--border);border-radius:100px;font-family:var(--font-sans);font-size:13px;font-weight:600;color:var(--text-2);cursor:pointer;transition:all 0.2s;margin:12px 0}
+.proof-toggle:hover{border-color:var(--accent);color:var(--accent)}
+.proof-toggle .arrow{transition:transform 0.3s ease;font-size:10px}
+.proof-toggle.open .arrow{transform:rotate(90deg)}
+.proof-body{max-height:0;overflow:hidden;transition:max-height 0.4s cubic-bezier(0.22,1,0.36,1)}
+.proof-body.open{max-height:2000px}
+.proof-inner{background:#F9FAFB;border:1px solid var(--border);border-radius:var(--radius-sm);padding:20px 24px;margin:8px 0 16px;font-size:15px;line-height:1.75;color:var(--text-2)}
+pre[class*="language-"]{background:#1a1b2e !important;border-radius:var(--radius) !important;border:1px solid #2a2b42 !important;padding:0 !important;margin:24px 0 !important;overflow:hidden;box-shadow:var(--shadow-md);position:relative}
+.code-header{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:#12132a;border-bottom:1px solid #2a2b42;font-family:var(--font-sans);font-size:12px}
+.code-lang{color:#7dd3fc;font-weight:600;text-transform:uppercase;letter-spacing:0.05em}
+.copy-btn{background:none;border:1px solid #3a3b52;border-radius:6px;padding:4px 12px;color:#888;font-family:var(--font-sans);font-size:11px;font-weight:500;cursor:pointer;transition:all 0.15s}
+.copy-btn:hover{border-color:#7dd3fc;color:#7dd3fc}
+.copy-btn.copied{border-color:var(--green);color:var(--green)}
+pre[class*="language-"]>code{display:block;padding:20px 24px !important;font-family:var(--font-mono) !important;font-size:13.5px !important;line-height:1.7 !important;color:#e2e8f0 !important;background:none !important;overflow-x:auto}
+.token.comment,.token.prolog,.token.doctype{color:#6b7280 !important;font-style:italic}
+.token.keyword{color:#c084fc !important}.token.string{color:#86efac !important}.token.number{color:#fbbf24 !important}
+.token.function{color:#7dd3fc !important}.token.boolean{color:#fb923c !important}.token.operator{color:#94a3b8 !important}
+.token.builtin{color:#67e8f9 !important}.token.class-name{color:#fca5a5 !important}.token.punctuation{color:#94a3b8 !important}
+:not(pre)>code{font-family:var(--font-mono);font-size:0.88em;background:#F0EFEC;padding:2px 7px;border-radius:4px;color:#C2410C}
+.katex-display{margin:24px 0 !important;padding:16px 0}.katex{font-size:1.08em !important}
+.callout{background:linear-gradient(135deg,var(--blue-light) 0%,var(--purple-light) 100%);border:1px solid #D1D5EB;border-radius:var(--radius);padding:24px 28px;margin:28px 0}
+.callout .callout-label{font-family:var(--font-sans);font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--blue);margin-bottom:8px}
+.callout p{font-size:15.5px;line-height:1.7}
+.perf-dive{background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 100%);border-radius:var(--radius);padding:28px 28px 20px;margin:28px 0;color:#e2e8f0;position:relative;overflow:hidden}
+.perf-dive::before{content:'\26A1';position:absolute;top:-6px;right:12px;font-size:56px;opacity:0.08}
+.perf-dive .perf-label{font-family:var(--font-sans);font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#fbbf24;margin-bottom:8px}
+.perf-dive h4{color:#fff;font-size:18px;margin:0 0 12px}
+.perf-dive p{color:#94a3b8;font-size:15px;line-height:1.7}
+.perf-dive pre[class*="language-"]{border:1px solid #334155 !important;margin-top:16px !important}
+.why-ai{background:linear-gradient(135deg,var(--purple-light) 0%,#EDE9FE 100%);border:2px solid var(--accent);border-radius:var(--radius);padding:28px 28px;margin:36px 0}
+.why-ai .why-label{font-family:var(--font-sans);font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
+.why-ai h3{font-size:20px;margin:0 0 12px}
+.why-ai ul{margin-left:18px}.why-ai li{margin:10px 0;font-size:15.5px;line-height:1.7}.why-ai li strong{color:var(--accent)}
+.socratic{margin-top:56px;scroll-margin-top:80px}
+.socratic-header{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.socratic-icon{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--amber) 0%,#F97316 100%);display:flex;align-items:center;justify-content:center;font-size:20px}
+.socratic h2{margin:0;font-size:24px}
+.socratic-scenario{background:var(--amber-light);border:1px solid #FDE68A;border-radius:var(--radius);padding:20px 24px;margin-bottom:24px;font-style:italic;color:var(--text-2);font-size:15.5px;line-height:1.75}
+.q-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin-bottom:14px;transition:box-shadow 0.2s}
+.q-card:hover{box-shadow:var(--shadow-md)}
+.q-top{display:flex;align-items:flex-start;gap:14px}
+.q-num{width:28px;height:28px;border-radius:50%;background:var(--grad-part4);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--font-sans);font-size:13px;font-weight:700;flex-shrink:0}
+.q-text{font-weight:500;font-size:15.5px;line-height:1.6;flex:1}
+.reveal-btn{display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:6px 14px;background:none;border:1px solid var(--accent);border-radius:100px;font-family:var(--font-sans);font-size:12px;font-weight:600;color:var(--accent);cursor:pointer;transition:all 0.2s}
+.reveal-btn:hover{background:var(--accent);color:#fff}
+.reveal-btn.open{background:var(--accent);color:#fff}
+.q-answer{max-height:0;overflow:hidden;transition:max-height 0.4s cubic-bezier(0.22,1,0.36,1)}
+.q-answer.open{max-height:500px}
+.q-answer-inner{background:var(--purple-light);border-radius:var(--radius-sm);padding:14px 18px;margin-top:14px;font-size:15px;line-height:1.7;color:var(--text-2)}
+.nav-bottom{display:flex;justify-content:space-between;gap:16px;margin-top:64px;padding-top:32px;border-top:1px solid var(--border)}
+.nav-btn{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border:1px solid var(--border);border-radius:100px;font-family:var(--font-sans);font-size:14px;font-weight:500;color:var(--text-2);text-decoration:none;transition:all 0.2s}
+.nav-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-hover)}
+@media(max-width:768px){
+  .content{padding:20px 0 60px}
+  .ch-badge{width:44px;height:44px;font-size:16px;margin-bottom:16px}
+  .ch-title{font-size:26px}
+  .section{margin-top:40px}
+  .def-box,.thm-box,.prop-box,.callout,.why-ai,.perf-dive,.feynman-bridge{padding:16px 18px;margin:20px 0}
+  .nav-bottom{flex-direction:column}
+  .nav-btn{justify-content:center}
+}
+</style>
+</head>
+<body>
+
+<div class="reading-progress" id="readingProgress"></div>
+
+<div class="page-layout">
+  <aside class="toc-sidebar">
+    <div class="toc-label">On this page</div>
+    <ul class="toc-list">
+      <li><a href="#expected-value">Expected Value</a></li>
+      <li><a href="#variance">Variance and Standard Deviation</a></li>
+      <li><a href="#covariance">Covariance and Correlation</a></li>
+      <li><a href="#lln">Law of Large Numbers</a></li>
+      <li><a href="#information-theory">Information Theory</a></li>
+      <li><a href="#mle">Maximum Likelihood Estimation</a></li>
+      <li><a href="#ml-connection">Why This Matters for ML</a></li>
+      <li><a href="#socratic" class="sub">Practice Questions</a></li>
+    </ul>
+  </aside>
+
+  <main class="content">
+    <div class="mobile-toc">
+      <button class="mobile-toc-toggle" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h10M3 8h10M3 12h10"/></svg>
+        On this page
+        <span class="chevron">&#9660;</span>
+      </button>
+      <ul class="mobile-toc-list">
+        <li><a href="#expected-value">Expected Value</a></li>
+        <li><a href="#variance">Variance and Standard Deviation</a></li>
+        <li><a href="#covariance">Covariance and Correlation</a></li>
+        <li><a href="#lln">Law of Large Numbers</a></li>
+        <li><a href="#information-theory">Information Theory</a></li>
+        <li><a href="#mle">Maximum Likelihood Estimation</a></li>
+        <li><a href="#ml-connection">Why This Matters for ML</a></li>
+        <li><a href="#socratic">Practice Questions</a></li>
+      </ul>
+    </div>
+
+    <nav class="breadcrumb">
+      <a href="../index.html">Home</a>
+      <span class="sep">/</span>
+      <span class="current">Chapter 20</span>
+    </nav>
+
+    <header class="ch-header">
+      <div class="ch-badge">20</div>
+      <h1 class="ch-title">The Expected Value</h1>
+      <p class="ch-subtitle">From abstract probability to concrete statistics — the essential tools that translate randomness into actionable insights for machine learning.</p>
+      <div class="ch-meta">
+        <div class="ch-meta-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          50 min read
+        </div>
+        <div class="ch-meta-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
+          Core
+        </div>
+        <button class="complete-btn" id="completeBtn" onclick="toggleChapterComplete()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+          <span id="completeBtnText">Mark as Complete</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="feynman-bridge">
+      <div class="feynman-label">The Big Picture</div>
+      <h3>From probabilities to numbers we can compute with</h3>
+      <p>Chapter 19 gave us distributions — the probability patterns of random variables. But patterns alone don't help us make decisions or train models. We need summaries: the average value (expected value), how spread out it is (variance), how variables move together (covariance). This chapter builds the computational toolkit for machine learning. We'll see how the expected value connects to loss functions, how variance and covariance relate to features and uncertainty, and how the law of large numbers justifies learning from finite samples. Finally, we'll discover that maximum likelihood estimation — the foundation of modern ML — is secretly just another form of expected value minimisation.</p>
+    </div>
+
+    <!-- Section 1: Expected Value -->
+    <div class="section" id="expected-value">
+      <div class="section-divider"><span class="section-num">Section 20.1</span></div>
+      <h2>Expected Value</h2>
+
+      <p>The <strong>expected value</strong> is the average outcome of a random variable, weighted by its probability. It's the long-run empirical mean if you repeat an experiment infinitely many times.</p>
+
+      <div class="def-box">
+        <div class="box-label">Definition — Expected Value (Expectation)</div>
+        <p>For a discrete random variable \(X\), the expected value is:</p>
+        \[E[X] = \sum_x x \cdot P(X = x) = \sum_x x \cdot p(x)\]
+        <p>For a continuous random variable \(X\) with density \(f(x)\):</p>
+        \[E[X] = \int_{-\infty}^{\infty} x \cdot f(x)\,dx\]
+        <p>Both are weighted averages. \(E[X]\) is also called the mean or first moment, often denoted \(\mu\).</p>
+      </div>
+
+      <h3>Linearity of expectation</h3>
+      <p>The most powerful property of expectation:</p>
+
+      <div class="thm-box">
+        <div class="box-label">Theorem — Linearity of Expectation</div>
+        <p>For any random variables \(X_1, X_2, \ldots, X_n\) and constants \(a_1, a_2, \ldots, a_n\):</p>
+        \[E\left[\sum_{i=1}^n a_i X_i\right] = \sum_{i=1}^n a_i E[X_i]\]
+        <p>This holds <em>even if the \(X_i\) are dependent</em>. Notice: no independence assumption needed.</p>
+      </div>
+
+      <button class="proof-toggle" onclick="toggleProof('proof1')">Show proof</button>
+      <div class="proof-body" id="proof1">
+        <div class="proof-inner">
+          Discrete case: \begin{align}
+          E\left[\sum_{i=1}^n a_i X_i\right] &= \sum_x \left(\sum_{i=1}^n a_i x_i\right) p(x_1, \ldots, x_n)\\
+          &= \sum_{i=1}^n a_i \sum_x x_i p(x_1, \ldots, x_n)\\
+          &= \sum_{i=1}^n a_i E[X_i]
+          \end{align}
+          The second line swaps the order of summation. The third marginalises out all variables except \(X_i\). The key point: each variable appears in its own marginal distribution, breaking the dependence structure.
+        </div>
+      </div>
+
+      <h3>Expected value of common distributions</h3>
+
+      <div class="prop-box">
+        <div class="box-label">Property — Common Expectations</div>
+        <ul>
+          <li>\(\text{Bernoulli}(p)\): \(E[X] = p\)</li>
+          <li>\(\text{Binomial}(n, p)\): \(E[X] = np\)</li>
+          <li>\(\text{Poisson}(\lambda)\): \(E[X] = \lambda\)</li>
+          <li>\(\text{Uniform}(a, b)\): \(E[X] = (a+b)/2\)</li>
+          <li>\(\text{Exponential}(\lambda)\): \(E[X] = 1/\lambda\)</li>
+          <li>\(\mathcal{N}(\mu, \sigma^2)\): \(E[X] = \mu\)</li>
+        </ul>
+      </div>
+
+      <div class="perf-dive">
+        <div class="perf-label">Implementation</div>
+        <h4>Computing expected value from samples</h4>
+        <pre class="language-python"><code class="language-python">import numpy as np
+from scipy.stats import binom, poisson, norm
+
+rng = np.random.default_rng(42)
+
+# Binomial(n=20, p=0.3)
+samples = rng.binomial(20, 0.3, 100_000)
+empirical_ev = np.mean(samples)
+theoretical_ev = 20 * 0.3
+print(f"Binomial(20,0.3): empirical E[X]={empirical_ev:.4f}, "
+      f"theory={theoretical_ev:.4f}")
+
+# Poisson(λ=5)
+samples = rng.poisson(5, 100_000)
+empirical_ev = np.mean(samples)
+print(f"Poisson(5): empirical E[X]={empirical_ev:.4f}, theory=5.0000")
+
+# Normal(μ=10, σ=2)
+samples = rng.normal(10, 2, 100_000)
+empirical_ev = np.mean(samples)
+print(f"Normal(10,2): empirical E[X]={empirical_ev:.4f}, theory=10.0000")
+
+# Verify linearity: E[3X + 2] = 3E[X] + 2
+X = rng.normal(10, 2, 100_000)
+Y = 3*X + 2
+print(f"\nLinearity check: E[3X+2] empirical={np.mean(Y):.4f}, "
+      f"theory 3*10+2={32:.4f}")</code></pre>
+      </div>
+    </div>
+
+    <!-- Section 2: Variance and Standard Deviation -->
+    <div class="section" id="variance">
+      <div class="section-divider"><span class="section-num">Section 20.2</span></div>
+      <h2>Variance and Standard Deviation</h2>
+
+      <p>Expectation tells us the centre of a distribution. <strong>Variance</strong> measures spread — how far values typically deviate from the mean.</p>
+
+      <div class="def-box">
+        <div class="box-label">Definition — Variance</div>
+        <p>The variance of \(X\) is the expected squared deviation from its mean:</p>
+        \[\text{Var}(X) = E[(X - E[X])^2] = E[(X - \mu)^2]\]
+        <p>Expanding algebraically:</p>
+        \[\text{Var}(X) = E[X^2] - (E[X])^2\]
+        <p>The <strong>standard deviation</strong> is \(\sigma = \sqrt{\text{Var}(X)}\), measured in the same units as \(X\).</p>
+      </div>
+
+      <div class="prop-box">
+        <div class="box-label">Property — Variance Properties</div>
+        <ul>
+          <li>\(\text{Var}(cX) = c^2 \text{Var}(X)\) for any constant \(c\)</li>
+          <li>\(\text{Var}(X + a) = \text{Var}(X)\) for any constant \(a\)</li>
+          <li>If \(X_1, \ldots, X_n\) are <em>independent</em>: \(\text{Var}\left(\sum X_i\right) = \sum \text{Var}(X_i)\)</li>
+          <li>\(\text{Var}(aX + bY) = a^2 \text{Var}(X) + b^2 \text{Var}(Y) + 2ab\,\text{Cov}(X,Y)\) (depends on covariance)</li>
+        </ul>
+      </div>
+
+      <p>Key insight: variance of a sum grows only linearly if variables are independent, but can grow much faster if they're correlated.</p>
+
+      <div class="perf-dive">
+        <div class="perf-label">Implementation</div>
+        <h4>Variance and standard deviation from samples</h4>
+        <pre class="language-python"><code class="language-python"># Variance from samples
+X = rng.normal(10, 2, 100_000)
+
+# Method 1: direct formula Var(X) = E[(X-μ)²]
+mu = np.mean(X)
+var_direct = np.mean((X - mu)**2)
+
+# Method 2: E[X²] - (E[X])²
+var_formula = np.mean(X**2) - mu**2
+
+# Method 3: numpy built-in (default: N-1 denominator for unbiased estimate)
+var_numpy = np.var(X, ddof=0)  # ddof=0 → divide by N
+
+print(f"Variance: direct={var_direct:.4f}, formula={var_formula:.4f}, "
+      f"numpy={var_numpy:.4f}")
+print(f"Theory variance = σ² = 4, std = σ = 2")
+print(f"Empirical std = {np.std(X, ddof=0):.4f}")
+
+# Distribution variances
+variances = {
+    'Bernoulli(0.3)': 0.3 * (1-0.3),
+    'Binomial(20, 0.3)': 20 * 0.3 * (1-0.3),
+    'Poisson(5)': 5,
+    'Uniform(0, 10)': 10**2 / 12,
+    'Normal(μ, σ²)': 'σ²'  # by definition
+}
+for name, var in variances.items():
+    print(f"{name}: Var = {var}")</code></pre>
+      </div>
+    </div>
+
+    <!-- Section 3: Covariance and Correlation -->
+    <div class="section" id="covariance">
+      <div class="section-divider"><span class="section-num">Section 20.3</span></div>
+      <h2>Covariance and Correlation</h2>
+
+      <p>So far we've studied single variables. In ML, we have datasets with many features. <strong>Covariance</strong> measures how two variables move together.</p>
+
+      <div class="def-box">
+        <div class="box-label">Definition — Covariance</div>
+        <p>For random variables \(X\) and \(Y\) with means \(\mu_X\) and \(\mu_Y\):</p>
+        \[\text{Cov}(X, Y) = E[(X - \mu_X)(Y - \mu_Y)] = E[XY] - E[X]E[Y]\]
+        <p>If \(X\) and \(Y\) are independent, \(\text{Cov}(X,Y) = 0\). Conversely, zero covariance does not imply independence (only linear independence).</p>
+      </div>
+
+      <h3>The correlation coefficient</h3>
+
+      <p>Covariance depends on the scale of \(X\) and \(Y\). Standardised covariance is the <strong>Pearson correlation coefficient</strong>:</p>
+
+      \[\rho(X, Y) = \text{Corr}(X, Y) = \frac{\text{Cov}(X,Y)}{\sqrt{\text{Var}(X)\text{Var}(Y)}} = \frac{\text{Cov}(X,Y)}{\sigma_X \sigma_Y}\]
+
+      <p>Properties: \(-1 \leq \rho \leq 1\), with \(\rho=1\) indicating perfect positive linear relationship, \(\rho=-1\) perfect negative, and \(\rho=0\) no linear relationship.</p>
+
+      <h3>Covariance matrices and connections to earlier chapters</h3>
+
+      <p>For a random vector \(\mathbf{X} = (X_1, \ldots, X_d)^\top\), the <strong>covariance matrix</strong> is:</p>
+
+      \[\boldsymbol{\Sigma} = \text{Cov}(\mathbf{X}) = E[(\mathbf{X} - \boldsymbol{\mu})(\mathbf{X} - \boldsymbol{\mu})^\top]\]
+
+      <p>This is a \(d \times d\) symmetric positive semidefinite matrix. Its diagonal contains variances of each feature; off-diagonal entries are pairwise covariances. This matrix appears throughout ML:</p>
+
+      <ul>
+        <li><strong>PCA (Chapter 7):</strong> PCA finds the eigenvectors of \(\boldsymbol{\Sigma}\), which point along directions of maximum variance in data.</li>
+        <li><strong>Gaussian distribution (Ch 19):</strong> The multivariate normal \(\mathcal{N}(\boldsymbol{\mu}, \boldsymbol{\Sigma})\) has covariance matrix \(\boldsymbol{\Sigma}\).</li>
+        <li><strong>Linear regression:</strong> The optimal weight vector involves \(\boldsymbol{\Sigma}^{-1}\), the inverse covariance matrix.</li>
+      </ul>
+
+      <div class="perf-dive">
+        <div class="perf-label">Implementation</div>
+        <h4>Covariance and correlation from samples</h4>
+        <pre class="language-python"><code class="language-python"># Generate correlated data
+rng = np.random.default_rng(42)
+X = rng.normal(0, 1, 1000)
+Y = 0.7 * X + rng.normal(0, np.sqrt(1-0.7**2), 1000)  # ρ≈0.7
+
+# Empirical covariance: Cov(X,Y) = E[XY] - E[X]E[Y]
+cov_xy = np.mean(X * Y) - np.mean(X) * np.mean(Y)
+print(f"Cov(X, Y) = {cov_xy:.4f}")
+
+# Correlation: Cov / (σ_X * σ_Y)
+corr_xy = cov_xy / (np.std(X) * np.std(Y))
+print(f"Corr(X, Y) = {corr_xy:.4f} (theoretical ≈ 0.7)")
+
+# Covariance matrix using numpy
+data = np.column_stack([X, Y])
+cov_matrix = np.cov(data.T, ddof=0)
+print(f"\nCovariance matrix:\n{cov_matrix}")
+
+# Correlation matrix
+corr_matrix = np.corrcoef(data.T)
+print(f"\nCorrelation matrix:\n{corr_matrix}")
+
+# Multi-feature example
+X1 = rng.normal(0, 1, 1000)
+X2 = 0.5 * X1 + rng.normal(0, np.sqrt(1-0.5**2), 1000)
+X3 = rng.normal(0, 1, 1000)  # independent
+
+data = np.column_stack([X1, X2, X3])
+corr = np.corrcoef(data.T)
+print(f"\n3D correlation matrix:\n{corr}")</code></pre>
+      </div>
+    </div>
+
+    <!-- Section 4: Law of Large Numbers -->
+    <div class="section" id="lln">
+      <div class="section-divider"><span class="section-num">Section 20.4</span></div>
+      <h2>Law of Large Numbers</h2>
+
+      <p>The Law of Large Numbers is the bedrock justification for learning from finite data. It says: as we collect more samples, the empirical average converges to the true expected value.</p>
+
+      <div class="thm-box">
+        <div class="box-label">Theorem — Weak Law of Large Numbers</div>
+        <p>Let \(X_1, X_2, \ldots\) be i.i.d. random variables with mean \(\mu\) and finite variance. For any \(\epsilon > 0\):</p>
+        \[\lim_{n \to \infty} P\left(\left|\bar{X}_n - \mu\right| > \epsilon\right) = 0\]
+        <p>where \(\bar{X}_n = \frac{1}{n}\sum_{i=1}^n X_i\) is the sample mean. In other words, \(\bar{X}_n\) converges in probability to \(\mu\).</p>
+      </div>
+
+      <button class="proof-toggle" onclick="toggleProof('proof2')">Show proof (via Chebyshev)</button>
+      <div class="proof-body" id="proof2">
+        <div class="proof-inner">
+          We use Chebyshev's inequality: for any random variable \(Y\) with mean \(\mu_Y\) and variance \(\sigma_Y^2\),
+          \[P(|Y - \mu_Y| > \epsilon) \leq \frac{\sigma_Y^2}{\epsilon^2}\]
+
+          Apply to \(\bar{X}_n\): \(E[\bar{X}_n] = \mu\) by linearity, and
+          \[\text{Var}(\bar{X}_n) = \text{Var}\left(\frac{1}{n}\sum X_i\right) = \frac{1}{n^2}\sum \text{Var}(X_i) = \frac{1}{n^2} \cdot n \sigma^2 = \frac{\sigma^2}{n}\]
+
+          Thus:
+          \[P(|\bar{X}_n - \mu| > \epsilon) \leq \frac{\sigma^2}{n\epsilon^2} \to 0 \text{ as } n \to \infty\]
+        </div>
+      </div>
+
+      <p>There's also a <strong>Strong Law of Large Numbers</strong>, which is even stronger: \(\bar{X}_n \to \mu\) almost surely (with probability 1), not just in probability. Both are fundamental to why supervised learning works.</p>
+
+      <div class="callout">
+        <div class="callout-label">Practical Insight</div>
+        <p>When you train a model on a finite dataset, you're estimating the expected loss \(E[\text{loss}]\) using the empirical average \(\frac{1}{n}\sum \text{loss}_i\). The LLN guarantees that as \(n\) grows, your empirical estimate converges to the true expected loss. This is why more data helps — but also why overtraining on small datasets fails.</p>
+      </div>
+
+      <div class="perf-dive">
+        <div class="perf-label">Implementation</div>
+        <h4>Law of Large Numbers in action</h4>
+        <pre class="language-python"><code class="language-python"># Demonstrate LLN: mean of Exp(1) samples → 1
+rng = np.random.default_rng(42)
+true_mean = 1.0
+
+sample_sizes = [10, 50, 100, 500, 1000, 5000, 10000]
+num_trials = 100
+
+for n in sample_sizes:
+    # Generate num_trials independent sets of n samples
+    means = []
+    for _ in range(num_trials):
+        samples = rng.exponential(1.0, n)
+        means.append(np.mean(samples))
+
+    mean_of_means = np.mean(means)
+    std_of_means = np.std(means)
+    print(f"n={n:5d}: empirical mean={mean_of_means:.4f}±{std_of_means:.4f}, "
+          f"error={abs(mean_of_means - true_mean):.4f}")
+
+# Monte Carlo estimation: integrate using samples
+# ∫_0^1 sin(πx) dx = 2/π ≈ 0.6366
+def monte_carlo_integral(n):
+    x = rng.uniform(0, 1, n)
+    return np.mean(np.sin(np.pi * x))
+
+print(f"\nMonte Carlo integration of sin(πx) on [0,1]:")
+true_integral = 2 / np.pi
+for n in [100, 1000, 10000]:
+    estimate = monte_carlo_integral(n)
+    error = abs(estimate - true_integral)
+    print(f"n={n:5d}: estimate={estimate:.4f}, error={error:.6f}")</code></pre>
+      </div>
+    </div>
+
+    <!-- Section 5: Information Theory -->
+    <div class="section" id="information-theory">
+      <div class="section-divider"><span class="section-num">Section 20.5</span></div>
+      <h2>Information Theory</h2>
+
+      <p>Information theory quantifies uncertainty and surprise. It connects to ML through loss functions and model selection.</p>
+
+      <h3>Surprise and information content</h3>
+
+      <p>If an event has low probability, observing it is surprising — it contains more information. Define the <strong>information content</strong> of an event with probability \(p\):</p>
+
+      \[I(p) = -\log p\]
+
+      <p>Low probability \(\Rightarrow\) high information; certainty \((p=1) \Rightarrow I(p)=0\) (no surprise).</p>
+
+      <h3>Shannon entropy</h3>
+
+      <p>Averaging information content over all outcomes gives <strong>Shannon entropy</strong>:</p>
+
+      <div class="def-box">
+        <div class="box-label">Definition — Shannon Entropy</div>
+        <p>For a discrete probability distribution \(p\) over outcomes \(x\):</p>
+        \[H(p) = E[-\log p(X)] = -\sum_x p(x) \log p(x)\]
+        <p>(Logarithm is usually base 2 or natural log; results differ by a constant factor.)</p>
+        <p>For a continuous distribution with density \(f\):</p>
+        \[H(f) = -\int f(x) \log f(x)\,dx\]
+        <p>Entropy measures average uncertainty: uniform distributions have high entropy (lots of surprise); concentrated distributions have low entropy (predictable).</p>
+      </div>
+
+      <h3>Cross-entropy and KL divergence</h3>
+
+      <p>In ML, we fit a model distribution \(q\) to true data distribution \(p\). The <strong>cross-entropy</strong> between them is:</p>
+
+      \[H(p, q) = -E_p[\log q(X)] = -\sum_x p(x) \log q(x)\]
+
+      <p>This measures the average number of bits needed to encode samples from \(p\) using codes optimised for \(q\).</p>
+
+      <p>The <strong>Kullback-Leibler (KL) divergence</strong> measures the difference between distributions:</p>
+
+      \[D_{\text{KL}}(p \| q) = E_p\left[\log \frac{p(X)}{q(X)}\right] = \sum_x p(x) \log \frac{p(x)}{q(x)}\]
+
+      <p>Relation: \(H(p,q) = H(p) + D_{\text{KL}}(p \| q)\). KL divergence is always non-negative, zero iff \(p = q\).</p>
+
+      <div class="perf-dive">
+        <div class="perf-label">Implementation</div>
+        <h4>Entropy and KL divergence computation</h4>
+        <pre class="language-python"><code class="language-python">def entropy(p):
+    """Shannon entropy of discrete distribution p."""
+    p = np.array(p)
+    p = p / p.sum()  # normalise
+    return -np.sum(p * np.log2(p + 1e-10))
+
+def kl_divergence(p, q):
+    """KL divergence D_KL(p||q)."""
+    p = np.array(p) / np.sum(p)
+    q = np.array(q) / np.sum(q)
+    return np.sum(p * np.log((p + 1e-10) / (q + 1e-10)))
+
+def cross_entropy(p, q):
+    """Cross-entropy H(p,q)."""
+    p = np.array(p) / np.sum(p)
+    q = np.array(q) / np.sum(q)
+    return -np.sum(p * np.log(q + 1e-10))
+
+# Examples
+p_uniform = [0.25, 0.25, 0.25, 0.25]  # max entropy
+p_peaked = [0.7, 0.1, 0.1, 0.1]        # low entropy
+q = [0.4, 0.3, 0.2, 0.1]               # another distribution
+
+print(f"Entropy of uniform: {entropy(p_uniform):.4f} bits (max)")
+print(f"Entropy of peaked: {entropy(p_peaked):.4f} bits")
+
+print(f"\nKL(uniform||q) = {kl_divergence(p_uniform, q):.4f}")
+print(f"KL(peaked||q) = {kl_divergence(p_peaked, q):.4f}")
+
+print(f"\nCross-entropy H(peaked, q) = {cross_entropy(p_peaked, q):.4f}")
+print(f"H(peaked) + D_KL(peaked||q) = {entropy(p_peaked) + kl_divergence(p_peaked, q):.4f}")
+
+# Classification example: softmax output vs one-hot label
+from scipy.special import softmax
+logits = np.array([1.0, 0.5, 0.2])
+true_label = np.array([1, 0, 0])  # one-hot for class 0
+predicted_probs = softmax(logits)
+
+ce_loss = cross_entropy(true_label, predicted_probs)
+print(f"\nClassification cross-entropy loss: {ce_loss:.4f}")</code></pre>
+      </div>
+    </div>
+
+    <!-- Section 6: Maximum Likelihood Estimation -->
+    <div class="section" id="mle">
+      <div class="section-divider"><span class="section-num">Section 20.6</span></div>
+      <h2>Maximum Likelihood Estimation</h2>
+
+      <p><strong>Maximum Likelihood Estimation (MLE)</strong> is the principle of choosing model parameters to make observed data as probable as possible. It's the theoretical foundation of supervised learning.</p>
+
+      <div class="def-box">
+        <div class="box-label">Definition — Likelihood and Maximum Likelihood Estimation</div>
+        <p>Given observations \(x_1, \ldots, x_n\) from a distribution parameterised by \(\theta\), the <strong>likelihood function</strong> is:</p>
+        \[L(\theta; x_1, \ldots, x_n) = \prod_{i=1}^n f(x_i | \theta)\]
+        <p>The <strong>log-likelihood</strong> is \(\ell(\theta) = \log L(\theta)\). The MLE is:</p>
+        \[\hat{\theta} = \arg\max_{\theta} \ell(\theta) = \arg\max_{\theta} \sum_{i=1}^n \log f(x_i | \theta)\]
+        <p>Often we minimise negative log-likelihood: \(\hat{\theta} = \arg\min_{\theta} -\ell(\theta)\).</p>
+      </div>
+
+      <h3>MLE for Gaussian distribution</h3>
+
+      <p>Suppose data \(x_1, \ldots, x_n\) are samples from \(\mathcal{N}(\mu, \sigma^2)\). The log-likelihood is:</p>
+
+      \[\ell(\mu, \sigma^2) = \sum_{i=1}^n \log \frac{1}{\sigma\sqrt{2\pi}} \exp\!\left(-\frac{(x_i-\mu)^2}{2\sigma^2}\right) = -\frac{n}{2}\log(2\pi\sigma^2) - \frac{1}{2\sigma^2}\sum(x_i-\mu)^2\]
+
+      <p>Maximising over \(\mu\): set \(\frac{\partial \ell}{\partial \mu} = 0\) gives \(\hat{\mu} = \frac{1}{n}\sum x_i\) (the sample mean).</p>
+
+      <p>Maximising over \(\sigma^2\): set \(\frac{\partial \ell}{\partial \sigma^2} = 0\) gives \(\hat{\sigma}^2 = \frac{1}{n}\sum(x_i - \hat{\mu})^2\) (the sample variance).</p>
+
+      <p><strong>Key insight:</strong> For Gaussian models, MLE recovers the empirical mean and variance — exactly what you'd compute from data intuitively.</p>
+
+      <h3>MLE for Bernoulli (classification)</h3>
+
+      <p>For binary labels \(y_i \in \{0,1\}\) with \(P(y=1|x) = p(x)\), the log-likelihood of observing \(y_1, \ldots, y_n\) is:</p>
+
+      \[\ell = \sum_{i=1}^n [y_i \log p(x_i) + (1-y_i)\log(1-p(x_i))]\]
+
+      <p>This is exactly the <strong>binary cross-entropy loss</strong> used in logistic regression and neural networks! Minimising cross-entropy = maximising likelihood.</p>
+
+      <div class="perf-dive">
+        <div class="perf-label">Implementation</div>
+        <h4>MLE from scratch</h4>
+        <pre class="language-python"><code class="language-python">from scipy.optimize import minimize
+
+# Generate data from N(5, 2²)
+rng = np.random.default_rng(42)
+true_mu, true_sigma = 5.0, 2.0
+data = rng.normal(true_mu, true_sigma, 100)
+
+# Negative log-likelihood for Gaussian
+def neg_log_likelihood(params, data):
+    mu, sigma = params
+    if sigma <= 0:
+        return 1e10
+    n = len(data)
+    nll = n/2 * np.log(2*np.pi*sigma**2) + \
+          np.sum((data - mu)**2) / (2*sigma**2)
+    return nll
+
+# Optimize
+initial_guess = [0, 1]
+result = minimize(neg_log_likelihood, initial_guess, args=(data,))
+mu_mle, sigma_mle = result.x
+
+print(f"True parameters: μ={true_mu}, σ={true_sigma}")
+print(f"MLE estimates: μ={mu_mle:.4f}, σ={sigma_mle:.4f}")
+print(f"Sample statistics: mean={np.mean(data):.4f}, std={np.std(data):.4f}")
+
+# Binary classification: logistic regression as MLE
+def sigmoid(z):
+    return 1 / (1 + np.exp(-z))
+
+# Generate synthetic classification data
+X = rng.normal(0, 1, (100, 2))
+true_w = np.array([1.0, -0.5])
+y = (sigmoid(X @ true_w) > 0.5).astype(int)
+
+# Negative log-likelihood for logistic regression
+def neg_logistic_ll(w, X, y):
+    p = sigmoid(X @ w)
+    return -np.sum(y * np.log(p + 1e-10) + (1-y) * np.log(1-p + 1e-10))
+
+result = minimize(neg_logistic_ll, [0, 0], args=(X, y))
+w_mle = result.x
+
+print(f"\nLogistic regression MLE: w = {w_mle}")
+print(f"True weights were: {true_w}")</code></pre>
+      </div>
+    </div>
+
+    <!-- Section 7: Why This Matters for ML -->
+    <div class="section" id="ml-connection">
+      <div class="section-divider"><span class="section-num">Section 20.7</span></div>
+      <h2>Why This Matters for Machine Learning</h2>
+
+      <div class="why-ai">
+        <div class="why-label">Why This Matters for ML</div>
+        <h3>The bridge from theory to practice</h3>
+        <ul>
+          <li><strong>Loss functions are negative log-likelihoods:</strong> Cross-entropy loss for classification, MSE for regression with Gaussian noise — these are all derived from MLE. Training a neural network = finding the parameters that maximise likelihood of the data.</li>
+          <li><strong>Entropy in decision trees:</strong> Information gain, used to decide splits in tree models, is literally the difference in entropy before and after a split. Higher information gain = better feature for separation.</li>
+          <li><strong>KL divergence in generative models:</strong> VAEs minimise \(D_{\text{KL}}(q_\phi(\mathbf{z}|\mathbf{x}) \| p(\mathbf{z})) + E[\text{reconstruction error}]\). The KL term regularises the learned latent distribution toward the prior.</li>
+          <li><strong>Law of Large Numbers justifies empirical risk minimisation:</strong> We minimise average loss on our finite dataset hoping it approximates true expected loss. The LLN guarantees this works as data grows.</li>
+          <li><strong>Variance in feature selection:</strong> High-variance features are unstable predictors. Low variance features are too constant. The covariance matrix guides feature engineering and dimensionality reduction (PCA).</li>
+        </ul>
+      </div>
+
+      <div class="callout">
+        <div class="callout-label">Unifying Insight</div>
+        <p>Expected value, variance, covariance, entropy, and MLE are all aspects of one unified framework: probabilistic modelling. Every ML algorithm can be interpreted as finding the model distribution (or its parameters) that best explains observed data. Understanding these concepts deeply is key to debugging ML systems, choosing appropriate models, and recognising when assumptions break down.</p>
+      </div>
+    </div>
+
+    <!-- Socratic Section -->
+    <div class="socratic" id="socratic">
+      <div class="socratic-header">
+        <div class="socratic-icon">&#129300;</div>
+        <h2>Test Your Understanding</h2>
+      </div>
+      <div class="socratic-scenario">
+        You're training a language model on text data. Each training example has a true distribution over the next token (one-hot at the ground truth), and your model outputs a predicted distribution (softmax over 50,000 vocabulary). The loss is cross-entropy. You notice training loss decreases but validation loss plateaus.
+      </div>
+
+      <div class="q-card">
+        <div class="q-top">
+          <div class="q-num">1</div>
+          <div class="q-text">Your cross-entropy loss is the expected value of what quantity? How does minimising it relate to MLE?</div>
+        </div>
+        <button class="reveal-btn" onclick="toggleAnswer('a1')"><span>Reveal Thinking</span></button>
+        <div class="q-answer" id="a1">
+          <div class="q-answer-inner">Cross-entropy \(H(p, q) = -E_p[\log q(X)]\) is the <em>expected</em> negative log-likelihood. When you average cross-entropy over all training examples, you're averaging the log-likelihood. Minimising average cross-entropy = maximising average log-likelihood, which is exactly MLE. The model learns parameters to make ground-truth labels as likely as possible under the learned distribution.</div>
+        </div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-top">
+          <div class="q-num">2</div>
+          <div class="q-text">What does the plateau in validation loss tell you about what might be happening? How would you distinguish between overfitting, high bias, and bad hyperparameters?</div>
+        </div>
+        <button class="reveal-btn" onclick="toggleAnswer('a2')"><span>Reveal Thinking</span></button>
+        <div class="q-answer" id="a2">
+          <div class="q-answer-inner">Training loss decreasing but validation plateauing suggests <em>overfitting</em> — the model is learning the training data distribution but not the true underlying distribution. This violates the assumption in the Law of Large Numbers that the empirical risk approximates true risk. To diagnose: (1) If training loss is still high, it's <em>high bias</em> (model too simple for the task). (2) If training loss is low but test loss is high, it's <em>overfitting</em> (high variance). (3) Check if validation loss improves with more data (suggests variance) or not (suggests bias). Regularisation (L2, dropout, early stopping) targets overfitting; increasing model capacity targets bias; better hyperparameters can address both.</div>
+        </div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-top">
+          <div class="q-num">3</div>
+          <div class="q-text">You compute the covariance matrix of your word embeddings (50,000 words, 768-dimensional embeddings). What would high covariance between two embedding dimensions tell you? How might you use PCA?</div>
+        </div>
+        <button class="reveal-btn" onclick="toggleAnswer('a3')"><span>Reveal Thinking</span></button>
+        <div class="q-answer" id="a3">
+          <div class="q-answer-inner">High covariance between two dimensions means they tend to vary together across words — they're capturing redundant information. PCA finds the eigenvectors of the covariance matrix, which point along directions of maximum variance. You could (1) compress embeddings by keeping only top-k principal components (reduces dimension while retaining variance), (2) identify which original dimensions are correlated and potentially redundant, (3) decorrelate features for downstream tasks, improving stability. High covariance suggests the 768 dimensions aren't all independent — the "true" representational dimension is lower, which PCA exploits.</div>
+        </div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-top">
+          <div class="q-num">4</div>
+          <div class="q-text">The KL divergence between true and predicted distributions is non-zero. Why can't you reduce it to exactly zero? What's the fundamental tradeoff?</div>
+        </div>
+        <button class="reveal-btn" onclick="toggleAnswer('a4')"><span>Reveal Thinking</span></button>
+        <div class="q-answer" id="a4">
+          <div class="q-answer-inner">Perfect KL divergence of zero requires your predicted distribution \(q\) to match the true data distribution \(p\) exactly. But (1) you have finite training data, so \(p\) is only estimated empirically; (2) your model class (e.g., transformer with fixed architecture) may not be expressive enough to match \(p\) exactly; (3) adding regularisation (L2, dropout) intentionally prevents overfitting to the empirical distribution. The fundamental tradeoff: tighter fit to training data (lower training KL) vs. robustness to unseen data (lower test KL). This is the bias-variance tradeoff reframed in information-theoretic terms. You optimise for validation KL, not training KL.</div>
+        </div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-top">
+          <div class="q-num">5</div>
+          <div class="q-text">If you used more training data, what would the Law of Large Numbers say about your empirical risk (average loss on training set) and true risk (expected loss on unseen data)?</div>
+        </div>
+        <button class="reveal-btn" onclick="toggleAnswer('a5')"><span>Reveal Thinking</span></button>
+        <div class="q-answer" id="a5">
+          <div class="q-answer-inner">The LLN says the empirical risk (sample average loss) converges to true risk (expected loss) as \(n \to \infty\). With more training data, your estimate of true risk becomes more accurate, the gap between training and validation loss shrinks, and your learned model generalises better. However, this assumes (1) data is i.i.d. (no distribution shift), (2) loss has finite variance (outliers could cause problems), (3) you don't overfit (e.g., no architecture that can memorise). In practice, more data reduces variance of your estimator but doesn't guarantee low bias if your model is too simple.</div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="nav-bottom">
+      <a class="nav-btn prev" href="ch19.html">&larr; Chapter 19: Random Variables and Distributions</a>
+      <a class="nav-btn next" href="chA.html">Appendix A: It's Just Logic &rarr;</a>
+    </nav>
+
+  </main>
+</div>
+
+<script>
+(function() {
+  window.addEventListener('scroll', function() {
+    const h = document.documentElement;
+    const pct = (h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100;
+    document.getElementById('readingProgress').style.width = pct + '%';
+  });
+  const sections = document.querySelectorAll('.section, .socratic');
+  const tocLinks = document.querySelectorAll('.toc-list a');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        tocLinks.forEach(l => l.classList.remove('active'));
+        const id = e.target.getAttribute('id');
+        const link = document.querySelector('.toc-list a[href="#' + id + '"]');
+        if (link) link.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  sections.forEach(s => observer.observe(s));
+
+  window.toggleAnswer = function(id) {
+    const el = document.getElementById(id);
+    const btn = el.previousElementSibling;
+    el.classList.toggle('open');
+    btn.classList.toggle('open');
+    btn.querySelector('span').textContent = el.classList.contains('open') ? 'Hide' : 'Reveal Thinking';
+  };
+  window.toggleProof = function(id) {
+    const el = document.getElementById(id);
+    const btn = el.previousElementSibling;
+    el.classList.toggle('open');
+    btn.classList.toggle('open');
+    btn.textContent = el.classList.contains('open') ? 'Hide proof' : 'Show proof';
+  };
+  window.copyCode = function(btn) {
+    const code = btn.closest('.code-block, .perf-dive').querySelector('code').textContent;
+    navigator.clipboard.writeText(code).then(() => {
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+    });
+  };
+  const STORAGE_KEY = 'mathml_completed';
+  let completed = new Set();
+  try { const s = localStorage.getItem(STORAGE_KEY); if (s) completed = new Set(JSON.parse(s)); } catch(e) {}
+  const btn = document.getElementById('completeBtn');
+  const btnText = document.getElementById('completeBtnText');
+  function syncBtn() {
+    if (completed.has('20')) { btn.classList.add('done'); btnText.textContent = 'Completed'; }
+    else { btn.classList.remove('done'); btnText.textContent = 'Mark as Complete'; }
+  }
+  syncBtn();
+  window.toggleChapterComplete = function() {
+    if (completed.has('20')) completed.delete('20'); else completed.add('20');
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify([...completed])); } catch(e) {}
+    syncBtn();
+  };
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 7: Matrix Factorizations — Math for ML</title>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,500&family=Figtree:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- KaTeX -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\[', right: '\\]', display: true},
+      {left: '\\(', right: '\\)', display: false}
+    ],
+    throwOnError: false
+  });"></script>
+
+<!-- Prism.js -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css">
+
+<style>
+/* ═══════════════════════════════════════════════════════════
+   DESIGN SYSTEM — Chapter Page
+   ═══════════════════════════════════════════════════════════ */
+:root {
+  --bg:           #FAF9F7;
+  --bg-card:      #FFFFFF;
+  --bg-warm:      #F7F6F3;
+  --text:         #2D2D2D;
+  --text-2:       #555555;
+  --text-3:       #888888;
+  --border:       #E5E5E0;
+  --border-hover: #D0D0CA;
+  --blue:         #4A6CF7;
+  --blue-light:   #EEF2FF;
+  --blue-dim:     rgba(74,108,247,0.08);
+  --indigo:       #6366F1;
+  --green:        #22C55E;
+  --green-light:  #F0FDF4;
+  --red:          #EF4444;
+  --red-light:    #FFF5F5;
+  --amber:        #F59E0B;
+  --amber-light:  #FFFBEB;
+  --purple:       #8B5CF6;
+  --purple-light: #F5F3FF;
+  --cyan:         #06B6D4;
+  --grad-part1:   linear-gradient(135deg, #4A6CF7 0%, #6366F1 100%);
+  --font-serif:   'Newsreader', Georgia, serif;
+  --font-sans:    'Figtree', -apple-system, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Fira Code', monospace;
+  --radius:       12px;
+  --radius-sm:    8px;
+  --shadow-sm:    0 1px 3px rgba(0,0,0,0.04);
+  --shadow-md:    0 4px 16px rgba(0,0,0,0.06);
+  --shadow-lg:    0 8px 32px rgba(0,0,0,0.08);
+  --content-w:    740px;
+  --layout-w:     1120px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 90px; }
+
+body {
+  font-family: var(--font-serif);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.75;
+  font-size: 17px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.reading-progress { position: fixed; top: 0; left: 0; z-index: 1000; width: 0%; height: 3px; background: var(--grad-part1); transition: width 0.1s linear; }
+
+.page-layout { display: grid; grid-template-columns: 1fr; max-width: var(--layout-w); margin: 0 auto; padding: 0 24px; }
+@media (min-width: 1060px) { .page-layout { grid-template-columns: 220px 1fr; gap: 48px; } }
+
+.toc-sidebar { display: none; }
+@media (min-width: 1060px) {
+  .toc-sidebar { display: block; position: sticky; top: 24px; align-self: start; padding-top: 32px; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+.toc-label { font-family: var(--font-sans); font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-3); margin-bottom: 16px; }
+.toc-list { list-style: none; }
+.toc-list li { margin: 0; }
+.toc-list a { display: block; padding: 6px 0 6px 14px; font-family: var(--font-sans); font-size: 13px; font-weight: 400; color: var(--text-3); text-decoration: none; border-left: 2px solid transparent; transition: all 0.2s ease; line-height: 1.5; }
+.toc-list a:hover { color: var(--blue); border-left-color: var(--blue); }
+.toc-list a.active { color: var(--blue); border-left-color: var(--blue); font-weight: 600; }
+.toc-list .sub { padding-left: 28px; font-size: 12px; }
+
+.mobile-toc { display: block; margin: 16px 0 32px; }
+@media (min-width: 1060px) { .mobile-toc { display: none; } }
+.mobile-toc-toggle { display: flex; align-items: center; gap: 8px; width: 100%; padding: 12px 16px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-sans); font-size: 14px; font-weight: 500; color: var(--text-2); cursor: pointer; }
+.mobile-toc-toggle .chevron { margin-left: auto; transition: transform 0.2s; }
+.mobile-toc-toggle.open .chevron { transform: rotate(180deg); }
+.mobile-toc-list { display: none; list-style: none; background: var(--bg-card); border: 1px solid var(--border); border-top: 0; border-radius: 0 0 var(--radius-sm) var(--radius-sm); padding: 8px 0; }
+.mobile-toc-list.open { display: block; }
+.mobile-toc-list a { display: block; padding: 8px 20px; font-family: var(--font-sans); font-size: 14px; color: var(--text-2); text-decoration: none; }
+.mobile-toc-list a:hover { color: var(--blue); background: var(--blue-dim); }
+
+.content { max-width: var(--content-w); padding: 32px 0 80px; min-width: 0; }
+
+.breadcrumb { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-family: var(--font-sans); font-size: 13px; color: var(--text-3); margin-bottom: 32px; }
+.breadcrumb a { color: var(--text-3); text-decoration: none; transition: color 0.15s; }
+.breadcrumb a:hover { color: var(--blue); }
+.breadcrumb .sep { color: var(--border); }
+.breadcrumb .current { color: var(--text-2); font-weight: 500; }
+
+.ch-header { margin-bottom: 48px; }
+.ch-badge { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: var(--radius); background: var(--grad-part1); color: #fff; font-family: var(--font-sans); font-size: 22px; font-weight: 700; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(74,108,247,0.25); }
+.ch-title { font-family: var(--font-serif); font-size: clamp(28px, 5vw, 40px); font-weight: 700; line-height: 1.15; letter-spacing: -0.02em; color: var(--text); margin-bottom: 8px; }
+.ch-subtitle { font-family: var(--font-serif); font-size: 18px; font-style: italic; color: var(--text-2); margin-bottom: 16px; }
+.ch-meta { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.ch-meta-item { display: flex; align-items: center; gap: 6px; font-family: var(--font-sans); font-size: 13px; color: var(--text-3); }
+.ch-meta-item svg { width: 15px; height: 15px; }
+
+.complete-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: var(--bg-card); border: 2px solid var(--border); border-radius: 100px; font-family: var(--font-sans); font-size: 14px; font-weight: 600; color: var(--text-2); cursor: pointer; transition: all 0.25s ease; }
+.complete-btn:hover { border-color: var(--green); color: var(--green); }
+.complete-btn.done { background: var(--green); border-color: var(--green); color: #fff; }
+.complete-btn svg { width: 16px; height: 16px; }
+
+.section { margin-top: 56px; scroll-margin-top: 80px; }
+.section-divider { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+.section-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.section-num { font-family: var(--font-sans); font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: var(--blue); text-transform: uppercase; white-space: nowrap; }
+.section h2 { font-family: var(--font-serif); font-size: clamp(22px, 4vw, 28px); font-weight: 700; line-height: 1.25; letter-spacing: -0.01em; color: var(--text); margin-bottom: 20px; }
+.section h3 { font-family: var(--font-serif); font-size: 20px; font-weight: 600; color: var(--text); margin: 36px 0 14px; scroll-margin-top: 80px; }
+.section h4 { font-family: var(--font-serif); font-size: 17px; font-weight: 600; color: var(--text); margin: 28px 0 10px; }
+p { margin: 14px 0; }
+
+.feynman-bridge { background: linear-gradient(135deg, #FFF7ED 0%, #FFFBEB 40%, #F0FDF4 100%); border: 1px solid #FDE68A; border-radius: var(--radius); padding: 32px; margin: 32px 0 48px; position: relative; overflow: hidden; }
+.feynman-bridge::before { content: '\1F4A1'; position: absolute; top: -8px; right: 16px; font-size: 48px; opacity: 0.15; }
+.feynman-label { font-family: var(--font-sans); font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--amber); margin-bottom: 12px; }
+.feynman-bridge h3 { font-family: var(--font-serif); font-size: 22px; font-weight: 600; color: var(--text); margin: 0 0 16px; }
+.feynman-bridge p { font-size: 17px; line-height: 1.85; color: #444; }
+
+.def-box { background: var(--blue-light); border-left: 4px solid var(--blue); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 20px 24px; margin: 24px 0; }
+.def-box .box-label { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-sans); font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--blue); margin-bottom: 10px; }
+.def-box .box-label::before { content: ''; width: 8px; height: 8px; border-radius: 2px; background: var(--blue); }
+.def-box .box-title { font-family: var(--font-serif); font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+.def-box p, .def-box li { font-size: 15.5px; line-height: 1.7; color: var(--text); }
+.def-box ul { margin-left: 20px; margin-top: 8px; }
+.def-box li { margin: 6px 0; }
+
+.thm-box { background: var(--red-light); border-left: 4px solid var(--red); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 20px 24px; margin: 24px 0; }
+.thm-box .box-label { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-sans); font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--red); margin-bottom: 10px; }
+.thm-box .box-label::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--red); }
+.thm-box p { font-size: 15.5px; line-height: 1.7; }
+
+.prop-box { background: var(--purple-light); border-left: 4px solid var(--purple); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 20px 24px; margin: 24px 0; }
+.prop-box .box-label { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-sans); font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--purple); margin-bottom: 10px; }
+.prop-box .box-label::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--purple); }
+.prop-box p { font-size: 15.5px; line-height: 1.7; }
+
+.proof-toggle { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: var(--bg-warm); border: 1px solid var(--border); border-radius: 100px; font-family: var(--font-sans); font-size: 13px; font-weight: 600; color: var(--text-2); cursor: pointer; transition: all 0.2s; margin: 12px 0; }
+.proof-toggle:hover { border-color: var(--blue); color: var(--blue); }
+.proof-toggle .arrow { transition: transform 0.3s ease; font-size: 10px; }
+.proof-toggle.open .arrow { transform: rotate(90deg); }
+.proof-body { max-height: 0; overflow: hidden; transition: max-height 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+.proof-body.open { max-height: 2000px; }
+.proof-inner { background: #F9FAFB; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 20px 24px; margin: 8px 0 16px; font-size: 15px; line-height: 1.75; color: var(--text-2); }
+.proof-inner em { font-style: italic; }
+
+pre[class*="language-"] { background: #1a1b2e !important; border-radius: var(--radius) !important; border: 1px solid #2a2b42 !important; padding: 0 !important; margin: 24px 0 !important; overflow: hidden; box-shadow: var(--shadow-md); position: relative; }
+.code-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px; background: #12132a; border-bottom: 1px solid #2a2b42; font-family: var(--font-sans); font-size: 12px; }
+.code-lang { color: #7dd3fc; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.copy-btn { background: none; border: 1px solid #3a3b52; border-radius: 6px; padding: 4px 12px; color: #888; font-family: var(--font-sans); font-size: 11px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+.copy-btn:hover { border-color: #7dd3fc; color: #7dd3fc; }
+.copy-btn.copied { border-color: var(--green); color: var(--green); }
+pre[class*="language-"] > code { display: block; padding: 20px 24px !important; font-family: var(--font-mono) !important; font-size: 13.5px !important; line-height: 1.7 !important; color: #e2e8f0 !important; background: none !important; overflow-x: auto; }
+.token.comment, .token.prolog, .token.doctype { color: #6b7280 !important; font-style: italic; }
+.token.keyword { color: #c084fc !important; }
+.token.string { color: #86efac !important; }
+.token.number { color: #fbbf24 !important; }
+.token.function { color: #7dd3fc !important; }
+.token.boolean { color: #fb923c !important; }
+.token.operator { color: #94a3b8 !important; }
+.token.builtin { color: #67e8f9 !important; }
+.token.class-name { color: #fca5a5 !important; }
+.token.punctuation { color: #94a3b8 !important; }
+:not(pre) > code { font-family: var(--font-mono); font-size: 0.88em; background: #F0EFEC; padding: 2px 7px; border-radius: 4px; color: #C2410C; }
+
+.katex-display { margin: 24px 0 !important; padding: 16px 0; }
+.katex { font-size: 1.08em !important; }
+
+.callout { background: linear-gradient(135deg, var(--blue-light) 0%, var(--purple-light) 100%); border: 1px solid #D1D5EB; border-radius: var(--radius); padding: 24px 28px; margin: 28px 0; }
+.callout .callout-label { font-family: var(--font-sans); font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--blue); margin-bottom: 8px; }
+.callout p { font-size: 15.5px; line-height: 1.7; }
+
+.perf-dive { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); border-radius: var(--radius); padding: 28px 28px 20px; margin: 28px 0; color: #e2e8f0; position: relative; overflow: hidden; }
+.perf-dive::before { content: '\26A1'; position: absolute; top: -6px; right: 12px; font-size: 56px; opacity: 0.08; }
+.perf-dive .perf-label { font-family: var(--font-sans); font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #fbbf24; margin-bottom: 8px; }
+.perf-dive h4 { color: #fff; font-size: 18px; margin: 0 0 12px; }
+.perf-dive p { color: #94a3b8; font-size: 15px; line-height: 1.7; }
+.perf-dive pre[class*="language-"] { border: 1px solid #334155 !important; margin-top: 16px !important; }
+
+.why-ai { background: linear-gradient(135deg, var(--blue-light) 0%, #F0FDFA 100%); border: 2px solid var(--blue); border-radius: var(--radius); padding: 28px 28px; margin: 36px 0; }
+.why-ai .why-label { font-family: var(--font-sans); font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--blue); margin-bottom: 12px; }
+.why-ai h3 { font-size: 20px; margin: 0 0 12px; }
+.why-ai ul { margin-left: 18px; }
+.why-ai li { margin: 10px 0; font-size: 15.5px; line-height: 1.7; }
+.why-ai li strong { color: var(--blue); }
+
+.socratic { margin-top: 56px; scroll-margin-top: 80px; }
+.socratic-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.socratic-icon { width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, var(--amber) 0%, #F97316 100%); display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.socratic h2 { margin: 0; font-size: 24px; }
+.socratic-scenario { background: var(--amber-light); border: 1px solid #FDE68A; border-radius: var(--radius); padding: 20px 24px; margin-bottom: 24px; font-style: italic; color: var(--text-2); font-size: 15.5px; line-height: 1.75; }
+.q-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px; margin-bottom: 14px; transition: box-shadow 0.2s; }
+.q-card:hover { box-shadow: var(--shadow-md); }
+.q-top { display: flex; align-items: flex-start; gap: 14px; }
+.q-num { width: 28px; height: 28px; border-radius: 50%; background: var(--grad-part1); color: #fff; display: flex; align-items: center; justify-content: center; font-family: var(--font-sans); font-size: 13px; font-weight: 700; flex-shrink: 0; }
+.q-text { font-weight: 500; font-size: 15.5px; line-height: 1.6; flex: 1; }
+.reveal-btn { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; padding: 6px 14px; background: none; border: 1px solid var(--blue); border-radius: 100px; font-family: var(--font-sans); font-size: 12px; font-weight: 600; color: var(--blue); cursor: pointer; transition: all 0.2s; }
+.reveal-btn:hover { background: var(--blue); color: #fff; }
+.reveal-btn.open { background: var(--blue); color: #fff; }
+.q-answer { max-height: 0; overflow: hidden; transition: max-height 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+.q-answer.open { max-height: 500px; }
+.q-answer-inner { background: var(--blue-light); border-radius: var(--radius-sm); padding: 14px 18px; margin-top: 14px; font-size: 15px; line-height: 1.7; color: var(--text-2); }
+
+.ch-nav { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 56px; padding-top: 28px; border-top: 1px solid var(--border); }
+.nav-btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-sans); font-size: 14px; font-weight: 600; color: var(--text-2); text-decoration: none; transition: all 0.2s; }
+.nav-btn:hover { border-color: var(--blue); color: var(--blue); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+.nav-btn.disabled { opacity: 0.4; pointer-events: none; }
+
+.back-top { position: fixed; bottom: 28px; right: 28px; width: 42px; height: 42px; border-radius: 50%; background: var(--bg-card); border: 1px solid var(--border); box-shadow: var(--shadow-md); display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: 0; transform: translateY(10px); transition: all 0.3s; z-index: 100; }
+.back-top.visible { opacity: 1; transform: translateY(0); }
+.back-top:hover { border-color: var(--blue); }
+.back-top svg { width: 18px; height: 18px; color: var(--text-2); }
+
+.ch-footer { text-align: center; padding: 32px 0; border-top: 1px solid var(--border); font-family: var(--font-sans); font-size: 13px; color: var(--text-3); margin-top: 32px; }
+
+@media (max-width: 600px) {
+  .ch-nav { flex-direction: column; }
+  .nav-btn { width: 100%; justify-content: center; }
+}
+</style>
+</head>
+<body>
+
+<!-- Reading Progress -->
+<div class="reading-progress" id="readingProgress"></div>
+
+<div class="page-layout">
+
+  <!-- ═══ SIDEBAR TOC ═══════════════════════════════ -->
+  <aside class="toc-sidebar">
+    <div class="toc-label">On this page</div>
+    <ul class="toc-list" id="tocList">
+      <li><a href="#s7-1" data-section="s7-1">7.1 Spectral Decomposition</a></li>
+      <li class="sub"><a href="#s7-1-ortho" data-section="s7-1-ortho">Orthogonal Diagonalisation</a></li>
+      <li><a href="#s7-2" data-section="s7-2">7.2 Singular Value Decomposition</a></li>
+      <li class="sub"><a href="#s7-2-geo" data-section="s7-2-geo">Geometric Interpretation</a></li>
+      <li class="sub"><a href="#s7-2-comp" data-section="s7-2-comp">Computing the SVD</a></li>
+      <li class="sub"><a href="#s7-2-trunc" data-section="s7-2-trunc">Truncated SVD</a></li>
+      <li><a href="#s7-3" data-section="s7-3">7.3 Orthogonal Projections</a></li>
+      <li><a href="#s7-4" data-section="s7-4">7.4 Power Iteration and QR</a></li>
+      <li class="sub"><a href="#s7-4-power" data-section="s7-4-power">Power Iteration</a></li>
+      <li class="sub"><a href="#s7-4-qr" data-section="s7-4-qr">QR Algorithm</a></li>
+      <li><a href="#s7-5" data-section="s7-5">7.5 Summary</a></li>
+      <li><a href="#socratic" data-section="socratic">Knowledge Check</a></li>
+    </ul>
+  </aside>
+
+  <!-- ═══ MAIN CONTENT ══════════════════════════════ -->
+  <main class="content">
+
+    <!-- Mobile TOC -->
+    <div class="mobile-toc">
+      <button class="mobile-toc-toggle" id="mobileTocToggle">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+        Table of Contents
+        <span class="chevron">▾</span>
+      </button>
+      <ul class="mobile-toc-list" id="mobileTocList">
+        <li><a href="#s7-1">7.1 Spectral Decomposition</a></li>
+        <li><a href="#s7-2">7.2 Singular Value Decomposition</a></li>
+        <li><a href="#s7-3">7.3 Orthogonal Projections</a></li>
+        <li><a href="#s7-4">7.4 Power Iteration and QR</a></li>
+        <li><a href="#s7-5">7.5 Summary</a></li>
+        <li><a href="#socratic">Knowledge Check</a></li>
+      </ul>
+    </div>
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb">
+      <a href="../index.html">Curriculum</a>
+      <span class="sep">/</span>
+      <span class="current">Chapter 7</span>
+    </nav>
+
+    <!-- Chapter Header -->
+    <header class="ch-header">
+      <div class="ch-badge">7</div>
+      <h1 class="ch-title">Matrix Factorizations</h1>
+      <p class="ch-subtitle">SVD, spectral decomposition, orthogonal projections, power iteration, and the QR algorithm</p>
+      <div class="ch-meta">
+        <span class="ch-meta-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+          Part I — Linear Algebra
+        </span>
+        <span class="ch-meta-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          ~50 min read
+        </span>
+        <button class="complete-btn" id="completeBtn" onclick="toggleChapterComplete()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+          <span id="completeBtnText">Mark as Complete</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ═══ FEYNMAN BRIDGE ════════════════════════════ -->
+    <div class="feynman-bridge">
+      <div class="feynman-label">Mental Model</div>
+      <h3>Every Matrix Tells a Three-Act Story</h3>
+      <p>
+        Think of any matrix as a three-step transformation: first, rotate the input into a special coordinate system; second, stretch along each axis by a different amount; third, rotate the result into the output space. This is the <strong>Singular Value Decomposition</strong> (SVD). The stretching amounts — the singular values — reveal how much "energy" the matrix puts into each direction. By keeping only the largest singular values, you get the best low-rank approximation of your data — the mathematical heart of dimensionality reduction, recommender systems, and image compression.
+      </p>
+    </div>
+
+    <!-- ═══ SECTION 7.1 ═══════════════════════════════ -->
+    <section class="section" id="s7-1">
+      <div class="section-divider"><span class="section-num">Section 7.1</span></div>
+      <h2>Spectral Decomposition</h2>
+
+      <h3 id="s7-1-ortho">Orthogonal Diagonalisation</h3>
+
+      <p>
+        In Chapter 6 we saw that the Spectral Theorem guarantees every real symmetric matrix \(A \in \mathbb{R}^{n \times n}\) can be diagonalised by an orthogonal matrix. Let's make this concrete.
+      </p>
+
+      <div class="thm-box">
+        <div class="box-label">Theorem 7.1 — Spectral Decomposition</div>
+        <p>
+          If \(A \in \mathbb{R}^{n \times n}\) is symmetric, there exists an orthogonal matrix \(Q\) (i.e., \(Q^\top Q = I\)) and a diagonal matrix \(\Lambda\) such that
+        </p>
+        <p>$$A = Q \Lambda Q^\top = \sum_{i=1}^{n} \lambda_i \mathbf{q}_i \mathbf{q}_i^\top$$</p>
+        <p>
+          where the columns \(\mathbf{q}_i\) of \(Q\) are orthonormal eigenvectors and the diagonal entries of \(\Lambda\) are the corresponding eigenvalues. The outer-product form shows that \(A\) is a sum of rank-1 matrices, each weighted by an eigenvalue.
+        </p>
+      </div>
+
+      <p>
+        The outer-product expansion is powerful because it decomposes the matrix into layers of decreasing importance (ordered by \(|\lambda_i|\)). This is the foundation of Principal Component Analysis.
+      </p>
+
+      <div class="code-block">
+        <pre class="language-python"><div class="code-header"><span class="code-lang">Python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><code>import numpy as np
+
+# Symmetric matrix (covariance-like)
+np.random.seed(42)
+M = np.random.randn(4, 4)
+A = M.T @ M  # symmetric positive semi-definite
+
+eigenvalues, Q = np.linalg.eigh(A)
+
+# Sort in descending order (eigh returns ascending)
+idx = np.argsort(eigenvalues)[::-1]
+eigenvalues = eigenvalues[idx]
+Q = Q[:, idx]
+
+print("Eigenvalues (descending):", np.round(eigenvalues, 4))
+print()
+
+# Verify spectral decomposition via outer products
+A_reconstructed = np.zeros_like(A)
+for i in range(len(eigenvalues)):
+    q = Q[:, i:i+1]               # column vector (4×1)
+    A_reconstructed += eigenvalues[i] * (q @ q.T)
+
+print("Max reconstruction error:", np.max(np.abs(A - A_reconstructed)))
+print()
+
+# Show how much each component contributes
+total = np.sum(np.abs(eigenvalues))
+for i, lam in enumerate(eigenvalues):
+    pct = abs(lam) / total * 100
+    print(f"Component {i+1}: λ = {lam:8.4f}  ({pct:5.1f}% of total)")</code></pre>
+      </div>
+
+      <div class="callout">
+        <div class="callout-label">Key Insight</div>
+        <p>
+          The spectral decomposition only works for <em>symmetric</em> (or Hermitian) matrices. For arbitrary rectangular or non-symmetric matrices, we need the more general Singular Value Decomposition.
+        </p>
+      </div>
+    </section>
+
+    <!-- ═══ SECTION 7.2 ═══════════════════════════════ -->
+    <section class="section" id="s7-2">
+      <div class="section-divider"><span class="section-num">Section 7.2</span></div>
+      <h2>Singular Value Decomposition (SVD)</h2>
+
+      <p>
+        The SVD is perhaps the single most useful matrix factorization in applied mathematics and ML. It generalises the spectral decomposition to <em>any</em> matrix — not just square, not just symmetric.
+      </p>
+
+      <div class="thm-box">
+        <div class="box-label">Theorem 7.2 — Singular Value Decomposition</div>
+        <p>
+          Every matrix \(A \in \mathbb{R}^{m \times n}\) admits a factorization
+        </p>
+        <p>$$A = U \Sigma V^\top$$</p>
+        <p>
+          where \(U \in \mathbb{R}^{m \times m}\) is orthogonal (left singular vectors), \(V \in \mathbb{R}^{n \times n}\) is orthogonal (right singular vectors), and \(\Sigma \in \mathbb{R}^{m \times n}\) is a "diagonal" matrix with non-negative entries \(\sigma_1 \geq \sigma_2 \geq \cdots \geq \sigma_{\min(m,n)} \geq 0\) on the main diagonal and zeros elsewhere. The values \(\sigma_i\) are the <strong>singular values</strong>.
+        </p>
+      </div>
+
+      <button class="proof-toggle" onclick="toggleProof('proof7-2')">
+        <span>Show Proof</span> <span class="arrow">▸</span>
+      </button>
+      <div class="proof-body" id="proof7-2">
+        <div class="proof-inner">
+          <p>
+            <em>Proof sketch.</em> The matrix \(A^\top A \in \mathbb{R}^{n \times n}\) is symmetric and positive semi-definite. By the Spectral Theorem, there exists an orthogonal \(V\) such that \(A^\top A = V D V^\top\) with \(D = \text{diag}(d_1, \ldots, d_n)\), \(d_i \geq 0\).
+          </p>
+          <p>
+            Define \(\sigma_i = \sqrt{d_i}\) and \(\Sigma\) as the \(m \times n\) matrix with \(\sigma_i\) on the diagonal. For each \(\sigma_i > 0\), define \(\mathbf{u}_i = \frac{1}{\sigma_i} A \mathbf{v}_i\). One can verify that the \(\mathbf{u}_i\) are orthonormal: \(\mathbf{u}_i^\top \mathbf{u}_j = \frac{1}{\sigma_i \sigma_j} \mathbf{v}_i^\top A^\top A \mathbf{v}_j = \frac{d_j}{\sigma_i \sigma_j} \delta_{ij} = \delta_{ij}\).
+          </p>
+          <p>
+            Extend \(\{\mathbf{u}_i\}\) to a full orthonormal basis of \(\mathbb{R}^m\) to get \(U\). Then \(A V = U \Sigma\), so \(A = U \Sigma V^\top\). \(\blacksquare\)
+          </p>
+        </div>
+      </div>
+
+      <h3 id="s7-2-geo">Geometric Interpretation</h3>
+
+      <p>
+        The SVD tells us that every linear map is a composition of three operations:
+      </p>
+
+      <p>
+        <strong>Step 1</strong> (\(V^\top\)): Rotate the input space so the axes align with the "natural directions" of the transformation.
+      </p>
+      <p>
+        <strong>Step 2</strong> (\(\Sigma\)): Stretch along each axis by the corresponding singular value.
+      </p>
+      <p>
+        <strong>Step 3</strong> (\(U\)): Rotate the result into the output space.
+      </p>
+
+      <p>
+        The image of the unit sphere \(\|\mathbf{x}\| = 1\) under \(A\) is an ellipsoid whose semi-axes have lengths \(\sigma_1, \sigma_2, \ldots\) and directions \(\mathbf{u}_1, \mathbf{u}_2, \ldots\).
+      </p>
+
+      <div class="def-box">
+        <div class="box-label">Definition 7.1 — Compact and Truncated SVD</div>
+        <div class="box-title">Reduced Forms of the SVD</div>
+        <p>
+          If \(A\) has rank \(r\), then only \(r\) singular values are non-zero. The <strong>compact SVD</strong> keeps only these:
+        </p>
+        <p>$$A = U_r \Sigma_r V_r^\top$$</p>
+        <p>
+          where \(U_r \in \mathbb{R}^{m \times r}\), \(\Sigma_r \in \mathbb{R}^{r \times r}\), \(V_r \in \mathbb{R}^{n \times r}\). The <strong>truncated SVD</strong> (rank-\(k\) approximation) keeps only the top \(k \leq r\) singular values.
+        </p>
+      </div>
+
+      <h3 id="s7-2-comp">Computing the SVD in Practice</h3>
+
+      <div class="code-block">
+        <pre class="language-python"><div class="code-header"><span class="code-lang">Python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><code>import numpy as np
+
+A = np.array([[3, 2, 2],
+              [2, 3, -2]])
+
+# Full SVD
+U, sigma, Vt = np.linalg.svd(A, full_matrices=True)
+
+print("U (left singular vectors):")
+print(np.round(U, 4))
+print("\nSingular values:", np.round(sigma, 4))
+print("\nV^T (right singular vectors):")
+print(np.round(Vt, 4))
+
+# Reconstruct A from SVD
+Sigma_full = np.zeros_like(A, dtype=float)
+np.fill_diagonal(Sigma_full, sigma)
+A_reconstructed = U @ Sigma_full @ Vt
+print("\nReconstruction error:", np.max(np.abs(A - A_reconstructed)))
+
+# Compact SVD (full_matrices=False)
+U_c, sigma_c, Vt_c = np.linalg.svd(A, full_matrices=False)
+print(f"\nFull U shape: {U.shape}, Compact U shape: {U_c.shape}")
+print(f"Full Vt shape: {Vt.shape}, Compact Vt shape: {Vt_c.shape}")</code></pre>
+      </div>
+
+      <p>
+        The relationship between the SVD and the eigendecomposition is fundamental: the singular values of \(A\) are the square roots of the eigenvalues of \(A^\top A\) (or equivalently \(A A^\top\)), and the right singular vectors are the eigenvectors of \(A^\top A\).
+      </p>
+
+      <div class="prop-box">
+        <div class="box-label">Proposition 7.1 — SVD–Eigenvalue Connection</div>
+        <p>If \(A = U\Sigma V^\top\), then:</p>
+        <ul style="margin-left: 18px; margin-top: 8px;">
+          <li style="margin: 8px 0; font-size: 15.5px;">\(A^\top A = V \Sigma^\top \Sigma V^\top\) — eigenvalues are \(\sigma_i^2\), eigenvectors are columns of \(V\).</li>
+          <li style="margin: 8px 0; font-size: 15.5px;">\(A A^\top = U \Sigma \Sigma^\top U^\top\) — eigenvalues are \(\sigma_i^2\), eigenvectors are columns of \(U\).</li>
+        </ul>
+      </div>
+
+      <h3 id="s7-2-trunc">The Truncated SVD and Low-Rank Approximation</h3>
+
+      <p>
+        One of the most remarkable facts in all of matrix theory is that the best rank-\(k\) approximation to a matrix (in both Frobenius and spectral norm) is obtained simply by truncating its SVD.
+      </p>
+
+      <div class="thm-box">
+        <div class="box-label">Theorem 7.3 — Eckart–Young–Mirsky</div>
+        <p>
+          Let \(A = U \Sigma V^\top\) with singular values \(\sigma_1 \geq \cdots \geq \sigma_r > 0\). For any \(k \leq r\), define the rank-\(k\) truncated SVD:
+        </p>
+        <p>$$A_k = \sum_{i=1}^{k} \sigma_i \mathbf{u}_i \mathbf{v}_i^\top.$$</p>
+        <p>
+          Then \(A_k\) is the closest rank-\(k\) matrix to \(A\) in both the Frobenius norm and the spectral (operator) norm:
+        </p>
+        <p>$$\|A - A_k\|_F = \sqrt{\sigma_{k+1}^2 + \cdots + \sigma_r^2}, \qquad \|A - A_k\|_2 = \sigma_{k+1}.$$</p>
+      </div>
+
+      <p>
+        This theorem is the mathematical backbone of recommender systems (Netflix Prize), latent semantic analysis, and image compression.
+      </p>
+
+      <div class="code-block">
+        <pre class="language-python"><div class="code-header"><span class="code-lang">Python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><code>import numpy as np
+
+np.random.seed(0)
+
+# Create a matrix with known rank structure + noise
+true_rank = 3
+m, n = 50, 30
+U_true = np.linalg.qr(np.random.randn(m, true_rank))[0]
+V_true = np.linalg.qr(np.random.randn(n, true_rank))[0]
+sigma_true = np.array([100, 30, 10])
+A_clean = U_true @ np.diag(sigma_true) @ V_true.T
+A = A_clean + 0.5 * np.random.randn(m, n)  # add noise
+
+U, sigma, Vt = np.linalg.svd(A, full_matrices=False)
+
+print("Top 8 singular values:", np.round(sigma[:8], 2))
+print()
+
+# Truncated approximations
+for k in [1, 2, 3, 5, 10]:
+    A_k = U[:, :k] @ np.diag(sigma[:k]) @ Vt[:k, :]
+    error = np.linalg.norm(A - A_k, 'fro')
+    total = np.linalg.norm(A, 'fro')
+    compression = (m * k + k + n * k) / (m * n) * 100
+    print(f"Rank-{k:2d} | Error: {error:8.2f} ({error/total*100:5.1f}%) | "
+          f"Storage: {compression:5.1f}% of original")</code></pre>
+      </div>
+
+      <div class="perf-dive">
+        <div class="perf-label">Performance Deep-Dive</div>
+        <h4>Full SVD vs Randomized SVD</h4>
+        <p>
+          The full SVD costs \(O(\min(m,n)^2 \cdot \max(m,n))\) — prohibitive for the million-dimensional matrices in recommender systems. Randomized SVD (Halko, Martinsson, Tropp, 2011) computes only the top \(k\) singular triplets in \(O(mn \cdot k)\) time using random projections.
+        </p>
+        <pre class="language-python"><div class="code-header"><span class="code-lang">Python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><code>import numpy as np
+from scipy.linalg import svd as scipy_svd
+import time
+
+def randomized_svd(A, k, n_oversamples=10, n_iter=2):
+    """Randomized SVD via Halko-Martinsson-Tropp algorithm."""
+    m, n = A.shape
+    # Step 1: Random projection to capture column space
+    Omega = np.random.randn(n, k + n_oversamples)
+    Y = A @ Omega
+    # Power iteration for better approximation
+    for _ in range(n_iter):
+        Y = A @ (A.T @ Y)
+    Q, _ = np.linalg.qr(Y)
+    # Step 2: Project A into low-dimensional space
+    B = Q.T @ A              # (k+p) × n — small!
+    Uhat, sigma, Vt = np.linalg.svd(B, full_matrices=False)
+    U = Q @ Uhat
+    return U[:, :k], sigma[:k], Vt[:k, :]
+
+# Benchmark
+for shape in [(1000, 500), (5000, 2000)]:
+    m, n = shape
+    A = np.random.randn(m, n)
+    k = 20
+
+    t0 = time.perf_counter()
+    np.linalg.svd(A, full_matrices=False)
+    t_full = time.perf_counter() - t0
+
+    t0 = time.perf_counter()
+    U_r, s_r, Vt_r = randomized_svd(A, k)
+    t_rand = time.perf_counter() - t0
+
+    print(f"{m}×{n}  full SVD: {t_full:.3f}s  "
+          f"randomized (k={k}): {t_rand:.3f}s  "
+          f"speedup: {t_full/t_rand:.1f}×")</code></pre>
+      </div>
+    </section>
+
+    <!-- ═══ SECTION 7.3 ═══════════════════════════════ -->
+    <section class="section" id="s7-3">
+      <div class="section-divider"><span class="section-num">Section 7.3</span></div>
+      <h2>Orthogonal Projections</h2>
+
+      <p>
+        Projections are linear maps that "collapse" a space onto a subspace. They appear everywhere: least-squares regression projects the observation vector onto the column space of the design matrix; PCA projects data onto the principal subspace.
+      </p>
+
+      <div class="def-box">
+        <div class="box-label">Definition 7.2 — Orthogonal Projection</div>
+        <div class="box-title">Projection onto a Subspace</div>
+        <p>
+          Let \(W\) be a subspace of \(\mathbb{R}^n\) with orthonormal basis \(\{\mathbf{q}_1, \ldots, \mathbf{q}_k\}\), collected into \(Q \in \mathbb{R}^{n \times k}\). The <strong>orthogonal projection</strong> onto \(W\) is the matrix
+        </p>
+        <p>$$P_W = QQ^\top.$$</p>
+        <p>
+          For any \(\mathbf{x} \in \mathbb{R}^n\), the projection \(P_W \mathbf{x}\) is the closest point in \(W\) to \(\mathbf{x}\):
+        </p>
+        <p>$$P_W \mathbf{x} = \arg\min_{\mathbf{w} \in W} \|\mathbf{x} - \mathbf{w}\|.$$</p>
+      </div>
+
+      <div class="prop-box">
+        <div class="box-label">Proposition 7.2 — Properties of Projection Matrices</div>
+        <p>A matrix \(P\) is an orthogonal projection if and only if:</p>
+        <ul style="margin-left: 18px; margin-top: 8px;">
+          <li style="margin: 8px 0; font-size: 15.5px;"><strong>Idempotent</strong>: \(P^2 = P\) (projecting twice is the same as projecting once).</li>
+          <li style="margin: 8px 0; font-size: 15.5px;"><strong>Symmetric</strong>: \(P = P^\top\).</li>
+        </ul>
+        <p style="margin-top: 10px;">Its eigenvalues are all 0 or 1, and \(\text{tr}(P) = \text{rank}(P) = \dim(W)\).</p>
+      </div>
+
+      <p>
+        When the basis vectors are not orthonormal, the projection formula involves the pseudoinverse:
+      </p>
+
+      <p>$$P_W = X(X^\top X)^{-1} X^\top$$</p>
+
+      <p>
+        where the columns of \(X\) span \(W\). This is exactly the "hat matrix" from linear regression: the predicted values are \(\hat{\mathbf{y}} = P_W \mathbf{y}\).
+      </p>
+
+      <div class="code-block">
+        <pre class="language-python"><div class="code-header"><span class="code-lang">Python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><code>import numpy as np
+
+# Orthogonal projection via QR
+np.random.seed(7)
+X = np.random.randn(5, 2)          # 5D space, 2D subspace
+
+# Method 1: QR-based (numerically stable)
+Q, R = np.linalg.qr(X)
+P_qr = Q @ Q.T
+
+# Method 2: Normal equations (less stable)
+P_ne = X @ np.linalg.inv(X.T @ X) @ X.T
+
+print("P via QR == P via normal equations?",
+      np.allclose(P_qr, P_ne))
+
+# Verify projection properties
+print(f"Idempotent (P² = P)?  {np.allclose(P_qr @ P_qr, P_qr)}")
+print(f"Symmetric  (P = Pᵀ)? {np.allclose(P_qr, P_qr.T)}")
+print(f"trace(P) = {np.trace(P_qr):.1f}  (should be {X.shape[1]})")
+print(f"rank(P)  = {np.linalg.matrix_rank(P_qr)}")
+print()
+
+# Project a point
+x = np.random.randn(5)
+x_proj = P_qr @ x
+residual = x - x_proj
+print(f"||residual|| = {np.linalg.norm(residual):.4f}")
+print(f"residual ⊥ subspace? {np.allclose(Q.T @ residual, 0)}")</code></pre>
+      </div>
+
+      <div class="callout">
+        <div class="callout-label">SVD Connection</div>
+        <p>
+          The SVD provides the optimal projection in the Frobenius-norm sense. If you want the best rank-\(k\) subspace to project your data onto (minimising reconstruction error), the answer is the subspace spanned by the top \(k\) left singular vectors — which are the same as the top \(k\) eigenvectors of the covariance matrix. This is PCA.
+        </p>
+      </div>
+    </section>
+
+    <!-- ═══ SECTION 7.4 ═══════════════════════════════ -->
+    <section class="section" id="s7-4">
+      <div class="section-divider"><span class="section-num">Section 7.4</span></div>
+      <h2>Algorithms: Power Iteration and the QR Algorithm</h2>
+
+      <p>
+        How does NumPy actually compute eigenvalues and singular values? Two foundational algorithms underpin modern numerical linear algebra.
+      </p>
+
+      <h3 id="s7-4-power">Power Iteration</h3>
+
+      <p>
+        Power iteration is the simplest algorithm for finding the <em>dominant</em> eigenvalue (the one with the largest absolute value) and its eigenvector. The idea is beautifully simple: repeatedly multiply by the matrix and normalise.
+      </p>
+
+      <div class="def-box">
+        <div class="box-label">Algorithm 7.1 — Power Iteration</div>
+        <div class="box-title">Finding the Dominant Eigenpair</div>
+        <p>Given \(A \in \mathbb{R}^{n \times n}\) and a random starting vector \(\mathbf{b}_0\):</p>
+        <p>$$\mathbf{b}_{k+1} = \frac{A \mathbf{b}_k}{\|A \mathbf{b}_k\|}$$</p>
+        <p>
+          Under mild conditions (dominant eigenvalue is unique in magnitude, \(\mathbf{b}_0\) is not orthogonal to the dominant eigenvector), the sequence converges to the dominant eigenvector. The corresponding eigenvalue is approximated by the Rayleigh quotient: \(\lambda \approx \mathbf{b}_k^\top A \mathbf{b}_k\).
+        </p>
+      </div>
+
+      <p>
+        The convergence rate is \(O(|\lambda_2/\lambda_1|^k)\) — it's fast when the dominant eigenvalue is well-separated, but slow when two eigenvalues are close in magnitude.
+      </p>
+
+      <div class="code-block">
+        <pre class="language-python"><div class="code-header"><span class="code-lang">Python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><code>import numpy as np
+
+def power_iteration(A, max_iter=100, tol=1e-10):
+    """Find the dominant eigenvalue and eigenvector."""
+    n = A.shape[0]
+    b = np.random.randn(n)
+    b /= np.linalg.norm(b)
+
+    history = []
+    for k in range(max_iter):
+        Ab = A @ b
+        b_new = Ab / np.linalg.norm(Ab)
+
+        # Rayleigh quotient for eigenvalue estimate
+        lam = b_new @ A @ b_new
+        history.append(lam)
+
+        # Check convergence
+        if np.linalg.norm(b_new - b) < tol:
+            print(f"Converged in {k+1} iterations")
+            return lam, b_new, history
+
+        b = b_new
+
+    print(f"Did not converge in {max_iter} iterations")
+    return lam, b_new, history
+
+# Example
+np.random.seed(42)
+M = np.random.randn(5, 5)
+A = M.T @ M  # symmetric PD — dominant eigenvalue is well-separated
+
+lam_power, v_power, hist = power_iteration(A)
+lam_true = np.max(np.linalg.eigvalsh(A))
+
+print(f"Power iteration: λ₁ = {lam_power:.10f}")
+print(f"numpy.linalg:    λ₁ = {lam_true:.10f}")
+print(f"Relative error:      {abs(lam_power - lam_true)/lam_true:.2e}")</code></pre>
+      </div>
+
+      <p>
+        Power iteration also forms the basis for computing the top singular values: applying power iteration to \(A^\top A\) gives the top right singular vector, and the top singular value is the square root of the dominant eigenvalue of \(A^\top A\). Google's original PageRank algorithm was essentially power iteration on the web's link matrix.
+      </p>
+
+      <h3 id="s7-4-qr">The QR Algorithm</h3>
+
+      <p>
+        The QR algorithm is the workhorse behind <code>np.linalg.eig</code> and the gold standard for computing <em>all</em> eigenvalues of a dense matrix. It works by repeatedly computing QR factorizations.
+      </p>
+
+      <div class="def-box">
+        <div class="box-label">Algorithm 7.2 — Basic QR Algorithm</div>
+        <div class="box-title">Computing All Eigenvalues</div>
+        <p>Starting from \(A_0 = A\), repeat:</p>
+        <p>$$A_k = Q_k R_k \qquad \text{(QR factorization)}$$</p>
+        <p>$$A_{k+1} = R_k Q_k \qquad \text{(reverse multiply)}$$</p>
+        <p>
+          Under suitable conditions, \(A_k\) converges to an upper triangular matrix (Schur form) whose diagonal entries are the eigenvalues. For symmetric matrices, \(A_k\) converges to a diagonal matrix.
+        </p>
+      </div>
+
+      <p>
+        The key insight is that \(A_{k+1} = Q_k^\top A_k Q_k\), so all iterates are similar to \(A\) and share the same eigenvalues. Each step "pushes" off-diagonal entries toward zero.
+      </p>
+
+      <div class="code-block">
+        <pre class="language-python"><div class="code-header"><span class="code-lang">Python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><code>import numpy as np
+
+def basic_qr_algorithm(A, max_iter=200, tol=1e-12):
+    """Basic QR algorithm for eigenvalues of a symmetric matrix."""
+    Ak = A.copy().astype(float)
+    n = A.shape[0]
+
+    for k in range(max_iter):
+        Q, R = np.linalg.qr(Ak)
+        Ak = R @ Q
+
+        # Check convergence: off-diagonal entries should vanish
+        off_diag = np.sum(np.abs(Ak)) - np.sum(np.abs(np.diag(Ak)))
+        if off_diag < tol:
+            print(f"Converged in {k+1} iterations")
+            return np.sort(np.diag(Ak))[::-1]
+
+    print(f"Warning: did not fully converge (off-diag = {off_diag:.2e})")
+    return np.sort(np.diag(Ak))[::-1]
+
+# Symmetric matrix
+np.random.seed(42)
+M = np.random.randn(5, 5)
+A = M.T @ M
+
+eigs_qr = basic_qr_algorithm(A)
+eigs_np = np.sort(np.linalg.eigvalsh(A))[::-1]
+
+print("\nQR algorithm eigenvalues:", np.round(eigs_qr, 6))
+print("NumPy eigenvalues:       ", np.round(eigs_np, 6))
+print("Max difference:          ", np.max(np.abs(eigs_qr - eigs_np)))</code></pre>
+      </div>
+
+      <div class="perf-dive">
+        <div class="perf-label">Performance Deep-Dive</div>
+        <h4>Why Production QR Is Much Faster</h4>
+        <p>
+          Our basic QR algorithm is \(O(n^3)\) per iteration. The production version used by LAPACK (and thus NumPy) applies three critical optimizations: (1) <strong>Hessenberg reduction</strong> — a one-time \(O(n^3)\) preprocessing step that makes each subsequent QR factorization only \(O(n^2)\); (2) <strong>Wilkinson shifts</strong> — the eigenvalue of the trailing \(2 \times 2\) block is used as a shift, giving cubic convergence; (3) <strong>Deflation</strong> — once an eigenvalue converges, the matrix size is reduced. The result is an algorithm that typically converges in \(O(n)\) iterations, giving \(O(n^3)\) total cost.
+        </p>
+      </div>
+
+      <div class="callout">
+        <div class="callout-label">The QR Factorization Itself</div>
+        <p>
+          Don't confuse the <em>QR algorithm</em> (an iterative eigenvalue algorithm) with the <em>QR factorization</em> (decomposing \(A = QR\) into an orthogonal matrix \(Q\) and an upper triangular matrix \(R\)). The QR factorization is a subroutine used inside the QR algorithm, but it also stands alone as a tool for solving least-squares problems: the normal equations \(X^\top X \boldsymbol{\beta} = X^\top \mathbf{y}\) are equivalent to \(R \boldsymbol{\beta} = Q^\top \mathbf{y}\), which is just back-substitution.
+        </p>
+      </div>
+    </section>
+
+    <!-- ═══ SECTION 7.5 — SUMMARY ═════════════════════ -->
+    <section class="section" id="s7-5">
+      <div class="section-divider"><span class="section-num">Section 7.5</span></div>
+      <h2>Summary</h2>
+
+      <p>
+        This chapter covered the major matrix factorizations that power modern machine learning. The spectral decomposition breaks symmetric matrices into orthogonal eigenvector directions scaled by eigenvalues. The SVD generalises this to any matrix and provides optimal low-rank approximations via the Eckart–Young–Mirsky theorem. Orthogonal projections connect these factorizations to least-squares regression and PCA. Under the hood, power iteration and the QR algorithm are the numerical workhorses that make these decompositions computable at scale.
+      </p>
+
+      <div class="why-ai">
+        <div class="why-label">Why This Matters for AI</div>
+        <h3>Factorizations Are the Engines of ML</h3>
+        <ul>
+          <li><strong>PCA</strong> — Computes the eigendecomposition (or SVD) of the covariance matrix to find the principal directions of variation. The truncated SVD is the default implementation in scikit-learn for large datasets.</li>
+          <li><strong>Recommender systems</strong> — Matrix factorization (a close cousin of SVD) was the winning approach in the Netflix Prize. The user-item matrix is approximately decomposed into low-rank factors representing latent user preferences and item attributes.</li>
+          <li><strong>Latent Semantic Analysis</strong> — Truncated SVD of the term-document matrix reveals latent "topics" that connect related words and documents — an early predecessor to modern embeddings.</li>
+          <li><strong>Pseudoinverse and least-squares</strong> — The Moore–Penrose pseudoinverse \(A^+ = V \Sigma^+ U^\top\) (computed from the SVD) provides the minimum-norm least-squares solution, which underpins every linear model.</li>
+          <li><strong>Data whitening</strong> — The spectral decomposition of the covariance matrix is used to decorrelate and normalise features, a critical preprocessing step for many algorithms.</li>
+          <li><strong>Graph neural networks</strong> — Spectral GNNs operate in the eigenspace of the graph Laplacian, using its eigenvectors as a Fourier basis for signals on graphs.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ═══ SOCRATIC KNOWLEDGE CHECK ════════════════════ -->
+    <section class="socratic" id="socratic">
+      <div class="socratic-header">
+        <div class="socratic-icon">?</div>
+        <h2>Socratic Knowledge Check</h2>
+      </div>
+
+      <div class="socratic-scenario">
+        You are building a movie recommendation engine. You have a 10,000-user × 5,000-movie rating matrix (mostly sparse). You plan to use matrix factorization to predict missing ratings. Think through these questions.
+      </div>
+
+      <!-- Q1 -->
+      <div class="q-card">
+        <div class="q-top">
+          <div class="q-num">1</div>
+          <div class="q-text">
+            You compute the SVD of the rating matrix and find that the top 20 singular values capture 85% of the Frobenius norm, while the remaining 4,980 capture only 15%. What does this tell you about the rating data, and what rank would you choose for your factorization?
+          </div>
+        </div>
+        <button class="reveal-btn" onclick="toggleAnswer('a1')"><span>Reveal Thinking</span></button>
+        <div class="q-answer" id="a1">
+          <div class="q-answer-inner">
+            This tells us the rating matrix is approximately low-rank — most of the "signal" lives in a 20-dimensional subspace. Users' preferences and movies' characteristics can be well-described by roughly 20 latent factors (e.g., genre preference, tone, era). By the Eckart–Young theorem, a rank-20 approximation is optimal and captures 85% of the data's energy. In practice you'd try ranks 10–50 and cross-validate on held-out ratings to find the best bias–variance trade-off.
+          </div>
+        </div>
+      </div>
+
+      <!-- Q2 -->
+      <div class="q-card">
+        <div class="q-top">
+          <div class="q-num">2</div>
+          <div class="q-text">
+            Your rating matrix is 10,000 × 5,000. Computing the full SVD takes too long. What algorithmic approach would you use instead, and why?
+          </div>
+        </div>
+        <button class="reveal-btn" onclick="toggleAnswer('a2')"><span>Reveal Thinking</span></button>
+        <div class="q-answer" id="a2">
+          <div class="q-answer-inner">
+            Use a randomized SVD (Halko–Martinsson–Tropp). It computes only the top \(k\) singular triplets in \(O(mnk)\) time rather than \(O(mn \cdot \min(m,n))\) for the full SVD. For \(k = 20\), this is roughly 250× faster. Scikit-learn's <code>TruncatedSVD</code> uses this approach internally. Alternatively, for very sparse matrices, you could use iterative Krylov-based methods (like ARPACK via <code>scipy.sparse.linalg.svds</code>) that exploit sparsity.
+          </div>
+        </div>
+      </div>
+
+      <!-- Q3 -->
+      <div class="q-card">
+        <div class="q-top">
+          <div class="q-num">3</div>
+          <div class="q-text">
+            You project your 5,000-dimensional movie feature vectors onto the top 50 principal components. A colleague asks: "How do we know the projection is optimal?" What theorem would you cite, and what does "optimal" mean here?
+          </div>
+        </div>
+        <button class="reveal-btn" onclick="toggleAnswer('a3')"><span>Reveal Thinking</span></button>
+        <div class="q-answer" id="a3">
+          <div class="q-answer-inner">
+            The Eckart–Young–Mirsky theorem guarantees that the rank-\(k\) truncated SVD minimises the Frobenius-norm reconstruction error over <em>all</em> rank-\(k\) matrices. "Optimal" means: among all possible 50-dimensional linear projections, PCA (equivalently, the truncated SVD of the centered data) minimises \(\sum_i \|\mathbf{x}_i - \hat{\mathbf{x}}_i\|^2\), the total squared reconstruction error. No other 50-dimensional subspace can do better.
+          </div>
+        </div>
+      </div>
+
+      <!-- Q4 -->
+      <div class="q-card">
+        <div class="q-top">
+          <div class="q-num">4</div>
+          <div class="q-text">
+            Your projection matrix \(P\) for a 50-dimensional subspace in a 5,000-dimensional space has shape 5000 × 5000. How many independent parameters does it actually have, and why should you never store it as a dense matrix?
+          </div>
+        </div>
+        <button class="reveal-btn" onclick="toggleAnswer('a4')"><span>Reveal Thinking</span></button>
+        <div class="q-answer" id="a4">
+          <div class="q-answer-inner">
+            Although \(P\) is 5000 × 5000 (25 million entries), it has rank 50, so it can be represented as \(P = QQ^\top\) where \(Q\) is 5000 × 50 (only 250,000 entries). The number of independent parameters in an orthogonal projection onto a \(k\)-dimensional subspace of \(\mathbb{R}^n\) is \(k(n - k)\) — the dimension of the Grassmannian. Storing and multiplying with the dense 5000 × 5000 matrix would use 100× more memory and compute than working with the factored form \(Q\).
+          </div>
+        </div>
+      </div>
+
+      <!-- Q5 -->
+      <div class="q-card">
+        <div class="q-top">
+          <div class="q-num">5</div>
+          <div class="q-text">
+            You use power iteration to find the top singular vector of the rating matrix for an online recommendation system. After deployment, you notice convergence is very slow. What could cause this, and how would you fix it?
+          </div>
+        </div>
+        <button class="reveal-btn" onclick="toggleAnswer('a5')"><span>Reveal Thinking</span></button>
+        <div class="q-answer" id="a5">
+          <div class="q-answer-inner">
+            Slow convergence in power iteration means \(|\sigma_2/\sigma_1| \approx 1\) — the top two singular values are very close in magnitude. This makes the ratio \(|\sigma_2/\sigma_1|^k\) decay slowly. Fixes include: (1) use <em>inverse iteration with shift</em> if you have a good eigenvalue estimate, giving convergence rate \(|(\sigma_1 - \mu)/(\sigma_2 - \mu)|\); (2) use a <em>block</em> (subspace) iteration that tracks multiple vectors simultaneously; (3) switch to an implicitly restarted Lanczos/Arnoldi method (what ARPACK uses), which has much better convergence for clustered singular values.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ CHAPTER NAVIGATION ═════════════════════ -->
+    <nav class="ch-nav">
+      <a class="nav-btn" href="ch06.html">← Chapter 6: Eigenvalues and Eigenvectors</a>
+      <a class="nav-btn" href="ch08.html">Chapter 8: Matrices and Graphs →</a>
+    </nav>
+
+    <footer class="ch-footer">
+      Based on <em>Mathematics of Machine Learning</em> by Tivadar Danka (Packt, 2025).
+    </footer>
+
+  </main>
+</div>
+
+<!-- Back to Top -->
+<button class="back-top" id="backTop" onclick="window.scrollTo({top:0})">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 15l-6-6-6 6"/></svg>
+</button>
+
+<!-- ═══ JAVASCRIPT ═════════════════════════════════════ -->
+<script>
+(function() {
+  const progressBar = document.getElementById('readingProgress');
+  window.addEventListener('scroll', () => {
+    const h = document.documentElement;
+    const pct = (h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100;
+    progressBar.style.width = Math.min(pct, 100) + '%';
+  });
+
+  const backTop = document.getElementById('backTop');
+  window.addEventListener('scroll', () => {
+    backTop.classList.toggle('visible', window.scrollY > 400);
+  });
+
+  const tocLinks = document.querySelectorAll('#tocList a');
+  const sections = [];
+  tocLinks.forEach(a => {
+    const id = a.getAttribute('data-section');
+    const el = document.getElementById(id);
+    if (el) sections.push({ el, a });
+  });
+
+  function updateActiveToc() {
+    let current = sections[0];
+    for (const s of sections) {
+      if (s.el.getBoundingClientRect().top <= 120) current = s;
+    }
+    tocLinks.forEach(a => a.classList.remove('active'));
+    if (current) current.a.classList.add('active');
+  }
+  window.addEventListener('scroll', updateActiveToc);
+  updateActiveToc();
+
+  const mToggle = document.getElementById('mobileTocToggle');
+  const mList = document.getElementById('mobileTocList');
+  mToggle.addEventListener('click', () => {
+    mToggle.classList.toggle('open');
+    mList.classList.toggle('open');
+  });
+  mList.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+    mToggle.classList.remove('open');
+    mList.classList.remove('open');
+  }));
+
+  window.toggleProof = function(id) {
+    const body = document.getElementById(id);
+    const btn = body.previousElementSibling;
+    body.classList.toggle('open');
+    btn.classList.toggle('open');
+    btn.querySelector('span').textContent = body.classList.contains('open') ? 'Hide Proof' : 'Show Proof';
+  };
+
+  window.toggleAnswer = function(id) {
+    const el = document.getElementById(id);
+    const btn = el.previousElementSibling;
+    el.classList.toggle('open');
+    btn.classList.toggle('open');
+    btn.querySelector('span').textContent = el.classList.contains('open') ? 'Hide' : 'Reveal Thinking';
+  };
+
+  window.copyCode = function(btn) {
+    const code = btn.closest('.code-block, .perf-dive').querySelector('code').textContent;
+    navigator.clipboard.writeText(code).then(() => {
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+    });
+  };
+
+  const STORAGE_KEY = 'mathml_completed';
+  let completed = new Set();
+  try {
+    const s = localStorage.getItem(STORAGE_KEY);
+    if (s) completed = new Set(JSON.parse(s));
+  } catch(e) {}
+
+  const btn = document.getElementById('completeBtn');
+  const btnText = document.getElementById('completeBtnText');
+
+  function syncBtn() {
+    if (completed.has('7')) {
+      btn.classList.add('done');
+      btnText.textContent = 'Completed';
+    } else {
+      btn.classList.remove('done');
+      btnText.textContent = 'Mark as Complete';
+    }
+  }
+  syncBtn();
+
+  window.toggleChapterComplete = function() {
+    if (completed.has('7')) completed.delete('7');
+    else completed.add('7');
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify([...completed])); } catch(e) {}
+    syncBtn();
+  };
+})();
+</script>
+
+</body>
+</html>

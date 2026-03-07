@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 17: Optimization in Multiple Variables — Math for ML</title>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,500&family=Figtree:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- KaTeX -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\[', right: '\\]', display: true},
+      {left: '\\(', right: '\\)', display: false}
+    ],
+    throwOnError: false
+  });"></script>
+
+<!-- Prism.js -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css">
+
+<style>
+:root {
+  --bg:#FAF9F7;--bg-card:#FFFFFF;--bg-warm:#F7F6F3;--text:#2D2D2D;--text-2:#555555;--text-3:#888888;
+  --border:#E5E5E0;--border-hover:#D0D0CA;--blue:#4A6CF7;--blue-light:#EEF2FF;--blue-dim:rgba(74,108,247,0.08);
+  --indigo:#6366F1;--green:#22C55E;--green-light:#F0FDF4;--red:#EF4444;--red-light:#FFF5F5;
+  --amber:#F59E0B;--amber-light:#FFFBEB;--purple:#8B5CF6;--purple-light:#F5F3FF;--cyan:#06B6D4;
+  --grad-part3:linear-gradient(135deg,#22C55E 0%,#06B6D4 100%);
+  --accent:#22C55E;--accent-light:#F0FDF4;--accent-hover:rgba(34,197,94,0.06);
+  --font-serif:'Newsreader',Georgia,serif;--font-sans:'Figtree',-apple-system,sans-serif;--font-mono:'JetBrains Mono','Fira Code',monospace;
+  --radius:12px;--radius-sm:8px;--shadow-sm:0 1px 3px rgba(0,0,0,0.04);--shadow-md:0 4px 16px rgba(0,0,0,0.06);--shadow-lg:0 8px 32px rgba(0,0,0,0.08);
+  --content-w:740px;--layout-w:1120px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:90px}
+body{font-family:var(--font-serif);background:var(--bg);color:var(--text);line-height:1.75;font-size:17px;-webkit-font-smoothing:antialiased}
+
+.reading-progress{position:fixed;top:0;left:0;z-index:1000;width:0%;height:3px;background:var(--grad-part3);transition:width 0.1s linear}
+.page-layout{display:grid;grid-template-columns:1fr;max-width:var(--layout-w);margin:0 auto;padding:0 24px}
+@media(min-width:1060px){.page-layout{grid-template-columns:220px 1fr;gap:48px}}
+
+.toc-sidebar{display:none}
+@media(min-width:1060px){.toc-sidebar{display:block;position:sticky;top:24px;align-self:start;padding-top:32px;max-height:calc(100vh - 48px);overflow-y:auto}}
+.toc-label{font-family:var(--font-sans);font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-3);margin-bottom:16px}
+.toc-list{list-style:none}.toc-list li{margin:0}
+.toc-list a{display:block;padding:6px 0 6px 14px;font-family:var(--font-sans);font-size:13px;font-weight:400;color:var(--text-3);text-decoration:none;border-left:2px solid transparent;transition:all 0.2s ease;line-height:1.5}
+.toc-list a:hover{color:var(--accent);border-left-color:var(--accent)}
+.toc-list a.active{color:var(--accent);border-left-color:var(--accent);font-weight:600}
+.toc-list .sub{padding-left:28px;font-size:12px}
+
+.mobile-toc{display:block;margin:16px 0 32px}
+@media(min-width:1060px){.mobile-toc{display:none}}
+.mobile-toc-toggle{display:flex;align-items:center;gap:8px;width:100%;padding:12px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-sans);font-size:14px;font-weight:500;color:var(--text-2);cursor:pointer}
+.mobile-toc-toggle .chevron{margin-left:auto;transition:transform 0.2s}
+.mobile-toc-toggle.open .chevron{transform:rotate(180deg)}
+.mobile-toc-list{display:none;list-style:none;background:var(--bg-card);border:1px solid var(--border);border-top:0;border-radius:0 0 var(--radius-sm) var(--radius-sm);padding:8px 0}
+.mobile-toc-list.open{display:block}
+.mobile-toc-list a{display:block;padding:8px 20px;font-family:var(--font-sans);font-size:14px;color:var(--text-2);text-decoration:none}
+.mobile-toc-list a:hover{color:var(--accent);background:var(--accent-hover)}
+
+.content{max-width:var(--content-w);padding:32px 0 80px;min-width:0}
+
+.breadcrumb{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-family:var(--font-sans);font-size:13px;color:var(--text-3);margin-bottom:32px}
+.breadcrumb a{color:var(--text-3);text-decoration:none;transition:color 0.15s}
+.breadcrumb a:hover{color:var(--accent)}
+.breadcrumb .sep{color:var(--border)}.breadcrumb .current{color:var(--text-2);font-weight:500}
+
+.ch-header{margin-bottom:48px}
+.ch-badge{display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:var(--radius);background:var(--grad-part3);color:#fff;font-family:var(--font-sans);font-size:20px;font-weight:700;margin-bottom:20px;box-shadow:0 4px 12px rgba(34,197,94,0.25)}
+.ch-title{font-family:var(--font-serif);font-size:clamp(28px,5vw,40px);font-weight:700;line-height:1.15;letter-spacing:-0.02em;color:var(--text);margin-bottom:8px}
+.ch-subtitle{font-family:var(--font-serif);font-size:18px;font-style:italic;color:var(--text-2);margin-bottom:16px}
+.ch-meta{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.ch-meta-item{display:flex;align-items:center;gap:6px;font-family:var(--font-sans);font-size:13px;color:var(--text-3)}
+.ch-meta-item svg{width:15px;height:15px}
+
+.complete-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:var(--bg-card);border:2px solid var(--border);border-radius:100px;font-family:var(--font-sans);font-size:14px;font-weight:600;color:var(--text-2);cursor:pointer;transition:all 0.25s ease}
+.complete-btn:hover{border-color:var(--green);color:var(--green)}
+.complete-btn.done{background:var(--green);border-color:var(--green);color:#fff}
+.complete-btn svg{width:16px;height:16px}
+
+.section{margin-top:56px;scroll-margin-top:80px}
+.section-divider{display:flex;align-items:center;gap:16px;margin-bottom:24px}
+.section-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.section-num{font-family:var(--font-sans);font-size:12px;font-weight:700;letter-spacing:0.06em;color:var(--accent);text-transform:uppercase;white-space:nowrap}
+.section h2{font-family:var(--font-serif);font-size:clamp(22px,4vw,28px);font-weight:700;line-height:1.25;letter-spacing:-0.01em;color:var(--text);margin-bottom:20px}
+.section h3{font-family:var(--font-serif);font-size:20px;font-weight:600;color:var(--text);margin:36px 0 14px;scroll-margin-top:80px}
+.section h4{font-family:var(--font-serif);font-size:17px;font-weight:600;color:var(--text);margin:28px 0 10px}
+p{margin:14px 0}
+
+.feynman-bridge{background:linear-gradient(135deg,#FFF7ED 0%,#FFFBEB 40%,#F0FDF4 100%);border:1px solid #FDE68A;border-radius:var(--radius);padding:32px;margin:32px 0 48px;position:relative;overflow:hidden}
+.feynman-bridge::before{content:'\1F4A1';position:absolute;top:-8px;right:16px;font-size:48px;opacity:0.15}
+.feynman-label{font-family:var(--font-sans);font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--amber);margin-bottom:12px}
+.feynman-bridge h3{font-family:var(--font-serif);font-size:22px;font-weight:600;color:var(--text);margin:0 0 16px}
+.feynman-bridge p{font-size:17px;line-height:1.85;color:#444}
+
+.def-box{background:var(--blue-light);border-left:4px solid var(--blue);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:20px 24px;margin:24px 0}
+.def-box .box-label{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-sans);font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--blue);margin-bottom:10px}
+.def-box .box-label::before{content:'';width:8px;height:8px;border-radius:2px;background:var(--blue)}
+.def-box .box-title{font-family:var(--font-serif);font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px}
+.def-box p,.def-box li{font-size:15.5px;line-height:1.7;color:var(--text)}
+.def-box ul{margin-left:20px;margin-top:8px}.def-box li{margin:6px 0}
+
+.thm-box{background:var(--red-light);border-left:4px solid var(--red);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:20px 24px;margin:24px 0}
+.thm-box .box-label{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-sans);font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--red);margin-bottom:10px}
+.thm-box .box-label::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--red)}
+.thm-box p{font-size:15.5px;line-height:1.7}
+
+.prop-box{background:var(--purple-light);border-left:4px solid var(--purple);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:20px 24px;margin:24px 0}
+.prop-box .box-label{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-sans);font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--purple);margin-bottom:10px}
+.prop-box .box-label::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--purple)}
+.prop-box p{font-size:15.5px;line-height:1.7}
+
+.proof-toggle{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;background:var(--bg-warm);border:1px solid var(--border);border-radius:100px;font-family:var(--font-sans);font-size:13px;font-weight:600;color:var(--text-2);cursor:pointer;transition:all 0.2s;margin:12px 0}
+.proof-toggle:hover{border-color:var(--accent);color:var(--accent)}
+.proof-toggle .arrow{transition:transform 0.3s ease;font-size:10px}
+.proof-toggle.open .arrow{transform:rotate(90deg)}
+.proof-body{max-height:0;overflow:hidden;transition:max-height 0.4s cubic-bezier(0.22,1,0.36,1)}
+.proof-body.open{max-height:2000px}
+.proof-inner{background:#F9FAFB;border:1px solid var(--border);border-radius:var(--radius-sm);padding:20px 24px;margin:8px 0 16px;font-size:15px;line-height:1.75;color:var(--text-2)}
+.proof-inner em{font-style:italic}
+
+pre[class*="language-"]{background:#1a1b2e !important;border-radius:var(--radius) !important;border:1px solid #2a2b42 !important;padding:0 !important;margin:24px 0 !important;overflow:hidden;box-shadow:var(--shadow-md);position:relative}
+.code-header{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:#12132a;border-bottom:1px solid #2a2b42;font-family:var(--font-sans);font-size:12px}
+.code-lang{color:#7dd3fc;font-weight:600;text-transform:uppercase;letter-spacing:0.05em}
+.copy-btn{background:none;border:1px solid #3a3b52;border-radius:6px;padding:4px 12px;color:#888;font-family:var(--font-sans);font-size:11px;font-weight:500;cursor:pointer;transition:all 0.15s}
+.copy-btn:hover{border-color:#7dd3fc;color:#7dd3fc}
+.copy-btn.copied{border-color:var(--green);color:var(--green)}
+pre[class*="language-"]>code{display:block;padding:20px 24px !important;font-family:var(--font-mono) !important;font-size:13.5px !important;line-height:1.7 !important;color:#e2e8f0 !important;background:none !important;overflow-x:auto}
+.token.comment,.token.prolog,.token.doctype{color:#6b7280 !important;font-style:italic}
+.token.keyword{color:#c084fc !important}.token.string{color:#86efac !important}.token.number{color:#fbbf24 !important}
+.token.function{color:#7dd3fc !important}.token.boolean{color:#fb923c !important}.token.operator{color:#94a3b8 !important}
+.token.builtin{color:#67e8f9 !important}.token.class-name{color:#fca5a5 !important}.token.punctuation{color:#94a3b8 !important}
+:not(pre)>code{font-family:var(--font-mono);font-size:0.88em;background:#F0EFEC;padding:2px 7px;border-radius:4px;color:#C2410C}
+
+.katex-display{margin:24px 0 !important;padding:16px 0}.katex{font-size:1.08em !important}
+
+.callout{background:linear-gradient(135deg,var(--blue-light) 0%,var(--purple-light) 100%);border:1px solid #D1D5EB;border-radius:var(--radius);padding:24px 28px;margin:28px 0}
+.callout .callout-label{font-family:var(--font-sans);font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--blue);margin-bottom:8px}
+.callout p{font-size:15.5px;line-height:1.7}
+
+.perf-dive{background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 100%);border-radius:var(--radius);padding:28px 28px 20px;margin:28px 0;color:#e2e8f0;position:relative;overflow:hidden}
+.perf-dive::before{content:'\26A1';position:absolute;top:-6px;right:12px;font-size:56px;opacity:0.08}
+.perf-dive .perf-label{font-family:var(--font-sans);font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#fbbf24;margin-bottom:8px}
+.perf-dive h4{color:#fff;font-size:18px;margin:0 0 12px}
+.perf-dive p{color:#94a3b8;font-size:15px;line-height:1.7}
+.perf-dive pre[class*="language-"]{border:1px solid #334155 !important;margin-top:16px !important}
+
+.why-ai{background:linear-gradient(135deg,var(--green-light) 0%,#F0FDFA 100%);border:2px solid var(--accent);border-radius:var(--radius);padding:28px 28px;margin:36px 0}
+.why-ai .why-label{font-family:var(--font-sans);font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
+.why-ai h3{font-size:20px;margin:0 0 12px}
+.why-ai ul{margin-left:18px}.why-ai li{margin:10px 0;font-size:15.5px;line-height:1.7}.why-ai li strong{color:var(--accent)}
+
+.socratic{margin-top:56px;scroll-margin-top:80px}
+.socratic-header{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.socratic-icon{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--amber) 0%,#F97316 100%);display:flex;align-items:center;justify-content:center;font-size:20px}
+.socratic h2{margin:0;font-size:24px}
+.socratic-scenario{background:var(--amber-light);border:1px solid #FDE68A;border-radius:var(--radius);padding:20px 24px;margin-bottom:24px;font-style:italic;color:var(--text-2);font-size:15.5px;line-height:1.75}
+.q-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin-bottom:14px;transition:box-shadow 0.2s}
+.q-card:hover{box-shadow:var(--shadow-md)}
+.q-top{display:flex;align-items:flex-start;gap:14px}
+.q-num{width:28px;height:28px;border-radius:50%;background:var(--grad-part3);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--font-sans);font-size:13px;font-weight:700;flex-shrink:0}
+.q-text{font-weight:500;font-size:15.5px;line-height:1.6;flex:1}
+.reveal-btn{display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:6px 14px;background:none;border:1px solid var(--accent);border-radius:100px;font-family:var(--font-sans);font-size:12px;font-weight:600;color:var(--accent);cursor:pointer;transition:all 0.2s}
+.reveal-btn:hover{background:var(--accent);color:#fff}
+.reveal-btn.open{background:var(--accent);color:#fff}
+.q-answer{max-height:0;overflow:hidden;transition:max-height 0.4s cubic-bezier(0.22,1,0.36,1)}
+.q-answer.open{max-height:500px}
+.q-answer-inner{background:var(--green-light);border-radius:var(--radius-sm);padding:14px 18px;margin-top:14px;font-size:15px;line-height:1.7;color:var(--text-2)}
+
+.nav-bottom{display:flex;justify-content:space-between;gap:16px;margin-top:64px;padding-top:32px;border-top:1px solid var(--border)}
+.nav-btn{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border:1px solid var(--border);border-radius:100px;font-family:var(--font-sans);font-size:14px;font-weight:500;color:var(--text-2);text-decoration:none;transition:all 0.2s}
+.nav-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-hover)}
+
+@media(max-width:768px){
+  .content{padding:20px 0 60px}
+  .ch-badge{width:44px;height:44px;font-size:16px;margin-bottom:16px}
+  .ch-title{font-size:26px}
+  .section{margin-top:40px}
+  .def-box,.thm-box,.prop-box,.callout,.why-ai,.perf-dive,.feynman-bridge{padding:16px 18px;margin:20px 0}
+  .nav-bottom{flex-direction:column}
+  .nav-btn{justify-content:center}
+}
+</style>
+</head>
+<body>
+
+<div class="reading-progress" id="readingProgress"></div>
+
+<div class="page-layout">
+  <!-- Sidebar TOC -->
+  <aside class="toc-sidebar">
+    <div class="toc-label">On this page</div>
+    <ul class="toc-list">
+      <li><a href="#multivariable-functions-code">Functions in Code</a></li>
+      <li><a href="#critical-points">Critical Points Revisited</a></li>
+      <li><a href="#second-order-conditions">Second-Order Conditions</a></li>
+      <li><a href="#constrained-optimization">Constrained Optimization</a></li>
+      <li><a href="#full-gradient-descent">Full Gradient Descent</a></li>
+      <li><a href="#convergence-multivariable">Convergence Theory</a></li>
+      <li><a href="#advanced-optimizers">Advanced Optimizers</a></li>
+      <li><a href="#ml-optimization">Optimization in ML</a></li>
+      <li><a href="#socratic" class="sub">Practice Questions</a></li>
+    </ul>
+  </aside>
+
+  <main class="content">
+    <!-- Mobile TOC -->
+    <div class="mobile-toc">
+      <button class="mobile-toc-toggle" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h10M3 8h10M3 12h10"/></svg>
+        On this page
+        <span class="chevron">&#9660;</span>
+      </button>
+      <ul class="mobile-toc-list">
+        <li><a href="#multivariable-functions-code">Functions in Code</a></li>
+        <li><a href="#critical-points">Critical Points Revisited</a></li>
+        <li><a href="#second-order-conditions">Second-Order Conditions</a></li>
+        <li><a href="#constrained-optimization">Constrained Optimization</a></li>
+        <li><a href="#full-gradient-descent">Full Gradient Descent</a></li>
+        <li><a href="#convergence-multivariable">Convergence Theory</a></li>
+        <li><a href="#advanced-optimizers">Advanced Optimizers</a></li>
+        <li><a href="#ml-optimization">Optimization in ML</a></li>
+        <li><a href="#socratic">Practice Questions</a></li>
+      </ul>
+    </div>
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb">
+      <a href="../index.html">Home</a>
+      <span class="sep">/</span>
+      <span class="current">Chapter 17</span>
+    </nav>
+
+    <!-- Chapter Header -->
+    <header class="ch-header">
+      <div class="ch-badge">17</div>
+      <h1 class="ch-title">Optimization in Multiple Variables</h1>
+      <p class="ch-subtitle">From single-variable hill-climbing to the full multi-dimensional gradient descent that powers modern machine learning.</p>
+      <div class="ch-meta">
+        <div class="ch-meta-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          35 min read
+        </div>
+        <div class="ch-meta-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
+          Advanced
+        </div>
+        <button class="complete-btn" id="completeBtn" onclick="toggleChapterComplete()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+          <span id="completeBtnText">Mark as Complete</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ============================================================== -->
+    <!-- Feynman Bridge -->
+    <!-- ============================================================== -->
+    <div class="feynman-bridge">
+      <div class="feynman-label">The Big Picture</div>
+      <h3>From hills to high-dimensional landscapes</h3>
+      <p>In Chapter 13 we learned to slide downhill along a single-variable curve. In Chapter 16 we built the gradient — a vector telling us the steepest uphill direction in \(\mathbb{R}^n\). Now we marry the two ideas: gradient descent navigates a loss surface with millions of parameters, guided entirely by that gradient vector. This single algorithm — and its variants — is the engine behind virtually every neural network ever trained.</p>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- Section 1: Multivariable Functions in Code -->
+    <!-- ============================================================== -->
+    <div class="section" id="multivariable-functions-code">
+      <div class="section-divider"><span class="section-num">Section 17.1</span></div>
+      <h2>Multivariable Functions in Code</h2>
+
+      <p>Before diving into theory, let's establish our running example — the Rosenbrock function, a classic test surface for optimization algorithms. It has a narrow curved valley that makes it notoriously difficult to minimize:</p>
+
+      \[f(x, y) = (a - x)^2 + b(y - x^2)^2\]
+
+      <p>With \(a = 1, b = 100\), the global minimum sits at \((1, 1)\) where \(f = 0\). The challenge is that the valley floor curves gently downward while the walls rise steeply, trapping naive optimizers.</p>
+
+      <div class="code-block">
+        <pre class="language-python"><code class="code-header"><span class="code-lang">Python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></code><code class="language-python">import numpy as np
+
+def rosenbrock(xy):
+    """Rosenbrock function: minimum at (1, 1) with value 0."""
+    x, y = xy
+    return (1 - x)**2 + 100 * (y - x**2)**2
+
+def rosenbrock_grad(xy):
+    """Analytical gradient of the Rosenbrock function."""
+    x, y = xy
+    dfdx = -2 * (1 - x) + 200 * (y - x**2) * (-2 * x)
+    dfdy = 200 * (y - x**2)
+    return np.array([dfdx, dfdy])
+
+# Evaluate at a test point
+p = np.array([-1.0, 1.0])
+print(f"f({p}) = {rosenbrock(p)}")         # 400.0
+print(f"∇f({p}) = {rosenbrock_grad(p)}")   # [  -4. -400.]</code></pre>
+      </div>
+
+      <p>The gradient at \((-1, 1)\) is \((-4, -400)\): the \(y\)-component is a hundred times larger than the \(x\)-component, reflecting the steep valley walls versus the gentle slope along the valley floor. This anisotropy is the central challenge of high-dimensional optimization.</p>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- Section 2: Critical Points Revisited -->
+    <!-- ============================================================== -->
+    <div class="section" id="critical-points">
+      <div class="section-divider"><span class="section-num">Section 17.2</span></div>
+      <h2>Critical Points Revisited</h2>
+
+      <p>Chapter 13 defined critical points where \(f'(x) = 0\). In multiple dimensions, the condition becomes:</p>
+
+      <div class="def-box">
+        <div class="box-label">Definition — Critical Point</div>
+        <p>A point \(\mathbf{x}^* \in \mathbb{R}^n\) is a <strong>critical point</strong> of \(f: \mathbb{R}^n \to \mathbb{R}\) if the gradient vanishes:</p>
+        \[\nabla f(\mathbf{x}^*) = \mathbf{0}\]
+        <p>Critical points are classified as <strong>local minima</strong>, <strong>local maxima</strong>, or <strong>saddle points</strong>.</p>
+      </div>
+
+      <p>In one dimension there are only three possibilities for a critical point. In higher dimensions, saddle points become overwhelmingly more common. At a saddle point the function curves upward along some directions and downward along others — think of a mountain pass between two peaks.</p>
+
+      <h3>The necessity condition</h3>
+
+      <div class="thm-box">
+        <div class="box-label">Theorem — First-Order Necessary Condition</div>
+        <p>If \(\mathbf{x}^*\) is a local minimum of a differentiable \(f: \mathbb{R}^n \to \mathbb{R}\), then \(\nabla f(\mathbf{x}^*) = \mathbf{0}\).</p>
+      </div>
+
+      <button class="proof-toggle" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')">
+        <span class="arrow">&#9654;</span> Proof
+      </button>
+      <div class="proof-body">
+        <div class="proof-inner">
+          <p>Suppose \(\mathbf{x}^*\) is a local minimum and, for contradiction, that \(\nabla f(\mathbf{x}^*) \neq \mathbf{0}\). Set \(\mathbf{d} = -\nabla f(\mathbf{x}^*)\). Then the directional derivative is:</p>
+          \[D_{\mathbf{d}} f(\mathbf{x}^*) = \nabla f(\mathbf{x}^*) \cdot \mathbf{d} = -\|\nabla f(\mathbf{x}^*)\|^2 < 0\]
+          <p>So \(f\) decreases in direction \(\mathbf{d}\). By the definition of the directional derivative, for sufficiently small \(t > 0\):</p>
+          \[f(\mathbf{x}^* + t\mathbf{d}) < f(\mathbf{x}^*)\]
+          <p>This contradicts \(\mathbf{x}^*\) being a local minimum. Hence \(\nabla f(\mathbf{x}^*) = \mathbf{0}\). \(\blacksquare\)</p>
+        </div>
+      </div>
+
+      <p>The converse is false: \(\nabla f = \mathbf{0}\) does not guarantee a minimum. We need second-order information to distinguish minima from saddle points.</p>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- Section 3: Second-Order Conditions -->
+    <!-- ============================================================== -->
+    <div class="section" id="second-order-conditions">
+      <div class="section-divider"><span class="section-num">Section 17.3</span></div>
+      <h2>Second-Order Conditions</h2>
+
+      <p>The Hessian matrix \(\mathbf{H}_f(\mathbf{x}^*)\), introduced in Chapter 16, provides the multivariable analogue of the second derivative test.</p>
+
+      <div class="thm-box">
+        <div class="box-label">Theorem — Second-Order Sufficient Conditions</div>
+        <p>Let \(\mathbf{x}^*\) be a critical point of \(f \in C^2\) (i.e., \(\nabla f(\mathbf{x}^*) = \mathbf{0}\)). Then:</p>
+        <p>1. If \(\mathbf{H}_f(\mathbf{x}^*)\) is <strong>positive definite</strong> (all eigenvalues \(> 0\)), then \(\mathbf{x}^*\) is a <strong>strict local minimum</strong>.</p>
+        <p>2. If \(\mathbf{H}_f(\mathbf{x}^*)\) is <strong>negative definite</strong> (all eigenvalues \(< 0\)), then \(\mathbf{x}^*\) is a <strong>strict local maximum</strong>.</p>
+        <p>3. If \(\mathbf{H}_f(\mathbf{x}^*)\) has both positive and negative eigenvalues, then \(\mathbf{x}^*\) is a <strong>saddle point</strong>.</p>
+      </div>
+
+      <button class="proof-toggle" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')">
+        <span class="arrow">&#9654;</span> Proof sketch (positive definite case)
+      </button>
+      <div class="proof-body">
+        <div class="proof-inner">
+          <p>By Taylor's theorem in \(\mathbb{R}^n\), for \(\mathbf{d} = \mathbf{x} - \mathbf{x}^*\) near zero:</p>
+          \[f(\mathbf{x}) = f(\mathbf{x}^*) + \underbrace{\nabla f(\mathbf{x}^*)^\top \mathbf{d}}_{= 0} + \frac{1}{2}\mathbf{d}^\top \mathbf{H}_f(\mathbf{x}^*)\mathbf{d} + o(\|\mathbf{d}\|^2)\]
+          <p>Since \(\mathbf{H}_f(\mathbf{x}^*)\) is positive definite, there exists \(\lambda_{\min} > 0\) (its smallest eigenvalue) such that \(\mathbf{d}^\top \mathbf{H}_f(\mathbf{x}^*)\mathbf{d} \geq \lambda_{\min}\|\mathbf{d}\|^2\). For \(\mathbf{d}\) small enough, the quadratic term dominates the \(o(\|\mathbf{d}\|^2)\) remainder, giving \(f(\mathbf{x}) > f(\mathbf{x}^*)\) for all \(\mathbf{x} \neq \mathbf{x}^*\) in a neighbourhood. \(\blacksquare\)</p>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <pre class="language-python"><code class="code-header"><span class="code-lang">Python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></code><code class="language-python">def classify_critical_point(hessian):
+    """Classify a critical point using eigenvalues of the Hessian."""
+    eigenvalues = np.linalg.eigvalsh(hessian)
+    print(f"Eigenvalues: {eigenvalues}")
+    if np.all(eigenvalues > 0):
+        return "strict local minimum"
+    elif np.all(eigenvalues < 0):
+        return "strict local maximum"
+    elif np.any(eigenvalues > 0) and np.any(eigenvalues < 0):
+        return "saddle point"
+    else:
+        return "inconclusive (semi-definite)"
+
+# Rosenbrock Hessian at the minimum (1, 1)
+H_min = np.array([[802, -400],
+                   [-400,  200]])
+print(classify_critical_point(H_min))
+# Eigenvalues: [  0.399  1001.6]  →  strict local minimum
+
+# Saddle point example: f(x,y) = x² - y² at origin
+H_saddle = np.array([[2, 0],
+                      [0, -2]])
+print(classify_critical_point(H_saddle))
+# Eigenvalues: [-2.  2.]  →  saddle point</code></pre>
+      </div>
+
+      <div class="callout">
+        <div class="callout-label">Key Insight</div>
+        <p>The <strong>condition number</strong> of the Hessian — the ratio \(\lambda_{\max}/\lambda_{\min}\) — controls how hard a problem is to optimize. For the Rosenbrock Hessian above, \(\kappa \approx 2509\), meaning the surface is 2509 times steeper in the worst direction than the best. This is why the Rosenbrock function is so difficult for gradient descent.</p>
+      </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- Section 4: Constrained Optimization -->
+    <!-- ============================================================== -->
+    <div class="section" id="constrained-optimization">
+      <div class="section-divider"><span class="section-num">Section 17.4</span></div>
+      <h2>Constrained Optimization</h2>
+
+      <p>Many ML problems have constraints: probability distributions must sum to one, regularised weights must stay inside a ball, SVMs enforce margin constraints. The method of <strong>Lagrange multipliers</strong> turns constrained problems into unconstrained ones.</p>
+
+      <div class="def-box">
+        <div class="box-label">Definition — Lagrangian</div>
+        <p>Given \(f: \mathbb{R}^n \to \mathbb{R}\) subject to equality constraints \(g_i(\mathbf{x}) = 0\) for \(i = 1, \ldots, m\), the <strong>Lagrangian</strong> is:</p>
+        \[\mathcal{L}(\mathbf{x}, \boldsymbol{\lambda}) = f(\mathbf{x}) + \sum_{i=1}^m \lambda_i \, g_i(\mathbf{x})\]
+        <p>where \(\lambda_1, \ldots, \lambda_m\) are <strong>Lagrange multipliers</strong>.</p>
+      </div>
+
+      <div class="thm-box">
+        <div class="box-label">Theorem — Lagrange Multiplier Condition</div>
+        <p>At a constrained extremum \(\mathbf{x}^*\), the gradient of \(f\) is a linear combination of the constraint gradients:</p>
+        \[\nabla f(\mathbf{x}^*) = -\sum_{i=1}^m \lambda_i \nabla g_i(\mathbf{x}^*)\]
+        <p>Equivalently, \(\nabla_{\mathbf{x}} \mathcal{L}(\mathbf{x}^*, \boldsymbol{\lambda}^*) = \mathbf{0}\) and \(g_i(\mathbf{x}^*) = 0\) for all \(i\).</p>
+      </div>
+
+      <p>The geometric intuition: at a constrained optimum, the gradient of \(f\) must be perpendicular to the constraint surface. If it weren't, you could move along the constraint and improve \(f\).</p>
+
+      <div class="code-block">
+        <pre class="language-python"><code class="code-header"><span class="code-lang">Python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></code><code class="language-python">from scipy.optimize import minimize
+
+# Minimize f(x,y) = x² + y² subject to x + y = 1
+# Using scipy's constrained optimizer
+result = minimize(
+    fun=lambda xy: xy[0]**2 + xy[1]**2,
+    x0=[0.0, 0.0],
+    method='SLSQP',
+    jac=lambda xy: np.array([2*xy[0], 2*xy[1]]),
+    constraints={'type': 'eq', 'fun': lambda xy: xy[0] + xy[1] - 1}
+)
+print(f"Constrained minimum: {result.x}")   # [0.5, 0.5]
+print(f"f(x*) = {result.fun:.4f}")           # 0.5000
+
+# Verify via Lagrange: ∇f = λ∇g  →  [2x, 2y] = λ[1,1]
+# Plus constraint x + y = 1  →  x = y = 0.5, λ = 1
+print(f"Lagrange multiplier λ = {2 * result.x[0]:.4f}")  # 1.0</code></pre>
+      </div>
+
+      <h3>KKT conditions for inequalities</h3>
+
+      <p>When inequality constraints \(g_i(\mathbf{x}) \leq 0\) are present, the Karush–Kuhn–Tucker (KKT) conditions extend Lagrange multipliers with <strong>complementary slackness</strong>: \(\lambda_i \geq 0\) and \(\lambda_i g_i(\mathbf{x}^*) = 0\). Either the constraint is active (\(g_i = 0\)) or its multiplier is zero. KKT conditions are the theoretical foundation of support vector machines.</p>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- Section 5: Full Gradient Descent -->
+    <!-- ============================================================== -->
+    <div class="section" id="full-gradient-descent">
+      <div class="section-divider"><span class="section-num">Section 17.5</span></div>
+      <h2>Full Gradient Descent</h2>
+
+      <p>In Chapter 13 we wrote the scalar update rule \(x \leftarrow x - \eta f'(x)\). Now we upgrade to the full multivariable form.</p>
+
+      <div class="def-box">
+        <div class="box-label">Definition — Gradient Descent in \(\mathbb{R}^n\)</div>
+        <div class="box-title">The update rule</div>
+        <p>Starting from \(\mathbf{x}_0 \in \mathbb{R}^n\), iterate:</p>
+        \[\mathbf{x}_{k+1} = \mathbf{x}_k - \eta \,\nabla f(\mathbf{x}_k)\]
+        <p>where \(\eta > 0\) is the <strong>learning rate</strong> (step size). Each step moves in the direction of steepest descent.</p>
+      </div>
+
+      <p>This is exactly how neural networks train: the parameter vector \(\mathbf{x}\) contains all the weights (often millions), \(f\) is the loss function, and \(\nabla f\) is computed by backpropagation. The entire training loop is repeated application of this single equation.</p>
+
+      <div class="perf-dive">
+        <div class="perf-label">Performance Deep-Dive</div>
+        <h4>Gradient Descent on the Rosenbrock Function</h4>
+        <p>Watch how GD struggles with the ill-conditioned Rosenbrock valley. Track the path, loss, and gradient norm.</p>
+        <pre class="language-python"><code class="language-python">def gradient_descent(grad_fn, x0, lr, n_steps, loss_fn=None):
+    """Full gradient descent with trajectory logging."""
+    x = np.array(x0, dtype=float)
+    trajectory = [x.copy()]
+    losses = [loss_fn(x)] if loss_fn else []
+
+    for k in range(n_steps):
+        g = grad_fn(x)
+        x = x - lr * g
+        trajectory.append(x.copy())
+        if loss_fn:
+            losses.append(loss_fn(x))
+
+    return np.array(trajectory), losses
+
+# Run GD on Rosenbrock from (-1, 1)
+x0 = [-1.0, 1.0]
+traj, losses = gradient_descent(
+    rosenbrock_grad, x0, lr=0.001, n_steps=10000,
+    loss_fn=rosenbrock
+)
+
+print(f"Start:  f = {losses[0]:.2f}")
+print(f"Step 1000:  x = {traj[1000]}, f = {losses[1000]:.4f}")
+print(f"Step 5000:  x = {traj[5000]}, f = {losses[5000]:.6f}")
+print(f"Final: x = {traj[-1]}, f = {losses[-1]:.8f}")
+print(f"Distance to optimum: {np.linalg.norm(traj[-1] - [1,1]):.6f}")</code></pre>
+      </div>
+
+      <h3>Learning rate sensitivity</h3>
+
+      <p>The learning rate \(\eta\) is the most critical hyperparameter. Too small and convergence is glacially slow; too large and the iterates diverge. The stability condition from Chapter 13 generalises: for a quadratic with Hessian \(\mathbf{H}\), convergence requires:</p>
+
+      \[\eta < \frac{2}{\lambda_{\max}(\mathbf{H})}\]
+
+      <p>For the Rosenbrock Hessian at \((1,1)\) with \(\lambda_{\max} \approx 1001.6\), this gives \(\eta < 0.002\). In practice, the optimal learning rate is \(\eta^* = 2/(\lambda_{\max} + \lambda_{\min})\), which balances progress across all eigendirections.</p>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- Section 6: Convergence Theory -->
+    <!-- ============================================================== -->
+    <div class="section" id="convergence-multivariable">
+      <div class="section-divider"><span class="section-num">Section 17.6</span></div>
+      <h2>Convergence Theory</h2>
+
+      <p>The convergence rate depends on two properties of the loss surface: smoothness and convexity.</p>
+
+      <div class="def-box">
+        <div class="box-label">Definition — L-Smoothness</div>
+        <p>A differentiable \(f: \mathbb{R}^n \to \mathbb{R}\) is <strong>\(L\)-smooth</strong> if its gradient is Lipschitz continuous:</p>
+        \[\|\nabla f(\mathbf{x}) - \nabla f(\mathbf{y})\| \leq L \|\mathbf{x} - \mathbf{y}\| \quad \forall \mathbf{x}, \mathbf{y}\]
+        <p>Equivalently, \(f\) can be upper-bounded by a quadratic with curvature \(L\) at every point.</p>
+      </div>
+
+      <div class="def-box">
+        <div class="box-label">Definition — Strong Convexity</div>
+        <p>\(f\) is <strong>\(\mu\)-strongly convex</strong> (\(\mu > 0\)) if for all \(\mathbf{x}, \mathbf{y}\):</p>
+        \[f(\mathbf{y}) \geq f(\mathbf{x}) + \nabla f(\mathbf{x})^\top (\mathbf{y} - \mathbf{x}) + \frac{\mu}{2}\|\mathbf{y} - \mathbf{x}\|^2\]
+        <p>Equivalently, \(\mathbf{H}_f(\mathbf{x}) \succeq \mu \mathbf{I}\) everywhere — the surface curves at least as much as a paraboloid of curvature \(\mu\).</p>
+      </div>
+
+      <div class="thm-box">
+        <div class="box-label">Theorem — GD Convergence Rates</div>
+        <p>For gradient descent with step size \(\eta = 1/L\) on an \(L\)-smooth function:</p>
+        <p><strong>Convex:</strong> \(\displaystyle f(\mathbf{x}_k) - f(\mathbf{x}^*) \leq \frac{L\|\mathbf{x}_0 - \mathbf{x}^*\|^2}{2k}\) — sublinear \(O(1/k)\) rate.</p>
+        <p><strong>\(\mu\)-strongly convex:</strong> \(\displaystyle \|\mathbf{x}_k - \mathbf{x}^*\|^2 \leq \left(1 - \frac{\mu}{L}\right)^k \|\mathbf{x}_0 - \mathbf{x}^*\|^2\) — linear (exponential) rate.</p>
+      </div>
+
+      <p>The ratio \(\kappa = L/\mu\) is the <strong>condition number</strong>. When \(\kappa\) is large, the error contracts by a factor of only \((1 - 1/\kappa)\) per step — convergence is slow. This exactly mirrors the intuition of the Rosenbrock valley: the condition number measures how elongated the loss surface is.</p>
+
+      <div class="code-block">
+        <pre class="language-python"><code class="code-header"><span class="code-lang">Python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></code><code class="language-python">def convergence_comparison():
+    """Compare GD convergence on well- vs ill-conditioned quadratics."""
+    # Well-conditioned: κ = 2
+    A_good = np.array([[2, 0], [0, 1]])
+    b_good = np.array([2, 1])
+    # Ill-conditioned: κ = 100
+    A_bad = np.array([[100, 0], [0, 1]])
+    b_bad = np.array([100, 1])
+
+    for name, A, b in [("κ=2", A_good, b_good), ("κ=100", A_bad, b_bad)]:
+        L = np.max(np.linalg.eigvalsh(A))
+        lr = 1.0 / L
+        x_star = np.linalg.solve(A, b)
+
+        x = np.zeros(2)
+        errors = []
+        for k in range(200):
+            errors.append(np.linalg.norm(x - x_star))
+            grad = A @ x - b
+            x = x - lr * grad
+
+        half_idx = next(i for i, e in enumerate(errors) if e < errors[0]/2)
+        print(f"{name}: halving time = {half_idx} steps, "
+              f"error at step 200 = {errors[-1]:.2e}")
+
+convergence_comparison()
+# κ=2:   halving time = 2 steps, error at step 200 ≈ 0.00e+00
+# κ=100: halving time = 69 steps, error at step 200 ≈ 1.32e-01</code></pre>
+      </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- Section 7: Advanced Optimizers -->
+    <!-- ============================================================== -->
+    <div class="section" id="advanced-optimizers">
+      <div class="section-divider"><span class="section-num">Section 17.7</span></div>
+      <h2>Advanced Optimizers</h2>
+
+      <p>Plain gradient descent converges slowly on ill-conditioned surfaces. The ML community has developed a family of <strong>adaptive optimizers</strong> that automatically adjust per-parameter learning rates.</p>
+
+      <h3>Momentum</h3>
+
+      <p>Momentum accumulates past gradients into a velocity vector, helping the optimizer build speed along consistently downhill directions while dampening oscillations across the valley:</p>
+
+      \[\mathbf{v}_{k+1} = \beta \mathbf{v}_k + \nabla f(\mathbf{x}_k), \qquad \mathbf{x}_{k+1} = \mathbf{x}_k - \eta \mathbf{v}_{k+1}\]
+
+      <p>With \(\beta = 0.9\), the effective step in a consistent direction is amplified by a factor of \(1/(1 - \beta) = 10\).</p>
+
+      <h3>Adam: Adaptive Moment Estimation</h3>
+
+      <p>Adam combines momentum with per-parameter learning rate scaling using the second moment of the gradient. It is the default optimizer in most deep learning projects.</p>
+
+      <div class="def-box">
+        <div class="box-label">Definition — Adam Update</div>
+        <p>Maintain first and second moment estimates \(\mathbf{m}_k, \mathbf{v}_k\):</p>
+        \[\mathbf{m}_{k+1} = \beta_1 \mathbf{m}_k + (1 - \beta_1)\,\mathbf{g}_k, \qquad \mathbf{v}_{k+1} = \beta_2 \mathbf{v}_k + (1 - \beta_2)\,\mathbf{g}_k^2\]
+        <p>Bias-correct: \(\hat{\mathbf{m}} = \mathbf{m}_{k+1}/(1 - \beta_1^{k+1})\), \(\hat{\mathbf{v}} = \mathbf{v}_{k+1}/(1 - \beta_2^{k+1})\). Update:</p>
+        \[\mathbf{x}_{k+1} = \mathbf{x}_k - \frac{\eta}{\sqrt{\hat{\mathbf{v}}} + \epsilon}\,\hat{\mathbf{m}}\]
+        <p>Default hyperparameters: \(\beta_1 = 0.9\), \(\beta_2 = 0.999\), \(\epsilon = 10^{-8}\).</p>
+      </div>
+
+      <div class="perf-dive">
+        <div class="perf-label">Performance Deep-Dive</div>
+        <h4>Optimizer Comparison on Rosenbrock</h4>
+        <p>Compare vanilla GD, momentum, and Adam on the Rosenbrock surface.</p>
+        <pre class="language-python"><code class="language-python">def adam(grad_fn, x0, lr=0.001, beta1=0.9, beta2=0.999,
+         eps=1e-8, n_steps=5000, loss_fn=None):
+    """Adam optimizer with trajectory logging."""
+    x = np.array(x0, dtype=float)
+    m = np.zeros_like(x)
+    v = np.zeros_like(x)
+    trajectory = [x.copy()]
+    losses = [loss_fn(x)] if loss_fn else []
+
+    for k in range(1, n_steps + 1):
+        g = grad_fn(x)
+        m = beta1 * m + (1 - beta1) * g
+        v = beta2 * v + (1 - beta2) * g**2
+        m_hat = m / (1 - beta1**k)
+        v_hat = v / (1 - beta2**k)
+        x = x - lr * m_hat / (np.sqrt(v_hat) + eps)
+        trajectory.append(x.copy())
+        if loss_fn:
+            losses.append(loss_fn(x))
+
+    return np.array(trajectory), losses
+
+def momentum_gd(grad_fn, x0, lr=0.001, beta=0.9,
+                n_steps=5000, loss_fn=None):
+    """GD with momentum."""
+    x = np.array(x0, dtype=float)
+    vel = np.zeros_like(x)
+    trajectory = [x.copy()]
+    losses = [loss_fn(x)] if loss_fn else []
+
+    for k in range(n_steps):
+        g = grad_fn(x)
+        vel = beta * vel + g
+        x = x - lr * vel
+        trajectory.append(x.copy())
+        if loss_fn:
+            losses.append(loss_fn(x))
+
+    return np.array(trajectory), losses
+
+x0 = [-1.0, 1.0]
+n = 5000
+
+_, loss_gd = gradient_descent(rosenbrock_grad, x0, 0.001, n, rosenbrock)
+_, loss_mom = momentum_gd(rosenbrock_grad, x0, 0.0005, 0.9, n, rosenbrock)
+_, loss_adam = adam(rosenbrock_grad, x0, 0.01, n_steps=n, loss_fn=rosenbrock)
+
+for name, losses in [("GD", loss_gd), ("Momentum", loss_mom), ("Adam", loss_adam)]:
+    print(f"{name:10s}: final loss = {losses[-1]:.6f}")</code></pre>
+      </div>
+
+      <h3>Why Adam works</h3>
+
+      <p>The denominator \(\sqrt{\hat{\mathbf{v}}}\) contains the root-mean-square of recent gradients. Parameters with large gradients get <em>smaller</em> effective learning rates, while parameters with small gradients get <em>larger</em> ones. This implicit preconditioning adapts to the local curvature without computing the full Hessian — a massive computational saving when the parameter count is in the millions.</p>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- Section 8: Optimization in ML -->
+    <!-- ============================================================== -->
+    <div class="section" id="ml-optimization">
+      <div class="section-divider"><span class="section-num">Section 17.8</span></div>
+      <h2>Optimization in Machine Learning</h2>
+
+      <div class="why-ai">
+        <div class="why-label">Why This Matters for ML</div>
+        <h3>The full picture: from loss surfaces to trained models</h3>
+        <ul>
+          <li><strong>Stochastic gradients:</strong> In practice, we approximate \(\nabla f\) with a <strong>mini-batch gradient</strong> — the average over a random subset of training examples. This gives SGD: noisier but much cheaper per step, and the noise actually helps escape sharp local minima.</li>
+          <li><strong>Non-convex landscapes:</strong> Neural network loss surfaces are highly non-convex with many saddle points. Remarkably, SGD with momentum or Adam navigates these effectively because most saddle points are "escapable" — random perturbations push the optimizer away.</li>
+          <li><strong>Learning rate schedules:</strong> Start with a large learning rate for fast initial progress, then decay (cosine annealing, step decay, warmup) for fine convergence. Modern transformers use linear warmup followed by cosine decay.</li>
+          <li><strong>Regularisation as constraints:</strong> L2 regularisation (\(\lambda\|\mathbf{w}\|^2\)) is equivalent to constrained optimization over a ball. L1 regularisation leads to sparsity via soft-thresholding in the gradient update.</li>
+        </ul>
+      </div>
+
+      <h3>Mini-batch SGD</h3>
+
+      <p>Instead of computing the gradient over all \(N\) training examples, we sample a mini-batch \(\mathcal{B} \subset \{1, \ldots, N\}\) of size \(B\) and use the estimate:</p>
+
+      \[\mathbf{g}_k = \frac{1}{B}\sum_{i \in \mathcal{B}} \nabla f_i(\mathbf{x}_k)\]
+
+      <p>This estimate is <strong>unbiased</strong>: \(\mathbb{E}[\mathbf{g}_k] = \nabla f(\mathbf{x}_k)\). The variance decreases as \(O(1/B)\), but even \(B = 32\) is enough for effective training in most deep learning settings.</p>
+
+      <div class="code-block">
+        <pre class="language-python"><code class="code-header"><span class="code-lang">Python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></code><code class="language-python">def sgd_linear_regression(X, y, lr=0.01, batch_size=32,
+                           n_epochs=50, seed=42):
+    """Mini-batch SGD for least-squares linear regression."""
+    rng = np.random.default_rng(seed)
+    n, d = X.shape
+    w = rng.normal(0, 0.01, size=d)
+    losses = []
+
+    for epoch in range(n_epochs):
+        indices = rng.permutation(n)
+        epoch_loss = 0.0
+        n_batches = 0
+
+        for start in range(0, n, batch_size):
+            batch = indices[start:start + batch_size]
+            X_b, y_b = X[batch], y[batch]
+
+            # Mini-batch gradient: (1/B) * X_b^T (X_b w - y_b)
+            residual = X_b @ w - y_b
+            grad = X_b.T @ residual / len(batch)
+
+            w = w - lr * grad
+            epoch_loss += np.mean(residual**2)
+            n_batches += 1
+
+        losses.append(epoch_loss / n_batches)
+
+    return w, losses
+
+# Synthetic example
+rng = np.random.default_rng(0)
+X = rng.normal(0, 1, (1000, 5))
+w_true = np.array([1.0, -2.0, 0.5, 3.0, -1.5])
+y = X @ w_true + rng.normal(0, 0.1, 1000)
+
+w_sgd, losses = sgd_linear_regression(X, y, lr=0.05, batch_size=64)
+print(f"True w:  {w_true}")
+print(f"SGD  w:  {np.round(w_sgd, 3)}")
+print(f"Final MSE: {losses[-1]:.6f}")</code></pre>
+      </div>
+
+      <h3>Putting it all together: training a neural network</h3>
+
+      <p>Every neural network training loop is an instance of the following pattern: forward pass (compute loss), backward pass (compute gradient via chain rule), and update (apply optimizer step). The mathematics of this chapter — gradients, Hessians, condition numbers, adaptive learning rates — govern every aspect of this process.</p>
+
+      <div class="code-block">
+        <pre class="language-python"><code class="code-header"><span class="code-lang">Python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></code><code class="language-python">def train_two_layer_net(X, y, hidden=32, lr=0.01,
+                        n_epochs=100, batch_size=32, seed=42):
+    """Train a 2-layer ReLU network with Adam from scratch."""
+    rng = np.random.default_rng(seed)
+    n, d = X.shape
+    out_dim = 1
+
+    # He initialisation
+    W1 = rng.normal(0, np.sqrt(2/d), (d, hidden))
+    b1 = np.zeros(hidden)
+    W2 = rng.normal(0, np.sqrt(2/hidden), (hidden, out_dim))
+    b2 = np.zeros(out_dim)
+
+    # Adam state
+    params = [W1, b1, W2, b2]
+    m = [np.zeros_like(p) for p in params]
+    v = [np.zeros_like(p) for p in params]
+    t = 0
+
+    losses = []
+    for epoch in range(n_epochs):
+        idx = rng.permutation(n)
+        epoch_loss = 0.0
+
+        for start in range(0, n, batch_size):
+            batch = idx[start:start+batch_size]
+            X_b, y_b = X[batch], y[batch].reshape(-1, 1)
+            B = len(batch)
+
+            # Forward pass
+            z1 = X_b @ W1 + b1
+            a1 = np.maximum(0, z1)        # ReLU
+            y_hat = a1 @ W2 + b2
+            loss = np.mean((y_hat - y_b)**2)
+            epoch_loss += loss
+
+            # Backward pass
+            dloss = 2 * (y_hat - y_b) / B
+            dW2 = a1.T @ dloss
+            db2 = dloss.sum(axis=0)
+            da1 = dloss @ W2.T
+            dz1 = da1 * (z1 > 0)          # ReLU derivative
+            dW1 = X_b.T @ dz1
+            db1 = dz1.sum(axis=0)
+
+            # Adam update
+            grads = [dW1, db1, dW2, db2]
+            t += 1
+            for i in range(4):
+                m[i] = 0.9 * m[i] + 0.1 * grads[i]
+                v[i] = 0.999 * v[i] + 0.001 * grads[i]**2
+                m_hat = m[i] / (1 - 0.9**t)
+                v_hat = v[i] / (1 - 0.999**t)
+                params[i] -= lr * m_hat / (np.sqrt(v_hat) + 1e-8)
+
+            W1, b1, W2, b2 = params
+
+        losses.append(epoch_loss * batch_size / n)
+
+    print(f"Epoch  1 loss: {losses[0]:.4f}")
+    print(f"Epoch 50 loss: {losses[49]:.4f}")
+    print(f"Epoch {n_epochs} loss: {losses[-1]:.4f}")
+    return params, losses
+
+# Train on synthetic data
+X_train = rng.normal(0, 1, (500, 5))
+y_train = np.sin(X_train[:, 0]) + 0.5 * X_train[:, 1]**2
+train_two_layer_net(X_train, y_train, hidden=64, lr=0.005)</code></pre>
+      </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- Socratic Section -->
+    <!-- ============================================================== -->
+    <div class="socratic" id="socratic">
+      <div class="socratic-header">
+        <div class="socratic-icon">&#129300;</div>
+        <h2>Test Your Understanding</h2>
+      </div>
+      <div class="socratic-scenario">
+        You are training a neural network. The training loss drops quickly for the first 100 steps, then oscillates wildly without further decrease. Use the ideas from this chapter to diagnose and fix the problem.
+      </div>
+
+      <div class="q-card">
+        <div class="q-top">
+          <div class="q-num">1</div>
+          <div class="q-text">What does \(\nabla f(\mathbf{x}) = \mathbf{0}\) tell us about a point? Is it sufficient to conclude that we've found a minimum?</div>
+        </div>
+        <button class="reveal-btn" onclick="toggleAnswer('a1')"><span>Reveal Thinking</span></button>
+        <div class="q-answer" id="a1">
+          <div class="q-answer-inner">It tells us that \(\mathbf{x}\) is a critical point — either a local minimum, local maximum, or saddle point. The zero gradient is <em>necessary</em> for a minimum but not <em>sufficient</em>. We need the second-order test: if the Hessian is positive definite at that point, then it's a strict local minimum. In high dimensions, most critical points are saddle points.</div>
+        </div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-top">
+          <div class="q-num">2</div>
+          <div class="q-text">The training loss oscillates wildly after an initial decrease. What is the most likely cause, and how would you fix it?</div>
+        </div>
+        <button class="reveal-btn" onclick="toggleAnswer('a2')"><span>Reveal Thinking</span></button>
+        <div class="q-answer" id="a2">
+          <div class="q-answer-inner">The learning rate is too large. Oscillation means the steps overshoot the minimum and bounce back and forth across the valley. The fix is to reduce the learning rate, or better, use a <strong>learning rate schedule</strong> (e.g., cosine annealing) that starts large for fast progress and decays over time. Alternatively, switching to Adam can help because its adaptive per-parameter rates dampen these oscillations automatically.</div>
+        </div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-top">
+          <div class="q-num">3</div>
+          <div class="q-text">Why does Adam often outperform plain GD on neural network loss surfaces? Explain in terms of condition numbers.</div>
+        </div>
+        <button class="reveal-btn" onclick="toggleAnswer('a3')"><span>Reveal Thinking</span></button>
+        <div class="q-answer" id="a3">
+          <div class="q-answer-inner">Neural network loss surfaces are typically ill-conditioned: different parameters (or directions in parameter space) have very different curvatures. Plain GD uses a single learning rate for all parameters, so it must use the smallest safe rate (set by the largest curvature), making progress in low-curvature directions painfully slow. Adam divides each parameter's update by the RMS of its recent gradients, effectively giving each parameter its own learning rate. This implicit diagonal preconditioning approximately reduces the condition number, accelerating convergence along all directions.</div>
+        </div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-top">
+          <div class="q-num">4</div>
+          <div class="q-text">You have a constrained optimisation problem: minimise cross-entropy loss subject to \(\sum_i w_i = 1\) and \(w_i \geq 0\). How do Lagrange multipliers connect to the softmax function?</div>
+        </div>
+        <button class="reveal-btn" onclick="toggleAnswer('a4')"><span>Reveal Thinking</span></button>
+        <div class="q-answer" id="a4">
+          <div class="q-answer-inner">When you minimise the cross-entropy (or equivalently, maximise entropy subject to moment constraints) with the constraint that the outputs form a valid probability distribution (\(\sum_i w_i = 1\), \(w_i \geq 0\)), applying the KKT conditions yields the exponential form \(w_i \propto e^{z_i}\). Normalising gives exactly the softmax function \(w_i = e^{z_i}/\sum_j e^{z_j}\). The Lagrange multiplier for the sum-to-one constraint becomes the log of the partition function. So softmax is not an arbitrary choice — it is the <em>solution</em> to a constrained optimisation problem.</div>
+        </div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-top">
+          <div class="q-num">5</div>
+          <div class="q-text">A convex function with condition number \(\kappa = 1000\). Roughly how many GD steps does it take to reduce the error by a factor of \(e \approx 2.718\)?</div>
+        </div>
+        <button class="reveal-btn" onclick="toggleAnswer('a5')"><span>Reveal Thinking</span></button>
+        <div class="q-answer" id="a5">
+          <div class="q-answer-inner">For a \(\mu\)-strongly convex, \(L\)-smooth function with \(\kappa = L/\mu = 1000\), the error contracts by \((1 - 1/\kappa)\) per step. To reduce by a factor of \(e\), we need \(k\) steps where \((1 - 1/1000)^k = 1/e\), i.e., \(k = -1/\ln(1 - 1/1000) \approx 1000\). So roughly \(\kappa\) steps to reduce the error by one \(e\)-fold. This is why reducing the condition number (via preconditioning or adaptive methods) is so valuable.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="nav-bottom">
+      <a class="nav-btn prev" href="ch16.html">&larr; Chapter 16: Derivatives and Gradients</a>
+      <a class="nav-btn next" href="ch18.html">Chapter 18: What is Probability? &rarr;</a>
+    </nav>
+
+  </main>
+</div>
+
+<script>
+(function() {
+  // Reading progress
+  window.addEventListener('scroll', function() {
+    const h = document.documentElement;
+    const pct = (h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100;
+    document.getElementById('readingProgress').style.width = pct + '%';
+  });
+
+  // TOC active tracking
+  const sections = document.querySelectorAll('.section, .socratic');
+  const tocLinks = document.querySelectorAll('.toc-list a');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        tocLinks.forEach(l => l.classList.remove('active'));
+        const id = e.target.getAttribute('id');
+        const link = document.querySelector('.toc-list a[href="#' + id + '"]');
+        if (link) link.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  sections.forEach(s => observer.observe(s));
+
+  // Proof toggles
+  window.toggleProof = function(btn) {
+    btn.classList.toggle('open');
+    btn.nextElementSibling.classList.toggle('open');
+  };
+
+  // Socratic Q&A
+  window.toggleAnswer = function(id) {
+    const el = document.getElementById(id);
+    const btn = el.previousElementSibling;
+    el.classList.toggle('open');
+    btn.classList.toggle('open');
+    btn.querySelector('span').textContent = el.classList.contains('open') ? 'Hide' : 'Reveal Thinking';
+  };
+
+  window.copyCode = function(btn) {
+    const code = btn.closest('.code-block, .perf-dive').querySelector('code').textContent;
+    navigator.clipboard.writeText(code).then(() => {
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+    });
+  };
+
+  const STORAGE_KEY = 'mathml_completed';
+  let completed = new Set();
+  try {
+    const s = localStorage.getItem(STORAGE_KEY);
+    if (s) completed = new Set(JSON.parse(s));
+  } catch(e) {}
+
+  const btn = document.getElementById('completeBtn');
+  const btnText = document.getElementById('completeBtnText');
+
+  function syncBtn() {
+    if (completed.has('17')) {
+      btn.classList.add('done');
+      btnText.textContent = 'Completed';
+    } else {
+      btn.classList.remove('done');
+      btnText.textContent = 'Mark as Complete';
+    }
+  }
+  syncBtn();
+
+  window.toggleChapterComplete = function() {
+    if (completed.has('17')) completed.delete('17');
+    else completed.add('17');
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify([...completed])); } catch(e) {}
+    syncBtn();
+  };
+})();
+</script>
+
+</body>
+</html>

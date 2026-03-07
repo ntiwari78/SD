@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 13: Optimization — Math for ML</title>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,500&family=Figtree:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- KaTeX -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\[', right: '\\]', display: true},
+      {left: '\\(', right: '\\)', display: false}
+    ],
+    throwOnError: false
+  });"></script>
+
+<!-- Prism.js -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css">
+
+<style>
+:root {
+  --bg:#FAF9F7;--bg-card:#FFFFFF;--bg-warm:#F7F6F3;--text:#2D2D2D;--text-2:#555555;--text-3:#888888;
+  --border:#E5E5E0;--border-hover:#D0D0CA;--blue:#4A6CF7;--blue-light:#EEF2FF;--blue-dim:rgba(74,108,247,0.08);
+  --indigo:#6366F1;--green:#22C55E;--green-light:#F0FDF4;--red:#EF4444;--red-light:#FFF5F5;
+  --amber:#F59E0B;--amber-light:#FFFBEB;--purple:#8B5CF6;--purple-light:#F5F3FF;--cyan:#06B6D4;
+  --grad-part2:linear-gradient(135deg,#EF4444 0%,#F97316 100%);
+  --font-serif:'Newsreader',Georgia,serif;--font-sans:'Figtree',-apple-system,sans-serif;--font-mono:'JetBrains Mono','Fira Code',monospace;
+  --radius:12px;--radius-sm:8px;--shadow-sm:0 1px 3px rgba(0,0,0,0.04);--shadow-md:0 4px 16px rgba(0,0,0,0.06);--shadow-lg:0 8px 32px rgba(0,0,0,0.08);
+  --content-w:740px;--layout-w:1120px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:90px}
+body{font-family:var(--font-serif);background:var(--bg);color:var(--text);line-height:1.75;font-size:17px;-webkit-font-smoothing:antialiased}
+
+.reading-progress{position:fixed;top:0;left:0;z-index:1000;width:0%;height:3px;background:var(--grad-part2);transition:width 0.1s linear}
+.page-layout{display:grid;grid-template-columns:1fr;max-width:var(--layout-w);margin:0 auto;padding:0 24px}
+@media(min-width:1060px){.page-layout{grid-template-columns:220px 1fr;gap:48px}}
+
+.toc-sidebar{display:none}
+@media(min-width:1060px){.toc-sidebar{display:block;position:sticky;top:24px;align-self:start;padding-top:32px;max-height:calc(100vh - 48px);overflow-y:auto}}
+.toc-label{font-family:var(--font-sans);font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-3);margin-bottom:16px}
+.toc-list{list-style:none}.toc-list li{margin:0}
+.toc-list a{display:block;padding:6px 0 6px 14px;font-family:var(--font-sans);font-size:13px;font-weight:400;color:var(--text-3);text-decoration:none;border-left:2px solid transparent;transition:all 0.2s ease;line-height:1.5}
+.toc-list a:hover{color:var(--red);border-left-color:var(--red)}
+.toc-list a.active{color:var(--red);border-left-color:var(--red);font-weight:600}
+.toc-list .sub{padding-left:28px;font-size:12px}
+
+.mobile-toc{display:block;margin:16px 0 32px}
+@media(min-width:1060px){.mobile-toc{display:none}}
+.mobile-toc-toggle{display:flex;align-items:center;gap:8px;width:100%;padding:12px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-sans);font-size:14px;font-weight:500;color:var(--text-2);cursor:pointer}
+.mobile-toc-toggle .chevron{margin-left:auto;transition:transform 0.2s}
+.mobile-toc-toggle.open .chevron{transform:rotate(180deg)}
+.mobile-toc-list{display:none;list-style:none;background:var(--bg-card);border:1px solid var(--border);border-top:0;border-radius:0 0 var(--radius-sm) var(--radius-sm);padding:8px 0}
+.mobile-toc-list.open{display:block}
+.mobile-toc-list a{display:block;padding:8px 20px;font-family:var(--font-sans);font-size:14px;color:var(--text-2);text-decoration:none}
+.mobile-toc-list a:hover{color:var(--red);background:rgba(239,68,68,0.06)}
+
+.content{max-width:var(--content-w);padding:32px 0 80px;min-width:0}
+
+.breadcrumb{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-family:var(--font-sans);font-size:13px;color:var(--text-3);margin-bottom:32px}
+.breadcrumb a{color:var(--text-3);text-decoration:none;transition:color 0.15s}
+.breadcrumb a:hover{color:var(--red)}
+.breadcrumb .sep{color:var(--border)}.breadcrumb .current{color:var(--text-2);font-weight:500}
+
+.ch-header{margin-bottom:48px}
+.ch-badge{display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:var(--radius);background:var(--grad-part2);color:#fff;font-family:var(--font-sans);font-size:20px;font-weight:700;margin-bottom:20px;box-shadow:0 4px 12px rgba(239,68,68,0.25)}
+.ch-title{font-family:var(--font-serif);font-size:clamp(28px,5vw,40px);font-weight:700;line-height:1.15;letter-spacing:-0.02em;color:var(--text);margin-bottom:8px}
+.ch-subtitle{font-family:var(--font-serif);font-size:18px;font-style:italic;color:var(--text-2);margin-bottom:16px}
+.ch-meta{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.ch-meta-item{display:flex;align-items:center;gap:6px;font-family:var(--font-sans);font-size:13px;color:var(--text-3)}
+.ch-meta-item svg{width:15px;height:15px}
+
+.complete-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:var(--bg-card);border:2px solid var(--border);border-radius:100px;font-family:var(--font-sans);font-size:14px;font-weight:600;color:var(--text-2);cursor:pointer;transition:all 0.25s ease}
+.complete-btn:hover{border-color:var(--green);color:var(--green)}
+.complete-btn.done{background:var(--green);border-color:var(--green);color:#fff}
+.complete-btn svg{width:16px;height:16px}
+
+.section{margin-top:56px;scroll-margin-top:80px}
+.section-divider{display:flex;align-items:center;gap:16px;margin-bottom:24px}
+.section-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.section-num{font-family:var(--font-sans);font-size:12px;font-weight:700;letter-spacing:0.06em;color:var(--red);text-transform:uppercase;white-space:nowrap}
+.section h2{font-family:var(--font-serif);font-size:clamp(22px,4vw,28px);font-weight:700;line-height:1.25;letter-spacing:-0.01em;color:var(--text);margin-bottom:20px}
+.section h3{font-family:var(--font-serif);font-size:20px;font-weight:600;color:var(--text);margin:36px 0 14px;scroll-margin-top:80px}
+.section h4{font-family:var(--font-serif);font-size:17px;font-weight:600;color:var(--text);margin:28px 0 10px}
+p{margin:14px 0}
+
+.feynman-bridge{background:linear-gradient(135deg,#FFF7ED 0%,#FFFBEB 40%,#F0FDF4 100%);border:1px solid #FDE68A;border-radius:var(--radius);padding:32px;margin:32px 0 48px;position:relative;overflow:hidden}
+.feynman-bridge::before{content:'\1F4A1';position:absolute;top:-8px;right:16px;font-size:48px;opacity:0.15}
+.feynman-label{font-family:var(--font-sans);font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--amber);margin-bottom:12px}
+.feynman-bridge h3{font-family:var(--font-serif);font-size:22px;font-weight:600;color:var(--text);margin:0 0 16px}
+.feynman-bridge p{font-size:17px;line-height:1.85;color:#444}
+
+.def-box{background:var(--blue-light);border-left:4px solid var(--blue);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:20px 24px;margin:24px 0}
+.def-box .box-label{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-sans);font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--blue);margin-bottom:10px}
+.def-box .box-label::before{content:'';width:8px;height:8px;border-radius:2px;background:var(--blue)}
+.def-box .box-title{font-family:var(--font-serif);font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px}
+.def-box p,.def-box li{font-size:15.5px;line-height:1.7;color:var(--text)}
+.def-box ul{margin-left:20px;margin-top:8px}.def-box li{margin:6px 0}
+
+.thm-box{background:var(--red-light);border-left:4px solid var(--red);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:20px 24px;margin:24px 0}
+.thm-box .box-label{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-sans);font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--red);margin-bottom:10px}
+.thm-box .box-label::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--red)}
+.thm-box p{font-size:15.5px;line-height:1.7}
+
+.prop-box{background:var(--purple-light);border-left:4px solid var(--purple);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:20px 24px;margin:24px 0}
+.prop-box .box-label{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-sans);font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--purple);margin-bottom:10px}
+.prop-box .box-label::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--purple)}
+.prop-box p{font-size:15.5px;line-height:1.7}
+
+.proof-toggle{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;background:var(--bg-warm);border:1px solid var(--border);border-radius:100px;font-family:var(--font-sans);font-size:13px;font-weight:600;color:var(--text-2);cursor:pointer;transition:all 0.2s;margin:12px 0}
+.proof-toggle:hover{border-color:var(--red);color:var(--red)}
+.proof-toggle .arrow{transition:transform 0.3s ease;font-size:10px}
+.proof-toggle.open .arrow{transform:rotate(90deg)}
+.proof-body{max-height:0;overflow:hidden;transition:max-height 0.4s cubic-bezier(0.22,1,0.36,1)}
+.proof-body.open{max-height:2000px}
+.proof-inner{background:#F9FAFB;border:1px solid var(--border);border-radius:var(--radius-sm);padding:20px 24px;margin:8px 0 16px;font-size:15px;line-height:1.75;color:var(--text-2)}
+.proof-inner em{font-style:italic}
+
+pre[class*="language-"]{background:#1a1b2e !important;border-radius:var(--radius) !important;border:1px solid #2a2b42 !important;padding:0 !important;margin:24px 0 !important;overflow:hidden;box-shadow:var(--shadow-md);position:relative}
+.code-header{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:#12132a;border-bottom:1px solid #2a2b42;font-family:var(--font-sans);font-size:12px}
+.code-lang{color:#7dd3fc;font-weight:600;text-transform:uppercase;letter-spacing:0.05em}
+.copy-btn{background:none;border:1px solid #3a3b52;border-radius:6px;padding:4px 12px;color:#888;font-family:var(--font-sans);font-size:11px;font-weight:500;cursor:pointer;transition:all 0.15s}
+.copy-btn:hover{border-color:#7dd3fc;color:#7dd3fc}
+.copy-btn.copied{border-color:var(--green);color:var(--green)}
+pre[class*="language-"]>code{display:block;padding:20px 24px !important;font-family:var(--font-mono) !important;font-size:13.5px !important;line-height:1.7 !important;color:#e2e8f0 !important;background:none !important;overflow-x:auto}
+.token.comment,.token.prolog,.token.doctype{color:#6b7280 !important;font-style:italic}
+.token.keyword{color:#c084fc !important}.token.string{color:#86efac !important}.token.number{color:#fbbf24 !important}
+.token.function{color:#7dd3fc !important}.token.boolean{color:#fb923c !important}.token.operator{color:#94a3b8 !important}
+.token.builtin{color:#67e8f9 !important}.token.class-name{color:#fca5a5 !important}.token.punctuation{color:#94a3b8 !important}
+:not(pre)>code{font-family:var(--font-mono);font-size:0.88em;background:#F0EFEC;padding:2px 7px;border-radius:4px;color:#C2410C}
+
+.katex-display{margin:24px 0 !important;padding:16px 0}.katex{font-size:1.08em !important}
+
+.callout{background:linear-gradient(135deg,var(--blue-light) 0%,var(--purple-light) 100%);border:1px solid #D1D5EB;border-radius:var(--radius);padding:24px 28px;margin:28px 0}
+.callout .callout-label{font-family:var(--font-sans);font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--blue);margin-bottom:8px}
+.callout p{font-size:15.5px;line-height:1.7}
+
+.perf-dive{background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 100%);border-radius:var(--radius);padding:28px 28px 20px;margin:28px 0;color:#e2e8f0;position:relative;overflow:hidden}
+.perf-dive::before{content:'\26A1';position:absolute;top:-6px;right:12px;font-size:56px;opacity:0.08}
+.perf-dive .perf-label{font-family:var(--font-sans);font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#fbbf24;margin-bottom:8px}
+.perf-dive h4{color:#fff;font-size:18px;margin:0 0 12px}
+.perf-dive p{color:#94a3b8;font-size:15px;line-height:1.7}
+.perf-dive pre[class*="language-"]{border:1px solid #334155 !important;margin-top:16px !important}
+
+.why-ai{background:linear-gradient(135deg,var(--blue-light) 0%,#F0FDFA 100%);border:2px solid var(--red);border-radius:var(--radius);padding:28px 28px;margin:36px 0}
+.why-ai .why-label{font-family:var(--font-sans);font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--red);margin-bottom:12px}
+.why-ai h3{font-size:20px;margin:0 0 12px}
+.why-ai ul{margin-left:18px}.why-ai li{margin:10px 0;font-size:15.5px;line-height:1.7}.why-ai li strong{color:var(--red)}
+
+.socratic{margin-top:56px;scroll-margin-top:80px}
+.socratic-header{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.socratic-icon{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--amber) 0%,#F97316 100%);display:flex;align-items:center;justify-content:center;font-size:20px}
+.socratic h2{margin:0;font-size:24px}
+.socratic-scenario{background:var(--amber-light);border:1px solid #FDE68A;border-radius:var(--radius);padding:20px 24px;margin-bottom:24px;font-style:italic;color:var(--text-2);font-size:15.5px;line-height:1.75}
+.q-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin-bottom:14px;transition:box-shadow 0.2s}
+.q-card:hover{box-shadow:var(--shadow-md)}
+.q-top{display:flex;align-items:flex-start;gap:14px}
+.q-num{width:28px;height:28px;border-radius:50%;background:var(--grad-part2);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--font-sans);font-size:13px;font-weight:700;flex-shrink:0}
+.q-text{font-weight:500;font-size:15.5px;line-height:1.6;flex:1}
+.reveal-btn{display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:6px 14px;background:none;border:1px solid var(--red);border-radius:100px;font-family:var(--font-sans);font-size:12px;font-weight:600;color:var(--red);cursor:pointer;transition:all 0.2s}
+.reveal-btn:hover{background:var(--red);color:#fff}
+.reveal-btn.open{background:var(--red);color:#fff}
+.q-answer{max-height:0;overflow:hidden;transition:max-height 0.4s cubic-bezier(0.22,1,0.36,1)}
+.q-answer.open{max-height:500px}
+.q-answer-inner{background:var(--red-light);border-radius:var(--radius-sm);padding:14px 18px;margin-top:14px;font-size:15px;line-height:1.7;color:var(--text-2)}
+
+.ch-nav{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:64px;padding-top:32px;border-top:2px solid var(--border)}
+.nav-btn{display:flex;align-items:center;gap:8px;padding:14px 20px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-sans);font-size:14px;font-weight:500;color:var(--text-2);text-decoration:none;transition:all 0.2s}
+.nav-btn:hover{border-color:var(--red);color:var(--red);box-shadow:var(--shadow-sm)}
+.nav-btn.prev{grid-column:1}.nav-btn.next{grid-column:2;text-align:right;justify-content:flex-end}
+
+.back-top{position:fixed;bottom:32px;right:32px;width:44px;height:44px;border-radius:50%;background:var(--bg-card);border:1px solid var(--border);box-shadow:var(--shadow-md);display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transform:translateY(8px);transition:all 0.25s ease;z-index:100}
+.back-top.visible{opacity:1;transform:translateY(0)}
+.back-top:hover{border-color:var(--red);color:var(--red)}
+</style>
+</head>
+<body>
+
+<div class="reading-progress" id="readingProgress"></div>
+
+<div class="page-layout">
+
+<!-- TOC Sidebar -->
+<aside class="toc-sidebar">
+  <div class="toc-label">On This Page</div>
+  <ul class="toc-list" id="tocList">
+    <li><a href="#extrema" data-section="extrema">Minima and Maxima</a></li>
+    <li><a href="#first-second-tests" data-section="first-second-tests">First &amp; Second Derivative Tests</a></li>
+    <li><a href="#convexity" data-section="convexity">Convexity</a></li>
+    <li><a href="#gradient-descent" data-section="gradient-descent">Gradient Descent</a></li>
+    <li><a href="#convergence" data-section="convergence">Convergence Theory</a></li>
+    <li><a href="#variants" data-section="variants">GD Variants &amp; Momentum</a></li>
+    <li><a href="#gradient-ascent" data-section="gradient-ascent">Gradient Ascent</a></li>
+    <li><a href="#knowledge-check" data-section="knowledge-check">Knowledge Check</a></li>
+  </ul>
+</aside>
+
+<main class="content">
+
+<!-- Breadcrumb -->
+<nav class="breadcrumb">
+  <a href="../index.html">Home</a>
+  <span class="sep">/</span>
+  <span class="current">Chapter 13</span>
+</nav>
+
+<!-- Mobile TOC -->
+<div class="mobile-toc">
+  <button class="mobile-toc-toggle" id="mobileTocToggle">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h10M3 8h10M3 12h10"/></svg>
+    On This Page
+    <span class="chevron">&#9662;</span>
+  </button>
+  <ul class="mobile-toc-list" id="mobileTocList">
+    <li><a href="#extrema">Minima and Maxima</a></li>
+    <li><a href="#first-second-tests">First &amp; Second Derivative Tests</a></li>
+    <li><a href="#convexity">Convexity</a></li>
+    <li><a href="#gradient-descent">Gradient Descent</a></li>
+    <li><a href="#convergence">Convergence Theory</a></li>
+    <li><a href="#variants">GD Variants &amp; Momentum</a></li>
+    <li><a href="#gradient-ascent">Gradient Ascent</a></li>
+    <li><a href="#knowledge-check">Knowledge Check</a></li>
+  </ul>
+</div>
+
+<!-- Chapter Header -->
+<header class="ch-header">
+  <div class="ch-badge">13</div>
+  <h1 class="ch-title">Optimization</h1>
+  <p class="ch-subtitle">Minima, maxima, gradient descent, convergence theory, and why the algorithm that trains every neural network works.</p>
+  <div class="ch-meta">
+    <span class="ch-meta-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="10"/></svg>
+      50 min read
+    </span>
+    <span class="ch-meta-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+      Part II &middot; Calculus
+    </span>
+    <button class="complete-btn" id="completeBtn" onclick="toggleChapterComplete()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+      <span id="completeBtnText">Mark as Complete</span>
+    </button>
+  </div>
+</header>
+
+<!-- Feynman Bridge -->
+<div class="feynman-bridge">
+  <div class="feynman-label">Mental Model</div>
+  <h3>Rolling Downhill</h3>
+  <p>Imagine a ball placed on a hilly landscape. Release it and gravity pulls it downhill — it accelerates where the slope is steep, slows where it flattens, and eventually settles in a valley. <strong>Gradient descent</strong> does exactly this, but in the landscape of a loss function. The derivative tells us which way is "downhill" at our current position, and we take a step in that direction. The step size (learning rate) controls how far we roll per step. Too large and we overshoot the valley; too small and training takes forever. Understanding the theory of minima and maxima tells us what kinds of valleys exist and when we are guaranteed to find the deepest one.</p>
+</div>
+
+<!-- Section 1: Minima and Maxima -->
+<section class="section" id="extrema">
+  <div class="section-divider"><span class="section-num">Section 13.1</span></div>
+  <h2>Minima and Maxima</h2>
+
+  <div class="def-box">
+    <div class="box-label">Definition — Local and Global Extrema</div>
+    <p>Let \(f : D \to \mathbb{R}\). A point \(x^* \in D\) is a:</p>
+    <ul>
+      <li><strong>Local minimum</strong> if there exists \(\delta > 0\) such that \(f(x^*) \leq f(x)\) for all \(x \in D\) with \(|x - x^*| < \delta\).</li>
+      <li><strong>Global minimum</strong> if \(f(x^*) \leq f(x)\) for all \(x \in D\).</li>
+      <li><strong>Strict local minimum</strong> if the inequalities above are strict for \(x \neq x^*\).</li>
+    </ul>
+    <p>Maxima are defined analogously with reversed inequalities.</p>
+  </div>
+
+  <p>Every global minimum is a local minimum, but the converse is false. A function like \(f(x) = x^4 - 2x^2\) has two local minima (at \(x = \pm 1\)) and one local maximum (at \(x = 0\)). In deep learning, loss surfaces have astronomically many local minima, yet recent theory suggests that most are "good enough" — close to the global minimum in value.</p>
+
+  <div class="thm-box">
+    <div class="box-label">Theorem — Fermat's Theorem (Necessary Condition)</div>
+    <p>If \(f\) is differentiable at an interior point \(x^*\) and \(x^*\) is a local extremum, then \(f'(x^*) = 0\).</p>
+  </div>
+
+  <button class="proof-toggle" onclick="toggleProof('proof1')"><span class="arrow">&#9654;</span> <span>Show Proof</span></button>
+  <div class="proof-body" id="proof1">
+    <div class="proof-inner">
+      <p>Suppose \(x^*\) is a local minimum (the maximum case is analogous). For small \(h > 0\), \(f(x^* + h) \geq f(x^*)\), so \(\frac{f(x^* + h) - f(x^*)}{h} \geq 0\). Taking \(h \to 0^+\), the derivative from the right is \(\geq 0\). For \(h < 0\), \(\frac{f(x^* + h) - f(x^*)}{h} \leq 0\) (numerator \(\geq 0\), denominator \(< 0\)). Taking \(h \to 0^-\), the derivative from the left is \(\leq 0\). Since \(f\) is differentiable, both one-sided limits equal \(f'(x^*)\), giving \(0 \leq f'(x^*) \leq 0\), so \(f'(x^*) = 0\). \(\blacksquare\)</p>
+    </div>
+  </div>
+
+  <div class="def-box">
+    <div class="box-label">Definition — Critical Point</div>
+    <p>A point \(x_0\) where \(f'(x_0) = 0\) is called a <strong>critical point</strong> (or stationary point). Critical points are candidates for extrema, but not all critical points are extrema — some are saddle points or inflection points.</p>
+  </div>
+
+  <p>Fermat's theorem gives a necessary but not sufficient condition. The point \(x = 0\) for \(f(x) = x^3\) satisfies \(f'(0) = 0\) but is neither a minimum nor a maximum — it is an inflection point. We need the derivative tests of the next section to classify critical points.</p>
+</section>
+
+<!-- Section 2: First and Second Derivative Tests -->
+<section class="section" id="first-second-tests">
+  <div class="section-divider"><span class="section-num">Section 13.2</span></div>
+  <h2>First and Second Derivative Tests</h2>
+
+  <div class="thm-box">
+    <div class="box-label">Theorem — First Derivative Test</div>
+    <p>Suppose \(f\) is continuous on an interval containing \(x^*\) and differentiable near \(x^*\) (except possibly at \(x^*\) itself).</p>
+    <p>If \(f'(x) < 0\) for \(x < x^*\) and \(f'(x) > 0\) for \(x > x^*\) (derivative changes from negative to positive), then \(x^*\) is a <strong>local minimum</strong>.</p>
+    <p>If \(f'(x) > 0\) for \(x < x^*\) and \(f'(x) < 0\) for \(x > x^*\), then \(x^*\) is a <strong>local maximum</strong>.</p>
+  </div>
+
+  <div class="thm-box">
+    <div class="box-label">Theorem — Second Derivative Test</div>
+    <p>Suppose \(f'(x^*) = 0\) and \(f''(x^*)\) exists.</p>
+    <p>If \(f''(x^*) > 0\), then \(x^*\) is a <strong>strict local minimum</strong>.</p>
+    <p>If \(f''(x^*) < 0\), then \(x^*\) is a <strong>strict local maximum</strong>.</p>
+    <p>If \(f''(x^*) = 0\), the test is <strong>inconclusive</strong>.</p>
+  </div>
+
+  <p>The second derivative test is intuitive: \(f''(x^*) > 0\) means the function is curving upward (bowl shape), so the critical point sits at the bottom — a minimum. In the multivariable case (Chapter 17), the second derivative test generalises to checking whether the Hessian matrix is positive definite.</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre class="language-python"><code>import numpy as np
+
+def find_critical_points(f, f_prime, f_double_prime, xs):
+    """Find and classify critical points in a search grid."""
+    # Find approximate zeros of f'
+    signs = np.sign(f_prime(xs))
+    sign_changes = np.where(np.diff(signs) != 0)[0]
+
+    results = []
+    for idx in sign_changes:
+        # Bisect to find precise critical point
+        a, b = xs[idx], xs[idx + 1]
+        for _ in range(64):
+            mid = (a + b) / 2
+            if f_prime(mid) * f_prime(a) < 0:
+                b = mid
+            else:
+                a = mid
+        x_crit = (a + b) / 2
+        f2 = f_double_prime(x_crit)
+
+        if f2 > 1e-10:
+            kind = "local minimum"
+        elif f2 < -1e-10:
+            kind = "local maximum"
+        else:
+            kind = "inconclusive"
+        results.append((x_crit, f(x_crit), kind))
+    return results
+
+# Example: f(x) = x⁴ - 2x²
+f = lambda x: x**4 - 2*x**2
+fp = lambda x: 4*x**3 - 4*x
+fpp = lambda x: 12*x**2 - 4
+
+xs = np.linspace(-2, 2, 10000)
+for x, fx, kind in find_critical_points(f, fp, fpp, xs):
+    print(f"x = {x:+.6f}, f(x) = {fx:+.6f}  →  {kind}")</code></pre>
+  </div>
+</section>
+
+<!-- Section 3: Convexity -->
+<section class="section" id="convexity">
+  <div class="section-divider"><span class="section-num">Section 13.3</span></div>
+  <h2>Convexity</h2>
+
+  <p>Convexity is the single most important structural property for optimization. On convex problems, every local minimum is global — there are no traps.</p>
+
+  <div class="def-box">
+    <div class="box-label">Definition — Convex Function</div>
+    <p>A function \(f : I \to \mathbb{R}\) (where \(I\) is an interval) is <strong>convex</strong> if for all \(x, y \in I\) and \(\lambda \in [0, 1]\):</p>
+    <p>\[f(\lambda x + (1-\lambda)y) \leq \lambda f(x) + (1-\lambda)f(y).\]</p>
+    <p>Geometrically: the line segment between any two points on the graph lies above (or on) the graph.</p>
+  </div>
+
+  <div class="thm-box">
+    <div class="box-label">Theorem — Second-Order Characterisation</div>
+    <p>If \(f\) is twice differentiable on an interval \(I\), then \(f\) is convex on \(I\) if and only if \(f''(x) \geq 0\) for all \(x \in I\).</p>
+  </div>
+
+  <div class="prop-box">
+    <div class="box-label">Proposition — Convex Functions Have Global Minima</div>
+    <p>If \(f\) is convex and \(x^*\) is a local minimum, then \(x^*\) is a <strong>global minimum</strong>. Moreover, if \(f\) is strictly convex, the global minimum is unique (if it exists).</p>
+  </div>
+
+  <button class="proof-toggle" onclick="toggleProof('proof2')"><span class="arrow">&#9654;</span> <span>Show Proof</span></button>
+  <div class="proof-body" id="proof2">
+    <div class="proof-inner">
+      <p>Suppose \(x^*\) is a local minimum of convex \(f\), and suppose for contradiction that there exists \(y\) with \(f(y) < f(x^*)\). By convexity, for \(\lambda \in (0, 1)\):</p>
+      <p>\[f(\lambda y + (1-\lambda)x^*) \leq \lambda f(y) + (1-\lambda) f(x^*) < \lambda f(x^*) + (1-\lambda) f(x^*) = f(x^*).\]</p>
+      <p>But the point \(\lambda y + (1-\lambda)x^*\) can be made arbitrarily close to \(x^*\) by taking \(\lambda\) small. This contradicts \(x^*\) being a local minimum. \(\blacksquare\)</p>
+    </div>
+  </div>
+
+  <div class="callout">
+    <div class="callout-label">Convexity in ML</div>
+    <p>Linear regression and logistic regression have convex loss functions, so gradient descent is guaranteed to find the global minimum. Deep neural networks have non-convex losses, which is why training involves careful initialisation, learning rate schedules, and multiple restarts. Despite non-convexity, modern overparameterised networks often behave "almost convexly" in practice.</p>
+  </div>
+</section>
+
+<!-- Section 4: Gradient Descent -->
+<section class="section" id="gradient-descent">
+  <div class="section-divider"><span class="section-num">Section 13.4</span></div>
+  <h2>Gradient Descent</h2>
+
+  <p>Gradient descent is the workhorse algorithm of machine learning. The idea is simple: to minimise \(f\), start at some point and repeatedly take steps in the direction of steepest descent.</p>
+
+  <div class="def-box">
+    <div class="box-label">Definition — Gradient Descent Update</div>
+    <p>Given a differentiable function \(f : \mathbb{R} \to \mathbb{R}\), the <strong>gradient descent</strong> iteration is:</p>
+    <p>\[x_{k+1} = x_k - \eta \, f'(x_k),\]</p>
+    <p>where \(\eta > 0\) is the <strong>learning rate</strong> (step size).</p>
+  </div>
+
+  <p>The negative sign ensures we move in the direction that <em>decreases</em> \(f\). When \(f'(x_k) > 0\), the function is increasing at \(x_k\), so we step left (decrease \(x\)). When \(f'(x_k) < 0\), we step right.</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre class="language-python"><code>import numpy as np
+
+def gradient_descent(f, f_prime, x0, lr=0.1, tol=1e-8, max_iter=10000):
+    """Vanilla gradient descent in 1D with convergence tracking."""
+    x = x0
+    history = [x]
+    for i in range(max_iter):
+        grad = f_prime(x)
+        x = x - lr * grad
+        history.append(x)
+        if abs(grad) < tol:
+            print(f"Converged in {i+1} iterations")
+            break
+    return x, np.array(history)
+
+# Minimise f(x) = (x - 3)² + 1
+f = lambda x: (x - 3)**2 + 1
+fp = lambda x: 2 * (x - 3)
+
+x_min, hist = gradient_descent(f, fp, x0=0.0, lr=0.1)
+print(f"Minimum at x = {x_min:.6f}, f(x) = {f(x_min):.6f}")
+print(f"True minimum: x = 3, f(x) = 1")</code></pre>
+  </div>
+
+  <h3>The Learning Rate</h3>
+
+  <p>The learning rate \(\eta\) is the most important hyperparameter in gradient descent. Its effect can be understood through the lens of Taylor expansion. Near a critical point of a quadratic \(f(x) = \frac{1}{2}Lx^2\), the GD update gives \(x_{k+1} = (1 - \eta L)x_k\). This contracts to zero when \(|1 - \eta L| < 1\), i.e., \(\eta < 2/L\). For \(\eta = 1/L\), the convergence is fastest (one-step for a pure quadratic). For \(\eta > 2/L\), the iterates diverge.</p>
+
+  <div class="callout">
+    <div class="callout-label">The Goldilocks Zone</div>
+    <p>Too small: convergence is painfully slow — the ball barely moves. Too large: the ball overshoots the valley and oscillates or diverges. Just right: smooth, rapid convergence to the minimum. In practice, learning rate schedules (warmup + decay) or adaptive methods (Adam, AdaGrad) automate finding this sweet spot.</p>
+  </div>
+</section>
+
+<!-- Section 5: Convergence Theory -->
+<section class="section" id="convergence">
+  <div class="section-divider"><span class="section-num">Section 13.5</span></div>
+  <h2>Convergence Theory</h2>
+
+  <p>When and how fast does gradient descent converge? The answer depends on the regularity of \(f\).</p>
+
+  <div class="def-box">
+    <div class="box-label">Definition — L-Smoothness</div>
+    <p>A differentiable function \(f\) is <strong>\(L\)-smooth</strong> if its derivative is Lipschitz continuous with constant \(L\):</p>
+    <p>\[|f'(x) - f'(y)| \leq L|x - y| \quad \text{for all } x, y.\]</p>
+    <p>Equivalently (for twice-differentiable functions), \(|f''(x)| \leq L\) everywhere.</p>
+  </div>
+
+  <div class="thm-box">
+    <div class="box-label">Theorem — GD Convergence for Convex L-Smooth Functions</div>
+    <p>If \(f\) is convex and \(L\)-smooth, and we run gradient descent with \(\eta = 1/L\), then after \(k\) iterations:</p>
+    <p>\[f(x_k) - f(x^*) \leq \frac{L\|x_0 - x^*\|^2}{2k}.\]</p>
+    <p>This is an \(O(1/k)\) rate. To achieve \(\varepsilon\)-accuracy, we need \(O(1/\varepsilon)\) iterations.</p>
+  </div>
+
+  <div class="def-box">
+    <div class="box-label">Definition — Strong Convexity</div>
+    <p>A function \(f\) is <strong>\(\mu\)-strongly convex</strong> (with \(\mu > 0\)) if \(f(x) - \frac{\mu}{2}x^2\) is convex. Equivalently, \(f''(x) \geq \mu\) for all \(x\). Strong convexity guarantees a unique minimum and faster convergence.</p>
+  </div>
+
+  <div class="thm-box">
+    <div class="box-label">Theorem — GD Convergence for Strongly Convex L-Smooth Functions</div>
+    <p>If \(f\) is \(\mu\)-strongly convex and \(L\)-smooth, gradient descent with \(\eta = 1/L\) gives:</p>
+    <p>\[f(x_k) - f(x^*) \leq \left(1 - \frac{\mu}{L}\right)^k \bigl(f(x_0) - f(x^*)\bigr).\]</p>
+    <p>This is <strong>linear</strong> (exponential) convergence. The ratio \(\kappa = L/\mu\) is the <strong>condition number</strong> — it controls how many iterations are needed.</p>
+  </div>
+
+  <p>A well-conditioned problem (\(\kappa\) close to 1) converges in few steps. An ill-conditioned problem (\(\kappa \gg 1\)) converges slowly because the loss landscape is a narrow, elongated valley — the gradient zigzags across the narrow dimension rather than making progress along the long dimension.</p>
+
+  <div class="perf-dive">
+    <div class="perf-label">Performance Deep-Dive</div>
+    <h4>Visualising Convergence Rates</h4>
+    <p>Compare convergence on well-conditioned vs. ill-conditioned quadratics.</p>
+    <pre class="language-python"><code>import numpy as np
+
+def gd_quadratic(L, mu, x0, num_steps, lr=None):
+    """GD on f(x) = 0.5*L*x² (shifted so minimum at 0)."""
+    if lr is None:
+        lr = 1.0 / L  # optimal for L-smooth
+    x = x0
+    losses = []
+    for _ in range(num_steps):
+        grad = L * x  # f'(x) = L*x for f = 0.5*L*x²
+        x = x - lr * grad
+        losses.append(0.5 * L * x**2)
+    return losses
+
+# Well-conditioned: κ = 2
+losses_good = gd_quadratic(L=2, mu=1, x0=10.0, num_steps=50)
+
+# Ill-conditioned: κ = 100
+losses_bad = gd_quadratic(L=100, mu=1, x0=10.0, num_steps=50)
+
+print("Step | Well-cond (κ=2) | Ill-cond (κ=100)")
+for i in [0, 5, 10, 20, 49]:
+    print(f"  {i:2d}  | {losses_good[i]:14.6e} | {losses_bad[i]:14.6e}")
+# Well-conditioned converges in ~10 steps
+# Ill-conditioned still has significant error after 50</code></pre>
+  </div>
+</section>
+
+<!-- Section 6: GD Variants and Momentum -->
+<section class="section" id="variants">
+  <div class="section-divider"><span class="section-num">Section 13.6</span></div>
+  <h2>GD Variants and Momentum</h2>
+
+  <h3>Stochastic Gradient Descent (SGD)</h3>
+
+  <p>In machine learning, the loss is typically a sum over \(n\) training examples: \(L(\theta) = \frac{1}{n}\sum_{i=1}^n \ell_i(\theta)\). Computing the full gradient costs \(O(n)\) — prohibitive when \(n\) is millions. <strong>Stochastic gradient descent</strong> approximates the gradient using a random mini-batch \(\mathcal{B} \subset \{1, \ldots, n\}\):</p>
+
+  \[g_k = \frac{1}{|\mathcal{B}|}\sum_{i \in \mathcal{B}} \nabla \ell_i(\theta_k), \quad \theta_{k+1} = \theta_k - \eta \, g_k.\]
+
+  <p>The stochastic gradient \(g_k\) is an unbiased estimator of the true gradient (\(\mathbb{E}[g_k] = \nabla L(\theta_k)\)), but introduces variance. Larger batch sizes reduce variance but cost more per step.</p>
+
+  <h3>Momentum</h3>
+
+  <p>Momentum addresses the zigzag problem on ill-conditioned landscapes by maintaining a "velocity" that accumulates past gradients:</p>
+
+  \[v_{k+1} = \beta \, v_k + f'(x_k), \quad x_{k+1} = x_k - \eta \, v_{k+1},\]
+
+  <p>where \(\beta \in [0, 1)\) is the momentum coefficient (typically 0.9). The velocity \(v\) acts like a rolling average of gradients. Consistent gradient directions get amplified; oscillating directions cancel out. This smooths the trajectory and accelerates convergence along the long axis of narrow valleys.</p>
+
+  <div class="thm-box">
+    <div class="box-label">Theorem — Nesterov's Accelerated Gradient (Optimal Rate)</div>
+    <p>For \(L\)-smooth convex functions, Nesterov's accelerated gradient method achieves:</p>
+    <p>\[f(x_k) - f(x^*) \leq O\!\left(\frac{L\|x_0 - x^*\|^2}{k^2}\right),\]</p>
+    <p>which is an \(O(1/k^2)\) rate — provably optimal among first-order methods. This improves on the \(O(1/k)\) rate of vanilla GD.</p>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre class="language-python"><code>import numpy as np
+
+def gd_momentum(f_prime, x0, lr=0.01, beta=0.9, max_iter=500):
+    """Gradient descent with momentum."""
+    x = x0
+    v = 0.0
+    history = [x]
+    for _ in range(max_iter):
+        grad = f_prime(x)
+        v = beta * v + grad
+        x = x - lr * v
+        history.append(x)
+    return x, np.array(history)
+
+def nesterov_gd(f_prime, x0, lr=0.01, max_iter=500):
+    """Nesterov accelerated gradient descent."""
+    x = x0
+    y = x0
+    history = [x]
+    for k in range(1, max_iter + 1):
+        x_new = y - lr * f_prime(y)
+        y = x_new + (k - 1) / (k + 2) * (x_new - x)
+        x = x_new
+        history.append(x)
+    return x, np.array(history)
+
+# Compare on f(x) = 0.5 * 50 * x² (condition number = 50)
+fp = lambda x: 50 * x
+x0 = 10.0
+
+_, hist_vanilla = gradient_descent(lambda x: 25*x**2, fp, x0, lr=0.019, max_iter=200)
+_, hist_momentum = gd_momentum(fp, x0, lr=0.019, beta=0.9, max_iter=200)
+_, hist_nesterov = nesterov_gd(fp, x0, lr=0.019, max_iter=200)
+
+for name, h in [("Vanilla", hist_vanilla),
+                ("Momentum", hist_momentum),
+                ("Nesterov", hist_nesterov)]:
+    final_loss = 25 * h[-1]**2
+    print(f"{name:10s}: x = {h[-1]:+.6e}, loss = {final_loss:.6e}")</code></pre>
+  </div>
+</section>
+
+<!-- Section 7: Gradient Ascent -->
+<section class="section" id="gradient-ascent">
+  <div class="section-divider"><span class="section-num">Section 13.7</span></div>
+  <h2>Gradient Ascent</h2>
+
+  <p>Maximising \(f\) is equivalent to minimising \(-f\). <strong>Gradient ascent</strong> simply flips the sign:</p>
+
+  \[x_{k+1} = x_k + \eta \, f'(x_k).\]
+
+  <p>We step in the direction of the gradient (uphill). This appears in several ML contexts:</p>
+
+  <p><strong>Generative adversarial networks (GANs):</strong> The discriminator maximises its ability to distinguish real from fake samples, while the generator minimises it. This min-max game alternates gradient descent (generator) and gradient ascent (discriminator).</p>
+
+  <p><strong>Reinforcement learning:</strong> Policy gradient methods maximise expected reward \(J(\theta) = \mathbb{E}[R]\) by ascending the gradient \(\nabla_\theta J\).</p>
+
+  <p><strong>Maximum likelihood:</strong> Finding the parameters that maximise the log-likelihood \(\ell(\theta) = \sum_i \log p(x_i|\theta)\) is gradient ascent on \(\ell\), or equivalently gradient descent on the negative log-likelihood.</p>
+
+  <div class="why-ai">
+    <div class="why-label">Why This Matters for AI/ML</div>
+    <h3>The Optimisation Perspective on Deep Learning</h3>
+    <ul>
+      <li><strong>Training = optimization:</strong> Every neural network is trained by minimising a loss function. The tools of this chapter — critical points, derivative tests, convexity, gradient descent — are exactly the tools used to find good parameters.</li>
+      <li><strong>Learning rate is king:</strong> The most impactful hyperparameter. Theory says \(\eta < 2/L\) for stability; in practice, learning rate warmup prevents early instability and cosine decay helps fine-tune.</li>
+      <li><strong>Condition number determines difficulty:</strong> Ill-conditioned losses (large \(\kappa = L/\mu\)) cause slow convergence. Batch normalisation, layer normalisation, and careful initialisation improve conditioning.</li>
+      <li><strong>Momentum is essential:</strong> Vanilla SGD is rarely used alone. Momentum (\(\beta = 0.9\)) or Adam (adaptive learning rates per parameter) are standard. Nesterov momentum is provably optimal for smooth convex functions.</li>
+      <li><strong>Non-convexity is manageable:</strong> Despite theory requiring convexity for guarantees, deep networks train successfully because: (1) loss surfaces of overparameterised networks have few "bad" local minima, (2) saddle points dominate over local minima in high dimensions, and (3) SGD noise helps escape shallow local minima.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- Socratic Knowledge Check -->
+<section class="socratic" id="knowledge-check">
+  <div class="socratic-header">
+    <div class="socratic-icon">&#129300;</div>
+    <h2>Socratic Knowledge Check</h2>
+  </div>
+
+  <div class="socratic-scenario">
+    You are training a neural network and notice that the loss plateaus after a few epochs but the learning rate is reasonable. A colleague suggests adding momentum. Using the theory from this chapter, reason about what is happening and whether momentum will help.
+  </div>
+
+  <div class="q-card">
+    <div class="q-top">
+      <div class="q-num">1</div>
+      <div class="q-text">Find all critical points of \(f(x) = x^3 - 3x + 2\) and classify each as a local min, local max, or neither.</div>
+    </div>
+    <button class="reveal-btn" onclick="toggleAnswer('a1')"><span>Reveal Thinking</span></button>
+    <div class="q-answer" id="a1">
+      <div class="q-answer-inner">\(f'(x) = 3x^2 - 3 = 3(x-1)(x+1) = 0\) gives \(x = 1\) and \(x = -1\). Second derivatives: \(f''(x) = 6x\). At \(x = 1\): \(f''(1) = 6 > 0\) → <strong>local minimum</strong> with \(f(1) = 0\). At \(x = -1\): \(f''(-1) = -6 < 0\) → <strong>local maximum</strong> with \(f(-1) = 4\).</div>
+    </div>
+  </div>
+
+  <div class="q-card">
+    <div class="q-top">
+      <div class="q-num">2</div>
+      <div class="q-text">Why does gradient descent with \(\eta = 0.5\) diverge on \(f(x) = 5x^2\)? What is the maximum safe learning rate?</div>
+    </div>
+    <button class="reveal-btn" onclick="toggleAnswer('a2')"><span>Reveal Thinking</span></button>
+    <div class="q-answer" id="a2">
+      <div class="q-answer-inner">Here \(f'(x) = 10x\), so \(L = 10\) (the Lipschitz constant of \(f'\)). The GD update is \(x_{k+1} = x_k - 10\eta x_k = (1 - 10\eta)x_k\). For convergence we need \(|1 - 10\eta| < 1\), giving \(\eta < 2/10 = 0.2\). With \(\eta = 0.5\), the multiplier is \(|1 - 5| = 4\), so \(|x_k|\) grows by a factor of 4 each step — divergence. The optimal rate \(\eta^* = 1/L = 0.1\) gives one-step convergence for this quadratic.</div>
+    </div>
+  </div>
+
+  <div class="q-card">
+    <div class="q-top">
+      <div class="q-num">3</div>
+      <div class="q-text">Is the cross-entropy loss \(\ell(p) = -[y\log p + (1-y)\log(1-p)]\) convex in \(p \in (0,1)\)? What does this imply for logistic regression?</div>
+    </div>
+    <button class="reveal-btn" onclick="toggleAnswer('a3')"><span>Reveal Thinking</span></button>
+    <div class="q-answer" id="a3">
+      <div class="q-answer-inner">Compute: \(\ell'(p) = -y/p + (1-y)/(1-p)\) and \(\ell''(p) = y/p^2 + (1-y)/(1-p)^2 > 0\) for \(p \in (0,1)\) and \(y \in \{0,1\}\). So yes, cross-entropy is <strong>strictly convex</strong> in \(p\). For logistic regression, \(p = \sigma(w^T x)\) and the composition with the linear model is also convex in \(w\) (since \(\sigma\) is log-concave). This means gradient descent on logistic regression will find the <strong>global</strong> minimum — no worries about local minima.</div>
+    </div>
+  </div>
+
+  <div class="q-card">
+    <div class="q-top">
+      <div class="q-num">4</div>
+      <div class="q-text">Your loss surface has condition number \(\kappa = 1000\). Without momentum, roughly how many GD iterations are needed to reduce the error by a factor of \(e^{-1}\)? With Nesterov acceleration?</div>
+    </div>
+    <button class="reveal-btn" onclick="toggleAnswer('a4')"><span>Reveal Thinking</span></button>
+    <div class="q-answer" id="a4">
+      <div class="q-answer-inner">For strongly convex \(L\)-smooth functions, vanilla GD converges as \((1 - \mu/L)^k = (1 - 1/\kappa)^k\). To reduce error by \(e^{-1}\), we need \((1 - 1/1000)^k \approx e^{-k/1000} = e^{-1}\), giving \(k \approx 1000\) iterations. Nesterov acceleration improves this to \((1 - 1/\sqrt{\kappa})^k\), needing \(k \approx \sqrt{1000} \approx 32\) iterations. That is a ~30× speedup — which is why momentum matters enormously for ill-conditioned problems.</div>
+    </div>
+  </div>
+
+  <div class="q-card">
+    <div class="q-top">
+      <div class="q-num">5</div>
+      <div class="q-text">Back to the scenario: the loss has plateaued with a reasonable learning rate. Is the issue likely a local minimum, a saddle point, or ill-conditioning? How does momentum help each case?</div>
+    </div>
+    <button class="reveal-btn" onclick="toggleAnswer('a5')"><span>Reveal Thinking</span></button>
+    <div class="q-answer" id="a5">
+      <div class="q-answer-inner">In high-dimensional loss surfaces, plateaus are more often caused by <strong>saddle points</strong> or <strong>ill-conditioning</strong> than true local minima. At a saddle point, the gradient is near zero in most directions but negative curvature exists along some direction. Ill-conditioning causes zigzag behaviour that appears as stagnation. Momentum helps both: (1) at saddle points, accumulated velocity from before the plateau carries the iterate through the flat region, (2) for ill-conditioning, momentum damps oscillations across narrow dimensions and amplifies progress along the long dimension. It is less helpful for true sharp local minima, where stochastic noise from mini-batching may be more effective at escaping.</div>
+    </div>
+  </div>
+</section>
+
+<!-- Chapter Navigation -->
+<nav class="ch-nav">
+  <a class="nav-btn prev" href="ch12.html">&larr; Chapter 12: Differentiation</a>
+  <a class="nav-btn next" href="ch14.html">Chapter 14: Integration &rarr;</a>
+</nav>
+
+</main>
+</div>
+
+<!-- Back to Top -->
+<button class="back-top" id="backTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 15l-6-6-6 6"/></svg>
+</button>
+
+<script>
+(function() {
+  const progressBar = document.getElementById('readingProgress');
+  window.addEventListener('scroll', () => {
+    const h = document.documentElement;
+    const pct = (h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100;
+    progressBar.style.width = Math.min(pct, 100) + '%';
+  });
+
+  const backTop = document.getElementById('backTop');
+  window.addEventListener('scroll', () => {
+    backTop.classList.toggle('visible', window.scrollY > 400);
+  });
+
+  const tocLinks = document.querySelectorAll('#tocList a');
+  const sections = [];
+  tocLinks.forEach(a => {
+    const id = a.getAttribute('data-section');
+    const el = document.getElementById(id);
+    if (el) sections.push({ el, a });
+  });
+
+  function updateActiveToc() {
+    let current = sections[0];
+    for (const s of sections) {
+      if (s.el.getBoundingClientRect().top <= 120) current = s;
+    }
+    tocLinks.forEach(a => a.classList.remove('active'));
+    if (current) current.a.classList.add('active');
+  }
+  window.addEventListener('scroll', updateActiveToc);
+  updateActiveToc();
+
+  const mToggle = document.getElementById('mobileTocToggle');
+  const mList = document.getElementById('mobileTocList');
+  mToggle.addEventListener('click', () => {
+    mToggle.classList.toggle('open');
+    mList.classList.toggle('open');
+  });
+  mList.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+    mToggle.classList.remove('open');
+    mList.classList.remove('open');
+  }));
+
+  window.toggleProof = function(id) {
+    const body = document.getElementById(id);
+    const btn = body.previousElementSibling;
+    body.classList.toggle('open');
+    btn.classList.toggle('open');
+    btn.querySelector('span').textContent = body.classList.contains('open') ? 'Hide Proof' : 'Show Proof';
+  };
+
+  window.toggleAnswer = function(id) {
+    const el = document.getElementById(id);
+    const btn = el.previousElementSibling;
+    el.classList.toggle('open');
+    btn.classList.toggle('open');
+    btn.querySelector('span').textContent = el.classList.contains('open') ? 'Hide' : 'Reveal Thinking';
+  };
+
+  window.copyCode = function(btn) {
+    const code = btn.closest('.code-block, .perf-dive').querySelector('code').textContent;
+    navigator.clipboard.writeText(code).then(() => {
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+    });
+  };
+
+  const STORAGE_KEY = 'mathml_completed';
+  let completed = new Set();
+  try {
+    const s = localStorage.getItem(STORAGE_KEY);
+    if (s) completed = new Set(JSON.parse(s));
+  } catch(e) {}
+
+  const btn = document.getElementById('completeBtn');
+  const btnText = document.getElementById('completeBtnText');
+
+  function syncBtn() {
+    if (completed.has('13')) {
+      btn.classList.add('done');
+      btnText.textContent = 'Completed';
+    } else {
+      btn.classList.remove('done');
+      btnText.textContent = 'Mark as Complete';
+    }
+  }
+  syncBtn();
+
+  window.toggleChapterComplete = function() {
+    if (completed.has('13')) completed.delete('13');
+    else completed.add('13');
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify([...completed])); } catch(e) {}
+    syncBtn();
+  };
+})();
+</script>
+
+</body>
+</html>
