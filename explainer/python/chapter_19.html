@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 19: Decorators & Metaprogramming</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: #0a0a0f;
+            --bg-darker: #050508;
+            --bg-card: #1a1a23;
+            --bg-hover: #252530;
+            --accent: #a78bfa;
+            --accent-dark: #8b5cf6;
+            --text-primary: #e4e4e7;
+            --text-secondary: #a1a1a6;
+            --text-tertiary: #71717a;
+            --border: #27272e;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --code-bg: #1e1e2e;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Top Navigation */
+        .topnav {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(10, 10, 15, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+        }
+
+        .topnav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .topnav-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .topnav-nav {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .topnav-nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.3s ease;
+        }
+
+        .topnav-nav a:hover {
+            color: var(--accent);
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, rgba(167, 139, 250, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 4rem 2rem;
+            margin: 3rem 0;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--accent) 0%, #f0abfc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Mental Model Section */
+        .mental-model {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 3rem 0;
+            border-left: 4px solid var(--accent);
+        }
+
+        .mental-model h2 {
+            color: var(--accent);
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .mental-model p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        /* Section Styling */
+        .section {
+            margin: 3rem 0;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.5rem;
+        }
+
+        .section h3 {
+            font-size: 1.3rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: var(--accent);
+        }
+
+        .section p, .section li {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .section ul, .section ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .section li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Code Block */
+        .code-block {
+            background-color: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .code-block code {
+            color: var(--text-primary);
+        }
+
+        .code-label {
+            font-size: 0.85rem;
+            color: var(--text-tertiary);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        /* Tables */
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th {
+            background-color: rgba(167, 139, 250, 0.15);
+            color: var(--accent);
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Deep-Dive Toggle */
+        .deep-dive {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin: 1.5rem 0;
+            overflow: hidden;
+        }
+
+        .deep-dive-header {
+            background-color: rgba(167, 139, 250, 0.1);
+            padding: 1rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+            transition: background-color 0.3s ease;
+        }
+
+        .deep-dive-header:hover {
+            background-color: rgba(167, 139, 250, 0.15);
+        }
+
+        .deep-dive-header h4 {
+            color: var(--accent);
+            margin: 0;
+            font-size: 1rem;
+        }
+
+        .deep-dive-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            background-color: rgba(167, 139, 250, 0.2);
+            border-radius: 4px;
+            transition: transform 0.3s ease;
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        .deep-dive.active .deep-dive-toggle {
+            transform: rotate(180deg);
+        }
+
+        .deep-dive-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .deep-dive.active .deep-dive-content {
+            max-height: 2000px;
+        }
+
+        .deep-dive-body {
+            padding: 1.5rem;
+        }
+
+        .deep-dive-body p, .deep-dive-body li {
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+        }
+
+        .deep-dive-body ul {
+            margin-left: 1.5rem;
+        }
+
+        /* Note Box */
+        .note-box {
+            background-color: rgba(16, 185, 129, 0.1);
+            border-left: 4px solid var(--success);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .note-box strong {
+            color: var(--success);
+        }
+
+        .warning-box {
+            background-color: rgba(245, 158, 11, 0.1);
+            border-left: 4px solid var(--warning);
+        }
+
+        .warning-box strong {
+            color: var(--warning);
+        }
+
+        .error-box {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-left: 4px solid var(--error);
+        }
+
+        .error-box strong {
+            color: var(--error);
+        }
+
+        /* Socratic Q&A */
+        .socratic-qa {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin: 1.5rem 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .qa-item {
+            border-bottom: 1px solid var(--border);
+            padding: 1.5rem;
+            transition: background-color 0.3s ease;
+        }
+
+        .qa-item:last-child {
+            border-bottom: none;
+        }
+
+        .qa-item:hover {
+            background-color: var(--bg-hover);
+        }
+
+        .qa-question {
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            user-select: none;
+        }
+
+        .qa-question-text {
+            font-weight: 600;
+            color: var(--accent);
+            flex: 1;
+            padding-right: 1rem;
+        }
+
+        .qa-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 24px;
+            height: 24px;
+            background-color: rgba(167, 139, 250, 0.2);
+            border-radius: 4px;
+            color: var(--accent);
+            font-weight: bold;
+            transition: transform 0.3s ease;
+        }
+
+        .qa-item.active .qa-toggle {
+            transform: rotate(180deg);
+        }
+
+        .qa-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, margin-top 0.3s ease;
+            color: var(--text-secondary);
+        }
+
+        .qa-item.active .qa-answer {
+            max-height: 1000px;
+            margin-top: 1rem;
+        }
+
+        /* Button */
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background-color: var(--accent);
+            color: var(--bg-dark);
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .btn:hover {
+            background-color: var(--accent-dark);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background-color: var(--bg-card);
+            color: var(--accent);
+            border: 1px solid var(--accent);
+        }
+
+        .btn-secondary:hover {
+            background-color: rgba(167, 139, 250, 0.1);
+        }
+
+        /* Footer */
+        .footer {
+            background-color: var(--bg-card);
+            border-top: 1px solid var(--border);
+            padding: 3rem 2rem;
+            margin-top: 4rem;
+            text-align: center;
+            color: var(--text-tertiary);
+        }
+
+        .footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .section h2 {
+                font-size: 1.5rem;
+            }
+
+            .topnav-nav {
+                gap: 1rem;
+                font-size: 0.85rem;
+            }
+
+            .container {
+                padding: 0 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Navigation -->
+    <nav class="topnav">
+        <div class="topnav-content">
+            <div class="topnav-title">Chapter 19</div>
+            <div class="topnav-nav">
+                <a href="#decorators">Decorators</a>
+                <a href="#builtins">Built-ins</a>
+                <a href="#meta">Meta</a>
+                <a href="#qa">Q&A</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Hero Section -->
+        <section class="hero">
+            <h1>Decorators & Metaprogramming</h1>
+            <p>Learn how to write functions that modify other functions. Master decorators, metaprogramming, and the tools Python provides for introspection and code transformation.</p>
+        </section>
+
+        <!-- Mental Model -->
+        <section class="mental-model">
+            <h2>Mental Model: Functions as First-Class Values</h2>
+            <p><strong>The Core Idea:</strong> In Python, functions are objects. You can pass them as arguments, return them from other functions, and store them in data structures. A decorator is simply a function that takes a function as input and returns a modified function. The `@decorator` syntax is syntactic sugar for function composition: `@dec def func(): ...` is equivalent to `func = dec(func)`.</p>
+            <p><strong>Key Insight:</strong> Decorators enable cross-cutting concerns: logging, caching, validation, timing, and more—without modifying the original function. They work through closures, capturing the original function and wrapping it with new behavior.</p>
+            <p><strong>Practical Consequence:</strong> Understanding decorators unlocks advanced patterns: parameterized decorators, stacked decorators, class decorators, and the descriptor protocol. Metaprogramming tools like `globals()`, `getattr()`, and `__dict__` allow code to inspect and modify itself at runtime.</p>
+        </section>
+
+        <!-- Section 1: What Are Decorators -->
+        <section class="section" id="decorators">
+            <h2>What Are Decorators?</h2>
+
+            <h3>Functions as Objects: The Foundation</h3>
+            <p>Python treats functions as first-class objects. You can assign them to variables, pass them as arguments, and return them from other functions.</p>
+
+            <div class="code-block">
+                <span class="code-label">Functions as objects</span>
+                <code>def greet(name):
+    return f"Hello, {name}!"
+
+# Assign function to variable
+say_hello = greet
+print(say_hello("Alice"))  # Hello, Alice!
+
+# Pass function as argument
+def call_twice(func, value):
+    return [func(value), func(value)]
+
+result = call_twice(greet, "Bob")
+print(result)  # ['Hello, Bob!', 'Hello, Bob!']
+</code>
+            </div>
+
+            <h3>Basic Decorator Pattern</h3>
+            <p>A decorator is a function that takes a function as input, wraps it with additional behavior, and returns the modified function.</p>
+
+            <div class="code-block">
+                <span class="code-label">Basic decorator structure</span>
+                <code">def timing_decorator(func):
+    def wrapper(*args, **kwargs):
+        print(f"Calling {func.__name__}")
+        result = func(*args, **kwargs)
+        print(f"Finished {func.__name__}")
+        return result
+    return wrapper
+
+# Manual application
+def add(a, b):
+    return a + b
+
+add = timing_decorator(add)
+add(5, 3)  # Prints: Calling add, Finished add
+</code>
+            </div>
+
+            <h3>The @ Syntax: Syntactic Sugar</h3>
+            <p>The `@decorator` syntax is equivalent to reassigning the function. It's just cleaner.</p>
+
+            <div class="code-block">
+                <span class="code-label">Using @ syntax</span>
+                <code">def timing_decorator(func):
+    def wrapper(*args, **kwargs):
+        print(f"Calling {func.__name__}")
+        result = func(*args, **kwargs)
+        return result
+    return wrapper
+
+@timing_decorator
+def add(a, b):
+    return a + b
+
+# Equivalent to: add = timing_decorator(add)
+add(5, 3)  # Prints: Calling add
+</code>
+            </div>
+
+            <div class="note-box">
+                <strong>Insight:</strong> `@timing_decorator` is just syntactic sugar. Understanding that it's function reassignment makes decorators less magical.
+            </div>
+
+            <h3>functools.wraps: Preserving Function Metadata</h3>
+            <p>When you decorate a function, the wrapper function replaces it. This loses metadata like `__name__`, `__doc__`, and function signature. `functools.wraps` copies this metadata.</p>
+
+            <div class="code-block">
+                <span class="code-label">Without functools.wraps</span>
+                <code">def my_decorator(func):
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    return wrapper
+
+@my_decorator
+def add(a, b):
+    """Add two numbers."""
+    return a + b
+
+print(add.__name__)  # 'wrapper' - Lost the original name!
+print(add.__doc__)   # None - Lost the docstring!
+</code>
+            </div>
+
+            <div class="code-block">
+                <span class="code-label">With functools.wraps (correct)</span>
+                <code">import functools
+
+def my_decorator(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    return wrapper
+
+@my_decorator
+def add(a, b):
+    """Add two numbers."""
+    return a + b
+
+print(add.__name__)  # 'add' - Correct!
+print(add.__doc__)   # 'Add two numbers.' - Correct!
+</code>
+            </div>
+
+            <div class="warning-box">
+                <strong>Best Practice:</strong> Always use `@functools.wraps` in decorators to preserve metadata. This is essential for tools like `help()` and `inspect`.
+            </div>
+
+            <div class="deep-dive">
+                <div class="deep-dive-header">
+                    <h4>Deep Dive: Parameterized Decorators</h4>
+                    <div class="deep-dive-toggle">+</div>
+                </div>
+                <div class="deep-dive-content">
+                    <div class="deep-dive-body">
+                        <p>Sometimes you want to configure a decorator with parameters. This requires an extra layer of nesting—a decorator factory.</p>
+                        <div class="code-block">
+                            <span class="code-label">Parameterized decorator</span>
+                            <code">import functools
+
+def retry(max_attempts=3):
+    """Decorator factory that creates a retry decorator."""
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            for attempt in range(max_attempts):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    if attempt == max_attempts - 1:
+                        raise
+                    print(f"Attempt {attempt + 1} failed, retrying...")
+        return wrapper
+    return decorator
+
+@retry(max_attempts=5)
+def unstable_function():
+    import random
+    if random.random() < 0.7:
+        raise ValueError("Failed!")
+    return "Success!"
+</code>
+                        </div>
+                        <p>The call stack: `@retry(5)` calls `retry(5)`, which returns a decorator function, which then decorates the target function.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Decorating Functions with Arguments -->
+        <section class="section">
+            <h2>Decorating Functions with Arguments</h2>
+
+            <h3>*args and **kwargs: Handling Any Signature</h3>
+            <p>Decorators must work with functions of any signature. Use `*args` and `**kwargs` to capture and pass all arguments.</p>
+
+            <div class="code-block">
+                <span class="code-label">Decorator with *args and **kwargs</span>
+                <code">import functools
+
+def logging_decorator(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        print(f"Calling {func.__name__}")
+        print(f"  args: {args}")
+        print(f"  kwargs: {kwargs}")
+        result = func(*args, **kwargs)
+        print(f"  result: {result}")
+        return result
+    return wrapper
+
+@logging_decorator
+def greet(name, greeting="Hello"):
+    return f"{greeting}, {name}!"
+
+greet("Alice", greeting="Hi")
+# Output:
+# Calling greet
+#   args: ('Alice',)
+#   kwargs: {'greeting': 'Hi'}
+#   result: Hi, Alice!
+</code>
+            </div>
+
+            <h3>Multiple Decorators: Stacking and Order</h3>
+            <p>You can apply multiple decorators to a single function. They execute bottom-to-top on definition, and the wrapping order determines call order.</p>
+
+            <div class="code-block">
+                <span class="code-label">Stacking decorators</span>
+                <code">import functools
+
+def log_calls(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        print(f"-> {func.__name__}")
+        result = func(*args, **kwargs)
+        print(f"<- {func.__name__}")
+        return result
+    return wrapper
+
+def timing(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        import time
+        start = time.time()
+        result = func(*args, **kwargs)
+        elapsed = time.time() - start
+        print(f"  Took {elapsed:.4f}s")
+        return result
+    return wrapper
+
+@log_calls
+@timing
+def slow_function():
+    import time
+    time.sleep(0.1)
+    return 42
+
+slow_function()
+# Output:
+# -> slow_function
+#   Took 0.1000s
+# <- slow_function
+</code>
+            </div>
+
+            <p>The order matters: `@log_calls` on top means logging wraps timing, so timing runs inside the logging wrapper.</p>
+
+            <h3>Class Decorators: Decorating Entire Classes</h3>
+            <p>Decorators can also work on classes, allowing you to modify class behavior globally.</p>
+
+            <div class="code-block">
+                <span class="code-label">Class decorator example</span>
+                <code">def add_repr(cls):
+    """Decorator that adds a __repr__ method to a class."""
+    def __repr__(self):
+        attrs = ', '.join(f"{k}={v!r}" for k, v in self.__dict__.items())
+        return f"{cls.__name__}({attrs})"
+    cls.__repr__ = __repr__
+    return cls
+
+@add_repr
+class Point:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+p = Point(3, 4)
+print(p)  # Point(x=3, y=4)
+</code>
+            </div>
+
+            <div class="note-box">
+                <strong>Use Case:</strong> Class decorators are powerful for frameworks. For example, `@dataclass` from the `dataclasses` module automatically generates `__init__`, `__repr__`, and other methods.
+            </div>
+        </section>
+
+        <!-- Section 3: Built-in Decorators -->
+        <section class="section" id="builtins">
+            <h2>Built-in Decorators in Python</h2>
+
+            <h3>@property: Creating Getter/Setter Methods</h3>
+            <p>The `@property` decorator turns a method into an attribute-like accessor without exposing internal state.</p>
+
+            <div class="code-block">
+                <span class="code-label">@property example</span>
+                <code">class Temperature:
+    def __init__(self, celsius):
+        self._celsius = celsius
+
+    @property
+    def celsius(self):
+        return self._celsius
+
+    @property
+    def fahrenheit(self):
+        return self._celsius * 9/5 + 32
+
+    @celsius.setter
+    def celsius(self, value):
+        if value < -273.15:
+            raise ValueError("Invalid temperature")
+        self._celsius = value
+
+temp = Temperature(25)
+print(temp.celsius)      # 25 (accessed like attribute, not method)
+print(temp.fahrenheit)   # 77.0
+temp.celsius = 30        # Uses setter
+</code>
+            </div>
+
+            <h3>@staticmethod and @classmethod: Method Types</h3>
+            <p>`@staticmethod` creates methods that don't need `self` or `cls`. `@classmethod` passes the class as the first argument.</p>
+
+            <div class="code-block">
+                <span class="code-label">@staticmethod and @classmethod</span>
+                <code">class MathOps:
+    @staticmethod
+    def add(a, b):
+        """No access to instance or class."""
+        return a + b
+
+    @classmethod
+    def from_string(cls, s):
+        """Factory method using the class."""
+        x, y = map(int, s.split(','))
+        return cls(x, y)
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+# staticmethod
+print(MathOps.add(5, 3))  # 8
+
+# classmethod
+result = MathOps.from_string("10,20")  # Creates MathOps(10, 20)
+</code>
+            </div>
+
+            <h3>@functools.lru_cache: Memoization</h3>
+            <p>LRU (Least Recently Used) cache decorator memoizes function results, avoiding recomputation.</p>
+
+            <div class="code-block">
+                <span class="code-label">@functools.lru_cache</span>
+                <code">import functools
+
+@functools.lru_cache(maxsize=128)
+def fibonacci(n):
+    if n < 2:
+        return n
+    return fibonacci(n-1) + fibonacci(n-2)
+
+# First call: recomputes
+print(fibonacci(30))  # Takes a moment
+
+# Second call: cached result
+print(fibonacci(30))  # Instant
+</code>
+            </div>
+
+            <div class="note-box">
+                <strong>Caution:</strong> Only cache pure functions (no side effects). The cached function must be called with hashable arguments.
+            </div>
+
+            <div class="deep-dive">
+                <div class="deep-dive-header">
+                    <h4>Deep Dive: Descriptor Protocol and @property</h4>
+                    <div class="deep-dive-toggle">+</div>
+                </div>
+                <div class="deep-dive-content">
+                    <div class="deep-dive-body">
+                        <p>Under the hood, `@property` implements the descriptor protocol. When you access an attribute, Python calls special methods (`__get__`, `__set__`, `__delete__`).</p>
+                        <div class="code-block">
+                            <span class="code-label">Custom descriptor (manual property)</span>
+                            <code">class MyProperty:
+    def __init__(self, getter):
+        self.getter = getter
+
+    def __get__(self, obj, objtype=None):
+        if obj is None:
+            return self
+        return self.getter(obj)
+
+class Example:
+    def __init__(self, value):
+        self._value = value
+
+    @MyProperty
+    def value(self):
+        return self._value
+
+e = Example(42)
+print(e.value)  # Calls __get__, returns 42
+</code>
+                        </div>
+                        <p>This is how Python implements attribute access. `@property` is a descriptor class providing `__get__`, `__set__`, and `__delete__` methods.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Miscellaneous Topics -->
+        <section class="section" id="meta">
+            <h2>Docstrings, Arguments, Bitwise Ops & Assertions</h2>
+
+            <h3>Docstrings: Self-Documenting Code</h3>
+            <p>A docstring is a string literal as the first statement in a module, function, class, or method. Tools like `help()` and `pydoc` use it for documentation.</p>
+
+            <div class="code-block">
+                <span class="code-label">Docstring conventions</span>
+                <code">def divide(a, b):
+    """Divide a by b.
+
+    Args:
+        a: Dividend (numeric).
+        b: Divisor (numeric, non-zero).
+
+    Returns:
+        The quotient a/b.
+
+    Raises:
+        ZeroDivisionError: If b is zero.
+    """
+    if b == 0:
+        raise ZeroDivisionError("Cannot divide by zero")
+    return a / b
+
+help(divide)  # Displays the docstring
+</code>
+            </div>
+
+            <h3>Command-Line Arguments: sys.argv and argparse</h3>
+            <p>`sys.argv` is a list of command-line arguments. For complex programs, use `argparse` for parsing and validation.</p>
+
+            <div class="code-block">
+                <span class="code-label">Using argparse</span>
+                <code">import argparse
+
+parser = argparse.ArgumentParser(description='Process data files')
+parser.add_argument('input', help='Input filename')
+parser.add_argument('--output', '-o', default='output.txt', help='Output file')
+parser.add_argument('--verbose', '-v', action='store_true', help='Verbose mode')
+parser.add_argument('--count', type=int, default=1, help='Number of iterations')
+
+args = parser.parse_args()
+
+print(f"Input: {args.input}")
+print(f"Output: {args.output}")
+print(f"Verbose: {args.verbose}")
+print(f"Count: {args.count}")
+
+# Run: python script.py input.txt -o output.txt -v --count 5
+</code>
+            </div>
+
+            <h3>Bitwise Operators: Efficient Bit Manipulation</h3>
+            <p>Python supports bitwise operations for low-level manipulation: `&` (AND), `|` (OR), `^` (XOR), `~` (NOT), `<<` (left shift), `>>` (right shift).</p>
+
+            <div class="code-block">
+                <span class="code-label">Bitwise operations</span>
+                <code">a = 5        # Binary: 0101
+b = 3        # Binary: 0011
+
+print(a & b)  # 0101 & 0011 = 0001 = 1 (AND)
+print(a | b)  # 0101 | 0011 = 0111 = 7 (OR)
+print(a ^ b)  # 0101 ^ 0011 = 0110 = 6 (XOR)
+print(~a)     # ~0101 = ...1010 = -6 (NOT)
+print(a << 1) # 0101 << 1 = 1010 = 10 (left shift)
+print(a >> 1) # 0101 >> 1 = 0010 = 2 (right shift)
+
+# Use case: Flag checking
+READ = 1 << 0   # 0001
+WRITE = 1 << 1  # 0010
+EXEC = 1 << 2   # 0100
+
+permissions = READ | WRITE
+print(permissions & READ)  # Non-zero if readable
+</code>
+            </div>
+
+            <h3>Assertions: Defensive Programming</h3>
+            <p>The `assert` statement checks conditions and raises `AssertionError` if false. Useful for catching bugs during development.</p>
+
+            <div class="code-block">
+                <span class="code-label">Using assertions</span>
+                <code">def divide(a, b):
+    assert b != 0, "Divisor cannot be zero"
+    assert isinstance(a, (int, float)), "a must be numeric"
+    return a / b
+
+divide(10, 2)     # OK
+divide(10, 0)     # AssertionError: Divisor cannot be zero
+divide("10", 2)   # AssertionError: a must be numeric
+
+# Note: Assertions are removed when Python runs with -O flag
+# Don't use for user input validation; use exceptions instead.
+</code>
+            </div>
+
+            <div class="warning-box">
+                <strong>Caution:</strong> Assertions are removed with `python -O`. Never use them for input validation or critical checks. They're for development/debugging only.
+            </div>
+
+            <h3>Unicode and Bytes: Text vs. Data</h3>
+            <p>Python 3 distinguishes between strings (Unicode text) and bytes (binary data). Encoding converts text to bytes; decoding converts bytes to text.</p>
+
+            <div class="code-block">
+                <span class="code-label">Unicode and bytes</span>
+                <code">text = "Hello, 世界"
+print(type(text))  # <class 'str'> - Unicode text
+
+# Encode to bytes
+data = text.encode('utf-8')
+print(type(data))  # <class 'bytes'>
+print(data)        # b'Hello, \xe4\xb8\x96\xe7\x95\x8c'
+
+# Decode back to string
+recovered = data.decode('utf-8')
+print(recovered)   # Hello, 世界
+
+# Bytes literals
+raw = b'Hello'
+print(raw[0])      # 72 (byte value)
+</code>
+            </div>
+
+            <h3>Creating Executable Files: Entry Points</h3>
+            <p>Modern Python packages use entry points (in `pyproject.toml`) to create command-line tools. When installed, they become system commands.</p>
+
+            <div class="code-block">
+                <span class="code-label">pyproject.toml</span>
+                <code">[project.scripts]
+my-tool = "mypackage.cli:main"
+</code>
+            </div>
+
+            <div class="code-block">
+                <span class="code-label">mypackage/cli.py</span>
+                <code">def main():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--name', default='World')
+    args = parser.parse_args()
+    print(f"Hello, {args.name}!")
+
+if __name__ == '__main__':
+    main()
+</code>
+            </div>
+
+            <p>After installing (`pip install -e .`), `my-tool --name Alice` runs the script.</p>
+        </section>
+
+        <!-- Section 5: Advanced Metaprogramming -->
+        <section class="section">
+            <h2>Advanced Metaprogramming Patterns</h2>
+
+            <h3>Decorator Classes with __call__</h3>
+            <p>A class can act as a decorator if it implements `__call__`. This is useful for stateful decorators.</p>
+
+            <div class="code-block">
+                <span class="code-label">Decorator class</span>
+                <code">class Counter:
+    def __init__(self, func):
+        self.func = func
+        self.call_count = 0
+
+    def __call__(self, *args, **kwargs):
+        self.call_count += 1
+        print(f"Call #{self.call_count}")
+        return self.func(*args, **kwargs)
+
+@Counter
+def greet(name):
+    return f"Hello, {name}!"
+
+greet("Alice")  # Call #1
+greet("Bob")    # Call #2
+print(greet.call_count)  # 2
+</code>
+            </div>
+
+            <h3>Using typing.ParamSpec for Type-Safe Decorators</h3>
+            <p>For advanced type hints, `ParamSpec` preserves the function signature in the decorator.</p>
+
+            <div class="code-block">
+                <span class="code-label">Type-safe decorator with ParamSpec</span>
+                <code">from typing import ParamSpec, TypeVar
+import functools
+
+P = ParamSpec('P')
+T = TypeVar('T')
+
+def typed_cache(func: Callable[P, T]) -> Callable[P, T]:
+    cache = {}
+    @functools.wraps(func)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+        key = (args, tuple(sorted(kwargs.items())))
+        if key not in cache:
+            cache[key] = func(*args, **kwargs)
+        return cache[key]
+    return wrapper
+
+@typed_cache
+def expensive(x: int) -> int:
+    return x ** 2
+</code>
+            </div>
+
+            <h3>The inspect Module: Introspection</h3>
+            <p>The `inspect` module provides tools to examine functions, classes, and code.</p>
+
+            <div class="code-block">
+                <span class="code-label">Using inspect for introspection</span>
+                <code">import inspect
+
+def example(a, b, c=10, *args, **kwargs):
+    """Example function."""
+    pass
+
+sig = inspect.signature(example)
+print(sig)  # (a, b, c=10, *args, **kwargs)
+
+for param_name, param in sig.parameters.items():
+    print(f"  {param_name}: {param.annotation or 'Any'}")
+
+# Get source code
+print(inspect.getsource(example))
+
+# Check if callable
+print(inspect.isfunction(example))  # True
+print(inspect.ismethod(example))    # False
+</code>
+            </div>
+
+            <div class="deep-dive">
+                <div class="deep-dive-header">
+                    <h4>Deep Dive: Metaclasses and Type Manipulation</h4>
+                    <div class="deep-dive-toggle">+</div>
+                </div>
+                <div class="deep-dive-content">
+                    <div class="deep-dive-body">
+                        <p>A metaclass is a "class of a class." It controls how classes are created. Most code never needs metaclasses, but they're powerful for frameworks.</p>
+                        <div class="code-block">
+                            <span class="code-label">Simple metaclass example</span>
+                            <code">class LoggingMeta(type):
+    """Metaclass that logs class creation."""
+    def __new__(mcs, name, bases, namespace):
+        print(f"Creating class {name}")
+        return super().__new__(mcs, name, bases, namespace)
+
+class MyClass(metaclass=LoggingMeta):
+    pass
+
+# Output: Creating class MyClass
+</code>
+                        </div>
+                        <p>Metaclasses are advanced and rarely needed. Class decorators are usually simpler and more readable.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Socratic Q&A Section -->
+        <section class="section" id="qa">
+            <h2>Socratic Q&A: Test Your Understanding</h2>
+            <p>Click each question to explore your understanding of decorators and metaprogramming.</p>
+
+            <div class="socratic-qa">
+                <div class="qa-item">
+                    <div class="qa-question">
+                        <div class="qa-question-text">1. What is a decorator, and how does it relate to function composition?</div>
+                        <div class="qa-toggle">+</div>
+                    </div>
+                    <div class="qa-answer">
+                        <p>A decorator is a function that takes a function as input, wraps it with additional behavior, and returns the modified function. It's function composition: `@dec def f(): ...` is equivalent to `f = dec(f)`. The original function is passed to the decorator, which returns a wrapper function that calls the original while adding extra logic (logging, validation, caching, etc.).</p>
+                    </div>
+                </div>
+
+                <div class="qa-item">
+                    <div class="qa-question">
+                        <div class="qa-question-text">2. Why is `functools.wraps` important in decorators?</div>
+                        <div class="qa-toggle">+</div>
+                    </div>
+                    <div class="qa-answer">
+                        <p>`functools.wraps` copies metadata from the original function to the wrapper: `__name__`, `__doc__`, `__module__`, `__qualname__`, and `__annotations__`. Without it, `help()`, `inspect`, and other tools see the wrapper's metadata (usually "wrapper"), not the original function's. This breaks introspection and documentation. Always use `@functools.wraps(func)` in your decorator's wrapper function.</p>
+                    </div>
+                </div>
+
+                <div class="qa-item">
+                    <div class="qa-question">
+                        <div class="qa-question-text">3. How do parameterized decorators work, and what's the structure?</div>
+                        <div class="qa-toggle">+</div>
+                    </div>
+                    <div class="qa-answer">
+                        <p>Parameterized decorators use an extra layer of nesting. `@decorator(param)` calls a decorator factory that returns the actual decorator. Structure: (1) Factory function takes parameters, (2) Returns a decorator function, (3) Decorator takes the target function, (4) Decorator returns a wrapper. Example: `@retry(max_attempts=3)` calls `retry(3)`, returns a decorator, which decorates the function. This allows configuration without modifying the decorator itself.</p>
+                    </div>
+                </div>
+
+                <div class="qa-item">
+                    <div class="qa-question">
+                        <div class="qa-question-text">4. What is the execution order when stacking multiple decorators?</div>
+                        <div class="qa-toggle">+</div>
+                    </div>
+                    <div class="qa-answer">
+                        <p>Decorators apply bottom-to-top on definition. With `@dec1 @dec2 @dec3 def f(): ...`, the order is: `f = dec1(dec2(dec3(f)))`. At runtime, execution order is top-to-bottom through the call stack: dec1's wrapper runs first, which calls dec2's wrapper, which calls dec3's wrapper, which calls f. The outermost decorator executes first and last, wrapping all inner decorators.</p>
+                    </div>
+                </div>
+
+                <div class="qa-item">
+                    <div class="qa-question">
+                        <div class="qa-question-text">5. How does `@property` enable attribute-like access to methods?</div>
+                        <div class="qa-toggle">+</div>
+                    </div>
+                    <div class="qa-answer">
+                        <p>`@property` implements the descriptor protocol, converting a method into a getter. When you access the attribute, Python calls the property's `__get__` method, which invokes the original method. This enables `obj.value` to call a method without visible `()`. You can also define setters with `@value.setter`. This provides encapsulation: you can change internal implementation without changing the external interface.</p>
+                    </div>
+                </div>
+
+                <div class="qa-item">
+                    <div class="qa-question">
+                        <div class="qa-question-text">6. What's the difference between `@staticmethod` and `@classmethod`?</div>
+                        <div class="qa-toggle">+</div>
+                    </div>
+                    <div class="qa-answer">
+                        <p>`@staticmethod` creates a method that doesn't receive `self` or `cls`. It's just a function inside a class. `@classmethod` receives the class as the first argument (`cls`), not an instance. Use `@staticmethod` for utility functions. Use `@classmethod` for factory methods (creating instances) or operations on the class itself. Regular methods receive `self` (the instance).</p>
+                    </div>
+                </div>
+
+                <div class="qa-item">
+                    <div class="qa-question">
+                        <div class="qa-question-text">7. How does `@functools.lru_cache` optimize functions, and what are its limitations?</div>
+                        <div class="qa-toggle">+</div>
+                    </div>
+                    <div class="qa-answer">
+                        <p>`@functools.lru_cache(maxsize=N)` memoizes function results in an LRU (Least Recently Used) cache. On repeated calls with the same arguments, it returns the cached result instead of recomputing. Limitations: (1) Only caches pure functions (no side effects), (2) Arguments must be hashable (no lists/dicts), (3) Cache grows with unique inputs, (4) Not thread-safe. Use for expensive pure functions like recursive Fibonacci or API calls.</p>
+                    </div>
+                </div>
+
+                <div class="qa-item">
+                    <div class="qa-question">
+                        <div class="qa-question-text">8. How do class decorators modify class behavior?</div>
+                        <div class="qa-toggle">+</div>
+                    </div>
+                    <div class="qa-answer">
+                        <p>A class decorator takes the class as input and returns a modified class. It can add methods, modify existing methods, or change class attributes. Example: `@add_repr` adds a `__repr__` method. `@dataclass` auto-generates `__init__`, `__repr__`, etc. Class decorators are powerful for frameworks but can be less explicit than explicit methods. Prefer class decorators for automatic/generic functionality, explicit methods for custom behavior.</p>
+                    </div>
+                </div>
+
+                <div class="qa-item">
+                    <div class="qa-question">
+                        <div class="qa-question-text">9. What are assertions, and why shouldn't they be used for input validation?</div>
+                        <div class="qa-toggle">+</div>
+                    </div>
+                    <div class="qa-answer">
+                        <p>The `assert` statement checks a condition and raises `AssertionError` if false. They're for internal consistency checks during development. They're removed with `python -O`, so production code cannot rely on them. For input validation, use explicit `if` statements and raise `ValueError` or `TypeError` instead. Assertions are for "this should never happen" internal checks; exceptions are for expected errors.</p>
+                    </div>
+                </div>
+
+                <div class="qa-item">
+                    <div class="qa-question">
+                        <div class="qa-question-text">10. How do decorators with `__call__` differ from function decorators?</div>
+                        <div class="qa-toggle">+</div>
+                    </div>
+                    <div class="qa-answer">
+                        <p>A class with `__call__` can act as a decorator. It's instantiated with the target function, and `__call__` handles invocations. Advantages: (1) Can store state (call count, cache, etc.), (2) More readable for complex logic, (3) Can use instance attributes. Disadvantage: requires class syntax. Example: `class Counter: def __init__(self, func): self.func = func; self.count = 0` enables counting function calls by storing state in the decorator instance.</p>
+                    </div>
+                </div>
+
+                <div class="qa-item">
+                    <div class="qa-question">
+                        <div class="qa-question-text">11. What is the descriptor protocol, and how does it power `@property`?</div>
+                        <div class="qa-toggle">+</div>
+                    </div>
+                    <div class="qa-answer">
+                        <p>The descriptor protocol is a Python mechanism where objects with `__get__`, `__set__`, or `__delete__` methods intercept attribute access. When you access `obj.attr`, Python calls `descriptor.__get__(obj, type(obj))`. `@property` is a descriptor class implementing `__get__` (and optionally `__set__`, `__delete__`). This enables `@property.setter` and `@property.deleter`. Descriptors are how methods, properties, and class methods work under the hood.</p>
+                    </div>
+                </div>
+
+                <div class="qa-item">
+                    <div class="qa-question">
+                        <div class="qa-question-text">12. How does `argparse` improve over `sys.argv` for command-line arguments?</div>
+                        <div class="qa-toggle">+</div>
+                    </div>
+                    <div class="qa-answer">
+                        <p>`sys.argv` is a raw list of strings; parsing is manual and error-prone. `argparse` (or `click`) provides: (1) Automatic type conversion, (2) Validation, (3) Help generation (`-h`), (4) Short/long flags, (5) Default values, (6) Subcommands. `argparse.ArgumentParser` defines arguments declaratively, parses the command line, validates types, and raises helpful errors. For any non-trivial CLI, use argparse; `sys.argv` is only for simple scripts.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Conclusion -->
+        <section class="section">
+            <h2>Key Takeaways</h2>
+            <ul>
+                <li>A decorator is a function taking a function and returning a modified function. `@decorator` is syntactic sugar for function reassignment.</li>
+                <li>Always use `@functools.wraps` to preserve metadata (`__name__`, `__doc__`) in decorator wrappers.</li>
+                <li>Use `*args` and `**kwargs` in wrapper functions to handle functions of any signature.</li>
+                <li>Parameterized decorators use nesting: decorator factory returns a decorator that decorates the target.</li>
+                <li>Multiple decorators apply bottom-to-top on definition; execution order is top-to-bottom through the call stack.</li>
+                <li>Built-in decorators like `@property`, `@staticmethod`, `@classmethod`, and `@functools.lru_cache` provide common functionality.</li>
+                <li>Class decorators can add or modify class behavior globally; they're powerful for frameworks.</li>
+                <li>Assertions are for development debugging; use exceptions for input validation and error handling.</li>
+                <li>The descriptor protocol (`__get__`, `__set__`, `__delete__`) powers properties, methods, and custom attribute access.</li>
+                <li>Use `argparse` for command-line argument parsing; avoid manual `sys.argv` manipulation.</li>
+            </ul>
+        </section>
+    </div>
+
+    <footer class="footer">
+        <p>Interactive Explainer for Python Curriculum | Chapter 19: Decorators & Metaprogramming</p>
+        <p>Built with dark theme, interactive deep-dives, and Socratic Q&A for deeper learning</p>
+    </footer>
+
+    <script>
+        // Deep-dive toggle functionality
+        document.querySelectorAll('.deep-dive-header').forEach(header => {
+            header.addEventListener('click', function() {
+                const deepDive = this.closest('.deep-dive');
+                deepDive.classList.toggle('active');
+            });
+        });
+
+        // Socratic Q&A toggle functionality
+        document.querySelectorAll('.qa-question').forEach(question => {
+            question.addEventListener('click', function() {
+                const qaItem = this.closest('.qa-item');
+                qaItem.classList.toggle('active');
+            });
+        });
+
+        // Smooth scroll for navigation links
+        document.querySelectorAll('.topnav-nav a').forEach(link => {
+            link.addEventListener('click', function(e) {
+                const href = this.getAttribute('href');
+                if (href.startsWith('#')) {
+                    e.preventDefault();
+                    const target = document.querySelector(href);
+                    if (target) {
+                        target.scrollIntoView({ behavior: 'smooth' });
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

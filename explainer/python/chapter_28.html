@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 28: Synchronization & Thread Safety</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .topnav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(10, 10, 15, 0.95);
+            border-bottom: 1px solid #2a2a35;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .topnav-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.2rem;
+            color: #f43f5e;
+            font-weight: 700;
+        }
+
+        .topnav-nav {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .topnav-nav a {
+            color: #b0b0b8;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .topnav-nav a:hover {
+            color: #f43f5e;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, rgba(244, 63, 94, 0.1), rgba(99, 102, 241, 0.1));
+            padding: 4rem 2rem;
+            text-align: center;
+            border-bottom: 1px solid #2a2a35;
+        }
+
+        .hero h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 3rem;
+            color: #f43f5e;
+            margin-bottom: 1rem;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: #b0b0b8;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            color: #f43f5e;
+            margin-top: 3rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #2a2a35;
+            padding-bottom: 1rem;
+        }
+
+        h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            color: #6366f1;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        h4 {
+            font-family: 'Playfair Display', serif;
+            color: #a78bfa;
+            margin-top: 1.5rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .mental-model {
+            background: rgba(99, 102, 241, 0.08);
+            border-left: 4px solid #6366f1;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            border-radius: 4px;
+        }
+
+        .mental-model h3 {
+            color: #6366f1;
+            margin-top: 0;
+        }
+
+        .section {
+            margin: 2rem 0;
+        }
+
+        .section p, .section li {
+            margin-bottom: 1rem;
+            color: #d0d0d8;
+        }
+
+        .section ul, .section ol {
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+            background: #1a1a24;
+            padding: 0.2rem 0.6rem;
+            border-radius: 3px;
+            font-size: 0.9em;
+            color: #ff9e64;
+        }
+
+        pre {
+            background: #1a1a24;
+            border: 1px solid #2a2a35;
+            border-radius: 6px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+            font-size: 0.95rem;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: #e0e0e0;
+        }
+
+        .code-block {
+            margin: 1.5rem 0;
+        }
+
+        .deepdive {
+            background: rgba(244, 63, 94, 0.05);
+            border: 1px solid #2a2a35;
+            border-radius: 6px;
+            margin: 1.5rem 0;
+        }
+
+        .deepdive-header {
+            background: rgba(244, 63, 94, 0.1);
+            padding: 1rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #2a2a35;
+            border-radius: 6px 6px 0 0;
+        }
+
+        .deepdive-header:hover {
+            background: rgba(244, 63, 94, 0.15);
+        }
+
+        .deepdive-header h4 {
+            margin: 0;
+            color: #f43f5e;
+        }
+
+        .deepdive-toggle {
+            color: #f43f5e;
+            font-size: 1.3rem;
+            transition: transform 0.3s;
+        }
+
+        .deepdive-toggle.open {
+            transform: rotate(180deg);
+        }
+
+        .deepdive-content {
+            display: none;
+            padding: 1.5rem;
+        }
+
+        .deepdive-content.open {
+            display: block;
+        }
+
+        .note {
+            background: rgba(168, 139, 250, 0.08);
+            border-left: 4px solid #a78bfa;
+            padding: 1rem;
+            margin: 1.5rem 0;
+            border-radius: 4px;
+        }
+
+        .note-title {
+            color: #a78bfa;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        th {
+            background: rgba(99, 102, 241, 0.1);
+            color: #6366f1;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 700;
+            border-bottom: 2px solid #2a2a35;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid #2a2a35;
+        }
+
+        tr:hover {
+            background: rgba(244, 63, 94, 0.05);
+        }
+
+        .qa-section {
+            margin: 2rem 0;
+        }
+
+        .qa-item {
+            background: rgba(99, 102, 241, 0.05);
+            border: 1px solid #2a2a35;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+
+        .qa-question {
+            padding: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .qa-question:hover {
+            background: rgba(99, 102, 241, 0.08);
+        }
+
+        .qa-question-text {
+            color: #6366f1;
+            font-weight: 600;
+            flex: 1;
+        }
+
+        .qa-toggle {
+            color: #6366f1;
+            font-size: 1.3rem;
+            transition: transform 0.3s;
+            flex-shrink: 0;
+        }
+
+        .qa-toggle.open {
+            transform: rotate(180deg);
+        }
+
+        .qa-answer {
+            display: none;
+            padding: 0 1.5rem 1.5rem;
+            border-top: 1px solid #2a2a35;
+        }
+
+        .qa-answer.open {
+            display: block;
+        }
+
+        .qa-answer p, .qa-answer li {
+            color: #d0d0d8;
+            margin-bottom: 0.8rem;
+        }
+
+        .completion-section {
+            background: rgba(244, 63, 94, 0.1);
+            border: 2px solid #f43f5e;
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 3rem 0;
+        }
+
+        .completion-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            color: #f43f5e;
+            margin-bottom: 1.5rem;
+        }
+
+        .chapters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .chapter-card {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid #6366f1;
+            padding: 1rem;
+            border-radius: 6px;
+        }
+
+        .chapter-num {
+            color: #f43f5e;
+            font-weight: 700;
+        }
+
+        .chapter-name {
+            color: #d0d0d8;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+
+            .topnav {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .topnav-nav {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="topnav">
+        <div class="topnav-title">Chapter 28: Synchronization & Thread Safety</div>
+        <div class="topnav-nav">
+            <a href="#synchronization">Sync</a>
+            <a href="#locks">Locks</a>
+            <a href="#patterns">Patterns</a>
+            <a href="#completion">Complete</a>
+            <a href="#qa">Q&A</a>
+        </div>
+    </nav>
+
+    <div class="hero">
+        <h1>Synchronization & Thread Safety</h1>
+        <p>Coordinate multiple threads safely and prevent data corruption from concurrent access</p>
+    </div>
+
+    <div class="container">
+        <div class="mental-model">
+            <h3>🧠 Mental Model: Thread-Safe Access</h3>
+            <p>When multiple threads access shared data simultaneously, chaos ensues. <strong>Synchronization</strong> is the practice of coordinating thread access to ensure consistency.</p>
+            <p>Think of it like a bathroom: only one person can be inside at a time (mutual exclusion). Locks are the mechanism—one thread acquires the lock, uses the resource, then releases it for the next thread.</p>
+            <p><strong>Race condition:</strong> Two threads read a value, both modify it, both write it back—the second write overwrites the first. Thread-safe code prevents this.</p>
+        </div>
+
+        <section id="synchronization">
+            <h2>Synchronization and Race Conditions</h2>
+
+            <div class="section">
+                <h3>What are Race Conditions?</h3>
+                <p>A race condition occurs when multiple threads access shared data and the result depends on their timing:</p>
+
+                <div class="code-block">
+                    <pre><code class="language-python">import threading
+
+counter = 0
+
+def increment():
+    global counter
+    for _ in range(1_000_000):
+        counter += 1  # NOT thread-safe!
+
+# Create two threads
+t1 = threading.Thread(target=increment)
+t2 = threading.Thread(target=increment)
+
+t1.start()
+t2.start()
+t1.join()
+t2.join()
+
+print(counter)  # Should be 2,000,000 but often much less!
+# Why? The increment operation has 3 steps:
+# 1. Read counter
+# 2. Add 1
+# 3. Write counter
+# Threads interleave these steps, losing updates
+</code></pre>
+                </div>
+
+                <p>The <code>+=</code> operation is not atomic—it's three separate steps. If threads interleave, updates get lost.</p>
+            </div>
+
+            <div class="section">
+                <h3>Examples of Shared Resource Problems</h3>
+
+                <h4>Shared Counter</h4>
+                <div class="code-block">
+                    <pre><code class="language-python"># WRONG: Shared counter without synchronization
+class BankAccount:
+    def __init__(self):
+        self.balance = 0
+
+    def deposit(self, amount):
+        # Simulate some computation (to increase race condition likelihood)
+        temp = self.balance
+        temp += amount
+        self.balance = temp  # Race condition here!
+
+    def withdraw(self, amount):
+        if self.balance >= amount:
+            temp = self.balance
+            temp -= amount
+            self.balance = temp
+
+# Two threads deposit concurrently
+account = BankAccount()
+account.balance = 100
+
+t1 = threading.Thread(target=account.deposit, args=(50,))
+t2 = threading.Thread(target=account.deposit, args=(50,))
+t1.start()
+t2.start()
+t1.join()
+t2.join()
+
+print(account.balance)  # Should be 200, but might be 150!
+</code></pre>
+                </div>
+
+                <h4>Producer-Consumer</h4>
+                <div class="code-block">
+                    <pre><code class="language-python"># WRONG: Producer and consumer without synchronization
+items = []
+
+def producer():
+    for i in range(5):
+        items.append(i)  # Not synchronized
+        print(f"Produced {i}")
+
+def consumer():
+    while True:
+        if items:
+            item = items.pop(0)  # Race condition: list may be empty!
+            print(f"Consumed {item}")
+
+# This can crash if consumer tries to pop from empty list
+</code></pre>
+                </div>
+            </div>
+
+            <div class="note">
+                <div class="note-title">Data Corruption vs Exceptions</div>
+                <p>Race conditions sometimes cause immediate crashes (pop from empty list) but often cause silent data corruption (wrong balance). Silent corruption is worse because you don't notice until the damage is done.</p>
+            </note>
+        </section>
+
+        <section id="locks">
+            <h2>Synchronization Mechanisms</h2>
+
+            <div class="section">
+                <h3>Lock (Mutual Exclusion)</h3>
+                <p>A lock ensures only one thread can access a resource at a time:</p>
+
+                <div class="code-block">
+                    <pre><code class="language-python">import threading
+
+class ThreadSafeCounter:
+    def __init__(self):
+        self.count = 0
+        self.lock = threading.Lock()
+
+    def increment(self):
+        with self.lock:  # Acquire lock
+            self.count += 1
+            # Lock is released when exiting the with block
+
+    def get_value(self):
+        with self.lock:
+            return self.count
+
+# Usage
+counter = ThreadSafeCounter()
+
+def worker():
+    for _ in range(100_000):
+        counter.increment()
+
+t1 = threading.Thread(target=worker)
+t2 = threading.Thread(target=worker)
+
+t1.start()
+t2.start()
+t1.join()
+t2.join()
+
+print(counter.get_value())  # Always 200,000 (correct!)
+</code></pre>
+                </div>
+
+                <p>The <code>with lock:</code> pattern ensures the lock is acquired before the block and released after, even if an exception occurs.</p>
+
+                <p><strong>Alternative (manual acquire/release):</strong></p>
+                <div class="code-block">
+                    <pre><code class="language-python">lock = threading.Lock()
+
+lock.acquire()
+try:
+    # Critical section
+    pass
+finally:
+    lock.release()  # Ensure release even on exception
+</code></pre>
+                </div>
+
+                <p>Always use the <code>with</code> statement—it's cleaner and safer.</p>
+            </div>
+
+            <div class="section">
+                <h3>RLock (Reentrant Lock)</h3>
+                <p>A reentrant lock can be acquired multiple times by the SAME thread:</p>
+
+                <div class="code-block">
+                    <pre><code class="language-python">import threading
+
+lock = threading.Lock()
+rlock = threading.RLock()
+
+def recursive_function_bad(n, lock):
+    with lock:  # First acquire
+        if n > 0:
+            # Try to acquire again—DEADLOCK!
+            recursive_function_bad(n - 1, lock)
+
+def recursive_function_good(n, rlock):
+    with rlock:  # Can acquire multiple times from same thread
+        if n > 0:
+            recursive_function_good(n - 1, rlock)
+
+# recursive_function_bad(3, lock)  # Deadlocks!
+recursive_function_good(3, rlock)  # Works fine
+</code></pre>
+                </div>
+
+                <p>Use RLock for recursive functions or when a function might call another function holding the same lock.</p>
+            </div>
+
+            <div class="section">
+                <h3>Semaphore: Counting Access</h3>
+                <p>A semaphore limits how many threads can access a resource simultaneously:</p>
+
+                <div class="code-block">
+                    <pre><code class="language-python">import threading
+
+semaphore = threading.Semaphore(3)  # Allow 3 concurrent threads
+
+def use_resource():
+    with semaphore:
+        print(f"{threading.current_thread().name} using resource")
+        time.sleep(1)
+
+# Create 5 threads, only 3 can use resource at a time
+threads = [threading.Thread(target=use_resource) for _ in range(5)]
+for t in threads:
+    t.start()
+for t in threads:
+    t.join()
+
+# BoundedSemaphore: prevents incrementing beyond initial value
+bounded = threading.BoundedSemaphore(3)
+# bounded.release()  # Would raise if count > initial value
+</code></pre>
+                </div>
+
+                <p>Use semaphores for resource pooling (e.g., max 10 concurrent database connections).</p>
+            </div>
+
+            <div class="section">
+                <h3>Event: Signaling Between Threads</h3>
+                <p>An event allows one thread to signal others:</p>
+
+                <div class="code-block">
+                    <pre><code class="language-python">import threading
+
+event = threading.Event()
+
+def worker():
+    print("Worker waiting for event...")
+    event.wait()  # Block until event is set
+    print("Worker woken up!")
+
+def signaler():
+    time.sleep(2)
+    print("Setting event")
+    event.set()  # Wake up all waiting threads
+
+t1 = threading.Thread(target=worker)
+t2 = threading.Thread(target=signaler)
+
+t1.start()
+t2.start()
+t1.join()
+t2.join()
+
+# Output:
+# Worker waiting for event...
+# (2 seconds later)
+# Setting event
+# Worker woken up!
+</code></pre>
+                </div>
+
+                <p>Events are useful for start/stop signals and coordination.</p>
+            </div>
+
+            <div class="section">
+                <h3>Condition: Wait and Notify</h3>
+                <p>A condition combines a lock with signaling, useful for producer-consumer patterns:</p>
+
+                <div class="code-block">
+                    <pre><code class="language-python">import threading
+import time
+
+condition = threading.Condition()
+items = []
+
+def producer():
+    for i in range(5):
+        with condition:
+            items.append(i)
+            print(f"Produced {i}")
+            condition.notify_all()  # Wake up consumers
+        time.sleep(0.5)
+
+def consumer(id):
+    while True:
+        with condition:
+            condition.wait_for(lambda: len(items) > 0)  # Wait until items available
+            if items:
+                item = items.pop(0)
+                print(f"Consumer {id} consumed {item}")
+
+prod = threading.Thread(target=producer)
+cons1 = threading.Thread(target=consumer, args=(1,), daemon=True)
+cons2 = threading.Thread(target=consumer, args=(2,), daemon=True)
+
+prod.start()
+cons1.start()
+cons2.start()
+prod.join()
+</code></pre>
+                </div>
+
+                <p>Use <code>wait()</code> to block until signaled, and <code>notify()` / `notify_all()</code> to wake up waiting threads.</p>
+            </div>
+
+            <div class="deepdive">
+                <div class="deepdive-header">
+                    <h4>Deep Dive: queue.Queue (Thread-Safe Queue)</h4>
+                    <span class="deepdive-toggle">▼</span>
+                </div>
+                <div class="deepdive-content">
+                    <p>For producer-consumer patterns, use <code>queue.Queue</code> instead of manually managing lists and locks:</p>
+                    <div class="code-block">
+                        <pre><code class="language-python">import queue
+import threading
+import time
+
+q = queue.Queue(maxsize=5)  # Thread-safe queue
+
+def producer():
+    for i in range(10):
+        q.put(i)  # Block if queue full
+        print(f"Produced {i}")
+        time.sleep(0.5)
+
+def consumer(id):
+    while True:
+        item = q.get()  # Block if queue empty
+        if item is None:  # Sentinel value to stop
+            break
+        print(f"Consumer {id} got {item}")
+
+prod = threading.Thread(target=producer)
+cons1 = threading.Thread(target=consumer, args=(1,))
+cons2 = threading.Thread(target=consumer, args=(2,))
+
+prod.start()
+cons1.start()
+cons2.start()
+
+prod.join()
+# Signal consumers to stop
+q.put(None)
+q.put(None)
+cons1.join()
+cons2.join()
+</code></pre>
+                    </div>
+
+                    <p><code>queue.Queue</code> is thread-safe, handles blocking/unblocking, and is much simpler than manual condition variables.</p>
+                </div>
+            </section>
+        </section>
+
+        <section id="patterns">
+            <h2>Concurrent Patterns</h2>
+
+            <div class="section">
+                <h3>Producer-Consumer Pattern</h3>
+                <p>A classic pattern where producers generate data and consumers process it:</p>
+
+                <div class="code-block">
+                    <pre><code class="language-python">import queue
+import threading
+import time
+
+def producer(q):
+    for i in range(10):
+        data = f"Item-{i}"
+        q.put(data)
+        print(f"Produced: {data}")
+        time.sleep(0.5)
+    q.put(None)  # Signal end
+
+def consumer(q, id):
+    while True:
+        data = q.get()
+        if data is None:
+            break
+        print(f"Consumer {id}: Processing {data}")
+        time.sleep(1)  # Simulate work
+
+q = queue.Queue()
+prod = threading.Thread(target=producer, args=(q,))
+cons1 = threading.Thread(target=consumer, args=(q, 1))
+cons2 = threading.Thread(target=consumer, args=(q, 2))
+
+prod.start()
+cons1.start()
+cons2.start()
+
+prod.join()
+cons1.join()
+cons2.join()
+</code></pre>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>Deadlock Prevention</h3>
+                <p>Deadlock happens when threads wait for each other circularly. Prevention strategies:</p>
+
+                <div class="code-block">
+                    <pre><code class="language-python"># WRONG: Can deadlock
+lock1 = threading.Lock()
+lock2 = threading.Lock()
+
+def thread1_code():
+    with lock1:
+        time.sleep(0.1)  # Give thread2 time to acquire lock2
+        with lock2:  # Waits for lock2 (deadlock!)
+            pass
+
+def thread2_code():
+    with lock2:
+        time.sleep(0.1)
+        with lock1:  # Waits for lock1 (deadlock!)
+            pass
+
+# CORRECT: Always acquire locks in the same order
+lock_a = threading.Lock()
+lock_b = threading.Lock()
+
+def safe_thread1():
+    with lock_a:
+        with lock_b:
+            pass
+
+def safe_thread2():
+    with lock_a:  # Same order as thread1
+        with lock_b:
+            pass
+
+# Also: Use timeout to detect/break deadlocks
+if lock.acquire(timeout=1):
+    try:
+        pass
+    finally:
+        lock.release()
+else:
+    print("Timeout: possible deadlock")
+</code></pre>
+                </div>
+
+                <p><strong>Deadlock prevention rules:</strong></p>
+                <ul>
+                    <li>Always acquire locks in the same order across threads</li>
+                    <li>Use timeouts to detect deadlock</li>
+                    <li>Minimize lock scope (hold locks as briefly as possible)</li>
+                    <li>Avoid nested locks when possible</li>
+                </ul>
+            </div>
+
+            <div class="deepdive">
+                <div class="deepdive-header">
+                    <h4>Deep Dive: threading.local() for Thread-Local Storage</h4>
+                    <span class="deepdive-toggle">▼</span>
+                </div>
+                <div class="deepdive-content">
+                    <p>Sometimes threads need their own isolated data without sharing:</p>
+                    <div class="code-block">
+                        <pre><code class="language-python">import threading
+
+# Global data shared by all threads (requires locking)
+shared_counter = 0
+lock = threading.Lock()
+
+# Thread-local data (each thread gets its own copy)
+thread_local = threading.local()
+
+def worker(id):
+    # Each thread has its own value
+    thread_local.value = id * 100
+    print(f"Thread {id}: {thread_local.value}")
+    time.sleep(0.1)
+    print(f"Thread {id} still has: {thread_local.value}")
+
+threads = [threading.Thread(target=worker, args=(i,)) for i in range(3)]
+for t in threads:
+    t.start()
+for t in threads:
+    t.join()
+
+# Output:
+# Thread 0: 0
+# Thread 1: 100
+# Thread 2: 200
+# Thread 0 still has: 0  (not affected by other threads)
+# Thread 1 still has: 100
+# Thread 2 still has: 200
+</code></pre>
+                    </div>
+
+                    <p>Thread-local storage avoids the need for locks when each thread needs independent state.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="completion" class="completion-section">
+            <h2>Congratulations! Course Completion</h2>
+            <p>You've successfully completed all 28 chapters of the Python Intermediate Course! Let's review what you've learned:</p>
+
+            <div class="chapters-grid">
+                <div class="chapter-card">
+                    <div class="chapter-num">Ch 1-5</div>
+                    <div class="chapter-name">Fundamentals & Functions</div>
+                </div>
+                <div class="chapter-card">
+                    <div class="chapter-num">Ch 6-10</div>
+                    <div class="chapter-name">OOP Foundations</div>
+                </div>
+                <div class="chapter-card">
+                    <div class="chapter-num">Ch 11-15</div>
+                    <div class="chapter-name">Advanced OOP</div>
+                </div>
+                <div class="chapter-card">
+                    <div class="chapter-num">Ch 16-20</div>
+                    <div class="chapter-name">Functional & Meta</div>
+                </div>
+                <div class="chapter-card">
+                    <div class="chapter-num">Ch 21-23</div>
+                    <div class="chapter-name">Iteration & Control</div>
+                </div>
+                <div class="chapter-card">
+                    <div class="chapter-num">Ch 24-28</div>
+                    <div class="chapter-name">Advanced Patterns</div>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 2rem;">Key Milestones Achieved</h3>
+            <ul>
+                <li>Master Python's object-oriented design with inheritance, polymorphism, and composition</li>
+                <li>Write robust code with exception handling and context managers</li>
+                <li>Leverage iterators and generators for memory-efficient programs</li>
+                <li>Persist and serialize data with files and various formats</li>
+                <li>Build concurrent and parallel applications using threads, processes, and async</li>
+                <li>Synchronize threads safely to prevent data corruption</li>
+            </ul>
+
+            <h3 style="margin-top: 2rem;">Where to Go Next</h3>
+            <p><strong>Web Development:</strong> Django, FastAPI, Flask for building web applications and APIs</p>
+            <p><strong>Data Science:</strong> NumPy, Pandas, Scikit-learn for data analysis and machine learning</p>
+            <p><strong>Advanced Concurrency:</strong> asyncio deep-dive, distributed systems, message queues (RabbitMQ, Kafka)</p>
+            <p><strong>Performance:</strong> Cython, Numba for high-performance computing; profiling and optimization</p>
+            <p><strong>Testing & Quality:</strong> pytest, unittest, mocking; code coverage and continuous integration</p>
+            <p><strong>Design Patterns:</strong> Gang of Four patterns in Python, architectural patterns (MVC, clean code)</p>
+            <p><strong>Domain-Specific:</strong> Web scraping (BeautifulSoup, Selenium), natural language processing (NLTK, spaCy), image processing (OpenCV, Pillow)</p>
+
+            <h3 style="margin-top: 2rem;">Practical Next Steps</h3>
+            <ol>
+                <li><strong>Build a project:</strong> Combine multiple concepts into a real application (web scraper, data pipeline, API server)</li>
+                <li><strong>Contribute to open source:</strong> Apply your skills to real-world codebases</li>
+                <li><strong>Read source code:</strong> Study how professional projects use these patterns</li>
+                <li><strong>Practice problem-solving:</strong> LeetCode, HackerRank, Project Euler for coding challenges</li>
+                <li><strong>Deep dives:</strong> Choose a specialty and become expert-level (web, data, systems, etc.)</li>
+            </ol>
+
+            <div style="background: rgba(99, 102, 241, 0.15); border: 1px solid #6366f1; padding: 1.5rem; border-radius: 6px; margin-top: 2rem;">
+                <p style="margin: 0; color: #d0d0d8;"><strong>Remember:</strong> Python mastery comes from consistent practice and building real projects. The concepts in this course are tools—your job now is to combine them creatively to solve problems. Happy coding!</p>
+            </div>
+        </section>
+
+        <section id="qa" class="qa-section">
+            <h2>Socratic Q&A: Test Your Understanding</h2>
+
+            <div class="qa-item">
+                <div class="qa-question">
+                    <span class="qa-question-text">What exactly happens in a race condition? Why does `counter += 1` fail in concurrent code?</span>
+                    <span class="qa-toggle">▼</span>
+                </div>
+                <div class="qa-answer">
+                    <p>`counter += 1` is three operations: (1) read counter, (2) add 1, (3) write back. Threads interleave: Thread A reads 5, Thread B reads 5, Thread A writes 6, Thread B writes 6. Result: 6 instead of 7. One update is lost. A race condition where the outcome depends on timing.</p>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <div class="qa-question">
+                    <span class="qa-question-text">Why is using `with lock:` better than manually calling `lock.acquire()` and `lock.release()`?</span>
+                    <span class="qa-toggle">▼</span>
+                </div>
+                <div class="qa-answer">
+                    <p>The `with` statement guarantees release even if an exception occurs. Manual calls can skip release if an exception is raised, leading to deadlock. Also cleaner and less error-prone. Always use `with lock:` for context manager cleanup.</p>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <div class="qa-question">
+                    <span class="qa-question-text">When would you use an RLock instead of a regular Lock?</span>
+                    <span class="qa-toggle">▼</span>
+                </div>
+                <div class="qa-answer">
+                    <p>Use RLock when the same thread needs to acquire the lock multiple times (recursive functions). A regular Lock would deadlock on re-acquisition. RLock allows the same thread to acquire it multiple times; other threads still block.</p>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <div class="qa-question">
+                    <span class="qa-question-text">How do Semaphore and Lock differ? When would you use each?</span>
+                    <span class="qa-toggle">▼</span>
+                </div>
+                <div class="qa-answer">
+                    <p>Lock: only ONE thread can access (binary: 0 or 1). Semaphore: N threads can access (counting). Use Lock for simple mutual exclusion. Use Semaphore for resource pooling (e.g., max 10 concurrent database connections).</p>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <div class="qa-question">
+                    <span class="qa-question-text">What causes a deadlock and how can you prevent it?</span>
+                    <span class="qa-toggle">▼</span>
+                </div>
+                <div class="qa-answer">
+                    <p>Deadlock: circular waiting for locks. Thread A has Lock1, waits for Lock2. Thread B has Lock2, waits for Lock1. Prevention: (1) Always acquire locks in the same order, (2) Use timeouts to detect it, (3) Minimize lock scope, (4) Avoid nested locks. Order is most important.</p>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <div class="qa-question">
+                    <span class="qa-question-text">How does an Event differ from a Condition? When would you use each?</span>
+                    <span class="qa-toggle">▼</span>
+                </div>
+                <div class="qa-answer">
+                    <p>Event: Simple signaling (set/wait). One thread sets, others wake. Use for start/stop signals. Condition: Combines lock + signaling. Useful for producer-consumer (threads need to check state within a lock). Event is simpler; Condition is more powerful for complex synchronization.</p>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <div class="qa-question">
+                    <span class="qa-question-text">Why is `queue.Queue` better than manually managing a list with locks?</span>
+                    <span class="qa-toggle">▼</span>
+                </div>
+                <div class="qa-answer">
+                    <p>Queue is thread-safe, handles blocking (waits if empty/full), provides clean API (put/get). Manual lists require you to manage locks, conditions, and edge cases. Queue is battle-tested and less error-prone. Use Queue for producer-consumer patterns.</p>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <div class="qa-question">
+                    <span class="qa-question-text">What is thread-local storage and why would you use it instead of a shared variable with a lock?</span>
+                    <span class="qa-toggle">▼</span>
+                </div>
+                <div class="qa-answer">
+                    <p>Thread-local storage gives each thread its own isolated copy of a variable. No locking needed because threads never share. Use when each thread needs independent state (e.g., thread ID, connection, database handle). Avoids synchronization overhead.</p>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <div class="qa-question">
+                    <span class="qa-question-text">If you acquire Lock A then Lock B, and another thread acquires them in reverse order, what happens?</span>
+                    <span class="qa-toggle">▼</span>
+                </div>
+                <div class="qa-answer">
+                    <p>Potential deadlock. Thread 1: acquires A, waits for B. Thread 2: acquires B, waits for A. Circular dependency. Prevention: always acquire locks in the same order globally. In this case, both threads should acquire A first, then B.</p>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <div class="qa-question">
+                    <span class="qa-question-text">How do you stop a worker thread cleanly without interrupting it mid-task?</span>
+                    <span class="qa-toggle">▼</span>
+                </div>
+                <div class="qa-answer">
+                    <p>Use a sentinel value (None) or stop flag. Producer sends None to signal end. Consumer checks for it and breaks. Alternatively, use a stop_event: thread checks event periodically and exits if set. Don't forcefully kill threads—let them finish current task and check for stop signal.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        document.querySelectorAll('.deepdive-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const content = header.nextElementSibling;
+                const toggle = header.querySelector('.deepdive-toggle');
+                content.classList.toggle('open');
+                toggle.classList.toggle('open');
+            });
+        });
+
+        document.querySelectorAll('.qa-question').forEach(question => {
+            question.addEventListener('click', () => {
+                const answer = question.nextElementSibling;
+                const toggle = question.querySelector('.qa-toggle');
+                answer.classList.toggle('open');
+                toggle.classList.toggle('open');
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 27: Concurrency & Parallelism</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .topnav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(10, 10, 15, 0.95);
+            border-bottom: 1px solid #2a2a35;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .topnav-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.2rem;
+            color: #f43f5e;
+            font-weight: 700;
+        }
+
+        .topnav-nav {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .topnav-nav a {
+            color: #b0b0b8;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .topnav-nav a:hover {
+            color: #f43f5e;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, rgba(244, 63, 94, 0.1), rgba(99, 102, 241, 0.1));
+            padding: 4rem 2rem;
+            text-align: center;
+            border-bottom: 1px solid #2a2a35;
+        }
+
+        .hero h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 3rem;
+            color: #f43f5e;
+            margin-bottom: 1rem;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: #b0b0b8;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            color: #f43f5e;
+            margin-top: 3rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #2a2a35;
+            padding-bottom: 1rem;
+        }
+
+        h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            color: #6366f1;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        h4 {
+            font-family: 'Playfair Display', serif;
+            color: #a78bfa;
+            margin-top: 1.5rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .mental-model {
+            background: rgba(99, 102, 241, 0.08);
+            border-left: 4px solid #6366f1;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            border-radius: 4px;
+        }
+
+        .mental-model h3 {
+            color: #6366f1;
+            margin-top: 0;
+        }
+
+        .section {
+            margin: 2rem 0;
+        }
+
+        .section p, .section li {
+            margin-bottom: 1rem;
+            color: #d0d0d8;
+        }
+
+        .section ul, .section ol {
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+            background: #1a1a24;
+            padding: 0.2rem 0.6rem;
+            border-radius: 3px;
+            font-size: 0.9em;
+            color: #ff9e64;
+        }
+
+        pre {
+            background: #1a1a24;
+            border: 1px solid #2a2a35;
+            border-radius: 6px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+            font-size: 0.95rem;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: #e0e0e0;
+        }
+
+        .code-block {
+            margin: 1.5rem 0;
+        }
+
+        .deepdive {
+            background: rgba(244, 63, 94, 0.05);
+            border: 1px solid #2a2a35;
+            border-radius: 6px;
+            margin: 1.5rem 0;
+        }
+
+        .deepdive-header {
+            background: rgba(244, 63, 94, 0.1);
+            padding: 1rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #2a2a35;
+            border-radius: 6px 6px 0 0;
+        }
+
+        .deepdive-header:hover {
+            background: rgba(244, 63, 94, 0.15);
+        }
+
+        .deepdive-header h4 {
+            margin: 0;
+            color: #f43f5e;
+        }
+
+        .deepdive-toggle {
+            color: #f43f5e;
+            font-size: 1.3rem;
+            transition: transform 0.3s;
+        }
+
+        .deepdive-toggle.open {
+            transform: rotate(180deg);
+        }
+
+        .deepdive-content {
+            display: none;
+            padding: 1.5rem;
+        }
+
+        .deepdive-content.open {
+            display: block;
+        }
+
+        .note {
+            background: rgba(168, 139, 250, 0.08);
+            border-left: 4px solid #a78bfa;
+            padding: 1rem;
+            margin: 1.5rem 0;
+            border-radius: 4px;
+        }
+
+        .note-title {
+            color: #a78bfa;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        th {
+            background: rgba(99, 102, 241, 0.1);
+            color: #6366f1;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 700;
+            border-bottom: 2px solid #2a2a35;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid #2a2a35;
+        }
+
+        tr:hover {
+            background: rgba(244, 63, 94, 0.05);
+        }
+
+        .qa-section {
+            margin: 2rem 0;
+        }
+
+        .qa-item {
+            background: rgba(99, 102, 241, 0.05);
+            border: 1px solid #2a2a35;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+
+        .qa-question {
+            padding: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .qa-question:hover {
+            background: rgba(99, 102, 241, 0.08);
+        }
+
+        .qa-question-text {
+            color: #6366f1;
+            font-weight: 600;
+            flex: 1;
+        }
+
+        .qa-toggle {
+            color: #6366f1;
+            font-size: 1.3rem;
+            transition: transform 0.3s;
+            flex-shrink: 0;
+        }
+
+        .qa-toggle.open {
+            transform: rotate(180deg);
+        }
+
+        .qa-answer {
+            display: none;
+            padding: 0 1.5rem 1.5rem;
+            border-top: 1px solid #2a2a35;
+        }
+
+        .qa-answer.open {
+            display: block;
+        }
+
+        .qa-answer p, .qa-answer li {
+            color: #d0d0d8;
+            margin-bottom: 0.8rem;
+        }
+
+        .comparison-box {
+            background: rgba(99, 102, 241, 0.05);
+            border: 1px solid #2a2a35;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 6px;
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+
+            .topnav {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .topnav-nav {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="topnav">
+        <div class="topnav-title">Chapter 27: Concurrency & Parallelism</div>
+        <div class="topnav-nav">
+            <a href="#definitions">Definitions</a>
+            <a href="#threads">Threads</a>
+            <a href="#decision">Decision Tree</a>
+            <a href="#qa">Q&A</a>
+        </div>
+    </nav>
+
+    <div class="hero">
+        <h1>Concurrency & Parallelism</h1>
+        <p>Write responsive, high-performance applications by leveraging multiple CPU cores and asynchronous I/O</p>
+    </div>
+
+    <div class="container">
+        <div class="mental-model">
+            <h3>🧠 Mental Model: Concurrency vs Parallelism</h3>
+            <p><strong>Concurrency:</strong> Managing multiple tasks that can interleave. A single CPU core switches between tasks rapidly, making them appear simultaneous. Like a chef preparing multiple dishes by switching between them.</p>
+            <p><strong>Parallelism:</strong> Executing multiple tasks simultaneously on different CPU cores. Like multiple chefs each working on a dish. Requires multiple processors.</p>
+            <p><strong>Key insight:</strong> All parallelism is concurrent, but not all concurrency is parallel. Concurrency solves I/O delays; parallelism solves CPU-bound computation.</p>
+        </div>
+
+        <section id="definitions">
+            <h2>Concurrency and Parallelism Explained</h2>
+
+            <div class="section">
+                <h3>Concurrency: Task Switching</h3>
+                <p>Concurrency means multiple tasks are in progress simultaneously. The OS scheduler switches between them quickly, creating the illusion of parallelism on a single core.</p>
+
+                <div class="code-block">
+                    <pre><code class="language-python"># Simulating concurrency (single core, switching)
+import time
+
+start = time.time()
+
+def task_a():
+    for i in range(3):
+        print("Task A")
+        time.sleep(0.1)  # Simulates I/O wait
+
+def task_b():
+    for i in range(3):
+        print("Task B")
+        time.sleep(0.1)  # Simulates I/O wait
+
+# Sequential (no concurrency): 0.6 seconds
+task_a()
+task_b()
+print(f"Sequential: {time.time() - start:.2f}s")
+
+# With concurrency, both run "together"
+# While Task A waits for I/O, Task B can run
+</code></pre>
+                </div>
+
+                <p>Concurrency is ideal for I/O-bound programs (network requests, file operations, database queries). While one task waits, another progresses.</p>
+            </div>
+
+            <div class="section">
+                <h3>Parallelism: Simultaneous Execution</h3>
+                <p>Parallelism means tasks run simultaneously on different CPU cores. True parallelism requires multiple processors.</p>
+
+                <div class="code-block">
+                    <pre><code class="language-python"># Simulating parallelism (multiple cores, simultaneous)
+import time
+
+# CPU-bound task: crunching numbers
+def cpu_intensive(n):
+    result = 0
+    for i in range(n):
+        result += i ** 2
+    return result
+
+# Sequential: N seconds
+start = time.time()
+cpu_intensive(100_000_000)
+cpu_intensive(100_000_000)
+seq_time = time.time() - start
+print(f"Sequential: {seq_time:.2f}s")
+
+# With true parallelism (multiple processes): ~N/2 seconds
+# Each process runs on a different core simultaneously
+</code></pre>
+                </div>
+
+                <p>Parallelism is ideal for CPU-bound programs (heavy calculations, data processing). You need multiple cores to actually parallelize.</p>
+            </div>
+
+            <div class="section">
+                <h3>I/O-bound vs CPU-bound</h3>
+                <div class="comparison-box">
+                    <h4>I/O-bound Programs</h4>
+                    <p><strong>What:</strong> Time is spent waiting for I/O (network, disk, database)</p>
+                    <p><strong>Examples:</strong> Web scraper, API client, file processor, database query app</p>
+                    <p><strong>Solution:</strong> Concurrency (threading, asyncio). Let other tasks run while waiting.</p>
+                    <p><strong>Speedup:</strong> Can be 10-100x with many concurrent tasks</p>
+
+                    <div style="margin-top: 2rem;">
+                        <h4>CPU-bound Programs</h4>
+                        <p><strong>What:</strong> Time is spent in CPU computation (no I/O waiting)</p>
+                        <p><strong>Examples:</strong> Machine learning, numerical computation, image processing</p>
+                        <p><strong>Solution:</strong> Parallelism (multiprocessing). Use multiple cores.</p>
+                        <p><strong>Speedup:</strong> Can be near-linear with number of cores (minus overhead)</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="note">
+                <div class="note-title">Python's GIL: The Global Interpreter Lock</div>
+                <p>Python's GIL prevents true parallelism on a single process. Even with threading on multiple cores, only one thread executes Python bytecode at a time. Threading in Python works for I/O-bound tasks (the thread releases the GIL during I/O), but not for CPU-bound parallelism. Use <code>multiprocessing</code> for CPU parallelism (each process has its own GIL).</p>
+            </note>
+        </section>
+
+        <section id="threads">
+            <h2>Threads: Lightweight Concurrency</h2>
+
+            <div class="section">
+                <h3>What are Threads?</h3>
+                <p>Threads are lightweight processes that share the same memory space. They're cheaper to create than full processes.</p>
+
+                <div class="code-block">
+                    <pre><code class="language-python">import threading
+import time
+
+def worker(name, duration):
+    print(f"{name} started")
+    time.sleep(duration)
+    print(f"{name} done")
+
+# Create and start threads
+t1 = threading.Thread(target=worker, args=("Thread-1", 2))
+t2 = threading.Thread(target=worker, args=("Thread-2", 1))
+
+start = time.time()
+t1.start()  # Start execution
+t2.start()
+
+# Wait for threads to finish
+t1.join()  # Block until t1 completes
+t2.join()  # Block until t2 completes
+
+print(f"Total time: {time.time() - start:.2f}s")
+# Sequential would be 3s. With threads: ~2s (parallelized I/O wait)
+</code></pre>
+                </div>
+
+                <p>Threads run "concurrently" (interleaved on one core). For I/O-bound tasks, other threads can run while one waits.</p>
+            </div>
+
+            <div class="section">
+                <h3>Thread Properties</h3>
+                <p>Threads have useful properties:</p>
+
+                <div class="code-block">
+                    <pre><code class="language-python">import threading
+
+def worker():
+    print(f"Running {threading.current_thread().name}")
+    time.sleep(2)
+
+# Create thread with a custom name
+thread = threading.Thread(target=worker, name="MyWorker")
+
+print(thread.name)  # 'MyWorker'
+print(thread.is_alive())  # False (not started yet)
+
+thread.start()
+print(thread.is_alive())  # True (running)
+print(thread.daemon)  # False (not a daemon)
+
+thread.join()
+print(thread.is_alive())  # False (finished)
+
+# Daemon threads
+daemon = threading.Thread(target=worker, daemon=True)
+daemon.start()
+# Program can exit while daemon is running (unlike normal threads)
+</code></pre>
+                </div>
+
+                <p><strong>Key properties:</strong></p>
+                <ul>
+                    <li><code>name</code> - Thread identifier</li>
+                    <li><code>daemon</code> - If True, program doesn't wait for this thread to finish</li>
+                    <li><code>is_alive()</code> - Check if thread is still running</li>
+                    <li><code>join()</code> - Wait for thread to complete</li>
+                </ul>
+            </div>
+
+            <div class="section">
+                <h3>Launching Threads</h3>
+                <p>Create and start threads with target function and arguments:</p>
+
+                <div class="code-block">
+                    <pre><code class="language-python">import threading
+
+def work(task_id, delay):
+    print(f"Task {task_id} starting")
+    time.sleep(delay)
+    print(f"Task {task_id} done")
+
+# Method 1: Pass args
+thread = threading.Thread(target=work, args=(1, 2))
+thread.start()
+
+# Method 2: Pass kwargs
+thread = threading.Thread(target=work, task_id=2, delay=1)
+thread.start()
+
+# Method 3: Subclass Thread
+class Worker(threading.Thread):
+    def __init__(self, task_id):
+        super().__init__()
+        self.task_id = task_id
+
+    def run(self):
+        print(f"Task {self.task_id} starting")
+        time.sleep(1)
+        print(f"Task {self.task_id} done")
+
+thread = Worker(3)
+thread.start()
+</code></pre>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>Passing Parameters to Threads</h3>
+                <p>Use <code>args</code> and <code>kwargs</code> to pass data to thread functions:</p>
+
+                <div class="code-block">
+                    <pre><code class="language-python">import threading
+
+def fetch_data(url, timeout=5):
+    print(f"Fetching {url} with timeout {timeout}")
+    # ... fetch logic ...
+
+# Positional arguments
+t1 = threading.Thread(target=fetch_data, args=("http://example.com",))
+
+# Keyword arguments
+t2 = threading.Thread(target=fetch_data, kwargs={"url": "http://example.com", "timeout": 10})
+
+# Mixed
+t3 = threading.Thread(target=fetch_data, args=("http://example.com",), kwargs={"timeout": 10})
+
+t1.start()
+t2.start()
+t3.start()
+</code></pre>
+                </div>
+
+                <p>Note: Tuples with one element need a trailing comma: <code>(value,)</code></p>
+            </div>
+
+            <div class="deepdive">
+                <div class="deepdive-header">
+                    <h4>Deep Dive: The GIL (Global Interpreter Lock)</h4>
+                    <span class="deepdive-toggle">▼</span>
+                </div>
+                <div class="deepdive-content">
+                    <p>Python's GIL is a mutex that protects access to Python objects. Only one thread can execute Python bytecode at a time, even on multi-core systems.</p>
+                    <div class="code-block">
+                        <pre><code class="language-python"># GIL Impact: CPU-bound threading does NOT parallelize
+import threading
+import time
+
+def cpu_work(n):
+    """CPU-bound: lots of computation"""
+    result = 0
+    for i in range(n):
+        result += i ** 2
+    return result
+
+# Sequential: 4 seconds
+start = time.time()
+cpu_work(100_000_000)
+cpu_work(100_000_000)
+print(f"Sequential: {time.time() - start:.2f}s")
+
+# Threading: still ~4 seconds (GIL prevents parallelism)
+start = time.time()
+t1 = threading.Thread(target=cpu_work, args=(100_000_000,))
+t2 = threading.Thread(target=cpu_work, args=(100_000_000,))
+t1.start()
+t2.start()
+t1.join()
+t2.join()
+print(f"Threading: {time.time() - start:.2f}s")
+
+# But I/O-bound threading DOES parallelize
+# While Thread 1 waits for I/O, Thread 2 can run
+</code></pre>
+                    </div>
+
+                    <p><strong>Key points:</strong></p>
+                    <ul>
+                        <li>Threads don't parallelize CPU-bound work (GIL blocks it)</li>
+                        <li>Threads DO parallelize I/O-bound work (GIL is released during I/O)</li>
+                        <li>Multiprocessing bypasses the GIL (each process has its own)</li>
+                        <li>Python 3.13+ has "free-threaded" mode (no GIL), but it's still experimental</li>
+                    </ul>
+                </div>
+            </section>
+
+            <div class="deepdive">
+                <div class="deepdive-header">
+                    <h4>Deep Dive: concurrent.futures</h4>
+                    <span class="deepdive-toggle">▼</span>
+                </div>
+                <div class="deepdive-content">
+                    <p><code>concurrent.futures</code> provides high-level abstractions for thread and process pools:</p>
+                    <div class="code-block">
+                        <pre><code class="language-python">from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+import time
+
+def work(task_id):
+    print(f"Task {task_id} started")
+    time.sleep(1)
+    return f"Task {task_id} done"
+
+# ThreadPoolExecutor for I/O-bound
+with ThreadPoolExecutor(max_workers=3) as executor:
+    futures = [executor.submit(work, i) for i in range(5)]
+    for future in futures:
+        print(future.result())  # Wait and get result
+
+# ProcessPoolExecutor for CPU-bound
+with ProcessPoolExecutor(max_workers=3) as executor:
+    futures = [executor.submit(work, i) for i in range(5)]
+    for future in futures:
+        print(future.result())
+
+# map convenience method
+with ThreadPoolExecutor(max_workers=3) as executor:
+    results = executor.map(work, range(5))
+    for result in results:
+        print(result)
+</code></pre>
+                    </div>
+
+                    <p>Executors manage thread/process pools, handle job queues, and simplify result collection.</p>
+                </div>
+            </div>
+
+            <div class="deepdive">
+                <div class="deepdive-header">
+                    <h4>Deep Dive: Asyncio (Cooperative Multitasking)</h4>
+                    <span class="deepdive-toggle">▼</span>
+                </div>
+                <div class="deepdive-content">
+                    <p>Asyncio is for cooperative concurrency where tasks voluntarily yield control (using <code>await</code>):</p>
+                    <div class="code-block">
+                        <pre><code class="language-python">import asyncio
+
+async def fetch_data(url):
+    print(f"Fetching {url}")
+    await asyncio.sleep(2)  # Simulate I/O
+    return f"Data from {url}"
+
+async def main():
+    # Run multiple coroutines concurrently
+    tasks = [
+        fetch_data("http://example1.com"),
+        fetch_data("http://example2.com"),
+        fetch_data("http://example3.com"),
+    ]
+    results = await asyncio.gather(*tasks)
+    for result in results:
+        print(result)
+
+# Run the event loop
+asyncio.run(main())
+
+# Advantages over threading:
+# - No GIL issues (single-threaded)
+# - Lighter weight than threads
+# - Explicit control with 'await'
+# - Better for I/O-heavy applications
+</code></pre>
+                    </div>
+
+                    <p>Asyncio is more efficient than threading for I/O-bound code with many concurrent operations (thousands of connections).</p>
+                </div>
+            </section>
+        </section>
+
+        <section id="decision">
+            <h2>Which to Use: Decision Tree</h2>
+
+            <div class="section">
+                <h3>Quick Decision Matrix</h3>
+                <div class="comparison-box">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Problem Type</th>
+                                <th>Solution</th>
+                                <th>Why</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>I/O-bound (few tasks)</td>
+                                <td><code>threading</code></td>
+                                <td>Simple, light, works well</td>
+                            </tr>
+                            <tr>
+                                <td>I/O-bound (many tasks, 1000+)</td>
+                                <td><code>asyncio</code></td>
+                                <td>Lighter, more scalable</td>
+                            </tr>
+                            <tr>
+                                <td>CPU-bound</td>
+                                <td><code>multiprocessing</code></td>
+                                <td>Bypasses GIL, true parallelism</td>
+                            </tr>
+                            <tr>
+                                <td>General purpose</td>
+                                <td><code>concurrent.futures</code></td>
+                                <td>Higher-level abstraction</td>
+                            </tr>
+                            <tr>
+                                <td>Complex async code</td>
+                                <td><code>asyncio</code></td>
+                                <td>More control, explicit flow</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>Step-by-Step Decision Process</h3>
+                <ol>
+                    <li><strong>Is it CPU-bound?</strong> (mostly computation)
+                        <ul>
+                            <li>YES → Use <code>multiprocessing</code></li>
+                            <li>NO → Continue</li>
+                        </ul>
+                    </li>
+                    <li><strong>How many concurrent tasks?</strong>
+                        <ul>
+                            <li>&lt; 50 tasks → <code>threading</code> (simple)</li>
+                            <li>1000+ tasks → <code>asyncio</code> (scalable)</li>
+                            <li>Otherwise → <code>threading</code></li>
+                        </ul>
+                    </li>
+                    <li><strong>Can you restructure code to async/await?</strong>
+                        <ul>
+                            <li>YES → <code>asyncio</code> (better)</li>
+                            <li>NO → <code>threading</code> (pragmatic)</li>
+                        </ul>
+                    </li>
+                </ol>
+            </div>
+
+            <div class="section">
+                <h3>Real-World Examples</h3>
+
+                <h4>Web Scraper (I/O-bound, few tasks): threading</h4>
+                <div class="code-block">
+                    <pre><code class="language-python">import threading
+import requests
+from concurrent.futures import ThreadPoolExecutor
+
+def download_page(url):
+    response = requests.get(url)  # I/O blocking
+    return len(response.text)
+
+urls = ["http://example.com"] * 10
+
+with ThreadPoolExecutor(max_workers=5) as executor:
+    results = executor.map(download_page, urls)
+    print(f"Downloaded {sum(results)} characters")
+</code></pre>
+                </div>
+
+                <h4>Data Processing (CPU-bound): multiprocessing</h4>
+                <div class="code-block">
+                    <pre><code class="language-python">from multiprocessing import Pool
+
+def process_data(chunk):
+    # CPU-intensive work
+    return sum(x ** 2 for x in chunk)
+
+data = [[1, 2, 3]] * 10
+
+with Pool(processes=4) as pool:
+    results = pool.map(process_data, data)
+    total = sum(results)
+</code></pre>
+                </div>
+
+                <h4>Web Server (I/O-bound, many tasks): asyncio</h4>
+                <div class="code-block">
+                    <pre><code class="language-python">import asyncio
+
+async def handle_request(request):
+    await asyncio.sleep(0.1)  # Simulate database query
+    return "Response"
+
+# In reality, you'd use a web framework like FastAPI
+# which handles asyncio internally
+</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <section id="qa" class="qa-section">
+            <h2>Socratic Q&A: Test Your Understanding</h2>
+
+            <div class="qa-item">
+                <div class="qa-question">
+                    <span class="qa-question-text">Can Python threads achieve true parallelism on multi-core systems? Why or why not?</span>
+                    <span class="qa-toggle">▼</span>
+                </div>
+                <div class="qa-answer">
+                    <p>No, due to the GIL (Global Interpreter Lock). Only one thread can execute Python bytecode at a time, even on multi-core systems. The GIL prevents true parallelism for CPU-bound work. However, threads DO parallelize I/O-bound work because the GIL is released during I/O operations (network, disk, etc.), allowing other threads to run while one waits.</p>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <div class="qa-question">
+                    <span class="qa-question-text">What's the difference between `t.start()` and `t.run()` for threads?</span>
+                    <span class="qa-toggle">▼</span>
+                </div>
+                <div class="qa-answer">
+                    <p>`t.start()` launches the thread as a separate concurrent execution. `t.run()` executes the target function directly in the CURRENT thread (blocking). Always use `start()`. Using `run()` defeats the purpose of threading—the code runs sequentially, not concurrently.</p>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <div class="qa-question">
+                    <span class="qa-question-text">What does `t.join()` do? What happens if you don't call it?</span>
+                    <span class="qa-toggle">▼</span>
+                </div>
+                <div class="qa-answer">
+                    <p>`t.join()` blocks the calling thread until thread `t` completes. Without it, your program can exit while threads are still running. If the thread is NOT a daemon, the program waits anyway. If it IS a daemon, it terminates when the main program exits, potentially losing data or leaving tasks incomplete.</p>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <div class="qa-question">
+                    <span class="qa-question-text">What's a daemon thread? When would you use one?</span>
+                    <span class="qa-toggle">▼</span>
+                </div>
+                <div class="qa-answer">
+                    <p>A daemon thread is one that exits when the main program exits, regardless of whether it finished. Use for background tasks that aren't critical (logging, monitoring, cleanup). Normal threads force the program to wait for them; daemon threads don't. Critical work should use normal threads.</p>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <div class="qa-question">
+                    <span class="qa-question-text">When should you use multiprocessing instead of threading?</span>
+                    <span class="qa-toggle">▼</span>
+                </div>
+                <div class="qa-answer">
+                    <p>Use multiprocessing for CPU-bound work. Each process has its own GIL, enabling true parallelism on multi-core systems. Threading only helps for I/O-bound work (where the GIL is released during I/O). Multiprocessing is heavier (more memory, slower startup) but achieves actual parallelism for computation.</p>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <div class="qa-question">
+                    <span class="qa-question-text">Why is asyncio preferred over threading for I/O-bound apps with thousands of concurrent connections?</span>
+                    <span class="qa-toggle">▼</span>
+                </div>
+                <div class="qa-answer">
+                    <p>Each thread consumes memory and OS resources. Creating 10,000 threads is expensive. Asyncio uses a single thread with an event loop managing many "lightweight" coroutines. Coroutines are much cheaper than threads: you can have 100,000+ without resource exhaustion. Asyncio is more scalable for high-concurrency I/O workloads.</p>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <div class="qa-question">
+                    <span class="qa-question-text">What's the difference between `concurrent.futures.ThreadPoolExecutor` and manually creating threads?</span>
+                    <span class="qa-toggle">▼</span>
+                </div>
+                <div class="qa-answer">
+                    <p>ThreadPoolExecutor manages a pool of reusable threads and a job queue. Manual threads require you to create, start, and join each one. Executors handle thread lifecycle, reuse threads to save creation overhead, and provide convenient methods like `map()` and `submit()`. Use ThreadPoolExecutor for cleaner, more efficient code.</p>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <div class="qa-question">
+                    <span class="qa-question-text">How do you pass arguments to a thread's target function?</span>
+                    <span class="qa-toggle">▼</span>
+                </div>
+                <div class="qa-answer">
+                    <p>Use `args` for positional arguments and `kwargs` for keyword arguments. Example: `Thread(target=func, args=(1, 2), kwargs={'x': 3})`. Args are passed as a tuple (note: single-element tuples need a trailing comma: `args=(value,)`). Kwargs are passed as a dict.</p>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <div class="qa-question">
+                    <span class="qa-question-text">Can you safely share mutable objects between threads? What precautions are needed?</span>
+                    <span class="qa-toggle">▼</span>
+                </div>
+                <div class="qa-answer">
+                    <p>Sharing mutable objects is risky—concurrent modifications can corrupt data (race conditions). Use synchronization primitives like `Lock`, `RLock`, `Semaphore`, `Event`, or `Condition` from the `threading` module to protect shared access. Or use thread-safe collections like `queue.Queue`. This is covered in Chapter 28 (Synchronization & Thread Safety).</p>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <div class="qa-question">
+                    <span class="qa-question-text">What happens if a thread raises an unhandled exception?</span>
+                    <span class="qa-toggle">▼</span>
+                </div>
+                <div class="qa-answer">
+                    <p>The thread terminates, but the program continues. The exception doesn't propagate to the main thread. To catch exceptions from threads, wrap the target function in try-except or use executor's `result()` method which re-raises exceptions. This is important: you must explicitly handle exceptions in threads.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        document.querySelectorAll('.deepdive-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const content = header.nextElementSibling;
+                const toggle = header.querySelector('.deepdive-toggle');
+                content.classList.toggle('open');
+                toggle.classList.toggle('open');
+            });
+        });
+
+        document.querySelectorAll('.qa-question').forEach(question => {
+            question.addEventListener('click', () => {
+                const answer = question.nextElementSibling;
+                const toggle = question.querySelector('.qa-toggle');
+                answer.classList.toggle('open');
+                toggle.classList.toggle('open');
+            });
+        });
+    </script>
+</body>
+</html>
