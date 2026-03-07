@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PyTorch → Ancient Language Translation: An Interactive Explainer</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+  :root {
+    --max-w: 740px;
+    --bg: #FAF9F7;
+    --text: #2D2D2D;
+    --text-light: #6B6B6B;
+    --border: #E5E5E0;
+    --accent: #3B5BDB;
+    --accent-light: #EDF2FF;
+    --green: #2B8A3E;
+    --green-light: #EBFBEE;
+    --orange: #E67700;
+    --orange-light: #FFF9DB;
+    --red: #C92A2A;
+    --red-light: #FFF5F5;
+    --purple: #7048E8;
+    --purple-light: #F3F0FF;
+    --code-bg: #1e1e2e;
+    --code-text: #cdd6f4;
+    --serif: 'Georgia', 'Times New Roman', serif;
+    --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--serif);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.75;
+    font-size: 17px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* === HERO === */
+  .hero {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 100%);
+    color: white;
+    padding: 80px 24px 60px;
+    text-align: center;
+  }
+  .hero h1 {
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 1.15;
+    max-width: var(--max-w);
+    margin: 0 auto 16px;
+  }
+  .hero h1 span { color: #FF6B6B; }
+  .hero .subtitle {
+    font-family: var(--sans);
+    font-size: 18px;
+    color: #b0b8d1;
+    max-width: 580px;
+    margin: 0 auto 32px;
+    line-height: 1.6;
+  }
+  .hero .badge {
+    display: inline-block;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 6px 16px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+  }
+
+  /* === MAIN CONTENT === */
+  .content {
+    max-width: var(--max-w);
+    margin: 0 auto;
+    padding: 48px 24px 120px;
+  }
+
+  h2 {
+    font-size: 32px;
+    margin: 64px 0 12px;
+    line-height: 1.25;
+    color: var(--text);
+  }
+  h3 {
+    font-size: 22px;
+    margin: 36px 0 10px;
+    line-height: 1.35;
+  }
+  h4 {
+    font-family: var(--sans);
+    font-size: 16px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-light);
+    margin: 40px 0 8px;
+  }
+
+  p { margin: 12px 0; }
+  a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+  a:hover { color: #2B4BC8; }
+
+  /* === MODULE NAVIGATION === */
+  .module-nav {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 40px 0;
+  }
+  .module-nav a {
+    font-family: var(--sans);
+    font-size: 14px;
+    text-decoration: none;
+    padding: 14px 18px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: white;
+    color: var(--text);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .module-nav a:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  }
+  .module-nav .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--accent-light);
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  /* === MODULE HEADER === */
+  .module-header {
+    margin: 72px 0 24px;
+    padding: 28px 28px 24px;
+    border-radius: 14px;
+    border-left: 4px solid var(--accent);
+    background: white;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  }
+  .module-header .module-label {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .module-header h2 { margin: 0 0 8px; font-size: 28px; }
+  .module-header p {
+    font-family: var(--sans);
+    font-size: 15px;
+    color: var(--text-light);
+    margin: 0;
+  }
+
+  /* === FEYNMAN BOX (plain-language explanation) === */
+  .feynman-box {
+    background: var(--accent-light);
+    border: 1px solid #D0D9F6;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 24px 0;
+  }
+  .feynman-box .label {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--accent);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .feynman-box p { font-size: 16px; margin: 0; }
+
+  /* === PAUSE & THINK === */
+  .pause-think {
+    background: var(--orange-light);
+    border: 1px solid #FFE0A0;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 28px 0;
+  }
+  .pause-think .label {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--orange);
+    margin-bottom: 8px;
+  }
+  .pause-think p { font-size: 16px; margin: 0 0 12px; }
+  .pause-think .reveal-btn {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 8px 20px;
+    border: 1px solid var(--orange);
+    background: transparent;
+    color: var(--orange);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .pause-think .reveal-btn:hover {
+    background: var(--orange);
+    color: white;
+  }
+  .pause-think .answer {
+    display: none;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px dashed #FFE0A0;
+  }
+  .pause-think .answer.visible { display: block; }
+
+  /* === SOCRATIC QUIZ === */
+  .quiz {
+    background: var(--green-light);
+    border: 1px solid #B2DFB8;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 28px 0;
+  }
+  .quiz .label {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--green);
+    margin-bottom: 10px;
+  }
+  .quiz p { font-size: 16px; margin: 0 0 14px; }
+  .quiz .options { display: flex; flex-direction: column; gap: 8px; }
+  .quiz .option {
+    font-family: var(--sans);
+    font-size: 15px;
+    text-align: left;
+    padding: 12px 18px;
+    border: 1px solid #B2DFB8;
+    background: white;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .quiz .option:hover { border-color: var(--green); background: #F4FFF5; }
+  .quiz .option.correct { background: #D3F9D8; border-color: var(--green); font-weight: 600; }
+  .quiz .option.incorrect { background: #FFE0E0; border-color: var(--red); opacity: 0.7; }
+  .quiz .option.disabled { pointer-events: none; }
+  .quiz .explanation {
+    display: none;
+    margin-top: 14px;
+    padding: 14px 18px;
+    background: white;
+    border-radius: 8px;
+    font-size: 15px;
+    border-left: 3px solid var(--green);
+  }
+  .quiz .explanation.visible { display: block; }
+
+  /* === CODE BLOCKS === */
+  pre {
+    background: var(--code-bg);
+    color: var(--code-text);
+    padding: 20px 24px;
+    border-radius: 10px;
+    overflow-x: auto;
+    margin: 20px 0;
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.65;
+    position: relative;
+  }
+  pre .lang-tag {
+    position: absolute;
+    top: 10px;
+    right: 14px;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: #6c7086;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  code {
+    font-family: var(--mono);
+    font-size: 0.9em;
+    background: #f0f0ec;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  pre code { background: none; padding: 0; font-size: 1em; }
+
+  /* Syntax highlighting */
+  .kw { color: #cba6f7; }   /* keywords */
+  .fn { color: #89b4fa; }   /* functions */
+  .st { color: #a6e3a1; }   /* strings */
+  .cm { color: #6c7086; font-style: italic; }  /* comments */
+  .nb { color: #f9e2af; }   /* numbers / builtins */
+  .op { color: #89dceb; }   /* operators */
+  .vr { color: #f38ba8; }   /* variables / special */
+
+  /* === COLLAPSIBLE SECTIONS === */
+  .collapsible {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin: 20px 0;
+    overflow: hidden;
+    background: white;
+  }
+  .collapsible-header {
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 600;
+    padding: 14px 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #FAFAFA;
+    transition: background 0.2s;
+    user-select: none;
+  }
+  .collapsible-header:hover { background: #F5F5F3; }
+  .collapsible-header .arrow {
+    transition: transform 0.25s;
+    font-size: 12px;
+    color: var(--text-light);
+  }
+  .collapsible-header.open .arrow { transform: rotate(90deg); }
+  .collapsible-body {
+    display: none;
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+  }
+  .collapsible-body.open { display: block; }
+
+  /* === TIP / NOTE / WARNING === */
+  .tip, .note, .warning {
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 20px 0;
+    font-size: 15px;
+  }
+  .tip {
+    background: var(--purple-light);
+    border: 1px solid #D0BFF8;
+  }
+  .note {
+    background: var(--accent-light);
+    border: 1px solid #D0D9F6;
+  }
+  .warning {
+    background: var(--red-light);
+    border: 1px solid #FFC9C9;
+  }
+  .tip .label, .note .label, .warning .label {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 6px;
+  }
+  .tip .label { color: var(--purple); }
+  .note .label { color: var(--accent); }
+  .warning .label { color: var(--red); }
+
+  /* === PROGRESS BAR === */
+  .progress-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    background: var(--accent);
+    z-index: 100;
+    transition: width 0.1s;
+  }
+
+  /* === REFERENCES === */
+  .ref-card {
+    display: flex;
+    gap: 14px;
+    padding: 16px 20px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin: 10px 0;
+    background: white;
+    text-decoration: none;
+    color: var(--text);
+    transition: all 0.2s ease;
+  }
+  .ref-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+  }
+  .ref-card .icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .ref-card .meta { font-family: var(--sans); }
+  .ref-card .meta strong { font-size: 15px; display: block; margin-bottom: 2px; }
+  .ref-card .meta span { font-size: 13px; color: var(--text-light); }
+
+  /* === TENSOR SHAPE ANNOTATION === */
+  .shape {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 13px;
+    background: #FFF3BF;
+    color: #845F00;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+
+  /* === RESPONSIVE === */
+  @media (max-width: 640px) {
+    .hero h1 { font-size: 32px; }
+    .module-nav { grid-template-columns: 1fr; }
+    h2 { font-size: 26px; }
+    pre { font-size: 13px; padding: 16px; }
+  }
+
+  /* === KATEX OVERRIDES === */
+  .katex-display { margin: 20px 0; overflow-x: auto; }
+
+  /* === CAPSTONE === */
+  .capstone-header {
+    background: linear-gradient(135deg, #7048E8 0%, #3B5BDB 100%);
+    color: white;
+    padding: 32px 28px;
+    border-radius: 14px;
+    margin: 72px 0 24px;
+  }
+  .capstone-header h2 { color: white; margin: 0 0 8px; }
+  .capstone-header p {
+    font-family: var(--sans);
+    font-size: 15px;
+    color: #D0D9F6;
+    margin: 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+
+<!-- ============================================ -->
+<!-- HERO -->
+<!-- ============================================ -->
+<div class="hero">
+  <div class="badge">Interactive Explainer</div>
+  <h1>From Zero to <span>Ancient Language Translator</span> with PyTorch</h1>
+  <p class="subtitle">
+    A Feynman-style, interactive curriculum that takes you from tensors to building a custom neural machine translation system for low-resource ancient languages.
+  </p>
+</div>
+
+<!-- ============================================ -->
+<!-- CONTENT -->
+<!-- ============================================ -->
+<div class="content">
+
+<p>Welcome. This explainer is structured as a seven-module curriculum. Each module uses the <strong>Feynman Technique</strong>&mdash;we explain every concept as if to a curious friend, not a textbook&mdash;and the <strong>Socratic Method</strong> to test whether you've truly internalized the ideas before moving on.</p>
+
+<p>The final destination: a working Seq2Seq Transformer that translates an ancient language into English, even when training data is scarce.</p>
+
+<h4>Curriculum Map</h4>
+<div class="module-nav">
+  <a href="#module-1"><span class="num">1</span> Tensors &amp; Autograd</a>
+  <a href="#module-2"><span class="num">2</span> nn.Module Building Blocks</a>
+  <a href="#module-3"><span class="num">3</span> Data Pipelines for Translation</a>
+  <a href="#module-4"><span class="num">4</span> Sequential Modeling</a>
+  <a href="#module-5"><span class="num">5</span> Transformer from Scratch</a>
+  <a href="#module-6"><span class="num">6</span> PyTorch Lightning</a>
+  <a href="#module-7"><span class="num">7</span> Transfer Learning (Low-Resource)</a>
+</div>
+
+<!-- ============================================ -->
+<!-- MODULE 1: TENSORS & AUTOGRAD -->
+<!-- ============================================ -->
+<div class="module-header" id="module-1">
+  <div class="module-label">Module 1</div>
+  <h2>Tensors &amp; Autograd — The Engine</h2>
+  <p>Understanding the fundamental data structure and automatic differentiation that powers every PyTorch model.</p>
+</div>
+
+<h3>Tensors: NumPy's GPU-Accelerated Cousin</h3>
+
+<div class="feynman-box">
+  <div class="label">🧠 Feynman Explanation</div>
+  <p>Imagine a spreadsheet. A single cell is a <strong>scalar</strong> (0-D tensor). A row is a <strong>vector</strong> (1-D tensor). The whole sheet is a <strong>matrix</strong> (2-D tensor). Now imagine a <em>stack</em> of spreadsheets&mdash;that's a 3-D tensor. PyTorch tensors are just this: multi-dimensional arrays that know how to live on a GPU and track every math operation done to them, so they can later compute gradients automatically.</p>
+</div>
+
+<p>If you've used NumPy, PyTorch tensors will feel familiar. The critical differences are: (1) tensors can move to a GPU for parallel computation, and (2) tensors can record a <em>computation graph</em> for automatic differentiation.</p>
+
+<pre><code><span class="lang-tag">python</span>
+<span class="kw">import</span> torch
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cm"># Creating tensors — almost identical to NumPy</span>
+a_np = np.array([[<span class="nb">1.0</span>, <span class="nb">2.0</span>], [<span class="nb">3.0</span>, <span class="nb">4.0</span>]])
+a_pt = torch.tensor([[<span class="nb">1.0</span>, <span class="nb">2.0</span>], [<span class="nb">3.0</span>, <span class="nb">4.0</span>]])
+
+<span class="cm"># Zero-copy conversion between the two</span>
+a_from_np = torch.from_numpy(a_np)   <span class="cm"># shares memory!</span>
+a_to_np   = a_pt.numpy()             <span class="cm"># shares memory on CPU</span>
+
+<span class="cm"># Device management — move to GPU if available</span>
+device = torch.device(<span class="st">"cuda"</span> <span class="kw">if</span> torch.cuda.is_available() <span class="kw">else</span> <span class="st">"cpu"</span>)
+a_gpu = a_pt.to(device)  <span class="cm"># now lives on GPU (if available)</span>
+
+<span class="fn">print</span>(a_gpu.shape)   <span class="cm"># torch.Size([2, 2])</span>
+<span class="fn">print</span>(a_gpu.device)  <span class="cm"># cuda:0 or cpu</span>
+</code></pre>
+
+<div class="note">
+  <div class="label">Key Point</div>
+  <p><code>torch.from_numpy()</code> shares memory with the original array. If you modify one, the other changes too. This is efficient but can surprise you. When moving to GPU, <code>.to(device)</code> always creates a <em>copy</em>.</p>
+</div>
+
+<h3>Autograd: The Dynamic Computation Graph</h3>
+
+<div class="feynman-box">
+  <div class="label">🧠 Feynman Explanation</div>
+  <p>Imagine you're baking a cake and you write down every single step: "I mixed flour and eggs, then I added sugar, then I baked it." If the cake tastes bad and you want to know "how much would it improve if I used <em>slightly</em> more sugar?", you could trace your steps backward through your notes to figure it out. That's exactly what autograd does. Every time you do math on a tensor marked with <code>requires_grad=True</code>, PyTorch secretly writes down that operation in a directed acyclic graph (DAG). When you call <code>.backward()</code>, it walks that graph in reverse to compute gradients.</p>
+</div>
+
+<p>This is called "reverse-mode automatic differentiation." Unlike symbolic differentiation (which manipulates math expressions) or numerical differentiation (which uses finite differences), autograd computes <em>exact</em> gradients efficiently by replaying the computation backward.</p>
+
+<pre><code><span class="lang-tag">python</span>
+<span class="cm"># Tell PyTorch: "track all operations on this tensor"</span>
+x = torch.tensor([<span class="nb">2.0</span>, <span class="nb">3.0</span>], requires_grad=<span class="nb">True</span>)
+
+<span class="cm"># Forward pass: compute y = x^2 + 3x</span>
+y = x**<span class="nb">2</span> + <span class="nb">3</span> * x   <span class="cm"># PyTorch records: pow, mul, add</span>
+loss = y.sum()        <span class="cm"># reduce to scalar (backward needs a scalar)</span>
+
+<span class="cm"># Backward pass: compute dy/dx = 2x + 3</span>
+loss.backward()
+
+<span class="fn">print</span>(x.grad)  <span class="cm"># tensor([7., 9.])  — i.e., 2*2+3=7, 2*3+3=9 ✓</span>
+</code></pre>
+
+<div class="warning">
+  <div class="label">Common Pitfall</div>
+  <p>Gradients <strong>accumulate</strong> by default. If you call <code>.backward()</code> twice without zeroing, <code>x.grad</code> doubles. In a training loop, always call <code>optimizer.zero_grad()</code> before the backward pass.</p>
+</div>
+
+<div class="pause-think" id="pt1">
+  <div class="label">⏸ Pause &amp; Think</div>
+  <p>Consider: <code>z = (3 * x + 1).sum()</code> where <code>x = tensor([1.0, 2.0], requires_grad=True)</code>. What will <code>x.grad</code> be after <code>z.backward()</code>?</p>
+  <button class="reveal-btn" onclick="toggleAnswer('pt1')">Reveal Answer</button>
+  <div class="answer">
+    <p>The derivative of \(z = 3x + 1\) with respect to \(x\) is simply \(3\). Since <code>x</code> has two elements, <code>x.grad</code> will be <code>tensor([3., 3.])</code>. The constant \(+1\) vanishes in the derivative, and the <code>.sum()</code> distributes the gradient equally (each element contributes independently).</p>
+  </div>
+</div>
+
+<h3>Dynamic vs. Static Graphs</h3>
+
+<p>PyTorch uses a <strong>dynamic computation graph</strong> (define-by-run): the graph is rebuilt every forward pass. This means you can use standard Python control flow (<code>if</code>, <code>for</code>, <code>while</code>) inside your models, and the graph adapts. TensorFlow 1.x used static graphs (define-then-run), where you built the graph once and executed it repeatedly. PyTorch's approach feels more Pythonic and makes debugging trivial—you can use <code>print()</code> and <code>pdb</code> mid-forward-pass.</p>
+
+<div class="quiz" id="q1">
+  <div class="label">🏛 Socratic Check</div>
+  <p>Why must you call <code>.backward()</code> on a <strong>scalar</strong> tensor, not a vector?</p>
+  <div class="options">
+    <button class="option" onclick="checkQuiz('q1', this, false)">Because PyTorch can't differentiate vector-valued functions</button>
+    <button class="option" onclick="checkQuiz('q1', this, true)">Because a gradient is defined as the derivative of a scalar loss w.r.t. each parameter — you need a single number to differentiate "from"</button>
+    <button class="option" onclick="checkQuiz('q1', this, false)">It's just a software limitation; mathematically it would work fine</button>
+  </div>
+  <div class="explanation">Correct! The Jacobian of a vector-valued function w.r.t. a vector input is a <em>matrix</em>, not a simple gradient vector. PyTorch's <code>.backward()</code> computes the vector-Jacobian product, which requires a "starting vector" (defaulting to 1.0 for scalar outputs). You <em>can</em> pass a gradient argument to <code>.backward()</code> for non-scalar outputs, but in practice we always reduce to a scalar loss first.</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- MODULE 2: nn.Module -->
+<!-- ============================================ -->
+<div class="module-header" id="module-2">
+  <div class="module-label">Module 2</div>
+  <h2>The Building Blocks — <code>nn.Module</code></h2>
+  <p>Every neural network in PyTorch is built by composing <code>nn.Module</code> objects. Learn to create your own.</p>
+</div>
+
+<div class="feynman-box">
+  <div class="label">🧠 Feynman Explanation</div>
+  <p>Think of <code>nn.Module</code> like a LEGO brick. Each brick does one thing (a linear layer, a ReLU, a dropout). You snap bricks together to build bigger structures (a Transformer block), and those bigger structures snap together to build an entire architecture. Every brick knows two things: (1) what parameters it owns, and (2) how to compute its output given an input (the <code>forward</code> method).</p>
+</div>
+
+<pre><code><span class="lang-tag">python</span>
+<span class="kw">import</span> torch.nn <span class="kw">as</span> nn
+
+<span class="kw">class</span> <span class="fn">TranslationBlock</span>(nn.Module):
+    <span class="st">"""A simple feed-forward block we might use inside a bigger model."""</span>
+
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, d_model, d_ff, dropout=<span class="nb">0.1</span>):
+        <span class="fn">super</span>().__init__()
+        <span class="cm"># nn.Linear stores a weight matrix W and bias b</span>
+        <span class="cm"># It computes: output = input @ W.T + b</span>
+        self.linear1 = nn.Linear(d_model, d_ff)
+        self.linear2 = nn.Linear(d_ff, d_model)
+        self.dropout = nn.Dropout(dropout)
+        self.norm    = nn.LayerNorm(d_model)
+        self.relu    = nn.ReLU()
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x):
+        <span class="cm"># x shape: (batch, seq_len, d_model)</span>
+        residual = x
+        x = self.linear1(x)   <span class="cm"># → (batch, seq_len, d_ff)</span>
+        x = self.relu(x)
+        x = self.dropout(x)
+        x = self.linear2(x)   <span class="cm"># → (batch, seq_len, d_model)</span>
+        x = self.norm(x + residual)  <span class="cm"># residual connection + layer norm</span>
+        <span class="kw">return</span> x
+
+<span class="cm"># PyTorch automatically discovers all parameters</span>
+block = TranslationBlock(d_model=<span class="nb">512</span>, d_ff=<span class="nb">2048</span>)
+<span class="fn">print</span>(f<span class="st">"Parameters: {sum(p.numel() for p in block.parameters()):,}"</span>)
+<span class="cm"># → Parameters: 2,362,880</span>
+</code></pre>
+
+<p>Three rules to remember: (1) always call <code>super().__init__()</code>, (2) register sub-modules and parameters in <code>__init__</code>, and (3) define the forward computation in <code>forward()</code>. Never call <code>forward()</code> directly—use <code>model(input)</code> instead, because PyTorch hooks and other machinery wrap the <code>forward</code> call.</p>
+
+<div class="collapsible">
+  <div class="collapsible-header" onclick="toggleCollapsible(this)">
+    Why <code>nn.ModuleList</code> instead of a plain Python list? <span class="arrow">▶</span>
+  </div>
+  <div class="collapsible-body">
+    <p>If you store sub-modules in a regular Python list, PyTorch won't "see" them. <code>model.parameters()</code> won't find their weights, <code>.to(device)</code> won't move them, and <code>state_dict()</code> won't save them. Use <code>nn.ModuleList</code> (or <code>nn.ModuleDict</code>) so PyTorch properly registers them.</p>
+<pre><code><span class="cm"># ❌ WRONG — parameters are invisible</span>
+self.layers = [nn.Linear(<span class="nb">512</span>, <span class="nb">512</span>) <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(<span class="nb">6</span>)]
+
+<span class="cm"># ✅ CORRECT — parameters are registered</span>
+self.layers = nn.ModuleList([nn.Linear(<span class="nb">512</span>, <span class="nb">512</span>) <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(<span class="nb">6</span>)])
+</code></pre>
+  </div>
+</div>
+
+<div class="quiz" id="q2">
+  <div class="label">🏛 Socratic Check</div>
+  <p>You define a custom module with <code>self.W = torch.randn(512, 512)</code> in <code>__init__</code>. Will the optimizer update <code>W</code> during training?</p>
+  <div class="options">
+    <button class="option" onclick="checkQuiz('q2', this, false)">Yes — any tensor stored as an attribute is automatically a parameter</button>
+    <button class="option" onclick="checkQuiz('q2', this, true)">No — you need <code>nn.Parameter(torch.randn(512, 512))</code> to register it as a learnable parameter</button>
+    <button class="option" onclick="checkQuiz('q2', this, false)">It depends on whether <code>requires_grad=True</code> is set</button>
+  </div>
+  <div class="explanation">Exactly. A plain <code>torch.Tensor</code> stored as an attribute is invisible to <code>model.parameters()</code>. You must wrap it in <code>nn.Parameter()</code>, which tells PyTorch: "this tensor is a learnable weight — include it in the parameter list and update it during optimization."</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- MODULE 3: DATA PIPELINES -->
+<!-- ============================================ -->
+<div class="module-header" id="module-3">
+  <div class="module-label">Module 3</div>
+  <h2>Data Pipelines for Translation</h2>
+  <p>How to feed parallel sentence pairs into a model using <code>Dataset</code>, <code>DataLoader</code>, and custom <code>collate_fn</code>.</p>
+</div>
+
+<div class="feynman-box">
+  <div class="label">🧠 Feynman Explanation</div>
+  <p>Imagine you're a librarian. You have a huge catalog of book pairs (ancient text → English translation). A <code>Dataset</code> is your catalog: given an index, it returns one pair. A <code>DataLoader</code> is your assistant who grabs batches of pairs, shuffles them, and hands them to you efficiently. The tricky part? Ancient sentences have different lengths. You can't stack jagged arrays. A <code>collate_fn</code> is the assistant's padding tool—it pads shorter sentences with a special token so every sentence in the batch is the same length.</p>
+</div>
+
+<pre><code><span class="lang-tag">python</span>
+<span class="kw">from</span> torch.utils.data <span class="kw">import</span> Dataset, DataLoader
+
+<span class="kw">class</span> <span class="fn">TranslationDataset</span>(Dataset):
+    <span class="st">"""Custom dataset for ancient → English sentence pairs."""</span>
+
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, src_sentences, tgt_sentences, src_vocab, tgt_vocab):
+        self.src = src_sentences  <span class="cm"># list of tokenized source sentences</span>
+        self.tgt = tgt_sentences  <span class="cm"># list of tokenized target sentences</span>
+        self.src_vocab = src_vocab
+        self.tgt_vocab = tgt_vocab
+
+    <span class="kw">def</span> <span class="fn">__len__</span>(self):
+        <span class="kw">return</span> <span class="fn">len</span>(self.src)
+
+    <span class="kw">def</span> <span class="fn">__getitem__</span>(self, idx):
+        <span class="cm"># Convert tokens to integer IDs</span>
+        src_ids = [self.src_vocab[t] <span class="kw">for</span> t <span class="kw">in</span> self.src[idx]]
+        tgt_ids = [self.tgt_vocab[t] <span class="kw">for</span> t <span class="kw">in</span> self.tgt[idx]]
+        <span class="kw">return</span> torch.tensor(src_ids), torch.tensor(tgt_ids)
+
+
+<span class="kw">def</span> <span class="fn">collate_fn</span>(batch):
+    <span class="st">"""Pad variable-length sequences so they can be stacked into a batch tensor."""</span>
+    src_batch, tgt_batch = <span class="fn">zip</span>(*batch)
+
+    <span class="cm"># pad_sequence pads shorter tensors with 0 (our PAD token ID)</span>
+    <span class="cm"># batch_first=True → output shape: (batch_size, max_seq_len)</span>
+    src_padded = nn.utils.rnn.pad_sequence(src_batch, batch_first=<span class="nb">True</span>, padding_value=<span class="nb">0</span>)
+    tgt_padded = nn.utils.rnn.pad_sequence(tgt_batch, batch_first=<span class="nb">True</span>, padding_value=<span class="nb">0</span>)
+
+    <span class="kw">return</span> src_padded, tgt_padded
+
+
+<span class="cm"># DataLoader handles batching, shuffling, and multi-process loading</span>
+loader = DataLoader(
+    dataset,
+    batch_size=<span class="nb">32</span>,
+    shuffle=<span class="nb">True</span>,
+    collate_fn=collate_fn,
+    num_workers=<span class="nb">2</span>,      <span class="cm"># parallel data loading</span>
+    pin_memory=<span class="nb">True</span>,     <span class="cm"># faster CPU→GPU transfer</span>
+)
+</code></pre>
+
+<div class="pause-think" id="pt2">
+  <div class="label">⏸ Pause &amp; Think</div>
+  <p>Why do we need <code>pin_memory=True</code>? What happens during CPU → GPU data transfer without it?</p>
+  <button class="reveal-btn" onclick="toggleAnswer('pt2')">Reveal Answer</button>
+  <div class="answer">
+    <p>Normally, CPU memory is <em>pageable</em>—the OS can move it to disk. Before transferring to GPU, CUDA must first copy data to a <em>pinned</em> (non-pageable) staging area, then transfer. With <code>pin_memory=True</code>, the DataLoader pre-allocates data in pinned memory, skipping the extra copy. The GPU transfer then uses DMA (Direct Memory Access) and becomes asynchronous, overlapping with computation. This can significantly speed up training when GPU utilization is high.</p>
+  </div>
+</div>
+
+<div class="tip">
+  <div class="label">Translation-Specific Tip</div>
+  <p>For ancient languages, your vocabulary will likely be small (5k–20k tokens). Consider using <strong>BPE (Byte Pair Encoding)</strong> via <code>sentencepiece</code> to handle rare words and morphological richness. Train a shared BPE model on both your ancient corpus and the English side for a shared subword vocabulary.</p>
+</div>
+
+
+<!-- ============================================ -->
+<!-- MODULE 4: SEQUENTIAL MODELING -->
+<!-- ============================================ -->
+<div class="module-header" id="module-4">
+  <div class="module-label">Module 4</div>
+  <h2>Sequential Modeling — LSTMs, GRUs &amp; Teacher Forcing</h2>
+  <p>Before Transformers, these recurrent architectures were the workhorses of NMT. Understanding them builds crucial intuition.</p>
+</div>
+
+<div class="feynman-box">
+  <div class="label">🧠 Feynman Explanation</div>
+  <p>An RNN reads a sentence one word at a time, updating a "hidden state" that acts as a running summary. Problem: by the time it reaches word 50, it has largely forgotten word 1. An <strong>LSTM</strong> fixes this with a "cell state"—think of it as a conveyor belt running alongside the hidden state. Information can be placed on the belt (input gate), removed from it (forget gate), or read from it (output gate). A <strong>GRU</strong> simplifies this to two gates (reset, update) and is faster to train, often with similar performance.</p>
+</div>
+
+<pre><code><span class="lang-tag">python</span>
+<span class="kw">class</span> <span class="fn">Seq2SeqRNN</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, src_vocab_size, tgt_vocab_size, emb_dim, hid_dim):
+        <span class="fn">super</span>().__init__()
+        self.encoder_emb = nn.Embedding(src_vocab_size, emb_dim)
+        self.decoder_emb = nn.Embedding(tgt_vocab_size, emb_dim)
+
+        <span class="cm"># LSTM encoder: reads source sentence</span>
+        self.encoder = nn.LSTM(emb_dim, hid_dim, batch_first=<span class="nb">True</span>)
+        <span class="cm"># LSTM decoder: generates target sentence</span>
+        self.decoder = nn.LSTM(emb_dim, hid_dim, batch_first=<span class="nb">True</span>)
+        <span class="cm"># Project hidden state to vocabulary logits</span>
+        self.fc_out  = nn.Linear(hid_dim, tgt_vocab_size)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, src, tgt, teacher_forcing_ratio=<span class="nb">0.5</span>):
+        <span class="cm"># Encode: compress source into a context vector</span>
+        src_emb = self.encoder_emb(src)            <span class="cm"># (B, S, E)</span>
+        _, (hidden, cell) = self.encoder(src_emb)  <span class="cm"># hidden: (1, B, H)</span>
+
+        <span class="cm"># Decode: generate one token at a time</span>
+        batch_size, tgt_len = tgt.shape
+        outputs = torch.zeros(batch_size, tgt_len, self.fc_out.out_features)
+
+        <span class="cm"># First input to decoder is &lt;BOS&gt; token</span>
+        input_tok = tgt[:, <span class="nb">0</span>].unsqueeze(<span class="nb">1</span>)  <span class="cm"># (B, 1)</span>
+
+        <span class="kw">for</span> t <span class="kw">in</span> <span class="fn">range</span>(<span class="nb">1</span>, tgt_len):
+            dec_emb = self.decoder_emb(input_tok)
+            out, (hidden, cell) = self.decoder(dec_emb, (hidden, cell))
+            logits = self.fc_out(out.squeeze(<span class="nb">1</span>))
+            outputs[:, t] = logits
+
+            <span class="cm"># Teacher forcing: use true token or model's prediction?</span>
+            use_teacher = torch.rand(<span class="nb">1</span>).item() < teacher_forcing_ratio
+            input_tok = tgt[:, t].unsqueeze(<span class="nb">1</span>) <span class="kw">if</span> use_teacher \
+                        <span class="kw">else</span> logits.argmax(-<span class="nb">1</span>).unsqueeze(<span class="nb">1</span>)
+
+        <span class="kw">return</span> outputs
+</code></pre>
+
+<h3>Why Teacher Forcing?</h3>
+
+<div class="feynman-box">
+  <div class="label">🧠 Feynman Explanation</div>
+  <p>Imagine teaching a child to recite a poem. If they get word 3 wrong, every word after that will likely be wrong too (because each word depends on the previous one). <strong>Teacher forcing</strong> means: at training time, even when the model guesses wrong, you feed it the <em>correct</em> previous word so it can still learn the rest of the sequence. Without it, one early mistake cascades and the model learns almost nothing. The catch? At inference time, you don't have the answers, so the model must rely on its own predictions. That's why we often anneal the teacher forcing ratio during training.</p>
+</div>
+
+<div class="quiz" id="q3">
+  <div class="label">🏛 Socratic Check</div>
+  <p>What is the "exposure bias" problem with teacher forcing?</p>
+  <div class="options">
+    <button class="option" onclick="checkQuiz('q3', this, true)">The model is trained on ground-truth inputs but at inference uses its own (possibly wrong) predictions — a distribution mismatch</button>
+    <button class="option" onclick="checkQuiz('q3', this, false)">The model overfits to the training data because it always sees the correct answer</button>
+    <button class="option" onclick="checkQuiz('q3', this, false)">The model becomes too slow because it processes one token at a time</button>
+  </div>
+  <div class="explanation">Exactly. During training with teacher forcing, the decoder always sees ground-truth tokens as input. But at inference, it feeds its own predictions, which may contain errors. The model has never "practiced" recovering from its own mistakes. Scheduled sampling (linearly reducing teacher forcing ratio) and techniques like sequence-level training help mitigate this.</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- MODULE 5: TRANSFORMER FROM SCRATCH -->
+<!-- ============================================ -->
+<div class="module-header" id="module-5">
+  <div class="module-label">Module 5</div>
+  <h2>The Transformer from Scratch</h2>
+  <p>The architecture that revolutionized NLP. We build Multi-Head Attention, the Encoder, and the Decoder using vanilla PyTorch.</p>
+</div>
+
+<h3>Self-Attention: The Core Mechanism</h3>
+
+<div class="feynman-box">
+  <div class="label">🧠 Feynman Explanation</div>
+  <p>Imagine you're reading the sentence: "The cat sat on the mat because <strong>it</strong> was tired." What does "it" refer to? To answer, you mentally <em>attend</em> to other words in the sentence and decide "it" most strongly connects to "cat." Self-attention does this mechanically. For each word, it asks: "How relevant is every other word to me?" It computes a relevance score (attention weight) for each pair, then produces a new representation of each word as a weighted sum of all other words' representations.</p>
+</div>
+
+<p>Mathematically, given queries \(Q\), keys \(K\), and values \(V\):</p>
+
+$$\text{Attention}(Q, K, V) = \text{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right) V$$
+
+<p>The \(\sqrt{d_k}\) scaling prevents dot products from growing too large (which would push softmax into regions with vanishing gradients).</p>
+
+<h3>Tensor Shapes Through Self-Attention</h3>
+
+<p>Let's trace every shape. Assume batch size \(B=2\), sequence length \(S=10\), model dimension \(d_{model}=512\), and \(h=8\) heads, so \(d_k = 512/8 = 64\):</p>
+
+<p>
+  Input \(X\): <span class="shape">(2, 10, 512)</span> →
+  \(Q, K, V\) after linear projections: <span class="shape">(2, 10, 512)</span> →
+  Reshape to multi-head: <span class="shape">(2, 8, 10, 64)</span> →
+  \(QK^\top\): <span class="shape">(2, 8, 10, 10)</span> →
+  Attention weights (after softmax): <span class="shape">(2, 8, 10, 10)</span> →
+  Weighted values: <span class="shape">(2, 8, 10, 64)</span> →
+  Concatenate heads: <span class="shape">(2, 10, 512)</span> →
+  Output projection: <span class="shape">(2, 10, 512)</span>
+</p>
+
+<pre><code><span class="lang-tag">python</span>
+<span class="kw">import</span> math
+
+<span class="kw">class</span> <span class="fn">MultiHeadAttention</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, d_model, n_heads):
+        <span class="fn">super</span>().__init__()
+        <span class="kw">assert</span> d_model % n_heads == <span class="nb">0</span>
+        self.d_k = d_model // n_heads
+        self.n_heads = n_heads
+
+        <span class="cm"># Three separate linear projections for Q, K, V</span>
+        self.W_q = nn.Linear(d_model, d_model)
+        self.W_k = nn.Linear(d_model, d_model)
+        self.W_v = nn.Linear(d_model, d_model)
+        self.W_o = nn.Linear(d_model, d_model)  <span class="cm"># output projection</span>
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, query, key, value, mask=<span class="nb">None</span>):
+        B = query.size(<span class="nb">0</span>)
+
+        <span class="cm"># Step 1: Project inputs</span>
+        Q = self.W_q(query)  <span class="cm"># (B, S, d_model)</span>
+        K = self.W_k(key)
+        V = self.W_v(value)
+
+        <span class="cm"># Step 2: Reshape into (B, n_heads, S, d_k)</span>
+        <span class="cm"># .view splits d_model into (n_heads, d_k)</span>
+        <span class="cm"># .transpose swaps seq_len and n_heads dimensions</span>
+        Q = Q.view(B, -<span class="nb">1</span>, self.n_heads, self.d_k).transpose(<span class="nb">1</span>, <span class="nb">2</span>)
+        K = K.view(B, -<span class="nb">1</span>, self.n_heads, self.d_k).transpose(<span class="nb">1</span>, <span class="nb">2</span>)
+        V = V.view(B, -<span class="nb">1</span>, self.n_heads, self.d_k).transpose(<span class="nb">1</span>, <span class="nb">2</span>)
+
+        <span class="cm"># Step 3: Scaled dot-product attention</span>
+        <span class="cm"># K.transpose(-2,-1) flips the last two dims for matrix multiply</span>
+        scores = torch.matmul(Q, K.transpose(-<span class="nb">2</span>, -<span class="nb">1</span>)) / math.sqrt(self.d_k)
+        <span class="cm"># scores shape: (B, n_heads, S_q, S_k)</span>
+
+        <span class="kw">if</span> mask <span class="kw">is not</span> <span class="nb">None</span>:
+            <span class="cm"># .masked_fill() sets positions where mask==0 to -inf</span>
+            <span class="cm"># This makes softmax assign ~0 weight to those positions</span>
+            <span class="cm"># Used for: (a) padding masks, (b) causal masks in decoder</span>
+            scores = scores.masked_fill(mask == <span class="nb">0</span>, <span class="nb">float</span>(<span class="st">'-inf'</span>))
+
+        attn_weights = torch.softmax(scores, dim=-<span class="nb">1</span>)
+
+        <span class="cm"># Step 4: Weighted sum of values</span>
+        context = torch.matmul(attn_weights, V)  <span class="cm"># (B, n_heads, S, d_k)</span>
+
+        <span class="cm"># Step 5: Concatenate heads back together</span>
+        <span class="cm"># .transpose then .contiguous().view merges the head dimension</span>
+        context = context.transpose(<span class="nb">1</span>, <span class="nb">2</span>).contiguous().view(B, -<span class="nb">1</span>, self.n_heads * self.d_k)
+
+        <span class="kw">return</span> self.W_o(context)  <span class="cm"># (B, S, d_model)</span>
+</code></pre>
+
+<div class="pause-think" id="pt3">
+  <div class="label">⏸ Pause &amp; Think</div>
+  <p>Why do we call <code>.contiguous()</code> before <code>.view()</code> after transposing? What would happen without it?</p>
+  <button class="reveal-btn" onclick="toggleAnswer('pt3')">Reveal Answer</button>
+  <div class="answer">
+    <p><code>.transpose()</code> doesn't physically rearrange memory—it just changes how PyTorch indexes into the same data (modifying strides). But <code>.view()</code> requires that the tensor is stored contiguously in memory. Without <code>.contiguous()</code>, you'd get a runtime error: <em>"view size is not compatible with input tensor's size and stride."</em> Calling <code>.contiguous()</code> copies the data into a fresh, contiguous block. Alternatively, you can use <code>.reshape()</code> which handles this automatically (but may silently copy).</p>
+  </div>
+</div>
+
+<h3>The Full Encoder &amp; Decoder Blocks</h3>
+
+<pre><code><span class="lang-tag">python</span>
+<span class="kw">class</span> <span class="fn">TransformerEncoderBlock</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, d_model, n_heads, d_ff, dropout):
+        <span class="fn">super</span>().__init__()
+        self.self_attn = MultiHeadAttention(d_model, n_heads)
+        self.ffn = nn.Sequential(
+            nn.Linear(d_model, d_ff),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(d_ff, d_model),
+        )
+        self.norm1 = nn.LayerNorm(d_model)
+        self.norm2 = nn.LayerNorm(d_model)
+        self.dropout = nn.Dropout(dropout)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x, src_mask):
+        <span class="cm"># Self-attention with residual connection</span>
+        attn_out = self.self_attn(x, x, x, src_mask)
+        x = self.norm1(x + self.dropout(attn_out))
+        <span class="cm"># Feed-forward with residual connection</span>
+        ffn_out = self.ffn(x)
+        x = self.norm2(x + self.dropout(ffn_out))
+        <span class="kw">return</span> x
+
+
+<span class="kw">class</span> <span class="fn">TransformerDecoderBlock</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, d_model, n_heads, d_ff, dropout):
+        <span class="fn">super</span>().__init__()
+        self.self_attn  = MultiHeadAttention(d_model, n_heads)
+        self.cross_attn = MultiHeadAttention(d_model, n_heads)
+        self.ffn = nn.Sequential(
+            nn.Linear(d_model, d_ff),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(d_ff, d_model),
+        )
+        self.norm1 = nn.LayerNorm(d_model)
+        self.norm2 = nn.LayerNorm(d_model)
+        self.norm3 = nn.LayerNorm(d_model)
+        self.dropout = nn.Dropout(dropout)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x, enc_out, src_mask, tgt_mask):
+        <span class="cm"># Masked self-attention (causal: can't look at future tokens)</span>
+        attn1 = self.self_attn(x, x, x, tgt_mask)
+        x = self.norm1(x + self.dropout(attn1))
+        <span class="cm"># Cross-attention: decoder attends to encoder output</span>
+        <span class="cm"># Query=decoder, Key/Value=encoder</span>
+        attn2 = self.cross_attn(x, enc_out, enc_out, src_mask)
+        x = self.norm2(x + self.dropout(attn2))
+        <span class="cm"># Feed-forward</span>
+        ffn_out = self.ffn(x)
+        x = self.norm3(x + self.dropout(ffn_out))
+        <span class="kw">return</span> x
+</code></pre>
+
+<div class="quiz" id="q4">
+  <div class="label">🏛 Socratic Check</div>
+  <p>In the decoder's cross-attention, why does the <strong>query</strong> come from the decoder but the <strong>key</strong> and <strong>value</strong> come from the encoder?</p>
+  <div class="options">
+    <button class="option" onclick="checkQuiz('q4', this, false)">It's arbitrary — you could swap them and get the same result</button>
+    <button class="option" onclick="checkQuiz('q4', this, true)">The decoder is asking "which parts of the source sentence are relevant to what I'm currently generating?" — the query is the question, and the encoder's keys/values are the information being searched</button>
+    <button class="option" onclick="checkQuiz('q4', this, false)">Because the encoder output is larger and needs to be projected to a smaller dimension</button>
+  </div>
+  <div class="explanation">Think of it as a database lookup. The decoder's current state is the "search query." The encoder's output is the "database" where keys help find relevant entries and values contain the actual information. The decoder asks: "Given what I've generated so far, which source words should I focus on next?" This is the fundamental mechanism that lets the model align source and target words.</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- MODULE 6: PYTORCH LIGHTNING -->
+<!-- ============================================ -->
+<div class="module-header" id="module-6">
+  <div class="module-label">Module 6</div>
+  <h2>Advanced Research Patterns — PyTorch Lightning</h2>
+  <p>Reduce boilerplate, add logging, checkpointing, and multi-GPU support with minimal code changes.</p>
+</div>
+
+<div class="feynman-box">
+  <div class="label">🧠 Feynman Explanation</div>
+  <p>PyTorch gives you total control—but that means you also have to write the training loop, handle device placement, implement checkpointing, set up logging, and manage distributed training <em>yourself</em>. PyTorch Lightning is like hiring a very competent assistant. You tell it <em>what</em> your model does (the <code>training_step</code>, <code>validation_step</code>, etc.), and it handles <em>how</em> to run training. You keep full control over the science; Lightning handles the engineering.</p>
+</div>
+
+<pre><code><span class="lang-tag">python</span>
+<span class="kw">import</span> lightning <span class="kw">as</span> L
+
+<span class="kw">class</span> <span class="fn">TranslationModel</span>(L.LightningModule):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, model, lr=<span class="nb">1e-4</span>):
+        <span class="fn">super</span>().__init__()
+        self.model = model       <span class="cm"># your Transformer from Module 5</span>
+        self.lr = lr
+        self.criterion = nn.CrossEntropyLoss(ignore_index=<span class="nb">0</span>)  <span class="cm"># ignore PAD</span>
+
+    <span class="kw">def</span> <span class="fn">training_step</span>(self, batch, batch_idx):
+        src, tgt = batch
+        <span class="cm"># tgt[:, :-1] = decoder input (all tokens except last)</span>
+        <span class="cm"># tgt[:, 1:]  = labels (all tokens except first &lt;BOS&gt;)</span>
+        output = self.model(src, tgt[:, :-<span class="nb">1</span>])
+        loss = self.criterion(
+            output.reshape(-<span class="nb">1</span>, output.size(-<span class="nb">1</span>)),
+            tgt[:, <span class="nb">1</span>:].reshape(-<span class="nb">1</span>)
+        )
+        self.log(<span class="st">"train_loss"</span>, loss, prog_bar=<span class="nb">True</span>)
+        <span class="kw">return</span> loss
+
+    <span class="kw">def</span> <span class="fn">validation_step</span>(self, batch, batch_idx):
+        src, tgt = batch
+        output = self.model(src, tgt[:, :-<span class="nb">1</span>])
+        loss = self.criterion(
+            output.reshape(-<span class="nb">1</span>, output.size(-<span class="nb">1</span>)),
+            tgt[:, <span class="nb">1</span>:].reshape(-<span class="nb">1</span>)
+        )
+        self.log(<span class="st">"val_loss"</span>, loss, prog_bar=<span class="nb">True</span>)
+
+    <span class="kw">def</span> <span class="fn">configure_optimizers</span>(self):
+        <span class="kw">return</span> torch.optim.Adam(self.parameters(), lr=self.lr)
+
+
+<span class="cm"># Lightning's Trainer handles EVERYTHING else</span>
+trainer = L.Trainer(
+    max_epochs=<span class="nb">50</span>,
+    accelerator=<span class="st">"auto"</span>,          <span class="cm"># auto-detect GPU/CPU</span>
+    callbacks=[
+        L.pytorch.callbacks.ModelCheckpoint(
+            monitor=<span class="st">"val_loss"</span>,     <span class="cm"># save best model</span>
+            mode=<span class="st">"min"</span>,
+        ),
+        L.pytorch.callbacks.EarlyStopping(
+            monitor=<span class="st">"val_loss"</span>,     <span class="cm"># stop if no improvement</span>
+            patience=<span class="nb">5</span>,
+        ),
+    ],
+)
+trainer.fit(lit_model, train_loader, val_loader)
+</code></pre>
+
+<div class="tip">
+  <div class="label">Research Tip</div>
+  <p>Lightning integrates seamlessly with <strong>Weights &amp; Biases</strong> (W&amp;B) for experiment tracking. Just add <code>logger=L.pytorch.loggers.WandbLogger(project="ancient-nmt")</code> to the Trainer. For low-resource experiments, tracking every hyperparameter configuration is critical—you'll have limited data and need to squeeze maximum performance from each run.</p>
+</div>
+
+
+<!-- ============================================ -->
+<!-- MODULE 7: TRANSFER LEARNING -->
+<!-- ============================================ -->
+<div class="module-header" id="module-7">
+  <div class="module-label">Module 7</div>
+  <h2>Transfer Learning for Low-Resource Languages</h2>
+  <p>How to "warm-start" a model using pre-trained weights from a related modern language to bootstrap translation for an ancient language.</p>
+</div>
+
+<div class="feynman-box">
+  <div class="label">🧠 Feynman Explanation</div>
+  <p>Imagine you speak modern Italian fluently and now want to learn Latin. You don't start from zero—Italian shares roots, grammar patterns, and vocabulary with Latin. Transfer learning works the same way. We take a model already trained on millions of sentences in modern languages (like Meta's <strong>NLLB-200</strong>, which covers 200 languages), and we <em>fine-tune</em> it on our small ancient language dataset. The model already understands sentence structure, morphology, and alignment patterns. It just needs to adapt those skills to the specific ancient language.</p>
+</div>
+
+<h3>Strategy: Warm-Start with NLLB-200</h3>
+
+<p>NLLB-200 (No Language Left Behind) is a massively multilingual model from Meta. For ancient languages, you'd:</p>
+
+<p>
+  <strong>Step 1:</strong> Identify the closest living relative (e.g., Modern Greek → Ancient Greek, Hindi → Sanskrit, Icelandic → Old Norse).
+</p>
+<p>
+  <strong>Step 2:</strong> Fine-tune NLLB on your ancient ↔ English parallel data, using the related language's token embeddings as initialization.
+</p>
+<p>
+  <strong>Step 3:</strong> Apply techniques to prevent catastrophic forgetting: freeze lower encoder layers, use a low learning rate, and employ gradual unfreezing.
+</p>
+
+<pre><code><span class="lang-tag">python</span>
+<span class="kw">from</span> transformers <span class="kw">import</span> AutoModelForSeq2SeqLM, AutoTokenizer
+
+<span class="cm"># Load pre-trained NLLB-200 (distilled 600M parameter version)</span>
+model_name = <span class="st">"facebook/nllb-200-distilled-600M"</span>
+tokenizer  = AutoTokenizer.from_pretrained(model_name)
+model      = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+
+<span class="cm"># Key insight: NLLB uses language codes like "hin_Deva" (Hindi)</span>
+<span class="cm"># For Sanskrit, we can START with Hindi embeddings since they</span>
+<span class="cm"># share the Devanagari script and many cognates</span>
+
+<span class="cm"># Strategy 1: Freeze encoder (preserve multilingual knowledge)</span>
+<span class="kw">for</span> param <span class="kw">in</span> model.model.encoder.parameters():
+    param.requires_grad = <span class="nb">False</span>
+
+<span class="cm"># Strategy 2: Gradual unfreezing — unfreeze top 2 encoder layers</span>
+<span class="kw">for</span> layer <span class="kw">in</span> model.model.encoder.layers[-<span class="nb">2</span>:]:
+    <span class="kw">for</span> param <span class="kw">in</span> layer.parameters():
+        param.requires_grad = <span class="nb">True</span>
+
+<span class="cm"># Strategy 3: Different learning rates for different parts</span>
+optimizer = torch.optim.Adam([
+    {<span class="st">"params"</span>: model.model.encoder.layers[-<span class="nb">2</span>:].parameters(), <span class="st">"lr"</span>: <span class="nb">1e-5</span>},
+    {<span class="st">"params"</span>: model.model.decoder.parameters(), <span class="st">"lr"</span>: <span class="nb">5e-5</span>},
+    {<span class="st">"params"</span>: model.lm_head.parameters(), <span class="st">"lr"</span>: <span class="nb">1e-4</span>},
+])
+</code></pre>
+
+<div class="warning">
+  <div class="label">Low-Resource Reality Check</div>
+  <p>With fewer than 10,000 parallel sentences, you're in seriously low-resource territory. Consider data augmentation techniques: back-translation (translate English → ancient using your draft model, then use those as training data), lexicon injection (embed a bilingual dictionary as training pairs), and noise injection (randomly dropping/swapping tokens to make the model robust).</p>
+</div>
+
+<div class="quiz" id="q5">
+  <div class="label">🏛 Socratic Check</div>
+  <p>Why do we freeze the <em>lower</em> encoder layers but unfreeze the <em>upper</em> ones?</p>
+  <div class="options">
+    <button class="option" onclick="checkQuiz('q5', this, false)">Lower layers are more complex and harder to train</button>
+    <button class="option" onclick="checkQuiz('q5', this, true)">Lower layers learn general linguistic features (subword patterns, basic syntax) that transfer across languages; upper layers learn more language-specific representations that need adaptation</button>
+    <button class="option" onclick="checkQuiz('q5', this, false)">It's just a computational shortcut to save training time</button>
+  </div>
+  <div class="explanation">Research consistently shows that lower Transformer layers capture universal linguistic features — phonological patterns, basic morphology, word order regularities — that transfer well across languages. Upper layers increasingly specialize in language-specific semantics. By freezing the lower layers, we preserve the general linguistic knowledge from pre-training while allowing the upper layers to adapt to the new language's specific properties.</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- CAPSTONE PROJECT -->
+<!-- ============================================ -->
+<div class="capstone-header" id="capstone">
+  <div class="module-label" style="color:#D0D9F6">Capstone Project</div>
+  <h2>Working Seq2Seq Transformer with BLEU Evaluation</h2>
+  <p>A complete, under-150-line PyTorch script: model definition, custom dataset, training loop, and BLEU scoring.</p>
+</div>
+
+<p>This script ties together everything from the curriculum. It defines a compact Transformer model, a Dataset for ancient language pairs, and a training loop with BLEU evaluation. Copy this, swap in your data, and start training.</p>
+
+<pre><code><span class="lang-tag">python — capstone.py</span>
+<span class="st">"""
+Capstone: Seq2Seq Transformer for Ancient Language → English
+Complete training pipeline with BLEU evaluation (~145 lines)
+"""</span>
+<span class="kw">import</span> math, torch, torch.nn <span class="kw">as</span> nn
+<span class="kw">from</span> torch.utils.data <span class="kw">import</span> Dataset, DataLoader
+<span class="kw">from</span> collections <span class="kw">import</span> Counter
+
+<span class="cm"># ── Positional Encoding ──────────────────────────────────────</span>
+<span class="kw">class</span> <span class="fn">PositionalEncoding</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, d_model, max_len=<span class="nb">512</span>, dropout=<span class="nb">0.1</span>):
+        <span class="fn">super</span>().__init__()
+        self.dropout = nn.Dropout(dropout)
+        pe = torch.zeros(max_len, d_model)
+        pos = torch.arange(max_len).unsqueeze(<span class="nb">1</span>).float()
+        div = torch.exp(torch.arange(<span class="nb">0</span>, d_model, <span class="nb">2</span>).float() * -(math.log(<span class="nb">10000.0</span>) / d_model))
+        pe[:, <span class="nb">0</span>::<span class="nb">2</span>] = torch.sin(pos * div)
+        pe[:, <span class="nb">1</span>::<span class="nb">2</span>] = torch.cos(pos * div)
+        self.register_buffer(<span class="st">"pe"</span>, pe.unsqueeze(<span class="nb">0</span>))  <span class="cm"># (1, max_len, d_model)</span>
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x):
+        <span class="kw">return</span> self.dropout(x + self.pe[:, :x.size(<span class="nb">1</span>)])
+
+<span class="cm"># ── Seq2Seq Transformer ──────────────────────────────────────</span>
+<span class="kw">class</span> <span class="fn">Seq2SeqTransformer</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, src_vocab, tgt_vocab, d=<span class="nb">256</span>, heads=<span class="nb">4</span>, N=<span class="nb">3</span>, ff=<span class="nb">512</span>, drop=<span class="nb">0.1</span>):
+        <span class="fn">super</span>().__init__()
+        self.src_emb = nn.Embedding(src_vocab, d); self.tgt_emb = nn.Embedding(tgt_vocab, d)
+        self.pos_enc = PositionalEncoding(d, dropout=drop)
+        enc_layer = nn.TransformerEncoderLayer(d, heads, ff, drop, batch_first=<span class="nb">True</span>)
+        dec_layer = nn.TransformerDecoderLayer(d, heads, ff, drop, batch_first=<span class="nb">True</span>)
+        self.encoder = nn.TransformerEncoder(enc_layer, N)
+        self.decoder = nn.TransformerDecoder(dec_layer, N)
+        self.fc_out = nn.Linear(d, tgt_vocab)
+        self.d_model = d
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, src, tgt, src_mask=<span class="nb">None</span>, tgt_mask=<span class="nb">None</span>,
+                src_pad_mask=<span class="nb">None</span>, tgt_pad_mask=<span class="nb">None</span>):
+        <span class="cm"># Scale embeddings by sqrt(d_model) as in "Attention Is All You Need"</span>
+        src_e = self.pos_enc(self.src_emb(src) * math.sqrt(self.d_model))
+        tgt_e = self.pos_enc(self.tgt_emb(tgt) * math.sqrt(self.d_model))
+        memory = self.encoder(src_e, src_key_padding_mask=src_pad_mask)
+        out = self.decoder(tgt_e, memory, tgt_mask=tgt_mask,
+                           tgt_key_padding_mask=tgt_pad_mask,
+                           memory_key_padding_mask=src_pad_mask)
+        <span class="kw">return</span> self.fc_out(out)
+
+<span class="cm"># ── Dataset ───────────────────────────────────────────────────</span>
+<span class="kw">class</span> <span class="fn">AncientLangDataset</span>(Dataset):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, pairs, src_v, tgt_v):
+        self.pairs, self.sv, self.tv = pairs, src_v, tgt_v
+
+    <span class="kw">def</span> <span class="fn">__len__</span>(self): <span class="kw">return</span> <span class="fn">len</span>(self.pairs)
+
+    <span class="kw">def</span> <span class="fn">__getitem__</span>(self, i):
+        s, t = self.pairs[i]
+        src = [<span class="nb">1</span>] + [self.sv.get(w, <span class="nb">3</span>) <span class="kw">for</span> w <span class="kw">in</span> s.split()] + [<span class="nb">2</span>]  <span class="cm"># 1=BOS 2=EOS 3=UNK</span>
+        tgt = [<span class="nb">1</span>] + [self.tv.get(w, <span class="nb">3</span>) <span class="kw">for</span> w <span class="kw">in</span> t.split()] + [<span class="nb">2</span>]
+        <span class="kw">return</span> torch.tensor(src), torch.tensor(tgt)
+
+<span class="kw">def</span> <span class="fn">collate</span>(batch):
+    s, t = <span class="fn">zip</span>(*batch)
+    <span class="kw">return</span> (nn.utils.rnn.pad_sequence(s, batch_first=<span class="nb">True</span>),
+            nn.utils.rnn.pad_sequence(t, batch_first=<span class="nb">True</span>))
+
+<span class="cm"># ── Vocab builder ─────────────────────────────────────────────</span>
+<span class="kw">def</span> <span class="fn">build_vocab</span>(sentences, min_freq=<span class="nb">1</span>):
+    c = Counter(w <span class="kw">for</span> s <span class="kw">in</span> sentences <span class="kw">for</span> w <span class="kw">in</span> s.split())
+    v = {<span class="st">"&lt;PAD&gt;"</span>: <span class="nb">0</span>, <span class="st">"&lt;BOS&gt;"</span>: <span class="nb">1</span>, <span class="st">"&lt;EOS&gt;"</span>: <span class="nb">2</span>, <span class="st">"&lt;UNK&gt;"</span>: <span class="nb">3</span>}
+    <span class="kw">for</span> w, cnt <span class="kw">in</span> c.items():
+        <span class="kw">if</span> cnt >= min_freq: v[w] = <span class="fn">len</span>(v)
+    <span class="kw">return</span> v
+
+<span class="cm"># ── BLEU Score (simplified 4-gram) ────────────────────────────</span>
+<span class="kw">def</span> <span class="fn">bleu_score</span>(pred_tokens, ref_tokens, max_n=<span class="nb">4</span>):
+    <span class="kw">from</span> collections <span class="kw">import</span> Counter
+    <span class="kw">import</span> math
+    bp = math.exp(min(<span class="nb">0</span>, <span class="nb">1</span> - <span class="fn">len</span>(ref_tokens) / max(<span class="fn">len</span>(pred_tokens), <span class="nb">1</span>)))
+    scores = []
+    <span class="kw">for</span> n <span class="kw">in</span> <span class="fn">range</span>(<span class="nb">1</span>, max_n + <span class="nb">1</span>):
+        pred_ng = Counter(<span class="fn">tuple</span>(pred_tokens[i:i+n]) <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="fn">len</span>(pred_tokens)-n+<span class="nb">1</span>))
+        ref_ng  = Counter(<span class="fn">tuple</span>(ref_tokens[i:i+n]) <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="fn">len</span>(ref_tokens)-n+<span class="nb">1</span>))
+        clip = <span class="fn">sum</span>(min(pred_ng[g], ref_ng[g]) <span class="kw">for</span> g <span class="kw">in</span> pred_ng)
+        total = max(<span class="fn">sum</span>(pred_ng.values()), <span class="nb">1</span>)
+        scores.append(math.log(max(clip / total, <span class="nb">1e-10</span>)))
+    <span class="kw">return</span> bp * math.exp(<span class="fn">sum</span>(scores) / max_n)
+
+<span class="cm"># ── Training Loop ─────────────────────────────────────────────</span>
+<span class="kw">def</span> <span class="fn">train</span>():
+    <span class="cm"># Example data — replace with your ancient language pairs</span>
+    pairs = [
+        (<span class="st">"arma virumque cano"</span>, <span class="st">"I sing of arms and the man"</span>),
+        (<span class="st">"veni vidi vici"</span>, <span class="st">"I came I saw I conquered"</span>),
+        (<span class="st">"alea iacta est"</span>, <span class="st">"the die is cast"</span>),
+        (<span class="st">"cogito ergo sum"</span>, <span class="st">"I think therefore I am"</span>),
+        (<span class="st">"carpe diem"</span>, <span class="st">"seize the day"</span>),
+    ] * <span class="nb">100</span>  <span class="cm"># repeat for demo; use real data in practice</span>
+
+    src_v = build_vocab([p[<span class="nb">0</span>] <span class="kw">for</span> p <span class="kw">in</span> pairs])
+    tgt_v = build_vocab([p[<span class="nb">1</span>] <span class="kw">for</span> p <span class="kw">in</span> pairs])
+    tgt_iv = {v: k <span class="kw">for</span> k, v <span class="kw">in</span> tgt_v.items()}  <span class="cm"># inverse vocab for decoding</span>
+
+    ds = AncientLangDataset(pairs, src_v, tgt_v)
+    dl = DataLoader(ds, batch_size=<span class="nb">16</span>, shuffle=<span class="nb">True</span>, collate_fn=collate)
+
+    device = torch.device(<span class="st">"cuda"</span> <span class="kw">if</span> torch.cuda.is_available() <span class="kw">else</span> <span class="st">"cpu"</span>)
+    model = Seq2SeqTransformer(<span class="fn">len</span>(src_v), <span class="fn">len</span>(tgt_v)).to(device)
+    opt = torch.optim.Adam(model.parameters(), lr=<span class="nb">3e-4</span>)
+    loss_fn = nn.CrossEntropyLoss(ignore_index=<span class="nb">0</span>)  <span class="cm"># ignore PAD=0</span>
+
+    <span class="kw">for</span> epoch <span class="kw">in</span> <span class="fn">range</span>(<span class="nb">30</span>):
+        model.train(); total_loss = <span class="nb">0</span>
+        <span class="kw">for</span> src, tgt <span class="kw">in</span> dl:
+            src, tgt = src.to(device), tgt.to(device)
+            tgt_in = tgt[:, :-<span class="nb">1</span>]  <span class="cm"># decoder input: all but last token</span>
+            tgt_out = tgt[:, <span class="nb">1</span>:]  <span class="cm"># labels: all but first token (&lt;BOS&gt;)</span>
+
+            <span class="cm"># Causal mask: prevents attending to future tokens</span>
+            sz = tgt_in.size(<span class="nb">1</span>)
+            tgt_mask = torch.triu(torch.ones(sz, sz, device=device), diagonal=<span class="nb">1</span>).bool()
+            <span class="cm"># Padding masks: True where token is PAD</span>
+            src_pad = (src == <span class="nb">0</span>); tgt_pad = (tgt_in == <span class="nb">0</span>)
+
+            logits = model(src, tgt_in, tgt_mask=tgt_mask,
+                          src_pad_mask=src_pad, tgt_pad_mask=tgt_pad)
+
+            opt.zero_grad()
+            loss = loss_fn(logits.reshape(-<span class="nb">1</span>, logits.size(-<span class="nb">1</span>)), tgt_out.reshape(-<span class="nb">1</span>))
+            loss.backward(); opt.step()
+            total_loss += loss.item()
+
+        <span class="cm"># Evaluate BLEU every 5 epochs</span>
+        <span class="kw">if</span> (epoch + <span class="nb">1</span>) % <span class="nb">5</span> == <span class="nb">0</span>:
+            model.eval()
+            avg = total_loss / <span class="fn">len</span>(dl)
+            <span class="cm"># Greedy decode first example</span>
+            <span class="kw">with</span> torch.no_grad():
+                s = torch.tensor([[<span class="nb">1</span>] + [src_v.get(w,<span class="nb">3</span>) <span class="kw">for</span> w <span class="kw">in</span> pairs[<span class="nb">0</span>][<span class="nb">0</span>].split()] + [<span class="nb">2</span>]]).to(device)
+                dec = torch.tensor([[<span class="nb">1</span>]]).to(device)
+                <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(<span class="nb">20</span>):
+                    m = torch.triu(torch.ones(dec.size(<span class="nb">1</span>),dec.size(<span class="nb">1</span>),device=device),<span class="nb">1</span>).bool()
+                    o = model(s, dec, tgt_mask=m)
+                    nxt = o[:, -<span class="nb">1</span>].argmax(-<span class="nb">1</span>, keepdim=<span class="nb">True</span>)
+                    dec = torch.cat([dec, nxt], <span class="nb">1</span>)
+                    <span class="kw">if</span> nxt.item() == <span class="nb">2</span>: <span class="kw">break</span>  <span class="cm"># EOS</span>
+                pred = [tgt_iv.get(t.item(), <span class="st">"?"</span>) <span class="kw">for</span> t <span class="kw">in</span> dec[<span class="nb">0</span>, <span class="nb">1</span>:] <span class="kw">if</span> t.item() <span class="kw">not in</span> (<span class="nb">0</span>,<span class="nb">1</span>,<span class="nb">2</span>)]
+                ref = pairs[<span class="nb">0</span>][<span class="nb">1</span>].split()
+                b = bleu_score(pred, ref)
+            <span class="fn">print</span>(f<span class="st">"Epoch {epoch+1:3d} | Loss: {avg:.4f} | BLEU: {b:.4f} | Pred: {' '.join(pred)}"</span>)
+
+<span class="kw">if</span> __name__ == <span class="st">"__main__"</span>:
+    train()
+</code></pre>
+
+<div class="pause-think" id="pt4">
+  <div class="label">⏸ Pause &amp; Think</div>
+  <p>In the capstone code, the causal mask is created with <code>torch.triu(..., diagonal=1).bool()</code>. Why <code>diagonal=1</code> and not <code>diagonal=0</code>?</p>
+  <button class="reveal-btn" onclick="toggleAnswer('pt4')">Reveal Answer</button>
+  <div class="answer">
+    <p><code>torch.triu(matrix, diagonal=1)</code> returns the upper triangle <em>excluding</em> the main diagonal (which represents a token attending to itself). We want <code>True</code> in positions that should be <em>blocked</em> (future tokens), and <code>False</code> where attention is allowed. A token should be able to attend to <em>itself</em> and all previous tokens. If we used <code>diagonal=0</code>, the main diagonal would be <code>True</code>, meaning each token couldn't even look at itself—which breaks self-attention entirely.</p>
+  </div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- REFERENCES -->
+<!-- ============================================ -->
+<h2 id="references">Reference Resources</h2>
+
+<a class="ref-card" href="https://pytorch.org/tutorials/" target="_blank">
+  <div class="icon" style="background:#FF6B35;">🔥</div>
+  <div class="meta">
+    <strong>PyTorch Official Tutorials — "Learning the Basics"</strong>
+    <span>The canonical starting point. Focus on tensors, autograd, and building models.</span>
+  </div>
+</a>
+
+<a class="ref-card" href="https://pytorch.org/tutorials/beginner/deep_learning_60min_blitz.html" target="_blank">
+  <div class="icon" style="background:#3B5BDB;">⚡</div>
+  <div class="meta">
+    <strong>Deep Learning with PyTorch: A 60-Minute Blitz</strong>
+    <span>Condensed walkthrough of tensors, autograd, neural networks, and training.</span>
+  </div>
+</a>
+
+<a class="ref-card" href="https://huggingface.co/learn/nlp-course" target="_blank">
+  <div class="icon" style="background:#FFD43B;">🤗</div>
+  <div class="meta">
+    <strong>Hugging Face NLP Course — Low-Resource Languages</strong>
+    <span>Practical guide to fine-tuning multilingual models for underrepresented languages.</span>
+  </div>
+</a>
+
+<!-- ============================================ -->
+<!-- NEXT STEPS -->
+<!-- ============================================ -->
+<h2>What's Next?</h2>
+
+<p>You now have the complete conceptual and practical toolkit. Here's how to move forward:</p>
+
+<p><strong>Tell me your target ancient language</strong> (Latin, Sanskrit, Old Norse, Ancient Greek, Sumerian, etc.), and the curriculum can be tailored further—specific tokenization strategies for that script, known parallel corpora you can use, and grammar-aware data augmentation techniques.</p>
+
+<p><strong>Go module by module.</strong> If this feels like a lot, say: <em>"Start with Module 1 and give me a small coding challenge at the end."</em> We'll work through it interactively.</p>
+
+<p><strong>Visualize tensor shapes.</strong> When implementing the Transformer, ask: <em>"Show me the tensor shapes at every step of self-attention"</em> and trace the dimensions by hand. This builds the intuition that separates someone who <em>uses</em> PyTorch from someone who <em>understands</em> it.</p>
+
+<div class="note">
+  <div class="label">The Loss Function</div>
+  <p>For translation, we minimize the cross-entropy loss between predicted and true tokens, ignoring padding positions:</p>
+</div>
+
+$$\mathcal{L} = -\frac{1}{N}\sum_{i=1}^{N}\sum_{t=1}^{T_i} \log P_\theta(y_t^{(i)} \mid y_{<t}^{(i)}, \mathbf{x}^{(i)})$$
+
+<p>where \(N\) is the batch size, \(T_i\) is the target length for sample \(i\), and \(\mathbf{x}^{(i)}\) is the source sentence.</p>
+
+</div><!-- /content -->
+
+<!-- ============================================ -->
+<!-- JAVASCRIPT -->
+<!-- ============================================ -->
+<script>
+// Progress bar
+window.addEventListener('scroll', () => {
+  const winH = document.documentElement.scrollHeight - window.innerHeight;
+  const pct = (window.scrollY / winH) * 100;
+  document.getElementById('progressBar').style.width = pct + '%';
+});
+
+// Reveal answers in Pause & Think blocks
+function toggleAnswer(id) {
+  const block = document.getElementById(id);
+  const answer = block.querySelector('.answer');
+  const btn = block.querySelector('.reveal-btn');
+  answer.classList.toggle('visible');
+  btn.textContent = answer.classList.contains('visible') ? 'Hide Answer' : 'Reveal Answer';
+}
+
+// Quiz logic
+function checkQuiz(quizId, btn, isCorrect) {
+  const quiz = document.getElementById(quizId);
+  const options = quiz.querySelectorAll('.option');
+  const explanation = quiz.querySelector('.explanation');
+
+  options.forEach(o => {
+    o.classList.add('disabled');
+    // Find the correct one
+    if (o === btn) {
+      o.classList.add(isCorrect ? 'correct' : 'incorrect');
+    }
+  });
+
+  // If wrong, highlight the correct one
+  if (!isCorrect) {
+    options.forEach(o => {
+      if (o.getAttribute('onclick')?.includes('true')) {
+        o.classList.add('correct');
+      }
+    });
+  }
+
+  explanation.classList.add('visible');
+}
+
+// Collapsible sections
+function toggleCollapsible(header) {
+  header.classList.toggle('open');
+  header.nextElementSibling.classList.toggle('open');
+}
+
+// Render KaTeX
+document.addEventListener('DOMContentLoaded', () => {
+  if (typeof renderMathInElement !== 'undefined') {
+    renderMathInElement(document.body, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '\\(', right: '\\)', display: false},
+      ],
+    });
+  }
+});
+// Fallback: wait for KaTeX auto-render to load
+window.addEventListener('load', () => {
+  if (typeof renderMathInElement !== 'undefined') {
+    renderMathInElement(document.body, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '\\(', right: '\\)', display: false},
+      ],
+    });
+  }
+});
+</script>
+
+</body>
+</html>
