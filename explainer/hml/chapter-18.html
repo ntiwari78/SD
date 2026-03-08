@@ -1,0 +1,1878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 18: Autoencoders, GANs, and Diffusion Models | Interactive ML Explainer</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a24;
+            --accent-purple: #ce93d8;
+            --accent-blue: #4fc3f7;
+            --accent-green: #66bb6a;
+            --accent-red: #ef5350;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --text-tertiary: #707080;
+            --border-color: #2a2a35;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-purple), var(--accent-blue));
+            z-index: 1000;
+            transition: width 0.3s ease;
+        }
+
+        /* Header */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 70px;
+            background: rgba(10, 10, 15, 0.95);
+            border-bottom: 1px solid var(--border-color);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            padding: 0 40px;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--accent-purple);
+            letter-spacing: 0.5px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 30px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent-purple);
+        }
+
+        .nav-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover {
+            color: var(--accent-purple);
+        }
+
+        main {
+            margin-top: 70px;
+            padding: 0;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, rgba(206, 147, 216, 0.1) 0%, rgba(79, 195, 247, 0.05) 100%);
+            border-bottom: 1px solid var(--border-color);
+            padding: 100px 40px;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--accent-purple);
+        }
+
+        .hero p {
+            font-size: 18px;
+            color: var(--text-secondary);
+            max-width: 800px;
+            margin: 0 auto 30px;
+            line-height: 1.8;
+        }
+
+        .chapter-label {
+            display: inline-block;
+            background: var(--bg-secondary);
+            color: var(--accent-purple);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Content Sections */
+        section {
+            padding: 80px 40px;
+            border-bottom: 1px solid var(--border-color);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        section h2 {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 40px;
+            color: var(--accent-purple);
+        }
+
+        section h3 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+
+        p, li {
+            font-size: 16px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            line-height: 1.8;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 24px;
+            margin: 20px 0;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 20px rgba(206, 147, 216, 0.1);
+        }
+
+        .card.highlight {
+            border-left: 4px solid var(--accent-purple);
+        }
+
+        .card h4 {
+            color: var(--accent-purple);
+            margin-bottom: 12px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        /* Code Blocks */
+        code {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: var(--accent-blue);
+        }
+
+        pre {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+
+        pre code {
+            background: none;
+            border: none;
+            padding: 0;
+            color: var(--text-secondary);
+        }
+
+        /* Canvas Containers */
+        .canvas-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        canvas {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            max-width: 100%;
+            height: auto;
+            margin: 10px 0;
+            display: block;
+        }
+
+        /* Interactive Controls */
+        .controls {
+            display: flex;
+            gap: 16px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        label {
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        input[type="range"],
+        input[type="checkbox"],
+        select {
+            accent-color: var(--accent-purple);
+        }
+
+        button {
+            background: var(--accent-purple);
+            color: var(--bg-primary);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: #e8a3f0;
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            background: var(--text-tertiary);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* KaTeX Display */
+        .katex-display {
+            color: var(--text-primary);
+            margin: 20px 0;
+        }
+
+        .katex {
+            font-size: 1em;
+        }
+
+        /* Lists */
+        ul, ol {
+            margin-left: 20px;
+            margin-bottom: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        /* Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        th {
+            background: var(--bg-secondary);
+            color: var(--accent-purple);
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: var(--bg-secondary);
+        }
+
+        /* Comparison Table */
+        .comparison-table {
+            width: 100%;
+            margin: 30px 0;
+        }
+
+        .comparison-table th {
+            background: linear-gradient(90deg, rgba(206, 147, 216, 0.1), rgba(79, 195, 247, 0.05));
+        }
+
+        /* Footer Navigation */
+        footer {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: 40px;
+            margin-top: 80px;
+        }
+
+        .footer-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .nav-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 10px 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .nav-button:hover {
+            color: var(--accent-purple);
+            border-color: var(--accent-purple);
+        }
+
+        .nav-button.next {
+            background: rgba(206, 147, 216, 0.1);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero {
+                padding: 60px 20px;
+            }
+
+            .hero h1 {
+                font-size: 32px;
+            }
+
+            section {
+                padding: 40px 20px;
+            }
+
+            header {
+                padding: 0 20px;
+            }
+
+            .nav-links {
+                gap: 15px;
+                font-size: 12px;
+            }
+
+            .footer-nav {
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+
+        /* Socratic Box */
+        .socratic-box {
+            background: linear-gradient(135deg, rgba(206, 147, 216, 0.15), rgba(206, 147, 216, 0.05));
+            border: 2px solid var(--accent-purple);
+            border-radius: 8px;
+            padding: 24px;
+            margin: 30px 0;
+        }
+
+        .socratic-box h4 {
+            color: var(--accent-purple);
+            margin-bottom: 16px;
+            font-size: 18px;
+        }
+
+        .socratic-box ul {
+            list-style: none;
+            margin-left: 0;
+        }
+
+        .socratic-box li {
+            padding-left: 20px;
+            position: relative;
+            color: var(--text-secondary);
+        }
+
+        .socratic-box li:before {
+            content: "?";
+            position: absolute;
+            left: 0;
+            color: var(--accent-purple);
+            font-weight: bold;
+        }
+
+        /* Mental Model */
+        .mental-model {
+            background: linear-gradient(135deg, rgba(79, 195, 247, 0.15), rgba(79, 195, 247, 0.05));
+            border: 2px solid var(--accent-blue);
+            border-radius: 8px;
+            padding: 24px;
+            margin: 30px 0;
+        }
+
+        .mental-model h4 {
+            color: var(--accent-blue);
+            margin-bottom: 16px;
+            font-size: 18px;
+        }
+
+        /* Slider Value Display */
+        .slider-value {
+            color: var(--accent-purple);
+            font-weight: 600;
+            min-width: 40px;
+        }
+
+        /* Visualization Grid */
+        .visualization-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .visualization-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .visualization-item h4 {
+            color: var(--accent-purple);
+            margin-bottom: 16px;
+            font-size: 16px;
+        }
+
+        /* Stats Box */
+        .stats-box {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin: 20px 0;
+        }
+
+        .stat {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .stat-label {
+            color: var(--text-tertiary);
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            color: var(--accent-purple);
+            font-size: 24px;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-bar" id="progressBar"></div>
+
+    <header>
+        <div class="header-content">
+            <div class="logo">HOML Chapter 18</div>
+            <nav>
+                <ul class="nav-links">
+                    <li><a href="#autoencoders">Autoencoders</a></li>
+                    <li><a href="#vae">VAE</a></li>
+                    <li><a href="#gans">GANs</a></li>
+                    <li><a href="#diffusion">Diffusion</a></li>
+                    <li><a href="#socratic">War Room</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <div class="hero">
+            <a href="ml-explainer-dashboard.html" class="nav-link">← Back to Dashboard</a>
+            <div class="chapter-label">PART II: NEURAL NETWORKS & DEEP LEARNING</div>
+            <h1>Autoencoders, GANs, and Diffusion Models</h1>
+            <p>Learning Dense Representations and Generating New Data</p>
+            <p style="font-size: 16px; margin-top: 20px;">Three powerful paradigms for unsupervised learning: Autoencoders compress data into efficient latent codes, GANs pit a forger against a detective, and Diffusion Models gradually remove noise. Each approach learns different representations and generates high-quality synthetic data.</p>
+        </div>
+
+        <!-- Autoencoders Section -->
+        <section id="autoencoders">
+            <h2>Autoencoders: Learning Efficient Representations</h2>
+
+            <div class="mental-model">
+                <h4>The Feynman Mental Model: "Compress Then Reconstruct"</h4>
+                <p>Imagine you're trying to memorize a long sequence of numbers. If you notice a pattern (e.g., "even numbers from 50 down to 14"), you only need to remember the pattern and two endpoints—compression through intelligence. Autoencoders do this: compress high-dimensional inputs into a low-dimensional code that captures the essence, then reconstruct the original.</p>
+            </div>
+
+            <h3>The Core Idea</h3>
+            <p>Autoencoders are unsupervised neural networks that learn to copy their inputs to their outputs, but with constraints that force them to discover efficient representations. They consist of:</p>
+            <ul>
+                <li><strong>Encoder:</strong> Maps input to a latent code (low-dimensional representation)</li>
+                <li><strong>Decoder:</strong> Reconstructs the original input from the latent code</li>
+                <li><strong>Bottleneck:</strong> The constraint that creates compression pressure</li>
+            </ul>
+
+            <div class="card highlight">
+                <h4>Key Insight</h4>
+                <p>Unlike classification networks trained on labeled data, autoencoders work entirely unsupervised. The target output equals the input, creating a self-supervised training signal.</p>
+            </div>
+
+            <h3>Undercomplete Autoencoders</h3>
+            <p>When the bottleneck dimension is smaller than the input dimension, the autoencoder must compress. This forces it to learn the most important features while discarding noise.</p>
+
+            <div class="canvas-container">
+                <h4>Interactive: Undercomplete Autoencoder Architecture</h4>
+                <canvas id="autoencoderArchCanvas" width="800" height="300"></canvas>
+                <p style="color: var(--text-tertiary); font-size: 13px; margin-top: 10px;">Input layer (5 dims) → Encoder → Bottleneck (2D code) → Decoder → Output layer (5 dims)</p>
+            </div>
+
+            <h3>PCA via Linear Autoencoder</h3>
+            <p>A linear autoencoder with MSE loss performs Principal Component Analysis (PCA), finding the lower-dimensional subspace that captures maximum variance.</p>
+
+            <div class="card">
+                <h4>PyTorch Implementation</h4>
+                <pre><code>import torch
+import torch.nn as nn
+
+class LinearAutoencoder(nn.Module):
+    def __init__(self, input_dim, latent_dim):
+        super().__init__()
+        self.encoder = nn.Linear(input_dim, latent_dim)
+        self.decoder = nn.Linear(latent_dim, input_dim)
+
+    def forward(self, x):
+        z = self.encoder(x)
+        return self.decoder(z), z
+
+# Usage
+ae = LinearAutoencoder(input_dim=784, latent_dim=32)
+criterion = nn.MSELoss()
+optimizer = torch.optim.Adam(ae.parameters(), lr=0.001)
+
+# Training loop
+for epoch in range(epochs):
+    z_codes, _ = ae(x_batch)
+    loss = criterion(z_codes, x_batch)
+    loss.backward()
+    optimizer.step()</code></pre>
+            </div>
+
+            <h3>Types of Autoencoders</h3>
+            <table>
+                <tr>
+                    <th>Type</th>
+                    <th>Characteristic</th>
+                    <th>Use Case</th>
+                </tr>
+                <tr>
+                    <td><strong>Undercomplete</strong></td>
+                    <td>Bottleneck smaller than input</td>
+                    <td>Dimensionality reduction, compression</td>
+                </tr>
+                <tr>
+                    <td><strong>Overcomplete</strong></td>
+                    <td>Bottleneck larger than input</td>
+                    <td>Feature expansion, denoising (with regularization)</td>
+                </tr>
+                <tr>
+                    <td><strong>Stacked</strong></td>
+                    <td>Multiple encoder/decoder layers</td>
+                    <td>Deep hierarchy of representations</td>
+                </tr>
+                <tr>
+                    <td><strong>Convolutional</strong></td>
+                    <td>Uses Conv layers (encoder/decoder)</td>
+                    <td>Image compression and reconstruction</td>
+                </tr>
+                <tr>
+                    <td><strong>Denoising</strong></td>
+                    <td>Input + noise → reconstructs clean input</td>
+                    <td>Noise removal, robustness</td>
+                </tr>
+                <tr>
+                    <td><strong>Sparse</strong></td>
+                    <td>L1 regularization on latent code</td>
+                    <td>Interpretable sparse features</td>
+                </tr>
+            </table>
+
+            <h3>Denoising Autoencoders</h3>
+            <p>A denoising autoencoder adds noise to inputs and trains the network to recover clean versions. This forces learning of robust features and acts as a regularizer.</p>
+
+            <div class="canvas-container">
+                <h4>Interactive: Denoising Process</h4>
+                <div class="controls">
+                    <div class="control-group">
+                        <label>Noise Level:</label>
+                        <input type="range" id="noiseSlider" min="0" max="100" value="30" style="width: 200px;">
+                        <span class="slider-value" id="noiseValue">30%</span>
+                    </div>
+                </div>
+                <canvas id="denoisingCanvas" width="800" height="300"></canvas>
+            </div>
+
+            <div class="socratic-box">
+                <h4>Think About It</h4>
+                <ul>
+                    <li>Why does reducing latent dimension force the autoencoder to learn useful representations rather than just copying inputs?</li>
+                    <li>How does adding noise during training make an autoencoder more robust to real-world messy data?</li>
+                    <li>What happens if you make the bottleneck too small? Too large?</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- VAE Section -->
+        <section id="vae">
+            <h2>Variational Autoencoders (VAE): Probabilistic Generation</h2>
+
+            <div class="mental-model">
+                <h4>The Feynman Mental Model: "Compress to Essence, Sample New Examples"</h4>
+                <p>A regular autoencoder creates discrete codes. A VAE instead learns a probability distribution over the latent space. Instead of mapping to a single point, it learns a region that's likely to produce good reconstructions. By sampling from this region, we can generate new data.</p>
+            </div>
+
+            <h3>From Autoencoders to VAEs</h3>
+            <p>A VAE adds two key components:</p>
+            <ul>
+                <li><strong>Probabilistic Latent Space:</strong> Encoder outputs mean and variance, not a point</li>
+                <li><strong>Generative Capability:</strong> Sample from the latent distribution to generate new data</li>
+            </ul>
+
+            <div class="card highlight">
+                <h4>The ELBO (Evidence Lower Bound)</h4>
+                <p>VAEs maximize:</p>
+                <div style="margin-top: 16px;">
+                    $$\mathcal{L} = \mathbb{E}_{q_\phi(z|x)}[\log p_\theta(x|z)] - \text{KL}(q_\phi(z|x) \| p(z))$$
+                </div>
+                <p style="margin-top: 16px;">Where:</p>
+                <ul>
+                    <li><strong>Reconstruction Term:</strong> $\mathbb{E}_{q_\phi(z|x)}[\log p_\theta(x|z)]$ - How well can we reconstruct?</li>
+                    <li><strong>KL Divergence:</strong> $\text{KL}(q_\phi(z|x) \| p(z))$ - How close is learned distribution to prior?</li>
+                </ul>
+            </div>
+
+            <h3>KL Divergence: Measuring Distribution Distance</h3>
+            <p>KL divergence measures how much one probability distribution differs from another:</p>
+            <div style="margin: 20px 0;">
+                $$\text{KL}(Q \| P) = \sum_i Q(i) \log \frac{Q(i)}{P(i)}$$
+            </div>
+            <p>In VAEs, we regularize the learned distribution $q(z|x)$ to stay close to a standard normal prior $p(z) = \mathcal{N}(0, I)$.</p>
+
+            <div class="canvas-container">
+                <h4>Interactive: KL Divergence Visualization</h4>
+                <div class="controls">
+                    <div class="control-group">
+                        <label>Variance of Q:</label>
+                        <input type="range" id="klSlider" min="0.5" max="3" step="0.1" value="1.5" style="width: 200px;">
+                        <span class="slider-value" id="klValue">1.5</span>
+                    </div>
+                </div>
+                <canvas id="klDivergenceCanvas" width="800" height="350"></canvas>
+            </div>
+
+            <h3>The Reparameterization Trick</h3>
+            <p>To backprop through sampling, VAEs use a clever trick: instead of sampling $z \sim q_\phi(z|x)$ directly, they reparameterize as $z = \mu + \sigma \odot \epsilon$ where $\epsilon \sim \mathcal{N}(0, I)$.</p>
+
+            <div class="card">
+                <h4>PyTorch VAE Implementation</h4>
+                <pre><code>class VAE(nn.Module):
+    def __init__(self, input_dim, hidden_dim, latent_dim):
+        super().__init__()
+        # Encoder
+        self.fc1 = nn.Linear(input_dim, hidden_dim)
+        self.fc_mu = nn.Linear(hidden_dim, latent_dim)
+        self.fc_logvar = nn.Linear(hidden_dim, latent_dim)
+        # Decoder
+        self.fc3 = nn.Linear(latent_dim, hidden_dim)
+        self.fc4 = nn.Linear(hidden_dim, input_dim)
+
+    def encode(self, x):
+        h = torch.relu(self.fc1(x))
+        mu = self.fc_mu(h)
+        logvar = self.fc_logvar(h)
+        return mu, logvar
+
+    def reparameterize(self, mu, logvar):
+        std = torch.exp(0.5 * logvar)
+        eps = torch.randn_like(std)
+        z = mu + eps * std
+        return z
+
+    def decode(self, z):
+        h = torch.relu(self.fc3(z))
+        return torch.sigmoid(self.fc4(h))
+
+    def forward(self, x):
+        mu, logvar = self.encode(x)
+        z = self.reparameterize(mu, logvar)
+        x_recon = self.decode(z)
+        return x_recon, mu, logvar
+
+def vae_loss(x_recon, x, mu, logvar):
+    # Reconstruction loss (binary cross-entropy)
+    BCE = nn.functional.binary_cross_entropy(x_recon, x, reduction='sum')
+    # KL divergence: D_KL(N(mu, sigma) || N(0, I))
+    KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+    return BCE + KLD</code></pre>
+            </div>
+
+            <h3>VAE Sampling and Generation</h3>
+            <p>Once trained, we can generate new samples by directly sampling from $\mathcal{N}(0, I)$ and passing through the decoder:</p>
+            <div style="margin: 20px 0;">
+                $$\text{Generate: } z \sim \mathcal{N}(0, I) \rightarrow x_{\text{new}} = p_\theta(z)$$
+            </div>
+
+            <div class="canvas-container">
+                <h4>Interactive: VAE Latent Space Sampling</h4>
+                <div class="controls">
+                    <div class="control-group">
+                        <label>Latent Dim 1:</label>
+                        <input type="range" id="latent1" min="-3" max="3" step="0.1" value="0" style="width: 200px;">
+                        <span class="slider-value" id="latent1Value">0.0</span>
+                    </div>
+                    <div class="control-group">
+                        <label>Latent Dim 2:</label>
+                        <input type="range" id="latent2" min="-3" max="3" step="0.1" value="0" style="width: 200px;">
+                        <span class="slider-value" id="latent2Value">0.0</span>
+                    </div>
+                </div>
+                <canvas id="vaeLatentCanvas" width="800" height="400"></canvas>
+            </div>
+
+            <div class="socratic-box">
+                <h4>Think About It</h4>
+                <ul>
+                    <li>Why do we need both a reconstruction term AND a KL divergence term? What does each optimize for?</li>
+                    <li>How does the reparameterization trick solve the problem of backpropagating through sampling?</li>
+                    <li>Why can we generate new samples that were never in the training set?</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- GANs Section -->
+        <section id="gans">
+            <h2>Generative Adversarial Networks: The Game Theory Approach</h2>
+
+            <div class="mental-model">
+                <h4>The Feynman Mental Model: "Forger vs. Detective"</h4>
+                <p>A GAN is like a criminal counterfeiting money (generator) competing against a police investigator (discriminator). The forger gets better at making fake money indistinguishable from real, while the detective gets better at spotting fakes. This adversarial dynamic drives both toward perfection.</p>
+            </div>
+
+            <h3>The GAN Architecture</h3>
+            <p>A GAN consists of two networks in an adversarial game:</p>
+            <ul>
+                <li><strong>Generator ($G$):</strong> Takes random noise, produces fake data</li>
+                <li><strong>Discriminator ($D$):</strong> Classifies data as real or fake</li>
+            </ul>
+
+            <h3>The Minimax Game</h3>
+            <p>Training alternates between:</p>
+            <div style="margin: 20px 0;">
+                $$\min_G \max_D V(G, D) = \mathbb{E}_{x \sim p_{\text{data}}}[\log D(x)] + \mathbb{E}_{z \sim p_z}[\log(1 - D(G(z)))]$$
+            </div>
+            <p><strong>Discriminator's Goal:</strong> Maximize $V$ (correctly identify real vs. fake)</p>
+            <p><strong>Generator's Goal:</strong> Minimize $V$ (fool the discriminator)</p>
+
+            <div class="card highlight">
+                <h4>Training Dynamics</h4>
+                <p>Ideally at equilibrium: $D$ is 50% confident (always uncertain), real and fake distributions match, and we can sample from $G$ to generate new data.</p>
+            </div>
+
+            <h3>Training Challenges</h3>
+            <table>
+                <tr>
+                    <th>Challenge</th>
+                    <th>What Happens</th>
+                    <th>Solution</th>
+                </tr>
+                <tr>
+                    <td><strong>Mode Collapse</strong></td>
+                    <td>Generator produces limited diversity, few distinct modes</td>
+                    <td>Minibatch discrimination, feature matching, unrolled GANs</td>
+                </tr>
+                <tr>
+                    <td><strong>Vanishing Gradients</strong></td>
+                    <td>When discriminator is too good, generator gradient becomes zero</td>
+                    <td>Wasserstein GAN, spectral normalization</td>
+                </tr>
+                <tr>
+                    <td><strong>Unstable Training</strong></td>
+                    <td>Loss oscillates wildly, networks don't converge</td>
+                    <td>Gradient clipping, learning rate scheduling, spectral norm</td>
+                </tr>
+                <tr>
+                    <td><strong>Non-Convergence</strong></td>
+                    <td>No equilibrium reached, continuous oscillation</td>
+                    <td>Wasserstein distance, improved loss functions</td>
+                </tr>
+            </table>
+
+            <div class="canvas-container">
+                <h4>Interactive: GAN Training Animation</h4>
+                <div class="controls">
+                    <button id="ganPlayButton">Play Animation</button>
+                    <button id="ganResetButton">Reset</button>
+                    <div class="control-group">
+                        <label>Speed:</label>
+                        <input type="range" id="ganSpeedSlider" min="0.5" max="2" step="0.1" value="1" style="width: 150px;">
+                        <span class="slider-value" id="ganSpeedValue">1.0x</span>
+                    </div>
+                </div>
+                <canvas id="ganTrainingCanvas" width="900" height="400"></canvas>
+            </div>
+
+            <h3>Advanced GAN Architectures</h3>
+
+            <div class="visualization-grid">
+                <div class="visualization-item">
+                    <h4>DCGAN</h4>
+                    <p><strong>Deep Convolutional GAN</strong> - Uses conv layers instead of dense layers, dramatically improving image quality and training stability.</p>
+                </div>
+                <div class="visualization-item">
+                    <h4>StyleGAN</h4>
+                    <p>Controls image generation at multiple scales with <em>style</em> vectors. Can morph between faces, adjust pose independently of identity.</p>
+                </div>
+                <div class="visualization-item">
+                    <h4>ProGAN</h4>
+                    <p><strong>Progressive Growing GAN</strong> - Starts with low resolution, gradually increases. Stabilizes training and enables high-resolution generation (1024×1024+).</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h4>Simple PyTorch GAN</h4>
+                <pre><code>class Generator(nn.Module):
+    def __init__(self, latent_dim, image_dim):
+        super().__init__()
+        self.fc = nn.Sequential(
+            nn.Linear(latent_dim, 128),
+            nn.ReLU(),
+            nn.Linear(128, 256),
+            nn.ReLU(),
+            nn.Linear(256, 512),
+            nn.ReLU(),
+            nn.Linear(512, image_dim),
+            nn.Sigmoid()
+        )
+
+    def forward(self, z):
+        return self.fc(z)
+
+class Discriminator(nn.Module):
+    def __init__(self, image_dim):
+        super().__init__()
+        self.fc = nn.Sequential(
+            nn.Linear(image_dim, 512),
+            nn.LeakyReLU(0.2),
+            nn.Linear(512, 256),
+            nn.LeakyReLU(0.2),
+            nn.Linear(256, 128),
+            nn.LeakyReLU(0.2),
+            nn.Linear(128, 1),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        return self.fc(x)
+
+# Training loop alternates:
+# 1. Update discriminator: maximize log D(x) + log(1 - D(G(z)))
+# 2. Update generator: minimize log(1 - D(G(z)))</code></pre>
+            </div>
+
+            <div class="socratic-box">
+                <h4>Think About It</h4>
+                <ul>
+                    <li>Why is the adversarial game between generator and discriminator effective for learning good representations?</li>
+                    <li>What causes mode collapse, and why is it hard to detect (you might think it's working)?</li>
+                    <li>Why do GANs suffer from vanishing gradients when the discriminator becomes too good?</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Diffusion Models Section -->
+        <section id="diffusion">
+            <h2>Diffusion Models: Denoising to Generate</h2>
+
+            <div class="mental-model">
+                <h4>The Feynman Mental Model: "Gradual Denoising"</h4>
+                <p>Imagine a photograph gradually covered by noise until it becomes pure static. A diffusion model learns to reverse this: start with random noise and gradually denoise it into a coherent image. By repeatedly removing noise, high-quality images emerge.</p>
+            </div>
+
+            <h3>The Two Processes</h3>
+            <p>Diffusion models involve two complementary processes:</p>
+
+            <h4>1. Forward Process (Diffusion): Adding Noise</h4>
+            <p>Gradually add Gaussian noise to data over $T$ timesteps:</p>
+            <div style="margin: 20px 0;">
+                $$x_t = \sqrt{\bar{\alpha}_t} x_0 + \sqrt{1 - \bar{\alpha}_t} \epsilon, \quad \epsilon \sim \mathcal{N}(0, I)$$
+            </div>
+            <p>At $t=0$: clean data. At $t=T$: pure noise.</p>
+
+            <h4>2. Reverse Process (Denoising): Removing Noise</h4>
+            <p>Learn to reverse: predict the noise added at each step and remove it:</p>
+            <div style="margin: 20px 0;">
+                $$p_\theta(x_{t-1}|x_t) = \mathcal{N}(x_{t-1}; \mu_\theta(x_t, t), \Sigma_\theta(x_t, t))$$
+            </div>
+
+            <div class="canvas-container">
+                <h4>Interactive: Forward Diffusion Process</h4>
+                <div class="controls">
+                    <div class="control-group">
+                        <label>Timestep:</label>
+                        <input type="range" id="diffusionTimeSlider" min="0" max="100" value="0" style="width: 250px;">
+                        <span class="slider-value" id="diffusionTimeValue">0 (Clean)</span>
+                    </div>
+                </div>
+                <canvas id="diffusionForwardCanvas" width="900" height="350"></canvas>
+            </div>
+
+            <h3>DDPM: Denoising Diffusion Probabilistic Models</h3>
+            <p>DDPM trains a neural network to predict the noise $\epsilon_\theta(x_t, t)$ at each timestep:</p>
+            <div style="margin: 20px 0;">
+                $$\mathcal{L} = \mathbb{E}_{x_0, t, \epsilon}[\| \epsilon - \epsilon_\theta(x_t, t) \|^2]$$
+            </div>
+            <p>The network learns: "Given noisy image at timestep $t$, predict what noise was added."</p>
+
+            <div class="card highlight">
+                <h4>Generation Process</h4>
+                <ol>
+                    <li>Start with $x_T \sim \mathcal{N}(0, I)$ (pure noise)</li>
+                    <li>For $t = T$ down to 1:
+                        <ul>
+                            <li>Predict noise: $\hat{\epsilon} = \epsilon_\theta(x_t, t)$</li>
+                            <li>Denoise: $x_{t-1} = \frac{1}{\sqrt{\alpha_t}}(x_t - \frac{1-\alpha_t}{\sqrt{1-\bar{\alpha}_t}}\hat{\epsilon}) + \sigma_t z$</li>
+                        </ul>
+                    </li>
+                    <li>Result: $x_0$, a high-quality generated image</li>
+                </ol>
+            </div>
+
+            <h3>Score-Based Generative Modeling</h3>
+            <p>An alternative formulation: learn the score (gradient of log probability) at each noise level:</p>
+            <div style="margin: 20px 0;">
+                $$s_\theta(x, t) \approx \nabla_x \log p_t(x)$$
+            </div>
+            <p>Generation uses Langevin dynamics with these scores to iteratively denoise.</p>
+
+            <div class="canvas-container">
+                <h4>Interactive: Generation via Reverse Diffusion</h4>
+                <div class="controls">
+                    <button id="diffusionGenButton">Generate from Noise</button>
+                    <button id="diffusionResetGenButton">Reset</button>
+                </div>
+                <canvas id="diffusionReverseCanvas" width="900" height="400"></canvas>
+                <div class="stats-box">
+                    <div class="stat">
+                        <div class="stat-label">Current Step</div>
+                        <div class="stat-value" id="diffusionStep">-</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Noise Level</div>
+                        <div class="stat-value" id="diffusionNoise">-</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Quality</div>
+                        <div class="stat-value" id="diffusionQuality">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3>Latent Diffusion Models (Stable Diffusion)</h3>
+            <p>Computing diffusion in pixel space is slow (1000+ steps needed). Latent Diffusion Models apply diffusion in a compressed latent space:</p>
+            <ol>
+                <li>Encode image to latent space with VAE encoder</li>
+                <li>Run diffusion on compact latent representation</li>
+                <li>Decode back to pixel space with VAE decoder</li>
+            </ol>
+            <p>This dramatically speeds up generation while maintaining quality.</p>
+
+            <div class="card">
+                <h4>DDPM Training Pseudocode</h4>
+                <pre><code># Training
+for step in range(num_steps):
+    x_0 = sample_real_images()  # Clean image
+    t = sample_random_timestep()
+    epsilon = torch.randn_like(x_0)  # Random noise
+
+    # Add noise: x_t = sqrt(alpha_bar[t])*x_0 + sqrt(1-alpha_bar[t])*epsilon
+    x_t = sqrt_alpha_bar[t] * x_0 + sqrt_1_minus_alpha_bar[t] * epsilon
+
+    # Predict noise
+    epsilon_pred = model(x_t, t)
+
+    # Loss: MSE between predicted and actual noise
+    loss = F.mse_loss(epsilon_pred, epsilon)
+    loss.backward()
+    optimizer.step()
+
+# Sampling (Generation)
+x_T = torch.randn(batch_size, channels, H, W)  # Start with noise
+for t in range(T-1, 0, -1):
+    z = torch.randn_like(x_T) if t > 1 else 0
+    epsilon_pred = model(x_T, t)
+    x_T = (x_T - (1-alpha[t])/sqrt(1-alpha_bar[t]) * epsilon_pred) / sqrt(alpha[t]) + sigma[t] * z
+
+return x_T  # Generated high-quality image</code></pre>
+            </div>
+
+            <h3>Comparison: Autoencoders vs. VAE vs. GANs vs. Diffusion</h3>
+            <table class="comparison-table">
+                <tr>
+                    <th>Aspect</th>
+                    <th>Autoencoder</th>
+                    <th>VAE</th>
+                    <th>GAN</th>
+                    <th>Diffusion</th>
+                </tr>
+                <tr>
+                    <td><strong>Learning</strong></td>
+                    <td>Deterministic compression</td>
+                    <td>Probabilistic distribution</td>
+                    <td>Adversarial game</td>
+                    <td>Noise prediction</td>
+                </tr>
+                <tr>
+                    <td><strong>Generation</strong></td>
+                    <td>Map latent code to output</td>
+                    <td>Sample from latent, decode</td>
+                    <td>Sample noise, run generator</td>
+                    <td>Iterative denoising (slow)</td>
+                </tr>
+                <tr>
+                    <td><strong>Training Stability</strong></td>
+                    <td>Very stable</td>
+                    <td>Stable</td>
+                    <td>Unstable, hard to tune</td>
+                    <td>Very stable</td>
+                </tr>
+                <tr>
+                    <td><strong>Generation Quality</strong></td>
+                    <td>Blurry</td>
+                    <td>Good but blurry</td>
+                    <td>Excellent (state-of-art)</td>
+                    <td>Excellent (state-of-art)</td>
+                </tr>
+                <tr>
+                    <td><strong>Speed (Generation)</strong></td>
+                    <td>Very fast</td>
+                    <td>Very fast</td>
+                    <td>Very fast</td>
+                    <td>Slow (1000s steps)</td>
+                </tr>
+                <tr>
+                    <td><strong>Applications</strong></td>
+                    <td>Compression, denoising, anomaly detection</td>
+                    <td>Compression, interpolation, anomaly detection</td>
+                    <td>Image generation, super-resolution, style transfer</td>
+                    <td>Text-to-image, image generation, editing</td>
+                </tr>
+            </table>
+
+            <div class="socratic-box">
+                <h4>Think About It</h4>
+                <ul>
+                    <li>Why does adding noise gradually (diffusion forward) help us learn the reverse process?</li>
+                    <li>How is predicting noise different from directly predicting denoised images? Why is noise prediction better?</li>
+                    <li>Why are latent diffusion models faster than pixel-space diffusion?</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- War Room: Socratic Sandbox -->
+        <section id="socratic">
+            <h2>War Room: Generative Model Decision Scenarios</h2>
+
+            <div class="socratic-box">
+                <h4>Scenario 1: E-Commerce Image Generation</h4>
+                <p><strong>Problem:</strong> You run an e-commerce platform with 10,000 product categories. You want to generate lifestyle images showing products in use to increase conversion rates. You need to generate images in real-time (< 100ms latency) for product pages.</p>
+                <p><strong>Questions:</strong></p>
+                <ul>
+                    <li>Which generative model would you choose and why?</li>
+                    <li>How would you handle the speed constraint with diffusion models?</li>
+                    <li>What training data would you need?</li>
+                </ul>
+                <details style="margin-top: 16px; cursor: pointer;">
+                    <summary style="color: var(--accent-purple); font-weight: 600;">Show Discussion</summary>
+                    <div style="margin-top: 12px; color: var(--text-secondary);">
+                        <p><strong>Answer:</strong> Use a latent diffusion model (like Stable Diffusion) fine-tuned on your product category images. While slower than GANs, modern optimizations (distillation, fewer steps) reduce inference to ~500ms. Alternatively, use a DCGAN for < 100ms generation, trading quality for speed. The key is caching frequently generated images and using conditional generation (product ID → image).</p>
+                    </div>
+                </details>
+            </div>
+
+            <div class="socratic-box">
+                <h4>Scenario 2: Anomaly Detection in Medical Imaging</h4>
+                <p><strong>Problem:</strong> You're building an anomaly detection system for chest X-rays. Normal X-rays are common, but abnormal ones (tumors, pneumonia) are rare. You need to identify images that deviate from normal patterns.</p>
+                <p><strong>Questions:</strong></p>
+                <ul>
+                    <li>Which model is best suited for unsupervised anomaly detection?</li>
+                    <li>How would you measure what's "anomalous"?</li>
+                    <li>Why wouldn't you use a classifier trained on labeled abnormalities?</li>
+                </ul>
+                <details style="margin-top: 16px; cursor: pointer;">
+                    <summary style="color: var(--accent-purple); font-weight: 600;">Show Discussion</summary>
+                    <div style="margin-top: 12px; color: var(--text-secondary);">
+                        <p><strong>Answer:</strong> Use a denoising autoencoder or VAE. Train on normal X-rays only. For a test image: if reconstruction error (original vs. reconstructed) is high, it's likely anomalous. Autoencoders are better than classifiers here because: (1) You can train on unlabeled normal data, (2) You catch unknown types of abnormalities not in training labels, (3) You learn what "normal" looks like rather than memorizing specific diseases.</p>
+                    </div>
+                </details>
+            </div>
+
+            <div class="socratic-box">
+                <h4>Scenario 3: Conditional Image Synthesis</h4>
+                <p><strong>Problem:</strong> You want to generate faces given attributes: age (18-80), gender, expression (smile, neutral, frown). Users specify attributes and receive a unique generated face.</p>
+                <p><strong>Questions:</strong></p>
+                <ul>
+                    <li>How would you incorporate conditional information into your generative model?</li>
+                    <li>Which model architecture (AE/VAE/GAN/Diffusion) best supports this?</li>
+                    <li>What challenges arise with conditional generation?</li>
+                </ul>
+                <details style="margin-top: 16px; cursor: pointer;">
+                    <summary style="color: var(--accent-purple); font-weight: 600;">Show Discussion</summary>
+                    <div style="margin-top: 12px; color: var(--text-secondary);">
+                        <p><strong>Answer:</strong> Use Conditional GAN (cGAN) or conditional diffusion model. Concatenate attribute vectors to both encoder and noise input. cGANs are efficient (fast generation), while conditional diffusion models produce higher quality but slower. The challenge is disentanglement: changing one attribute shouldn't affect others. Solutions include: (1) Attribute-specific latent factors, (2) Contrastive learning for disentanglement, (3) Progressive training (train age, then gender, then expression independently).</p>
+                    </div>
+                </details>
+            </div>
+
+            <div class="socratic-box">
+                <h4>Scenario 4: Data Augmentation for Small Datasets</h4>
+                <p><strong>Problem:</strong> You're training a classifier on a rare disease with only 500 labeled images. You need more training data to prevent overfitting but collecting more real images is expensive.</p>
+                <p><strong>Questions:</strong></p>
+                <ul>
+                    <li>How would you use generative models for data augmentation?</li>
+                    <li>Which model would be safest to use (avoid mode collapse, training issues)?</li>
+                    <li>How do you ensure synthetic data actually helps rather than hurts?</li>
+                </ul>
+                <details style="margin-top: 16px; cursor: pointer;">
+                    <summary style="color: var(--accent-purple); font-weight: 600;">Show Discussion</summary>
+                    <div style="margin-top: 12px; color: var(--text-secondary);">
+                        <p><strong>Answer:</strong> Use a VAE or diffusion model (more stable than GANs). Train on the 500 real images. Generate synthetic images but: (1) Mix synthetic 30-50% with real data, not 100% synthetic, (2) Validate: check if synthetic + real outperforms real-only, (3) Monitor classifier performance on held-out test set, (4) Use diversity metrics (FID, IS) to ensure generated variety. Diffusion models are safer due to stable training but slower. VAEs are a good balance.</p>
+                    </div>
+                </details>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-nav">
+            <a href="ml-explainer-dashboard.html" class="nav-button">← Back to Dashboard</a>
+            <div style="text-align: center; color: var(--text-tertiary); font-size: 14px;">
+                <p>Chapter 18: Autoencoders, GANs, and Diffusion Models</p>
+                <p style="margin-top: 8px;">Hands-On Machine Learning with Scikit-Learn and PyTorch</p>
+            </div>
+            <div style="text-align: right; color: var(--text-tertiary); font-size: 13px;">
+                <p>Progress: <span id="progressPercent">0</span>%</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // ============== PROGRESS BAR ==============
+        function updateProgressBar() {
+            const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const scrolled = window.scrollY;
+            const percent = scrollHeight > 0 ? (scrolled / scrollHeight) * 100 : 0;
+            document.getElementById('progressBar').style.width = percent + '%';
+            document.getElementById('progressPercent').textContent = Math.round(percent);
+        }
+
+        window.addEventListener('scroll', updateProgressBar);
+
+        // ============== CANVAS INITIALIZATION ==============
+        function initializeAllCanvases() {
+            try {
+                drawAutoencoderArch();
+            } catch(e) { console.error('Autoencoder arch canvas:', e); }
+
+            try {
+                drawDenoisingDemo();
+            } catch(e) { console.error('Denoising canvas:', e); }
+
+            try {
+                drawKLDivergence();
+            } catch(e) { console.error('KL divergence canvas:', e); }
+
+            try {
+                drawVAELatent();
+            } catch(e) { console.error('VAE latent canvas:', e); }
+
+            try {
+                drawGANTraining();
+            } catch(e) { console.error('GAN training canvas:', e); }
+
+            try {
+                drawDiffusionForward();
+            } catch(e) { console.error('Diffusion forward canvas:', e); }
+
+            try {
+                drawDiffusionReverse();
+            } catch(e) { console.error('Diffusion reverse canvas:', e); }
+        }
+
+        // ============== 1. AUTOENCODER ARCHITECTURE ==============
+        function drawAutoencoderArch() {
+            const canvas = document.getElementById('autoencoderArchCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const centerY = canvas.height / 2;
+            const layerHeight = 40;
+            const layerSpacing = 120;
+
+            // Draw encoder layer (input)
+            ctx.fillStyle = '#4fc3f7';
+            for (let i = 0; i < 5; i++) {
+                const y = centerY - 100 + i * 40;
+                ctx.fillRect(50, y, 40, 30);
+                ctx.fillStyle = '#0a0a0f';
+                ctx.font = 'bold 12px Inter';
+                ctx.fillText('I' + i, 60, y + 20);
+                ctx.fillStyle = '#4fc3f7';
+            }
+
+            // Draw encoder arrows
+            ctx.strokeStyle = '#ce93d8';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 5; i++) {
+                const y = centerY - 100 + i * 40;
+                ctx.beginPath();
+                ctx.moveTo(90, y + 15);
+                ctx.lineTo(170, centerY - 20 + (i % 2) * 40);
+                ctx.stroke();
+            }
+
+            // Draw bottleneck (latent space)
+            ctx.fillStyle = '#ce93d8';
+            ctx.fillRect(200, centerY - 30, 60, 60);
+            ctx.fillStyle = '#0a0a0f';
+            ctx.font = 'bold 12px Inter';
+            ctx.fillText('z (code)', 210, centerY + 5);
+
+            // Draw decoder arrows
+            ctx.strokeStyle = '#ce93d8';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 5; i++) {
+                const y = centerY - 100 + i * 40;
+                ctx.beginPath();
+                ctx.moveTo(260, centerY - 20 + (i % 2) * 40);
+                ctx.lineTo(340, y + 15);
+                ctx.stroke();
+            }
+
+            // Draw decoder layer (output)
+            ctx.fillStyle = '#66bb6a';
+            for (let i = 0; i < 5; i++) {
+                const y = centerY - 100 + i * 40;
+                ctx.fillRect(340, y, 40, 30);
+                ctx.fillStyle = '#0a0a0f';
+                ctx.font = 'bold 12px Inter';
+                ctx.fillText('O' + i, 350, y + 20);
+                ctx.fillStyle = '#66bb6a';
+            }
+
+            // Labels
+            ctx.fillStyle = '#a0a0a0';
+            ctx.font = '14px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('ENCODER', 70, canvas.height - 20);
+            ctx.fillText('BOTTLENECK', 230, canvas.height - 20);
+            ctx.fillText('DECODER', 360, canvas.height - 20);
+        }
+
+        // ============== 2. DENOISING DEMO ==============
+        const noiseSlider = document.getElementById('noiseSlider');
+        const noiseValue = document.getElementById('noiseValue');
+
+        noiseSlider.addEventListener('input', (e) => {
+            noiseValue.textContent = e.target.value + '%';
+            drawDenoisingDemo();
+        });
+
+        function drawDenoisingDemo() {
+            const canvas = document.getElementById('denoisingCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const noiseLevel = parseInt(noiseSlider.value) / 100;
+            const w = 100, h = 100;
+            const x1 = 100, y1 = 100;
+            const x2 = 400, y2 = 100;
+            const x3 = 700, y3 = 100;
+
+            // Original image (simple circle)
+            ctx.fillStyle = '#4fc3f7';
+            ctx.beginPath();
+            ctx.arc(x1 + w/2, y1 + h/2, 30, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Noisy image
+            ctx.fillStyle = '#12121a';
+            ctx.fillRect(x2, y2, w, h);
+            for (let i = 0; i < 2000; i++) {
+                const px = x2 + Math.random() * w;
+                const py = y2 + Math.random() * h;
+                const alpha = Math.random() < noiseLevel ? 1 : 0.2;
+                ctx.fillStyle = `rgba(79, 195, 247, ${alpha})`;
+                ctx.fillRect(px, py, 2, 2);
+            }
+
+            // Reconstructed image (blurred circle)
+            ctx.fillStyle = '#4fc3f7';
+            ctx.globalAlpha = 1 - noiseLevel * 0.5;
+            ctx.beginPath();
+            ctx.arc(x3 + w/2, y3 + h/2, 30, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+
+            // Labels
+            ctx.fillStyle = '#a0a0a0';
+            ctx.font = '14px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('Original', x1 + w/2, y1 + h + 30);
+            ctx.fillText('Noisy Input', x2 + w/2, y2 + h + 30);
+            ctx.fillText('Reconstructed', x3 + w/2, y3 + h + 30);
+
+            // Borders
+            ctx.strokeStyle = '#ce93d8';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x1, y1, w, h);
+            ctx.strokeRect(x2, y2, w, h);
+            ctx.strokeRect(x3, y3, w, h);
+        }
+
+        drawDenoisingDemo();
+
+        // ============== 3. KL DIVERGENCE ==============
+        const klSlider = document.getElementById('klSlider');
+        const klValue = document.getElementById('klValue');
+
+        klSlider.addEventListener('input', (e) => {
+            klValue.textContent = parseFloat(e.target.value).toFixed(1);
+            drawKLDivergence();
+        });
+
+        function drawKLDivergence() {
+            const canvas = document.getElementById('klDivergenceCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const variance = parseFloat(klSlider.value);
+            const centerX = canvas.width / 2;
+            const centerY = 150;
+            const scale = 80;
+
+            // Draw prior (N(0, 1)) - blue
+            ctx.strokeStyle = '#4fc3f7';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let x = -4; x <= 4; x += 0.1) {
+                const y = (1 / Math.sqrt(2 * Math.PI)) * Math.exp(-x * x / 2);
+                const px = centerX + x * scale;
+                const py = centerY - y * 100;
+                if (x === -4) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+
+            // Draw learned distribution (N(0, variance)) - purple
+            ctx.strokeStyle = '#ce93d8';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let x = -4; x <= 4; x += 0.1) {
+                const y = (1 / Math.sqrt(2 * Math.PI * variance)) * Math.exp(-x * x / (2 * variance));
+                const px = centerX + x * scale;
+                const py = centerY - y * 100;
+                if (x === -4) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+
+            // Calculate KL divergence
+            const kl = 0.5 * (variance - 1 - Math.log(variance));
+
+            // Labels and legend
+            ctx.fillStyle = '#a0a0a0';
+            ctx.font = '14px Inter';
+            ctx.fillText('Prior p(z) = N(0,1)', 100, 280);
+            ctx.fillStyle = '#ce93d8';
+            ctx.fillText('Learned q(z|x)', 100, 310);
+            ctx.fillStyle = '#ce93d8';
+            ctx.font = 'bold 16px Inter';
+            ctx.fillText(`KL Divergence = ${kl.toFixed(3)}`, centerX - 100, canvas.height - 40);
+
+            // Draw axes
+            ctx.strokeStyle = '#707080';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(centerX - 4*scale, centerY);
+            ctx.lineTo(centerX + 4*scale, centerY);
+            ctx.stroke();
+        }
+
+        drawKLDivergence();
+
+        // ============== 4. VAE LATENT SPACE ==============
+        const latent1 = document.getElementById('latent1');
+        const latent2 = document.getElementById('latent2');
+        const latent1Value = document.getElementById('latent1Value');
+        const latent2Value = document.getElementById('latent2Value');
+
+        latent1.addEventListener('input', (e) => {
+            latent1Value.textContent = parseFloat(e.target.value).toFixed(1);
+            drawVAELatent();
+        });
+
+        latent2.addEventListener('input', (e) => {
+            latent2Value.textContent = parseFloat(e.target.value).toFixed(1);
+            drawVAELatent();
+        });
+
+        function drawVAELatent() {
+            const canvas = document.getElementById('vaeLatentCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const z1 = parseFloat(latent1.value);
+            const z2 = parseFloat(latent2.value);
+            const centerX = 200;
+            const centerY = 200;
+            const scale = 50;
+
+            // Draw latent space grid
+            ctx.strokeStyle = '#2a2a35';
+            ctx.lineWidth = 1;
+            for (let i = -3; i <= 3; i += 0.5) {
+                ctx.beginPath();
+                ctx.moveTo(centerX + i * scale, centerY - 3 * scale);
+                ctx.lineTo(centerX + i * scale, centerY + 3 * scale);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(centerX - 3 * scale, centerY + i * scale);
+                ctx.lineTo(centerX + 3 * scale, centerY + i * scale);
+                ctx.stroke();
+            }
+
+            // Draw Gaussian prior
+            ctx.strokeStyle = '#4fc3f7';
+            ctx.globalAlpha = 0.3;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 2.5 * scale, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+
+            // Draw selected point
+            const px = centerX + z1 * scale;
+            const py = centerY + z2 * scale;
+            ctx.fillStyle = '#ce93d8';
+            ctx.beginPath();
+            ctx.arc(px, py, 8, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw generated face representation
+            ctx.fillStyle = '#66bb6a';
+            const faceSize = 60;
+            const faceX = centerX + 500;
+            const faceY = centerY - faceSize/2;
+
+            // Simple face
+            ctx.beginPath();
+            ctx.arc(faceX, faceY, faceSize/2.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eyes
+            ctx.fillStyle = '#12121a';
+            ctx.beginPath();
+            ctx.arc(faceX - 15, faceY - 10, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(faceX + 15, faceY - 10, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Mouth (varies with z2)
+            ctx.strokeStyle = '#12121a';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            const mouthCurve = z2 / 3;
+            ctx.arc(faceX, faceY + 15, 10, Math.PI * 0.2 + mouthCurve, Math.PI * 0.8 + mouthCurve);
+            ctx.stroke();
+
+            // Labels
+            ctx.fillStyle = '#a0a0a0';
+            ctx.font = '13px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('Latent Space (2D)', centerX, 50);
+            ctx.fillText('Generated Face', faceX, faceY + faceSize/2 + 40);
+
+            // Axes labels
+            ctx.font = '12px Inter';
+            ctx.fillText('z₁ (e.g., age)', centerX + 150, centerY + 3 * scale + 20);
+            ctx.fillText('z₂\n(smile)', centerX - 120, centerY - 120);
+        }
+
+        drawVAELatent();
+
+        // ============== 5. GAN TRAINING ANIMATION ==============
+        let ganAnimationRunning = false;
+        let ganAnimationFrame = 0;
+        const ganPlayButton = document.getElementById('ganPlayButton');
+        const ganResetButton = document.getElementById('ganResetButton');
+        const ganSpeedSlider = document.getElementById('ganSpeedSlider');
+        const ganSpeedValue = document.getElementById('ganSpeedValue');
+
+        ganPlayButton.addEventListener('click', () => {
+            ganAnimationRunning = !ganAnimationRunning;
+            ganPlayButton.textContent = ganAnimationRunning ? 'Pause' : 'Play Animation';
+        });
+
+        ganResetButton.addEventListener('click', () => {
+            ganAnimationRunning = false;
+            ganAnimationFrame = 0;
+            ganPlayButton.textContent = 'Play Animation';
+            drawGANTraining();
+        });
+
+        ganSpeedSlider.addEventListener('input', (e) => {
+            ganSpeedValue.textContent = parseFloat(e.target.value).toFixed(1) + 'x';
+        });
+
+        function drawGANTraining() {
+            const canvas = document.getElementById('ganTrainingCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const progress = Math.min(ganAnimationFrame / 200, 1);
+            const speed = parseFloat(ganSpeedSlider.value);
+
+            // Title
+            ctx.fillStyle = '#a0a0a0';
+            ctx.font = 'bold 16px Inter';
+            ctx.fillText(`GAN Training Progress: ${Math.round(progress * 100)}%`, 50, 30);
+
+            // Generator progress (left side)
+            ctx.fillStyle = '#ce93d8';
+            ctx.fillText('Generator', 50, 80);
+            for (let i = 0; i < 5; i++) {
+                const x = 50 + i * 150;
+                const y = 120;
+                const genQuality = Math.max(0, progress - i * 0.2);
+                ctx.fillStyle = `rgba(206, 147, 216, ${0.3 + genQuality * 0.7})`;
+                ctx.fillRect(x, y, 120, 80);
+                ctx.fillStyle = '#a0a0a0';
+                ctx.font = '12px Inter';
+                ctx.fillText(`Step ${i+1}`, x + 40, y + 40);
+            }
+
+            // Discriminator progress (right side)
+            ctx.fillStyle = '#4fc3f7';
+            ctx.font = 'bold 16px Inter';
+            ctx.fillText('Discriminator', 50, 250);
+            for (let i = 0; i < 5; i++) {
+                const x = 50 + i * 150;
+                const y = 290;
+                const discQuality = Math.max(0, progress - i * 0.2);
+                ctx.fillStyle = `rgba(79, 195, 247, ${0.3 + discQuality * 0.7})`;
+                ctx.fillRect(x, y, 120, 80);
+                ctx.fillStyle = '#a0a0a0';
+                ctx.font = '12px Inter';
+                ctx.fillText(`Step ${i+1}`, x + 40, y + 40);
+            }
+
+            // Status
+            ctx.fillStyle = '#66bb6a';
+            ctx.font = '14px Inter';
+            let status = 'Training...';
+            if (progress < 0.3) status = 'Generator struggling (Discriminator dominant)';
+            else if (progress < 0.6) status = 'Convergence phase (Both improving)';
+            else if (progress < 0.9) status = 'Mode collapse risk detected';
+            else status = 'Near equilibrium (High-quality diverse samples)';
+
+            ctx.fillText(status, 50, canvas.height - 20);
+
+            // Continue animation
+            if (ganAnimationRunning) {
+                ganAnimationFrame += 1 * speed;
+                if (ganAnimationFrame > 200) {
+                    ganAnimationFrame = 0;
+                }
+            }
+
+            requestAnimationFrame(drawGANTraining);
+        }
+
+        // ============== 6. DIFFUSION FORWARD PROCESS ==============
+        const diffusionTimeSlider = document.getElementById('diffusionTimeSlider');
+        const diffusionTimeValue = document.getElementById('diffusionTimeValue');
+
+        diffusionTimeSlider.addEventListener('input', (e) => {
+            const t = parseInt(e.target.value);
+            if (t === 0) diffusionTimeValue.textContent = '0 (Clean)';
+            else if (t === 100) diffusionTimeValue.textContent = '100 (Pure Noise)';
+            else diffusionTimeValue.textContent = `${t}`;
+            drawDiffusionForward();
+        });
+
+        function drawDiffusionForward() {
+            const canvas = document.getElementById('diffusionForwardCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const t = parseInt(diffusionTimeSlider.value) / 100;
+            const centerY = 120;
+            const boxSize = 100;
+
+            // Timeline
+            ctx.strokeStyle = '#ce93d8';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(80, centerY + boxSize + 40);
+            ctx.lineTo(850, centerY + boxSize + 40);
+            ctx.stroke();
+
+            // Draw images at different timesteps
+            const steps = [0, 0.25, 0.5, 0.75, 1.0];
+            steps.forEach((step, idx) => {
+                const x = 80 + idx * 190;
+                const y = centerY;
+
+                // Clean signal
+                ctx.fillStyle = `rgba(102, 187, 106, ${1 - step})`;
+                ctx.fillRect(x, y, boxSize, boxSize);
+
+                // Noise
+                ctx.fillStyle = `rgba(79, 195, 247, ${step * 0.7})`;
+                for (let i = 0; i < 300 * step; i++) {
+                    ctx.fillRect(
+                        x + Math.random() * boxSize,
+                        y + Math.random() * boxSize,
+                        2, 2
+                    );
+                }
+
+                // Border
+                ctx.strokeStyle = step === t ? '#ce93d8' : '#707080';
+                ctx.lineWidth = step === t ? 3 : 1;
+                ctx.strokeRect(x, y, boxSize, boxSize);
+
+                // Label
+                ctx.fillStyle = step === t ? '#ce93d8' : '#a0a0a0';
+                ctx.font = step === t ? 'bold 12px Inter' : '12px Inter';
+                ctx.textAlign = 'center';
+                ctx.fillText(`t=${(step * 100).toFixed(0)}`, x + boxSize/2, y + boxSize + 20);
+
+                // Marker on timeline
+                ctx.fillStyle = step === t ? '#ce93d8' : '#707080';
+                ctx.beginPath();
+                ctx.arc(x + boxSize/2, centerY + boxSize + 40, step === t ? 5 : 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Description
+            ctx.fillStyle = '#a0a0a0';
+            ctx.font = '14px Inter';
+            ctx.textAlign = 'left';
+            ctx.fillText('Forward Process: Gradually Add Noise', 100, 50);
+            ctx.font = '12px Inter';
+            ctx.fillStyle = '#707080';
+            ctx.fillText('At t=0: clean image | At t=100: pure random noise', 100, canvas.height - 20);
+        }
+
+        drawDiffusionForward();
+
+        // ============== 7. DIFFUSION REVERSE PROCESS ==============
+        let diffusionGenerating = false;
+        let diffusionStep = 0;
+        const maxDiffusionSteps = 50;
+        const diffusionGenButton = document.getElementById('diffusionGenButton');
+        const diffusionResetGenButton = document.getElementById('diffusionResetGenButton');
+
+        diffusionGenButton.addEventListener('click', () => {
+            if (!diffusionGenerating) {
+                diffusionGenerating = true;
+                diffusionStep = 0;
+                diffusionGenButton.disabled = true;
+                animateDiffusionReverse();
+            }
+        });
+
+        diffusionResetGenButton.addEventListener('click', () => {
+            diffusionGenerating = false;
+            diffusionStep = 0;
+            diffusionGenButton.disabled = false;
+            drawDiffusionReverse();
+        });
+
+        function animateDiffusionReverse() {
+            if (diffusionGenerating && diffusionStep < maxDiffusionSteps) {
+                diffusionStep++;
+                drawDiffusionReverse();
+                setTimeout(animateDiffusionReverse, 100);
+            } else if (diffusionStep >= maxDiffusionSteps) {
+                diffusionGenerating = false;
+                diffusionGenButton.disabled = false;
+            }
+        }
+
+        function drawDiffusionReverse() {
+            const canvas = document.getElementById('diffusionReverseCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const progress = diffusionStep / maxDiffusionSteps;
+            const boxSize = 150;
+            const centerX = canvas.width / 2 - boxSize / 2;
+            const centerY = 100;
+
+            // Title
+            ctx.fillStyle = '#a0a0a0';
+            ctx.font = 'bold 16px Inter';
+            ctx.fillText('Reverse Diffusion: Iterative Denoising', 50, 30);
+
+            // Main generation box
+            ctx.fillStyle = '#12121a';
+            ctx.fillRect(centerX, centerY, boxSize, boxSize);
+
+            // Draw noise decreasing
+            const noiseAlpha = 1 - progress;
+            ctx.fillStyle = `rgba(79, 195, 247, ${noiseAlpha * 0.7})`;
+            for (let i = 0; i < 500 * noiseAlpha; i++) {
+                ctx.fillRect(
+                    centerX + Math.random() * boxSize,
+                    centerY + Math.random() * boxSize,
+                    Math.random() * 3, Math.random() * 3
+                );
+            }
+
+            // Draw emerging structure
+            ctx.fillStyle = `rgba(102, 187, 106, ${progress})`;
+            ctx.beginPath();
+            ctx.arc(centerX + boxSize/2, centerY + boxSize/2, 30 * progress, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Border
+            ctx.strokeStyle = '#ce93d8';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(centerX, centerY, boxSize, boxSize);
+
+            // Step counter and stats
+            document.getElementById('diffusionStep').textContent = `${diffusionStep}/${maxDiffusionSteps}`;
+            document.getElementById('diffusionNoise').textContent = `${Math.round((1 - progress) * 100)}%`;
+            document.getElementById('diffusionQuality').textContent = `${Math.round(progress * 100)}%`;
+
+            // Progress bar
+            ctx.fillStyle = '#ce93d8';
+            ctx.fillRect(centerX, centerY + boxSize + 30, boxSize * progress, 10);
+            ctx.strokeStyle = '#707080';
+            ctx.strokeRect(centerX, centerY + boxSize + 30, boxSize, 10);
+
+            // Description
+            ctx.fillStyle = '#a0a0a0';
+            ctx.font = '13px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('Start: Pure Noise', centerX + boxSize/2, canvas.height - 50);
+            ctx.fillText('End: High-Quality Image', centerX + boxSize/2, canvas.height - 20);
+        }
+
+        drawDiffusionReverse();
+
+        // ============== MAIN INITIALIZATION ==============
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                initializeAllCanvases();
+            } catch(e) {
+                console.error('Canvas error:', e);
+            }
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left:'$$',right:'$$',display:true},
+                    {left:'\\[',right:'\\]',display:true},
+                    {left:'$',right:'$',display:false},
+                    {left:'\\(',right:'\\)',display:false}
+                ],
+                throwOnError: false
+            });
+        });
+
+        updateProgressBar();
+    </script>
+</body>
+</html>

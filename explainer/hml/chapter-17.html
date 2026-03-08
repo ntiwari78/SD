@@ -1,0 +1,1948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 17: Speeding Up Transformers | Interactive ML Explainer</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a24;
+            --accent-purple: #ce93d8;
+            --accent-blue: #4fc3f7;
+            --accent-green: #66bb6a;
+            --accent-red: #ef5350;
+            --accent-orange: #ffb74d;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --text-tertiary: #707080;
+            --border-color: #2a2a35;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-purple), var(--accent-blue));
+            z-index: 1000;
+            transition: width 0.3s ease;
+        }
+
+        /* Header */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 70px;
+            background: rgba(10, 10, 15, 0.95);
+            border-bottom: 1px solid var(--border-color);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            padding: 0 40px;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--accent-purple);
+            letter-spacing: 0.5px;
+        }
+
+        .nav-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s ease;
+        }
+
+        .nav-link:hover {
+            color: var(--accent-purple);
+        }
+
+        /* Main Container */
+        .main-container {
+            display: flex;
+            margin-top: 70px;
+            min-height: calc(100vh - 70px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            padding: 30px 0;
+            max-height: calc(100vh - 70px);
+            overflow-y: auto;
+            position: sticky;
+            top: 70px;
+        }
+
+        .sidebar-section {
+            margin-bottom: 25px;
+        }
+
+        .sidebar-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--accent-purple);
+            letter-spacing: 1px;
+            padding: 0 20px 12px;
+        }
+
+        .sidebar-nav {
+            list-style: none;
+        }
+
+        .sidebar-nav li {
+            margin: 0;
+        }
+
+        .sidebar-nav a {
+            display: block;
+            padding: 10px 20px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 13px;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar-nav a:hover,
+        .sidebar-nav a.active {
+            color: var(--accent-purple);
+            background: rgba(206, 147, 216, 0.1);
+            border-left-color: var(--accent-purple);
+        }
+
+        /* Content Area */
+        .content {
+            flex: 1;
+            padding: 50px 60px;
+            max-width: 900px;
+        }
+
+        /* Hero Section */
+        .hero {
+            margin-bottom: 60px;
+        }
+
+        .hero h1 {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 18px;
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+            line-height: 1.8;
+        }
+
+        /* Sections */
+        section {
+            margin-bottom: 80px;
+        }
+
+        section h2 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 25px;
+            color: var(--accent-purple);
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        section h3 {
+            font-size: 22px;
+            font-weight: 600;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            color: var(--text-primary);
+        }
+
+        p {
+            margin-bottom: 15px;
+            line-height: 1.8;
+            color: var(--text-primary);
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 20px rgba(206, 147, 216, 0.15);
+        }
+
+        .card.highlight {
+            border-color: var(--accent-purple);
+            background: rgba(206, 147, 216, 0.05);
+        }
+
+        .mental-model {
+            background: var(--bg-tertiary);
+            border-left: 4px solid var(--accent-orange);
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 8px;
+        }
+
+        .mental-model strong {
+            color: var(--accent-orange);
+        }
+
+        .mental-model em {
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        /* Math Blocks */
+        .math-block {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+
+        .math-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Code Blocks */
+        .code-block {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: var(--accent-blue);
+            line-height: 1.5;
+        }
+
+        .code-block code {
+            color: var(--accent-blue);
+        }
+
+        /* Canvas Containers */
+        .canvas-container {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 25px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 300px;
+        }
+
+        .canvas-container canvas {
+            max-width: 100%;
+        }
+
+        /* Interactive Controls */
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: var(--accent-purple);
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+        }
+
+        button:hover {
+            background: var(--accent-blue);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 195, 247, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .slider-container {
+            margin: 20px 0;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .slider-container label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            min-width: 100px;
+        }
+
+        .slider-container input[type="range"] {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border-color);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .slider-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-purple);
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(206, 147, 216, 0.3);
+        }
+
+        .slider-container input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-purple);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 8px rgba(206, 147, 216, 0.3);
+        }
+
+        .slider-value {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent-purple);
+            font-weight: 600;
+            min-width: 80px;
+        }
+
+        /* Lists */
+        ul, ol {
+            margin: 15px 0 15px 25px;
+        }
+
+        li {
+            margin-bottom: 10px;
+            line-height: 1.8;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        thead {
+            background: var(--bg-secondary);
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--accent-purple);
+            font-size: 13px;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 13px;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background: rgba(206, 147, 216, 0.05);
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .main-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+                max-height: auto;
+                position: static;
+                display: flex;
+                overflow-x: auto;
+            }
+
+            .sidebar-section {
+                margin-right: 40px;
+                margin-bottom: 0;
+            }
+
+            .content {
+                padding: 40px 30px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            header {
+                padding: 0 20px;
+            }
+
+            .logo {
+                font-size: 16px;
+            }
+
+            .content {
+                padding: 30px 20px;
+            }
+
+            section h2 {
+                font-size: 24px;
+            }
+
+            .hero h1 {
+                font-size: 32px;
+            }
+
+            .canvas-container {
+                min-height: 250px;
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-purple);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card {
+            animation: fadeIn 0.6s ease forwards;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 25px 0;
+        }
+
+        .stat-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--accent-purple);
+            margin-bottom: 8px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Progress Bar -->
+    <div class="progress-bar"></div>
+
+    <!-- Header -->
+    <header>
+        <div class="header-content">
+            <div class="logo">HOML Explainer</div>
+            <a href="ml-explainer-dashboard.html" class="nav-link">← Back to Dashboard</a>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-title">Speedup Techniques</div>
+                <ul class="sidebar-nav">
+                    <li><a href="#kv-caching" class="nav-link active">KV Caching</a></li>
+                    <li><a href="#speculative" class="nav-link">Speculative Decoding</a></li>
+                    <li><a href="#parallelization" class="nav-link">Parallelization</a></li>
+                    <li><a href="#sparse-attention" class="nav-link">Sparse Attention</a></li>
+                    <li><a href="#approximate-attention" class="nav-link">Approximate Attention</a></li>
+                </ul>
+            </div>
+            <div class="sidebar-section">
+                <div class="sidebar-title">Advanced Techniques</div>
+                <ul class="sidebar-nav">
+                    <li><a href="#shared-projections" class="nav-link">Shared Projections</a></li>
+                    <li><a href="#flashattention" class="nav-link">FlashAttention</a></li>
+                    <li><a href="#moe" class="nav-link">Mixture of Experts</a></li>
+                    <li><a href="#peft" class="nav-link">PEFT & LoRA</a></li>
+                    <li><a href="#training-tricks" class="nav-link">Training Tricks</a></li>
+                </ul>
+            </div>
+            <div class="sidebar-section">
+                <div class="sidebar-title">Distributed Training</div>
+                <ul class="sidebar-nav">
+                    <li><a href="#model-parallelism" class="nav-link">Model Parallelism</a></li>
+                    <li><a href="#data-parallelism" class="nav-link">War Room</a></li>
+                </ul>
+            </div>
+        </aside>
+
+        <!-- Content Area -->
+        <div class="content">
+            <!-- Hero Section -->
+            <div class="hero" id="hero">
+                <h1>Chapter 17: Speeding Up Transformers</h1>
+                <p>Transformers are powerful but computationally expensive. This chapter explores cutting-edge techniques to accelerate inference, training, and scaling—from KV caching to Mixture of Experts—enabling trillion-parameter models to be practical.</p>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">O(n²)</div>
+                        <div class="stat-label">Standard Attention</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">O(n)</div>
+                        <div class="stat-label">Sparse/Linear Attn</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">2-5x</div>
+                        <div class="stat-label">KV Cache Speedup</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">4-20x</div>
+                        <div class="stat-label">LoRA Training</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 1: KV CACHING -->
+            <section id="kv-caching">
+                <h2>KV Caching: Reusing Computed Values</h2>
+
+                <div class="mental-model">
+                    <strong>Mental Model:</strong> <em>KV Caching is like not re-reading the entire book each time you turn a page. Instead, you only read the new page and reference your notes from before.</em>
+                </div>
+
+                <p>In generative transformers, we produce tokens one at a time during decoding. Without optimization, each new token requires recomputing attention over all previous tokens—wasting enormous computation.</p>
+
+                <h3>The Problem: Redundant Computation</h3>
+                <p>When computing attention for token position $i$, we compute queries $Q$, keys $K$, and values $V$ for all positions $0...i$. But when computing token $i+1$, we recompute the same $K$ and $V$ for positions $0...i$ again!</p>
+
+                <div class="math-block">
+                    <div class="math-label">Attention Operation (Standard)</div>
+                    $$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V$$
+                </div>
+
+                <div class="canvas-container" id="kvCacheCanvas"></div>
+
+                <h3>The Solution: Cache Keys & Values</h3>
+                <p>Instead of recomputing $K$ and $V$ each time, we cache them and reuse. For each new token, we only compute its query and combine with cached keys/values:</p>
+
+                <div class="math-block">
+                    <div class="math-label">KV Cache (Incremental Attention)</div>
+                    $$\text{new\_output} = \text{softmax}\left(\frac{Q_{new}[K_{cached}; K_{new}]^T}{\sqrt{d_k}}\right)[V_{cached}; V_{new}]$$
+                </div>
+
+                <div class="card highlight">
+                    <h3>Memory Trade-off</h3>
+                    <p><strong>Standard:</strong> Compute attention from scratch each step → $O(n^2 d)$ FLOPs at step $n$</p>
+                    <p><strong>KV Cache:</strong> Cache $K, V$ matrices → $O(n d)$ FLOPs per step, but $O(n d)$ memory overhead</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Metric</th>
+                                <th>Without Cache</th>
+                                <th>With Cache</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Computation (per token)</td>
+                                <td>$O(n \cdot d)$</td>
+                                <td>$O(d)$</td>
+                            </tr>
+                            <tr>
+                                <td>Memory (cache)</td>
+                                <td>$0$</td>
+                                <td>$O(n \cdot d_{model})$</td>
+                            </tr>
+                            <tr>
+                                <td>Speedup</td>
+                                <td>1x</td>
+                                <td>2-5x typical</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>PyTorch Implementation</h3>
+                <div class="code-block"><code>class KVCache:
+    def __init__(self, max_seq_len, batch_size, num_heads, head_dim):
+        self.K = torch.zeros(batch_size, num_heads, max_seq_len, head_dim)
+        self.V = torch.zeros(batch_size, num_heads, max_seq_len, head_dim)
+        self.pos = 0
+
+    def update(self, K_new, V_new):
+        batch_size = K_new.shape[0]
+        seq_len = K_new.shape[2]
+        self.K[:batch_size, :, self.pos:self.pos+seq_len] = K_new
+        self.V[:batch_size, :, self.pos:self.pos+seq_len] = V_new
+        self.pos += seq_len
+        return self.K[:batch_size, :, :self.pos], \
+               self.V[:batch_size, :, :self.pos]
+
+    def reset(self):
+        self.pos = 0</code></div>
+
+                <h3>Interactive Demo: KV Cache Impact</h3>
+                <div class="slider-container">
+                    <label>Sequence Length:</label>
+                    <input type="range" id="kvSeqSlider" min="10" max="2048" value="512" step="10">
+                    <span class="slider-value" id="kvSeqValue">512</span>
+                </div>
+                <div class="controls">
+                    <button onclick="simulateKVCache()">Compare Computation Time</button>
+                </div>
+                <div id="kvComparisonResult" style="margin-top: 15px;"></div>
+            </section>
+
+            <!-- SECTION 2: SPECULATIVE DECODING -->
+            <section id="speculative">
+                <h2>Speculative Decoding: Draft Model Fast Path</h2>
+
+                <div class="mental-model">
+                    <strong>Mental Model:</strong> <em>Speculative Decoding is like having an assistant draft your email quickly, then you verify and correct it. Usually they're right, so you save work.</em>
+                </div>
+
+                <h3>The Challenge: Autoregressive Bottleneck</h3>
+                <p>Transformers generate text token-by-token sequentially. Even with KV caching, large models are slow. We cannot parallelize across the sequence because each token depends on previous tokens.</p>
+
+                <h3>The Idea: Speculate & Verify</h3>
+                <p>Use a smaller "draft" model to generate several candidate tokens quickly, then use the large "verifier" model to accept or reject them in parallel:</p>
+
+                <ol>
+                    <li><strong>Draft:</strong> Small model generates $\gamma$ tokens (typically 4-16)</li>
+                    <li><strong>Verify:</strong> Large model checks all $\gamma$ tokens in parallel</li>
+                    <li><strong>Accept/Reject:</strong> Compare probability distributions; accept if draft ≈ large model</li>
+                    <li><strong>Regenerate:</strong> If any token rejected, re-generate from that position</li>
+                </ol>
+
+                <div class="card">
+                    <h3>Why It Works</h3>
+                    <ul>
+                        <li>Typical acceptance rate: 50-80% of speculated tokens</li>
+                        <li>Speedup: 2-3x for many language models</li>
+                        <li><strong>Quality preserved:</strong> Large model makes final decisions</li>
+                    </ul>
+                </div>
+
+                <div class="math-block">
+                    <div class="math-label">Acceptance Criterion</div>
+                    $$\text{accept}_i = \begin{cases}
+                    1 & \text{if } p_{\text{large}}(t_i) \geq p_{\text{draft}}(t_i) \\
+                    \text{with prob } p_{\text{large}}(t_i) / p_{\text{draft}}(t_i) & \text{otherwise}
+                    \end{cases}$$
+                </div>
+
+                <div class="card highlight">
+                    <h3>When to Use Speculative Decoding</h3>
+                    <ul>
+                        <li>✓ Large language models (7B+ parameters)</li>
+                        <li>✓ Latency-critical applications</li>
+                        <li>✓ When you have access to smaller model</li>
+                        <li>✗ Small models (limited speedup)</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- SECTION 3: PARALLELIZATION -->
+            <section id="parallelization">
+                <h2>Parallelizing Text Generation</h2>
+
+                <div class="mental-model">
+                    <strong>Mental Model:</strong> <em>Instead of writing one sentence after another, imagine multiple writers working on different branches, then combine the best results.</em>
+                </div>
+
+                <h3>Techniques for Parallel Generation</h3>
+
+                <div class="card">
+                    <h3>1. Batch Decoding</h3>
+                    <p>Generate multiple sequences in parallel using mini-batches. If batch size is $B$, you generate $B$ sequences simultaneously.</p>
+                    <p><strong>Limitation:</strong> All sequences must complete at same time (padding overhead).</p>
+                </div>
+
+                <div class="card">
+                    <h3>2. Beam Search</h3>
+                    <p>Generate multiple continuations at each step, forming a tree structure. Prune low-probability branches.</p>
+                    <ul>
+                        <li>Beam width: $k=3$ to $k=5$ typical</li>
+                        <li>Standard in machine translation</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>3. Non-Autoregressive Generation</h3>
+                    <p>Predict all tokens in parallel (iterate, mask randomly, predict, repeat):</p>
+                    <ul>
+                        <li>Fast: 10-50x speedup</li>
+                        <li>Trade-off: lower quality</li>
+                    </ul>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Method</th>
+                            <th>Parallelization</th>
+                            <th>Quality</th>
+                            <th>Speed</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Greedy Decoding</td>
+                            <td>None</td>
+                            <td>Low</td>
+                            <td>1x (baseline)</td>
+                        </tr>
+                        <tr>
+                            <td>Batch Decoding</td>
+                            <td>Batch Level</td>
+                            <td>Low</td>
+                            <td>B x (with padding)</td>
+                        </tr>
+                        <tr>
+                            <td>Beam Search</td>
+                            <td>Intra-sequence</td>
+                            <td>High</td>
+                            <td>1-2x typical</td>
+                        </tr>
+                        <tr>
+                            <td>Speculative</td>
+                            <td>Token Level</td>
+                            <td>High</td>
+                            <td>2-3x</td>
+                        </tr>
+                        <tr>
+                            <td>Non-Autoregressive</td>
+                            <td>Full</td>
+                            <td>Medium</td>
+                            <td>10-50x</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- SECTION 4: SPARSE ATTENTION -->
+            <section id="sparse-attention">
+                <h2>Sparse Attention Patterns</h2>
+
+                <div class="mental-model">
+                    <strong>Mental Model:</strong> <em>Standard attention reads every word to understand a book. Sparse attention reads every $k$-th word plus nearby words—and still gets the gist.</em>
+                </div>
+
+                <h3>Problem: Quadratic Complexity</h3>
+                <p>Standard attention is $O(n^2)$ in sequence length $n$. For long documents (4K-100K tokens), this is prohibitive.</p>
+
+                <div class="math-block">
+                    <div class="math-label">Complexity of Standard Attention</div>
+                    $$\text{Time: } O(n^2 d), \quad \text{Memory: } O(n^2 + nd)$$
+                </div>
+
+                <h3>Sparse Patterns</h3>
+
+                <div class="canvas-container" id="sparseAttentionCanvas"></div>
+
+                <ul>
+                    <li><strong>Local Attention:</strong> Each token attends to window of size $w$ → $O(n \cdot w \cdot d)$</li>
+                    <li><strong>Strided:</strong> Attend every $s$-th token → captures global context</li>
+                    <li><strong>Dilated:</strong> Exponential spacing (1, 2, 4, 8...) → $O(n \log n)$</li>
+                    <li><strong>BigBird/Longformer:</strong> Hybrid (local + strided + random) → $O(n \log n)$</li>
+                </ul>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Pattern</th>
+                            <th>Complexity</th>
+                            <th>Window</th>
+                            <th>Use Case</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Local</td>
+                            <td>$O(n \cdot w)$</td>
+                            <td>256-512</td>
+                            <td>Document classification</td>
+                        </tr>
+                        <tr>
+                            <td>Strided</td>
+                            <td>$O(n \cdot n/s)$</td>
+                            <td>stride=64</td>
+                            <td>Long-range + local</td>
+                        </tr>
+                        <tr>
+                            <td>BigBird</td>
+                            <td>$O(n \log n)$</td>
+                            <td>hybrid</td>
+                            <td>Long documents (4K+)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- SECTION 5: APPROXIMATE ATTENTION -->
+            <section id="approximate-attention">
+                <h2>Approximate Attention Mechanisms</h2>
+
+                <div class="mental-model">
+                    <strong>Mental Model:</strong> <em>Instead of computing exact attention scores, approximate them using statistical methods. Like using a hash table summary instead of checking every element.</em>
+                </div>
+
+                <h3>Linformer: Low-Rank Projection</h3>
+                <p>Observation: Attention matrices are often low-rank. Project to lower dimension before computing attention:</p>
+
+                <div class="math-block">
+                    <div class="math-label">Linformer Projection</div>
+                    $$\text{Attention}_{\text{approx}} = \text{softmax}\left(\frac{Q(K^TP)^T}{\sqrt{d_k}}\right)V, \quad k \ll n$$
+                </div>
+
+                <ul>
+                    <li><strong>Complexity:</strong> $O(n \cdot k \cdot d)$ instead of $O(n^2 d)$</li>
+                    <li><strong>Performance:</strong> 2-5% accuracy drop, 3-5x faster</li>
+                </ul>
+
+                <h3>Performer: Kernel Approximation</h3>
+                <p>Use random features to approximate softmax kernel:</p>
+
+                <div class="math-block">
+                    <div class="math-label">FAVOR+ Approximation</div>
+                    $$\exp\left(\frac{QK^T}{\sqrt{d_k}}\right) \approx \phi(Q)\phi(K)^T$$
+                </div>
+
+                <ul>
+                    <li><strong>Complexity:</strong> $O(n \cdot d)$ (linear!)</li>
+                    <li><strong>Accuracy:</strong> 1-3% drop typical</li>
+                </ul>
+
+                <h3>Nyströmformer: Landmark Sampling</h3>
+                <p>Sample $m$ landmark tokens, compute full attention on samples, interpolate back:</p>
+
+                <div class="math-block">
+                    <div class="math-label">Nyström Approximation</div>
+                    $$A \approx A_{nm}(A_{mm})^{-1}A_{mn}$$
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Method</th>
+                            <th>Mechanism</th>
+                            <th>Complexity</th>
+                            <th>Accuracy Drop</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Standard</td>
+                            <td>Full $O(n^2)$</td>
+                            <td>$O(n^2 d)$</td>
+                            <td>0%</td>
+                        </tr>
+                        <tr>
+                            <td>Linformer</td>
+                            <td>Low-rank</td>
+                            <td>$O(n \cdot k \cdot d)$</td>
+                            <td>2-5%</td>
+                        </tr>
+                        <tr>
+                            <td>Performer</td>
+                            <td>Kernel approx</td>
+                            <td>$O(n \cdot d)$</td>
+                            <td>1-3%</td>
+                        </tr>
+                        <tr>
+                            <td>Nyströmformer</td>
+                            <td>Landmark sampling</td>
+                            <td>$O(n \cdot m)$</td>
+                            <td>1-2%</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- SECTION 6: SHARED PROJECTIONS -->
+            <section id="shared-projections">
+                <h2>Sharing Projections: GQA & Multi-Query Attention</h2>
+
+                <div class="mental-model">
+                    <strong>Mental Model:</strong> <em>Standard multi-head attention is like 8 independent listeners. Grouped-query is like them sharing 2 stenographers. Much cheaper, similar insights.</em>
+                </div>
+
+                <h3>Standard Multi-Head Attention (MHA)</h3>
+                <p>Each of $h$ heads has independent $Q, K, V$ projections. Cost: $h$ separate $K, V$ projections (expensive in KV cache).</p>
+
+                <h3>Multi-Query Attention (MQA)</h3>
+                <p>Share single $K, V$ projection across all heads:</p>
+
+                <div class="math-block">
+                    <div class="math-label">Multi-Query Attention</div>
+                    $$\text{head}_i = \text{Attention}(Q_iW_i^Q, KW^K, VW^V)$$
+                </div>
+
+                <ul>
+                    <li><strong>KV cache reduction:</strong> From $h \cdot d$ to $d$ per layer</li>
+                    <li><strong>Inference speedup:</strong> 2-4x for long sequences</li>
+                    <li><strong>Accuracy:</strong> ~1-2% drop typical</li>
+                </ul>
+
+                <h3>Grouped-Query Attention (GQA)</h3>
+                <p>Middle ground: share $K, V$ across groups of heads with $g$ groups:</p>
+
+                <ul>
+                    <li>Each group of $h/g$ query heads shares one $K, V$ projection</li>
+                    <li>Typical: $g=4$ to $g=8$ with $h=32$ or $h=64$</li>
+                    <li><strong>Used in:</strong> Llama 2, Mistral</li>
+                </ul>
+
+                <div class="canvas-container" id="gqaCanvas"></div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>MHA (8 heads)</th>
+                            <th>GQA (4 groups)</th>
+                            <th>MQA (1 group)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>KV Projections</td>
+                            <td>8</td>
+                            <td>2</td>
+                            <td>1</td>
+                        </tr>
+                        <tr>
+                            <td>Cache Memory</td>
+                            <td>$8d$</td>
+                            <td>$2d$</td>
+                            <td>$d$</td>
+                        </tr>
+                        <tr>
+                            <td>Speedup (seq=2K)</td>
+                            <td>1x</td>
+                            <td>1.8x</td>
+                            <td>3.2x</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- SECTION 7: FLASHATTENTION -->
+            <section id="flashattention">
+                <h2>FlashAttention: Memory-Efficient Computation</h2>
+
+                <div class="mental-model">
+                    <strong>Mental Model:</strong> <em>Standard attention stores the full $n \times n$ attention matrix. FlashAttention processes in tiles: load chunks, compute, write back—never materializing the full matrix.</em>
+                </div>
+
+                <h3>The Problem: Memory Bottleneck</h3>
+                <ul>
+                    <li>Attention scores: $O(n^2)$ memory (not compute-bound)</li>
+                    <li>For $n=4096, d=64, h=8$: ~4GB just for attention matrices!</li>
+                    <li>Results in slow memory I/O</li>
+                </ul>
+
+                <h3>FlashAttention Solution: IO-Aware Algorithm</h3>
+                <p>Process attention in blocks to maximize cache reuse:</p>
+
+                <div class="card">
+                    <h3>Algorithm Overview</h3>
+                    <ol>
+                        <li>Tile Q, K, V: Load small blocks into fast SRAM</li>
+                        <li>Compute attention: $S = Q_i K_j^T / \sqrt{d_k}$</li>
+                        <li>Online softmax: Update running statistics without storing full matrix</li>
+                        <li>Output block: Write to main memory</li>
+                        <li>Repeat for all tile pairs</li>
+                    </ol>
+                </div>
+
+                <div class="canvas-container" id="flashattentionCanvas"></div>
+
+                <div class="math-block">
+                    <div class="math-label">FlashAttention Memory Complexity</div>
+                    $$\text{Standard: } O(n^2) \quad \text{FlashAttention: } O(n)$$
+                    $$\text{Speedup: } 2-4x \text{ on modern GPUs}$$
+                </div>
+
+                <h3>Key Insights</h3>
+                <ul>
+                    <li><strong>Online Softmax:</strong> Compute incrementally as you load blocks</li>
+                    <li><strong>Tile Size:</strong> Matches GPU SRAM (96KB on A100)</li>
+                    <li><strong>Trade-off:</strong> Extra computation (online softmax) for fewer memory accesses</li>
+                    <li><strong>Exactness:</strong> Mathematically exact (no approximation)</li>
+                </ul>
+
+                <div class="card highlight">
+                    <p><strong>FlashAttention-2:</strong> Further optimizations (work partitioning, reduced sync overhead) → ~2x faster than original.</p>
+                </div>
+            </section>
+
+            <!-- SECTION 8: MIXTURE OF EXPERTS -->
+            <section id="moe">
+                <h2>Mixture of Experts: Scaling to Trillions</h2>
+
+                <div class="mental-model">
+                    <strong>Mental Model:</strong> <em>Instead of one massive expert, have dozens of specialized experts. A router decides which to use per token. You pay for only a few experts per token, not all.</em>
+                </div>
+
+                <h3>The Challenge: Scaling Laws</h3>
+                <p>Transformers follow: larger = better. But 10x model size = 10x compute. For trillion-parameter models, this is prohibitive.</p>
+
+                <h3>Mixture of Experts Solution</h3>
+                <p>Replace dense FFN with sparse mixture:</p>
+
+                <div class="math-block">
+                    <div class="math-label">Standard FFN vs MoE</div>
+                    $$\text{Dense: } y = W_2 \text{ReLU}(W_1 x)$$
+                    $$\text{MoE: } y = \sum_{i=1}^{N} \text{Gate}(x)_i \cdot \text{Expert}_i(x)$$
+                </div>
+
+                <h3>Architecture</h3>
+                <ul>
+                    <li><strong>Gate/Router:</strong> Learns per-token routing weights</li>
+                    <li><strong>Experts:</strong> Independent FFN modules (e.g., 128 experts)</li>
+                    <li><strong>Sparsity:</strong> Select top-$k$ experts per token (typically $k=2$)</li>
+                    <li><strong>Load Balancing:</strong> Loss term to prevent all tokens routing to same expert</li>
+                </ul>
+
+                <div class="canvas-container" id="moeCanvas"></div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Experts</th>
+                            <th>Top-k</th>
+                            <th>Total Params</th>
+                            <th>Active Params/Token</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>GShard</td>
+                            <td>6144</td>
+                            <td>2</td>
+                            <td>600B</td>
+                            <td>97B</td>
+                        </tr>
+                        <tr>
+                            <td>Switch Transformers</td>
+                            <td>2048</td>
+                            <td>1</td>
+                            <td>1.6T</td>
+                            <td>16B</td>
+                        </tr>
+                        <tr>
+                            <td>Mixtral 8x7B</td>
+                            <td>8</td>
+                            <td>2</td>
+                            <td>56B</td>
+                            <td>12.9B</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="card highlight">
+                    <p>Key Insight: Enables trillion parameters while keeping inference cheap (2-3 experts per token).</p>
+                </div>
+            </section>
+
+            <!-- SECTION 9: PEFT & LORA -->
+            <section id="peft">
+                <h2>Parameter-Efficient Fine-Tuning (PEFT)</h2>
+
+                <div class="mental-model">
+                    <strong>Mental Model:</strong> <em>LoRA is like giving an expert a small notebook to jot updates, rather than rewriting their entire knowledge base.</em>
+                </div>
+
+                <h3>The Problem: Expensive Fine-Tuning</h3>
+                <p>Fine-tuning a 7B model requires ~100GB memory (params + gradients + optimizer states). Solution: PEFT adapts only a small subset.</p>
+
+                <h3>Low-Rank Adaptation (LoRA)</h3>
+                <p>Key observation: weight updates have low rank. Instead of updating $W \in \mathbb{R}^{d_{out} \times d_{in}}$:</p>
+
+                <div class="math-block">
+                    <div class="math-label">LoRA Update Rule</div>
+                    $$W_{\text{new}} = W + AB^T$$
+                    $$\text{where } A \in \mathbb{R}^{d_{out} \times r}, \quad B \in \mathbb{R}^{d_{in} \times r}, \quad r \ll \min(d_{out}, d_{in})$$
+                </div>
+
+                <h3>Memory Savings</h3>
+                <div class="canvas-container" id="loraCanvas"></div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Configuration</th>
+                            <th>Tunable Params</th>
+                            <th>Memory</th>
+                            <th>Performance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>7B, full fine-tune</td>
+                            <td>7B</td>
+                            <td>~80GB</td>
+                            <td>100%</td>
+                        </tr>
+                        <tr>
+                            <td>7B, LoRA (r=8)</td>
+                            <td>4.2M</td>
+                            <td>~12GB</td>
+                            <td>97-99%</td>
+                        </tr>
+                        <tr>
+                            <td>7B, QLoRA (r=8)</td>
+                            <td>4.2M</td>
+                            <td>~6GB</td>
+                            <td>94-98%</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Other PEFT Techniques</h3>
+
+                <div class="card">
+                    <h3>Prefix Tuning</h3>
+                    <p>Add learnable "prefix" tokens before input. Parameters: $p \times d_{model}$ (typically $p=100-500$).</p>
+                </div>
+
+                <div class="card">
+                    <h3>Adapters</h3>
+                    <p>Insert small bottleneck modules in each layer. Between FFN and attention: $d \rightarrow r \rightarrow d$ projection.</p>
+                </div>
+
+                <div class="card">
+                    <h3>QLoRA: Quantized LoRA</h3>
+                    <p>Freeze weights in 4-bit, train LoRA in full precision. Memory: ~6GB for 7B model on single GPU.</p>
+                </div>
+            </section>
+
+            <!-- SECTION 10: TRAINING TECHNIQUES -->
+            <section id="training-tricks">
+                <h2>Efficient Training Techniques</h2>
+
+                <h3>Activation Checkpointing (Gradient Checkpointing)</h3>
+
+                <div class="mental-model">
+                    <strong>Mental Model:</strong> <em>Don't save all intermediate activations for backprop. Only save at checkpoints, recompute the rest. Trade compute for memory.</em>
+                </div>
+
+                <ul>
+                    <li><strong>Memory saved:</strong> 50-70% typical</li>
+                    <li><strong>Compute overhead:</strong> ~30% slower training</li>
+                    <li><strong>When to use:</strong> Memory constrained</li>
+                </ul>
+
+                <h3>Sequence Packing</h3>
+                <p>Instead of padding short sequences, concatenate multiple sequences:</p>
+                <ul>
+                    <li>Efficiency gain: ~50-80% on typical data</li>
+                    <li>Handle sequence boundaries with special tokens</li>
+                </ul>
+
+                <h3>Gradient Accumulation</h3>
+                <p>Simulate large batch size without large GPU memory:</p>
+                <ul>
+                    <li>Process small batches sequentially</li>
+                    <li>Accumulate gradients without updating weights</li>
+                    <li>Update weights after $k$ accumulation steps</li>
+                </ul>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Technique</th>
+                            <th>Memory Saved</th>
+                            <th>Speed Impact</th>
+                            <th>Implementation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Checkpointing</td>
+                            <td>50-70%</td>
+                            <td>-30% speed</td>
+                            <td>Simple decorator</td>
+                        </tr>
+                        <tr>
+                            <td>Sequence Packing</td>
+                            <td>50-80%</td>
+                            <td>+10% speed</td>
+                            <td>Preprocessing</td>
+                        </tr>
+                        <tr>
+                            <td>Grad Accumulation</td>
+                            <td>~1/k</td>
+                            <td>-20% speed</td>
+                            <td>Training loop</td>
+                        </tr>
+                        <tr>
+                            <td>Mixed Precision</td>
+                            <td>40-50%</td>
+                            <td>+10-20% speed</td>
+                            <td>torch.autocast</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- SECTION 11: MODEL PARALLELISM -->
+            <section id="model-parallelism">
+                <h2>Distributed Training & Parallelism</h2>
+
+                <h3>Data Parallelism (DP)</h3>
+                <p>Replicate model on each GPU, split data. Each GPU: 1 model copy, different batch. Synchronize gradients after backward pass.</p>
+
+                <h3>Tensor Parallelism (TP)</h3>
+                <p>Split weight matrices across GPUs. Linear layer $W \in \mathbb{R}^{d \times d}$ split row-wise or column-wise.</p>
+
+                <h3>Pipeline Parallelism (PP)</h3>
+                <p>Split model layers across GPUs. GPU 0: layers 0-3, GPU 1: layers 4-7, etc. Data flows through pipeline.</p>
+
+                <h3>Fully Sharded Data Parallel (FSDP)</h3>
+                <p>Combines data and tensor parallelism:</p>
+                <ul>
+                    <li>Each GPU: 1/N of parameters, full batch copy</li>
+                    <li>During forward: AllGather parameters, compute</li>
+                    <li>After backward: ReduceScatter gradients</li>
+                    <li><strong>Scales:</strong> Trains 70B models on cluster of A100s</li>
+                </ul>
+
+                <div class="canvas-container" id="parallelismCanvas"></div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Method</th>
+                            <th>Model Memory</th>
+                            <th>Communication</th>
+                            <th>Typical Use</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Data Parallel (DP)</td>
+                            <td>N x model</td>
+                            <td>AllReduce grads</td>
+                            <td>8 GPUs, small model</td>
+                        </tr>
+                        <tr>
+                            <td>Tensor Parallel (TP)</td>
+                            <td>Model / N</td>
+                            <td>AllGather/Scatter</td>
+                            <td>Model > GPU memory</td>
+                        </tr>
+                        <tr>
+                            <td>Pipeline Parallel (PP)</td>
+                            <td>Model / N</td>
+                            <td>Layer outputs</td>
+                            <td>Very deep models</td>
+                        </tr>
+                        <tr>
+                            <td>FSDP</td>
+                            <td>Model / N</td>
+                            <td>AllGather/Scatter</td>
+                            <td>70B+ models</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- SECTION 12: WAR ROOM -->
+            <section id="data-parallelism">
+                <h2>Optimization War Room: Putting It All Together</h2>
+
+                <p>You're training a 13B model on 8 A100 GPUs. The model is too large for a single GPU. How do you speed it up?</p>
+
+                <div class="card highlight">
+                    <h3>Socratic Challenge: Choose Your Optimizations</h3>
+                    <p>Select which techniques to apply and see their cumulative impact:</p>
+                </div>
+
+                <div class="controls">
+                    <button onclick="toggleOptimization('kv_cache')">Toggle KV Cache</button>
+                    <button onclick="toggleOptimization('flash_attn')">Toggle FlashAttention</button>
+                    <button onclick="toggleOptimization('lora')">Toggle LoRA</button>
+                    <button onclick="toggleOptimization('packing')">Toggle Packing</button>
+                    <button onclick="toggleOptimization('checkpointing')">Toggle Checkpointing</button>
+                    <button onclick="toggleOptimization('fsdp')">Toggle FSDP</button>
+                </div>
+
+                <div id="warRoomResults" style="margin-top: 25px;"></div>
+
+                <div class="card" style="margin-top: 30px;">
+                    <h3>Key Lessons</h3>
+                    <ul>
+                        <li><strong>KV Caching:</strong> Essential for inference (2-5x)</li>
+                        <li><strong>FlashAttention:</strong> Fastest general optimization (2-4x)</li>
+                        <li><strong>LoRA:</strong> Makes training feasible on consumer GPUs</li>
+                        <li><strong>Sequence Packing:</strong> Free speedup (50-80% more throughput)</li>
+                        <li><strong>FSDP:</strong> Scales beyond single GPU</li>
+                        <li><strong>Combined:</strong> 50-100x training, 5-10x inference speedup possible</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Conclusion -->
+            <section id="conclusion" style="margin-top: 100px;">
+                <h2>Key Takeaways</h2>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">12</div>
+                        <div class="stat-label">Core Speedup Techniques</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">100x</div>
+                        <div class="stat-label">Possible Combined Speedup</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">1T</div>
+                        <div class="stat-label">Parameter Models Now Viable</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">Modern</div>
+                        <div class="stat-label">Era of Efficient ML</div>
+                    </div>
+                </div>
+
+                <div class="card highlight">
+                    <h3>Speedup Techniques Summary</h3>
+                    <ol>
+                        <li>KV Caching - avoid recomputing attention</li>
+                        <li>Speculative Decoding - draft + verify pattern</li>
+                        <li>Sparse Attention - reduce $O(n^2)$ to $O(n \log n)$</li>
+                        <li>FlashAttention - memory-efficient attention</li>
+                        <li>Grouped-Query Attention - reduce KV cache memory</li>
+                        <li>Mixture of Experts - scale to trillions</li>
+                        <li>LoRA - fine-tune with 1000x fewer parameters</li>
+                        <li>Activation Checkpointing - trade compute for memory</li>
+                        <li>Sequence Packing - eliminate padding</li>
+                        <li>Gradient Accumulation - simulate large batches</li>
+                        <li>Tensor Parallelism - split weights across GPUs</li>
+                        <li>FSDP - fully sharded data parallel training</li>
+                    </ol>
+                </div>
+
+                <div class="mental-model">
+                    <strong>Final Insight:</strong> <em>Modern transformers are only practical through a combination of techniques. No single optimization dominates. The art is choosing the right mix for your constraints (memory, latency, quality, training time).</em>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        function updateProgressBar() {
+            const scrollTop = window.scrollY;
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const scrollPercent = docHeight ? (scrollTop / docHeight) * 100 : 0;
+            document.querySelector('.progress-bar').style.width = scrollPercent + '%';
+        }
+
+        window.addEventListener('scroll', updateProgressBar);
+        updateProgressBar();
+
+        document.querySelectorAll('.sidebar-nav a').forEach(link => {
+            link.addEventListener('click', function(e) {
+                document.querySelectorAll('.sidebar-nav a').forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        function initKVCacheCanvas() {
+            const canvas = document.getElementById('kvCacheCanvas');
+            if (!canvas) return;
+            try {
+                const ctx = canvas.getContext('2d');
+                canvas.width = 600;
+                canvas.height = 300;
+
+                ctx.fillStyle = '#ef5350';
+                ctx.fillRect(50, 50, 200, 80);
+                ctx.fillStyle = '#e0e0e0';
+                ctx.font = '14px Inter';
+                ctx.fillText('Without Cache', 80, 95);
+                ctx.fillText('O(n²) computation', 70, 115);
+
+                ctx.strokeStyle = '#a0a0a0';
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(260, 90);
+                ctx.lineTo(320, 90);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                ctx.fillStyle = '#66bb6a';
+                ctx.fillRect(330, 50, 200, 80);
+                ctx.fillStyle = '#e0e0e0';
+                ctx.fillText('With KV Cache', 360, 95);
+                ctx.fillText('O(n) computation', 355, 115);
+
+                ctx.strokeStyle = '#707080';
+                ctx.beginPath();
+                ctx.moveTo(50, 200);
+                ctx.lineTo(530, 200);
+                ctx.stroke();
+
+                ctx.fillStyle = '#ce93d8';
+                ctx.font = '12px JetBrains Mono';
+                ['Token 1', 'Token 2', 'Token N'].forEach((label, i) => {
+                    const x = 100 + i * 150;
+                    ctx.fillRect(x - 20, 210, 40, 25);
+                    ctx.fillStyle = '#000';
+                    ctx.fillText(label, x - 15, 227);
+                    ctx.fillStyle = '#ce93d8';
+                });
+
+                ctx.fillStyle = '#4fc3f7';
+                ctx.font = 'bold 24px JetBrains Mono';
+                ctx.fillText('2-5x Faster', 180, 280);
+            } catch (e) {
+                console.error('KV Cache Canvas error:', e);
+            }
+        }
+
+        function initSparseAttentionCanvas() {
+            const canvas = document.getElementById('sparseAttentionCanvas');
+            if (!canvas) return;
+            try {
+                const ctx = canvas.getContext('2d');
+                canvas.width = 600;
+                canvas.height = 280;
+                const cellSize = 20;
+                const startX = 80;
+                const startY = 40;
+                const n = 12;
+
+                ctx.fillStyle = '#e0e0e0';
+                ctx.font = 'bold 14px Inter';
+                ctx.fillText('Sparse Attention Pattern', 210, 25);
+
+                ctx.fillStyle = '#ce93d8';
+                ctx.font = '12px Inter';
+                ctx.fillText('Local Window', 70, 60);
+
+                for (let i = 0; i < n; i++) {
+                    for (let j = 0; j < n; j++) {
+                        const x = startX + j * cellSize;
+                        const y = startY + i * cellSize;
+                        const inWindow = Math.abs(i - j) <= 2;
+                        ctx.fillStyle = inWindow ? 'rgba(206, 147, 216, 0.6)' : 'rgba(112, 112, 128, 0.2)';
+                        ctx.fillRect(x, y, cellSize - 1, cellSize - 1);
+                    }
+                }
+
+                ctx.fillStyle = '#ce93d8';
+                ctx.fillText('Strided (stride=3)', 320, 60);
+
+                for (let i = 0; i < n; i++) {
+                    for (let j = 0; j < n; j++) {
+                        const x = startX + 250 + j * cellSize;
+                        const y = startY + i * cellSize;
+                        const isStrided = (j % 3) === 0 || i === j;
+                        ctx.fillStyle = isStrided ? 'rgba(79, 195, 247, 0.6)' : 'rgba(112, 112, 128, 0.2)';
+                        ctx.fillRect(x, y, cellSize - 1, cellSize - 1);
+                    }
+                }
+
+                ctx.fillStyle = '#66bb6a';
+                ctx.font = '12px JetBrains Mono';
+                ctx.fillText('Local: O(n·w)', 100, 270);
+                ctx.fillText('Strided: O(n²/s)', 370, 270);
+            } catch (e) {
+                console.error('Sparse Attention Canvas error:', e);
+            }
+        }
+
+        function initLoRACanvas() {
+            const canvas = document.getElementById('loraCanvas');
+            if (!canvas) return;
+            try {
+                const ctx = canvas.getContext('2d');
+                canvas.width = 600;
+                canvas.height = 280;
+
+                ctx.fillStyle = '#e0e0e0';
+                ctx.font = 'bold 14px Inter';
+                ctx.fillText('LoRA: Low-Rank Decomposition', 170, 25);
+
+                ctx.fillStyle = '#ef5350';
+                ctx.fillRect(50, 50, 120, 100);
+                ctx.fillStyle = '#e0e0e0';
+                ctx.font = '12px Inter';
+                ctx.fillText('W: 4096 x 4096', 70, 80);
+                ctx.fillText('16.7M params', 75, 100);
+
+                ctx.strokeStyle = '#a0a0a0';
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(180, 100);
+                ctx.lineTo(240, 100);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.fillText('LoRA(r=8)', 195, 120);
+
+                ctx.fillStyle = '#66bb6a';
+                ctx.fillRect(250, 50, 60, 100);
+                ctx.fillText('A: 4096x8', 258, 85);
+                ctx.fillText('32K params', 260, 105);
+
+                ctx.fillStyle = '#4fc3f7';
+                ctx.fillRect(320, 50, 60, 100);
+                ctx.fillText('B: 8x4096', 328, 85);
+                ctx.fillText('32K params', 330, 105);
+
+                ctx.fillStyle = '#ffb74d';
+                ctx.font = '12px JetBrains Mono';
+                ctx.fillText('Total: 64K (0.4% of original!)', 200, 180);
+
+                ctx.fillStyle = '#12121a';
+                ctx.fillRect(50, 220, 350, 20);
+                ctx.fillStyle = '#ce93d8';
+                ctx.fillRect(50, 220, 7, 20);
+                ctx.fillStyle = '#66bb6a';
+                ctx.fillRect(50, 220, 1, 20);
+
+                ctx.fillStyle = '#e0e0e0';
+                ctx.font = '10px Inter';
+                ctx.fillText('Full (100%)', 60, 233);
+                ctx.fillText('LoRA (0.4%)', 100, 233);
+            } catch (e) {
+                console.error('LoRA Canvas error:', e);
+            }
+        }
+
+        function initGQACanvas() {
+            const canvas = document.getElementById('gqaCanvas');
+            if (!canvas) return;
+            try {
+                const ctx = canvas.getContext('2d');
+                canvas.width = 600;
+                canvas.height = 280;
+
+                ctx.fillStyle = '#e0e0e0';
+                ctx.font = 'bold 14px Inter';
+                ctx.fillText('Multi-Query vs Grouped-Query Attention', 140, 25);
+
+                const headRadius = 8;
+                const spacing = 50;
+                let x = 80;
+
+                ctx.fillStyle = '#ce93d8';
+                ctx.font = '12px Inter';
+                ctx.fillText('MHA (8 heads)', 70, 55);
+                for (let i = 0; i < 8; i++) {
+                    ctx.fillStyle = '#ce93d8';
+                    ctx.beginPath();
+                    ctx.arc(x + i * spacing, 100, headRadius, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+                ctx.fillStyle = '#e0e0e0';
+                ctx.font = '11px Inter';
+                ctx.fillText('KV: 8 projections', 70, 150);
+
+                ctx.fillStyle = '#4fc3f7';
+                ctx.fillText('GQA (4 groups)', 70, 185);
+                for (let g = 0; g < 4; g++) {
+                    const color = ['#4fc3f7', '#66bb6a', '#ffb74d', '#ef5350'][g];
+                    for (let i = 0; i < 2; i++) {
+                        ctx.fillStyle = color;
+                        ctx.beginPath();
+                        ctx.arc(x + (g * 100) + i * 30, 230, headRadius - 2, 0, 2 * Math.PI);
+                        ctx.fill();
+                    }
+                }
+                ctx.fillStyle = '#e0e0e0';
+                ctx.font = '11px Inter';
+                ctx.fillText('KV: 4 projections (shared)', 70, 280);
+            } catch (e) {
+                console.error('GQA Canvas error:', e);
+            }
+        }
+
+        function initFlashAttentionCanvas() {
+            const canvas = document.getElementById('flashattentionCanvas');
+            if (!canvas) return;
+            try {
+                const ctx = canvas.getContext('2d');
+                canvas.width = 600;
+                canvas.height = 300;
+
+                ctx.fillStyle = '#e0e0e0';
+                ctx.font = 'bold 14px Inter';
+                ctx.fillText('FlashAttention: Tiled Computation', 170, 25);
+
+                ctx.fillStyle = '#ef5350';
+                ctx.fillRect(50, 50, 150, 120);
+                ctx.fillStyle = '#e0e0e0';
+                ctx.font = '12px Inter';
+                ctx.fillText('Standard: Full O(n²)', 65, 100);
+                ctx.fillText('Attention Matrix', 70, 120);
+
+                ctx.fillStyle = '#66bb6a';
+                ctx.fillRect(250, 50, 100, 100);
+                ctx.fillStyle = '#e0e0e0';
+                ctx.fillText('FlashAttention:', 265, 30);
+                ctx.fillText('Tiled Processing', 270, 80);
+
+                ctx.strokeStyle = '#ce93d8';
+                ctx.lineWidth = 2;
+                for (let i = 0; i < 2; i++) {
+                    for (let j = 0; j < 2; j++) {
+                        ctx.strokeRect(250 + i * 50, 50 + j * 50, 50, 50);
+                    }
+                }
+
+                ctx.fillStyle = '#ffb74d';
+                ctx.font = '11px JetBrains Mono';
+                ctx.fillText('Standard: O(n²) memory', 80, 210);
+                ctx.fillText('FlashAttention: O(n) memory', 250, 210);
+
+                ctx.fillStyle = '#4fc3f7';
+                ctx.font = 'bold 18px JetBrains Mono';
+                ctx.fillText('2-6x faster!', 220, 270);
+            } catch (e) {
+                console.error('FlashAttention Canvas error:', e);
+            }
+        }
+
+        function initMoECanvas() {
+            const canvas = document.getElementById('moeCanvas');
+            if (!canvas) return;
+            try {
+                const ctx = canvas.getContext('2d');
+                canvas.width = 600;
+                canvas.height = 320;
+
+                ctx.fillStyle = '#e0e0e0';
+                ctx.font = 'bold 14px Inter';
+                ctx.fillText('Mixture of Experts: Token Routing', 170, 25);
+
+                ctx.fillStyle = '#4fc3f7';
+                for (let i = 0; i < 4; i++) {
+                    ctx.fillRect(50, 60 + i * 60, 40, 40);
+                }
+                ctx.fillStyle = '#e0e0e0';
+                ctx.font = '11px Inter';
+                ctx.fillText('Tokens', 45, 280);
+
+                ctx.fillStyle = '#ce93d8';
+                ctx.fillRect(150, 120, 60, 80);
+                ctx.fillStyle = '#e0e0e0';
+                ctx.font = '10px Inter';
+                ctx.fillText('Gate/Router', 160, 165);
+
+                const expertColors = ['#66bb6a', '#ffb74d', '#ef5350', '#4fc3f7'];
+                for (let i = 0; i < 4; i++) {
+                    ctx.fillStyle = expertColors[i];
+                    ctx.fillRect(320, 60 + i * 60, 50, 40);
+                    ctx.fillStyle = '#000';
+                    ctx.font = '9px Inter';
+                    ctx.fillText('E' + i, 340, 85);
+                }
+
+                ctx.strokeStyle = 'rgba(206, 147, 216, 0.5)';
+                ctx.lineWidth = 1;
+                const routes = [[0, 0], [1, 1], [2, 2], [3, 0]];
+                routes.forEach(([token, expert]) => {
+                    ctx.beginPath();
+                    ctx.moveTo(90, 80 + token * 60);
+                    ctx.lineTo(150, 160);
+                    ctx.lineTo(320, 80 + expert * 60);
+                    ctx.stroke();
+                });
+
+                ctx.fillStyle = '#4fc3f7';
+                ctx.fillRect(450, 120, 80, 80);
+                ctx.fillStyle = '#e0e0e0';
+                ctx.font = '11px Inter';
+                ctx.fillText('Output', 475, 165);
+
+                ctx.fillStyle = '#ffb74d';
+                ctx.font = 'bold 13px JetBrains Mono';
+                ctx.fillText('Top-2 routing per token', 180, 310);
+            } catch (e) {
+                console.error('MoE Canvas error:', e);
+            }
+        }
+
+        function initParallelismCanvas() {
+            const canvas = document.getElementById('parallelismCanvas');
+            if (!canvas) return;
+            try {
+                const ctx = canvas.getContext('2d');
+                canvas.width = 600;
+                canvas.height = 280;
+                const boxWidth = 50;
+                const boxHeight = 50;
+
+                ctx.fillStyle = '#e0e0e0';
+                ctx.font = 'bold 14px Inter';
+                ctx.fillText('Data vs Tensor Parallelism', 200, 25);
+
+                ctx.fillStyle = '#ce93d8';
+                ctx.font = '12px Inter';
+                ctx.fillText('Data Parallel (DP)', 70, 55);
+
+                for (let i = 0; i < 4; i++) {
+                    ctx.fillStyle = '#ce93d8';
+                    ctx.fillRect(50 + i * 60, 70, boxWidth, boxHeight);
+                    ctx.strokeStyle = '#e0e0e0';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(50 + i * 60, 70, boxWidth, boxHeight);
+                    ctx.fillStyle = '#000';
+                    ctx.font = '10px Inter';
+                    ctx.fillText('GPU' + i, 63 + i * 60, 102);
+                }
+                ctx.fillStyle = '#e0e0e0';
+                ctx.font = '11px Inter';
+                ctx.fillText('Each GPU: full model, different batch', 50, 135);
+
+                ctx.fillStyle = '#4fc3f7';
+                ctx.fillText('Tensor Parallel (TP)', 70, 180);
+
+                ctx.fillStyle = '#4fc3f7';
+                ctx.fillRect(50, 195, 200, boxHeight);
+                ctx.strokeStyle = '#e0e0e0';
+                ctx.lineWidth = 1;
+
+                for (let i = 0; i < 4; i++) {
+                    ctx.strokeRect(50 + i * 50, 195, 50, boxHeight);
+                    ctx.fillStyle = '#000';
+                    ctx.font = '9px Inter';
+                    ctx.fillText('W' + i, 72 + i * 50, 225);
+                }
+
+                ctx.fillStyle = '#e0e0e0';
+                ctx.font = '11px Inter';
+                ctx.fillText('Weight matrix split across GPUs', 50, 270);
+            } catch (e) {
+                console.error('Parallelism Canvas error:', e);
+            }
+        }
+
+        function initializeAllCanvases() {
+            initKVCacheCanvas();
+            initSparseAttentionCanvas();
+            initLoRACanvas();
+            initGQACanvas();
+            initFlashAttentionCanvas();
+            initMoECanvas();
+            initParallelismCanvas();
+        }
+
+        function simulateKVCache() {
+            const seqLen = parseInt(document.getElementById('kvSeqSlider').value);
+            const resultDiv = document.getElementById('kvComparisonResult');
+            const withoutCache = seqLen * seqLen * 64;
+            const withCache = seqLen * 64;
+            const speedup = (withoutCache / withCache).toFixed(1);
+
+            resultDiv.innerHTML = `
+                <div class="card">
+                    <p><strong>Sequence Length:</strong> ${seqLen} tokens</p>
+                    <p><strong>Without Cache:</strong> ${(withoutCache / 1e6).toFixed(1)}M FLOPs per new token</p>
+                    <p><strong>With Cache:</strong> ${(withCache / 1e6).toFixed(1)}M FLOPs per new token</p>
+                    <p><strong>Speedup:</strong> <span style="color: var(--accent-purple); font-weight: 600;">${speedup}x</span></p>
+                </div>
+            `;
+        }
+
+        const optimizations = {
+            kv_cache: { name: 'KV Cache', speedup: 2.5 },
+            flash_attn: { name: 'FlashAttention', speedup: 3.0 },
+            lora: { name: 'LoRA (Training)', speedup: 1.0, memory: 0.15 },
+            packing: { name: 'Seq Packing', speedup: 1.5 },
+            checkpointing: { name: 'Checkpointing', speedup: 0.7, memory: 0.5 },
+            fsdp: { name: 'FSDP', speedup: 1.0, memory: 0.3 }
+        };
+
+        let activeOptimizations = new Set();
+
+        function toggleOptimization(opt) {
+            if (activeOptimizations.has(opt)) {
+                activeOptimizations.delete(opt);
+            } else {
+                activeOptimizations.add(opt);
+            }
+            updateWarRoomResults();
+        }
+
+        function updateWarRoomResults() {
+            let totalSpeedup = 1.0;
+            let memoryReduction = 1.0;
+            const active = [];
+
+            activeOptimizations.forEach(opt => {
+                const optData = optimizations[opt];
+                if (optData.speedup) totalSpeedup *= optData.speedup;
+                if (optData.memory) memoryReduction *= optData.memory;
+                active.push(optData.name);
+            });
+
+            const resultsDiv = document.getElementById('warRoomResults');
+            let html = '<div class="card highlight"><h3>Combined Impact</h3>';
+
+            if (active.length === 0) {
+                html += '<p>Select optimizations above to see the combined speedup</p>';
+            } else {
+                html += `<p><strong>Active:</strong> ${active.join(', ')}</p>`;
+                html += `<p><strong>Combined Speedup:</strong> <span style="color: var(--accent-green); font-weight: 600; font-size: 20px;">${totalSpeedup.toFixed(1)}x</span></p>`;
+                html += `<p><strong>Memory:</strong> ~${(memoryReduction * 100).toFixed(0)}% of baseline</p>`;
+
+                if (totalSpeedup >= 50) {
+                    html += '<p style="color: var(--accent-green); margin-top: 15px;">Can train 13B model on 8 A100s with good throughput!</p>';
+                }
+            }
+
+            html += '</div>';
+            resultsDiv.innerHTML = html;
+        }
+
+        document.getElementById('kvSeqSlider')?.addEventListener('input', (e) => {
+            document.getElementById('kvSeqValue').textContent = e.target.value;
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                initializeAllCanvases();
+            } catch (e) {
+                console.error('Canvas error:', e);
+            }
+
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '\\[', right: '\\]', display: true},
+                    {left: '$', right: '$', display: false},
+                    {left: '\\(', right: '\\)', display: false}
+                ],
+                throwOnError: false
+            });
+        });
+    </script>
+</body>
+</html>

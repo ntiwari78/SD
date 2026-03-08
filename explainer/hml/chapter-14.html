@@ -1,0 +1,1568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 14: NLP with RNNs and Attention | Interactive ML Explainer</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a24;
+            --accent-purple: #ce93d8;
+            --accent-blue: #4fc3f7;
+            --accent-green: #66bb6a;
+            --accent-red: #ef5350;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --text-tertiary: #707080;
+            --border-color: #2a2a35;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-purple), var(--accent-blue));
+            z-index: 1000;
+            transition: width 0.3s ease;
+        }
+
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 70px;
+            background: rgba(10, 10, 15, 0.95);
+            border-bottom: 1px solid var(--border-color);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            padding: 0 40px;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--accent-purple);
+            letter-spacing: 0.5px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 30px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent-purple);
+        }
+
+        main {
+            margin-top: 70px;
+            padding: 0;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, rgba(206, 147, 216, 0.1) 0%, rgba(79, 195, 247, 0.05) 100%);
+            border-bottom: 1px solid var(--border-color);
+            padding: 100px 40px;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--accent-purple);
+        }
+
+        .hero p {
+            font-size: 18px;
+            color: var(--text-secondary);
+            max-width: 800px;
+            margin: 0 auto 30px;
+            line-height: 1.8;
+        }
+
+        .chapter-label {
+            display: inline-block;
+            background: var(--bg-secondary);
+            color: var(--accent-purple);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--accent-purple);
+            text-decoration: none;
+            margin: 20px 0;
+            transition: gap 0.3s ease;
+        }
+
+        .back-link:hover {
+            gap: 12px;
+        }
+
+        section {
+            padding: 80px 40px;
+            border-bottom: 1px solid var(--border-color);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        section h2 {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 40px;
+            color: var(--accent-purple);
+        }
+
+        section h3 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+
+        p, li {
+            font-size: 16px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            line-height: 1.8;
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 24px;
+            margin: 20px 0;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 20px rgba(206, 147, 216, 0.1);
+        }
+
+        .card.highlight {
+            border-left: 4px solid var(--accent-purple);
+        }
+
+        .card h4 {
+            color: var(--accent-purple);
+            margin-bottom: 12px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        code {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: var(--accent-blue);
+        }
+
+        pre {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+
+        pre code {
+            background: none;
+            border: none;
+            padding: 0;
+            color: var(--text-secondary);
+        }
+
+        .canvas-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        canvas {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            max-width: 100%;
+            height: auto;
+            margin: 10px 0;
+        }
+
+        .controls {
+            display: flex;
+            gap: 16px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        label {
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        input[type="range"],
+        input[type="checkbox"],
+        select,
+        textarea {
+            accent-color: var(--accent-purple);
+        }
+
+        input[type="text"],
+        textarea {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent-purple);
+        }
+
+        button {
+            background: var(--accent-purple);
+            color: var(--bg-primary);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: #e8a3f0;
+            transform: translateY(-2px);
+        }
+
+        .katex-display {
+            color: var(--text-primary);
+            margin: 20px 0;
+        }
+
+        .katex {
+            font-size: 1em;
+        }
+
+        ul, ol {
+            margin-left: 20px;
+            margin-bottom: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        th {
+            background: var(--bg-secondary);
+            color: var(--accent-purple);
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: var(--bg-secondary);
+        }
+
+        footer {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: 40px;
+            margin-top: 80px;
+        }
+
+        .footer-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .nav-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 10px 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .nav-button:hover {
+            color: var(--accent-purple);
+            border-color: var(--accent-purple);
+        }
+
+        .nav-button.next {
+            background: rgba(206, 147, 216, 0.1);
+        }
+
+        @media (max-width: 768px) {
+            .hero { padding: 60px 20px; }
+            .hero h1 { font-size: 32px; }
+            section { padding: 40px 20px; }
+            header { padding: 0 20px; }
+            .nav-links { gap: 15px; font-size: 12px; }
+            .footer-nav { flex-direction: column; gap: 20px; }
+            .controls { flex-direction: column; align-items: stretch; }
+        }
+
+        .socratic-box {
+            background: linear-gradient(135deg, rgba(206, 147, 216, 0.15), rgba(206, 147, 216, 0.05));
+            border: 2px solid var(--accent-purple);
+            border-radius: 8px;
+            padding: 24px;
+            margin: 30px 0;
+        }
+
+        .socratic-box h4 {
+            color: var(--accent-purple);
+            margin-bottom: 16px;
+            font-size: 18px;
+        }
+
+        .socratic-box ul {
+            list-style: none;
+            margin-left: 0;
+        }
+
+        .socratic-box li {
+            padding-left: 20px;
+            position: relative;
+            color: var(--text-secondary);
+        }
+
+        .socratic-box li:before {
+            content: "?";
+            position: absolute;
+            left: 0;
+            color: var(--accent-purple);
+            font-weight: bold;
+        }
+
+        .diagram {
+            text-align: center;
+            margin: 30px 0;
+            padding: 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        .diagram-label {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-top: 10px;
+            font-style: italic;
+        }
+
+        .feynman-box {
+            background: linear-gradient(135deg, rgba(102, 187, 106, 0.15), rgba(102, 187, 106, 0.05));
+            border: 2px solid var(--accent-green);
+            border-radius: 8px;
+            padding: 24px;
+            margin: 30px 0;
+        }
+
+        .feynman-box h4 {
+            color: var(--accent-green);
+            margin-bottom: 12px;
+            font-size: 18px;
+        }
+
+        .demo-output {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 16px;
+            margin: 16px 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: var(--accent-green);
+            min-height: 60px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .viz-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .viz-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .viz-item h4 {
+            color: var(--accent-purple);
+            margin-bottom: 12px;
+        }
+
+        .step-sequence {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .step-box {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px 16px;
+            text-align: center;
+            font-size: 14px;
+            flex: 1;
+            min-width: 80px;
+        }
+
+        .arrow {
+            color: var(--accent-purple);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-bar" id="progressBar"></div>
+
+    <header>
+        <div class="header-content">
+            <div class="logo">HOML Chapter 14</div>
+            <nav>
+                <ul class="nav-links">
+                    <li><a href="#char-rnn">Char-RNN</a></li>
+                    <li><a href="#sentiment">Sentiment</a></li>
+                    <li><a href="#seq2seq">Seq2Seq</a></li>
+                    <li><a href="#attention">Attention</a></li>
+                    <li><a href="#visual-attn">Visual</a></li>
+                    <li><a href="#war-room">War Room</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="hero">
+            <a href="ml-explainer-dashboard.html" class="back-link">← Back to Dashboard</a>
+            <div class="chapter-label">PART II: NEURAL NETWORKS & DEEP LEARNING</div>
+            <h1>Natural Language Processing with RNNs and Attention</h1>
+            <p>Mastering Sequence Learning: From Character Generation to Machine Translation</p>
+            <p style="font-size: 16px; margin-top: 20px;">This chapter explores how RNNs process language sequentially and how attention mechanisms focus on relevant information. We'll build character-level language models, sentiment classifiers, and end-to-end machine translation systems—the foundational techniques that led to modern transformers.</p>
+        </div>
+
+        <section id="mental-model">
+            <h2>Mental Model: Attention as a Spotlight</h2>
+
+            <div class="feynman-box">
+                <h4>The Simplest Explanation</h4>
+                <p>Imagine you're reading a long essay and your brain naturally focuses on the most relevant words. When translating "The bank vault" from English to Spanish, you pay attention to both "bank" and "vault" but focus more heavily on their relationship. Attention in neural networks works the same way:</p>
+                <ul style="margin-top: 12px;">
+                    <li><strong>Query:</strong> "What am I trying to understand right now?" (the target word being generated)</li>
+                    <li><strong>Keys:</strong> "What could be relevant?" (all source words)</li>
+                    <li><strong>Values:</strong> "What is the actual information?" (the encoded source words)</li>
+                </ul>
+                <p style="margin-top: 12px;">The attention mechanism computes how much each source word is relevant (via a softmax over query-key similarities) and mixes their values proportionally.</p>
+            </div>
+
+            <div class="card highlight">
+                <h4>Why This Matters</h4>
+                <p>Before attention, RNNs struggled with long sequences because information had to flow through a single "bottleneck" vector. Attention allows the model to directly access any part of the input, making translation, summarization, and other tasks dramatically more accurate.</p>
+            </div>
+        </section>
+
+        <section id="char-rnn">
+            <h2>Generating Shakespearean Text Using a Character-RNN</h2>
+
+            <p>A character-level RNN learns to predict the next character in a sequence by training on character-by-character data. Despite its simplicity, it captures grammar, vocabulary, and even writing style.</p>
+
+            <h3>How Character RNNs Work</h3>
+            <p>At each time step, the RNN:</p>
+            <ol>
+                <li>Takes a single character as input</li>
+                <li>Updates its hidden state based on previous state and input</li>
+                <li>Outputs probabilities for the next character</li>
+                <li>Samples from this distribution to generate text</li>
+            </ol>
+
+            <div class="card">
+                <h4>Sample Output from Shakespeare Model</h4>
+                <pre><code>PANDARUS:
+Alas, I think he shall be come approached
+and the day
+When little srain would be attain'd into
+being never fed,
+And who is but a chain and subjects
+of his death,
+I should not sleep.</code></pre>
+                <p style="margin-top: 12px; font-size: 13px;">Trained purely on character sequences, the model learns words, grammar, and punctuation automatically.</p>
+            </div>
+
+            <h3>Building a Character RNN in PyTorch</h3>
+            <pre><code>import torch
+import torch.nn as nn
+
+class CharRNN(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size):
+        super().__init__()
+        self.hidden_size = hidden_size
+        self.embedding = nn.Embedding(input_size, hidden_size)
+        self.rnn = nn.LSTM(hidden_size, hidden_size, batch_first=True)
+        self.fc = nn.Linear(hidden_size, output_size)
+
+    def forward(self, x, hidden=None):
+        x = self.embedding(x)
+        out, hidden = self.rnn(x, hidden)
+        out = self.fc(out)
+        return out, hidden</code></pre>
+
+            <div class="socratic-box">
+                <h4>War Room: Character Prediction Scenarios</h4>
+                <ul>
+                    <li>If the model sees "The quick brown f", what should it predict next? Why might it assign high probability to 'o' (fox)?</li>
+                    <li>How could we improve the model if it keeps predicting unrealistic character sequences?</li>
+                    <li>Why is character-level modeling harder than word-level? What information must the model learn implicitly?</li>
+                </ul>
+            </div>
+
+            <h3>Interactive Text Generation Demo</h3>
+            <div class="canvas-container">
+                <div class="controls">
+                    <div class="control-group">
+                        <label for="seedText">Seed Text:</label>
+                        <input type="text" id="seedText" placeholder="Enter starting text..." value="The " style="flex: 1;">
+                    </div>
+                </div>
+                <div class="controls">
+                    <div class="control-group">
+                        <label for="tempSlider">Temperature:</label>
+                        <input type="range" id="tempSlider" min="0.1" max="2.0" step="0.1" value="0.8" style="flex: 1;">
+                        <span id="tempValue">0.8</span>
+                    </div>
+                </div>
+                <button onclick="generateText()">Generate Text</button>
+                <div id="generatedText" class="demo-output" style="margin-top: 16px;">Generated text will appear here...</div>
+            </div>
+        </section>
+
+        <section id="sentiment">
+            <h2>Sentiment Analysis: Classification with RNNs</h2>
+
+            <p>While character-level models generate text, we often want to classify sequences. Sentiment analysis determines if a review is positive, negative, or neutral.</p>
+
+            <h3>The Architecture</h3>
+            <div class="step-sequence">
+                <div class="step-box">Embed tokens</div>
+                <span class="arrow">→</span>
+                <div class="step-box">Pass through RNN</div>
+                <span class="arrow">→</span>
+                <div class="step-box">Use final hidden state</div>
+                <span class="arrow">→</span>
+                <div class="step-box">Classify</div>
+            </div>
+
+            <pre><code>class SentimentRNN(nn.Module):
+    def __init__(self, vocab_size, embed_dim, hidden_dim, num_classes):
+        super().__init__()
+        self.embedding = nn.Embedding(vocab_size, embed_dim)
+        self.rnn = nn.LSTM(embed_dim, hidden_dim, batch_first=True)
+        self.fc = nn.Linear(hidden_dim, num_classes)
+
+    def forward(self, x):
+        embedded = self.embedding(x)
+        _, (hidden, _) = self.rnn(embedded)
+        logits = self.fc(hidden.squeeze(0))
+        return logits</code></pre>
+
+            <h3>Interactive Sentiment Classifier</h3>
+            <div class="canvas-container">
+                <div class="controls">
+                    <label for="sentimentInput">Enter a review:</label>
+                </div>
+                <textarea id="sentimentInput" placeholder="E.g., 'This movie was absolutely fantastic!'" style="width: 100%; height: 80px; margin: 12px 0;"></textarea>
+                <button onclick="classifySentiment()">Classify Sentiment</button>
+                <div id="sentimentOutput" class="demo-output" style="margin-top: 16px;">Classification results appear here...</div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Dataset</th>
+                        <th>Size</th>
+                        <th>Task</th>
+                        <th>Model</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>IMDB Reviews</td>
+                        <td>25K train / 25K test</td>
+                        <td>Binary sentiment</td>
+                        <td>LSTM classifier</td>
+                    </tr>
+                    <tr>
+                        <td>SQuAD</td>
+                        <td>100K+ questions</td>
+                        <td>Reading comprehension</td>
+                        <td>Attention-based QA</td>
+                    </tr>
+                    <tr>
+                        <td>WMT Translation</td>
+                        <td>Millions of pairs</td>
+                        <td>Machine translation</td>
+                        <td>Seq2Seq with attention</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="seq2seq">
+            <h2>Encoder-Decoder Architecture for Neural Machine Translation</h2>
+
+            <p>Machine translation maps sequences to sequences. The encoder-decoder (seq2seq) architecture:</p>
+            <ul>
+                <li><strong>Encoder:</strong> Processes the source sentence and outputs a fixed context vector</li>
+                <li><strong>Decoder:</strong> Uses the context vector to generate the target sentence</li>
+            </ul>
+
+            <h3>The Information Flow</h3>
+            <div class="canvas-container">
+                <canvas id="seq2seqCanvas" width="800" height="300"></canvas>
+                <p class="diagram-label">Encoder-decoder data flow</p>
+            </div>
+
+            <h3>Mathematical Formulation</h3>
+            <div class="katex-display">$$c = h_T^{(e)} = \text{final hidden state}$$</div>
+            <div class="katex-display">$$h_t^{(d)} = \text{LSTM}(h_{t-1}^{(d)}, y_{t-1}, c)$$</div>
+            <div class="katex-display">$$P(y_t | y_1, \ldots, y_{t-1}, c) = \text{softmax}(W \cdot h_t^{(d)} + b)$$</div>
+
+            <h3>Code: Basic Seq2Seq Model</h3>
+            <pre><code>class Seq2SeqModel(nn.Module):
+    def __init__(self, encoder, decoder):
+        super().__init__()
+        self.encoder = encoder
+        self.decoder = decoder
+
+    def encode(self, src):
+        _, (hidden, cell) = self.encoder(src)
+        return hidden, cell
+
+    def forward(self, src, tgt, teacher_forcing_ratio=0.5):
+        batch_size = src.size(0)
+        tgt_len = tgt.size(1)
+        vocab_size = self.decoder.output_size
+        outputs = torch.zeros(batch_size, tgt_len, vocab_size)
+
+        hidden, cell = self.encode(src)
+        decoder_input = tgt[:, 0].unsqueeze(1)
+
+        for t in range(1, tgt_len):
+            output, hidden, cell = self.decoder(decoder_input, hidden, cell)
+            outputs[:, t] = output
+
+            use_teacher = random.random() < teacher_forcing_ratio
+            decoder_input = tgt[:, t].unsqueeze(1) if use_teacher else output.argmax(1).unsqueeze(1)
+
+        return outputs</code></pre>
+
+            <div class="card highlight">
+                <h4>Teacher Forcing</h4>
+                <p>During training, we feed the true previous word to the decoder. This speeds up training but can cause mismatch with inference. A solution is curriculum learning: gradually reduce teacher forcing probability.</p>
+            </div>
+        </section>
+
+        <section id="bidirectional">
+            <h2>Bidirectional RNNs: Looking Forward and Backward</h2>
+
+            <p>A unidirectional RNN only sees past context. A bidirectional RNN processes sequences forward and backward, allowing each token to see both contexts.</p>
+
+            <h3>Architecture Comparison</h3>
+            <div class="viz-container">
+                <div class="viz-item">
+                    <h4>Unidirectional</h4>
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-secondary);">
+                        Input: "The cat sat"<br/>
+                        h₁ = RNN(h₀, "The")<br/>
+                        h₂ = RNN(h₁, "cat")<br/>
+                        h₃ = RNN(h₂, "sat")<br/>
+                        <span style="color: var(--accent-blue);">No future context</span>
+                    </div>
+                </div>
+                <div class="viz-item">
+                    <h4>Bidirectional</h4>
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-secondary);">
+                        Forward: → "The" → "cat" → "sat"<br/>
+                        Backward: "sat" → "cat" → "The" ←<br/>
+                        h₂ = [h₂_fwd ⊕ h₂_bwd]<br/>
+                        <span style="color: var(--accent-green);">Full context</span>
+                    </div>
+                </div>
+            </div>
+
+            <pre><code>class BiLSTM(nn.Module):
+    def __init__(self, input_size, hidden_size):
+        super().__init__()
+        self.lstm = nn.LSTM(input_size, hidden_size, bidirectional=True, batch_first=True)
+
+    def forward(self, x):
+        out, (hidden, cell) = self.lstm(x)
+        # out: (batch, seq_len, 2*hidden_size)
+        return out</code></pre>
+
+            <p>BiLSTMs are powerful for encoding but cannot be used for generation, since we don't have future tokens at inference time.</p>
+        </section>
+
+        <section id="beam-search">
+            <h2>Beam Search: Finding Better Translations</h2>
+
+            <p>Greedy decoding picks the highest-probability token at each step. This is fast but often suboptimal. Beam search explores multiple hypotheses in parallel.</p>
+
+            <h3>Greedy vs. Beam Search</h3>
+            <div class="canvas-container">
+                <canvas id="beamSearchCanvas" width="800" height="400"></canvas>
+                <p class="diagram-label">Beam search (K=3) maintains multiple hypotheses</p>
+            </div>
+
+            <h3>Algorithm Overview</h3>
+            <ol>
+                <li><strong>Initialize:</strong> Start with K copies of decoder state (K = beam width)</li>
+                <li><strong>Expand:</strong> Generate all possible next tokens from K hypotheses</li>
+                <li><strong>Prune:</strong> Keep K hypotheses with highest cumulative probability</li>
+                <li><strong>Repeat:</strong> Continue until hypotheses reach end-of-sentence</li>
+                <li><strong>Score:</strong> Normalize by length to avoid bias toward short sequences</li>
+            </ol>
+
+            <h3>PyTorch Implementation (Simplified)</h3>
+            <pre><code>def beam_search(decoder, context, beam_width=3, max_len=20):
+    batch_size = context.size(0)
+    hypotheses = torch.full((batch_size, beam_width),
+                            START_TOKEN, dtype=torch.long)
+    scores = torch.zeros(batch_size, beam_width)
+
+    for step in range(max_len):
+        logits = decoder(hypotheses.view(-1, 1))
+        logits = logits.view(batch_size, beam_width, -1)
+        log_probs = F.log_softmax(logits, dim=-1)
+
+        new_scores = scores.unsqueeze(-1) + log_probs
+        flat_scores = new_scores.view(batch_size, -1)
+        top_scores, top_indices = torch.topk(flat_scores, beam_width)
+
+        # Reconstruct hypotheses from top_indices
+
+    return best_hypothesis</code></pre>
+
+            <div class="socratic-box">
+                <h4>War Room: Beam Search Trade-offs</h4>
+                <ul>
+                    <li>What happens if beam_width = 1? Is that greedy decoding?</li>
+                    <li>Why might increasing beam width eventually stop improving quality?</li>
+                    <li>How do we prevent the model from favoring very short translations?</li>
+                    <li>When would greedy decoding be preferable despite lower quality?</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="attention">
+            <h2>Attention Mechanisms: Bahdanau & Luong Attention</h2>
+
+            <p>Basic seq2seq compresses the entire source into a single context vector, losing information for long sentences. Attention solves this by letting the decoder focus on different source parts at each step.</p>
+
+            <h3>The Attention Formula</h3>
+            <div class="katex-display">$$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right) V$$</div>
+
+            <p>The softmax produces weights indicating relevance. Multiplying by V produces a weighted context vector.</p>
+
+            <h3>Bahdanau vs. Luong Attention</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Aspect</th>
+                        <th>Bahdanau</th>
+                        <th>Luong</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Score Function</td>
+                        <td>$\mathbf{v}^T \tanh(W_1 q + W_2 k_i)$</td>
+                        <td>$q^T k_i$</td>
+                    </tr>
+                    <tr>
+                        <td>Computation</td>
+                        <td>More parameters</td>
+                        <td>Fewer parameters</td>
+                    </tr>
+                    <tr>
+                        <td>Year</td>
+                        <td>2014 (Original)</td>
+                        <td>2015 (General)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Computing Attention Weights</h3>
+            <div class="card highlight">
+                <h4>Step-by-Step Breakdown</h4>
+                <ol style="margin-top: 12px;">
+                    <li><strong>Score:</strong> $s_i = \text{score}(q, k_i)$</li>
+                    <li><strong>Weights:</strong> $\alpha_i = \frac{\exp(s_i)}{\sum_j \exp(s_j)}$</li>
+                    <li><strong>Context:</strong> $c = \sum_i \alpha_i v_i$</li>
+                    <li><strong>Use:</strong> Concatenate context with decoder state</li>
+                </ol>
+            </div>
+
+            <h3>Attention Heatmap Visualization</h3>
+            <div class="canvas-container">
+                <canvas id="attentionCanvas" width="700" height="500"></canvas>
+                <p class="diagram-label">Darker colors = higher attention weights</p>
+                <div class="controls" style="margin-top: 16px;">
+                    <button onclick="generateAttentionMap()">Regenerate Map</button>
+                </div>
+            </div>
+
+            <h3>Code: Luong Attention Layer</h3>
+            <pre><code>class LuongAttention(nn.Module):
+    def __init__(self, hidden_dim):
+        super().__init__()
+        self.attention = nn.Linear(hidden_dim, hidden_dim)
+
+    def forward(self, decoder_hidden, encoder_outputs):
+        query = self.attention(decoder_hidden).unsqueeze(2)
+        scores = torch.matmul(encoder_outputs, query).squeeze(2)
+        weights = F.softmax(scores, dim=1)
+        context = torch.sum(encoder_outputs * weights.unsqueeze(2), dim=1)
+        return context, weights</code></pre>
+
+            <h3>End-to-End Seq2Seq with Attention</h3>
+            <pre><code>class AttentionalSeq2Seq(nn.Module):
+    def __init__(self, encoder, decoder, attention):
+        super().__init__()
+        self.encoder = encoder
+        self.decoder = decoder
+        self.attention = attention
+
+    def forward(self, src, tgt):
+        encoder_outputs, hidden = self.encoder(src)
+        outputs = []
+        decoder_input = tgt[:, 0].unsqueeze(1)
+
+        for t in range(1, tgt.size(1)):
+            context, _ = self.attention(hidden[-1], encoder_outputs)
+            output, hidden = self.decoder(decoder_input, hidden, context)
+            outputs.append(output)
+            decoder_input = tgt[:, t].unsqueeze(1)
+
+        return torch.cat(outputs, dim=1)</code></pre>
+
+            <div class="socratic-box">
+                <h4>War Room: Attention Deep Dive</h4>
+                <ul>
+                    <li>Why divide by $\sqrt{d_k}$? What happens without it?</li>
+                    <li>Can we use multi-head attention in a single decoder step?</li>
+                    <li>How would you adapt attention for images vs. sequences?</li>
+                    <li>What if attention focuses uniformly on all source words?</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="visual-attn">
+            <h2>Visual Attention: Beyond Text</h2>
+
+            <p>Attention mechanisms extend to images. For image captioning, a CNN encodes the image into feature maps, and an RNN decoder generates captions word-by-word while an attention layer focuses on relevant regions.</p>
+
+            <h3>Image-to-Caption Generation</h3>
+            <div class="canvas-container">
+                <canvas id="visualAttentionCanvas" width="700" height="400"></canvas>
+                <p class="diagram-label">Attention over image regions when predicting words</p>
+            </div>
+
+            <h3>Architecture: CNN + Attention + RNN</h3>
+            <pre><code>class ImageCaptioner(nn.Module):
+    def __init__(self, cnn_backbone, hidden_dim, vocab_size):
+        super().__init__()
+        self.cnn = cnn_backbone  # e.g., ResNet-50
+        self.attention = LuongAttention(hidden_dim)
+        self.decoder = nn.LSTMCell(hidden_dim + hidden_dim, hidden_dim)
+        self.fc = nn.Linear(hidden_dim, vocab_size)
+
+    def forward(self, image, max_len=20):
+        features = self.cnn(image)  # (batch, hidden_dim, H, W)
+        features_flat = features.permute(0, 2, 3, 1)
+        features_flat = features_flat.view(features_flat.size(0), -1, features_flat.size(-1))
+
+        batch_size = image.size(0)
+        h = torch.zeros(batch_size, self.hidden_dim)
+        c = torch.zeros(batch_size, self.hidden_dim)
+        captions = []
+
+        for t in range(max_len):
+            context, _ = self.attention(h, features_flat)
+            h, c = self.decoder(torch.cat([h, context], dim=1), (h, c))
+            logits = self.fc(h)
+            captions.append(logits)
+
+        return torch.stack(captions, dim=1)</code></pre>
+
+            <div class="card">
+                <h4>Applications of Visual Attention</h4>
+                <ul>
+                    <li><strong>Image Captioning:</strong> Generate descriptions focusing on regions</li>
+                    <li><strong>Visual Question Answering (VQA):</strong> Answer questions about images</li>
+                    <li><strong>Object Tracking:</strong> Maintain focus on moving objects</li>
+                    <li><strong>Interpretability:</strong> Visualize decision influences</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="transformer-bridge">
+            <h2>From RNNs to Transformers: The Bridge to Chapter 15</h2>
+
+            <p>RNNs process sequences sequentially, limiting parallelization. Transformers replace recurrence with stacked attention layers, enabling:</p>
+
+            <ul>
+                <li><strong>Full Parallelization:</strong> Process all positions simultaneously</li>
+                <li><strong>Longer Context:</strong> Better long-range dependency modeling</li>
+                <li><strong>Stable Gradients:</strong> No vanishing/exploding gradients</li>
+                <li><strong>Transfer Learning:</strong> Pre-trained on massive datasets</li>
+            </ul>
+
+            <h3>The Transformer Architecture (Overview)</h3>
+            <div class="diagram">
+                <p style="font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--text-secondary);">
+                    Input Embeddings<br/>
+                    ↓<br/>
+                    Positional Encodings<br/>
+                    ↓<br/>
+                    [Encoder: Multi-Head Attention + FFN] × N<br/>
+                    ↓<br/>
+                    [Decoder: Masked Attn + Cross-Attn + FFN] × N<br/>
+                    ↓<br/>
+                    Output Linear + Softmax
+                </p>
+                <p class="diagram-label">Transformers replace RNNs with stacked attention. Chapter 15 covers details.</p>
+            </div>
+
+            <div class="card highlight">
+                <h4>Key Insight</h4>
+                <p>The attention mechanism from this chapter is the core of Transformers. Multi-head attention applies multiple attention operations in parallel. Positional encodings handle token order (attention is permutation-invariant). The Transformer is a highly parallel attention-only architecture.</p>
+            </div>
+        </section>
+
+        <section id="interactive-math">
+            <h2>Interactive Math: Softmax and Attention Computation</h2>
+
+            <h3>Softmax Function</h3>
+            <p>Softmax converts scores into a probability distribution:</p>
+            <div class="katex-display">$$\sigma(x_i) = \frac{e^{x_i}}{\sum_j e^{x_j}}$$</div>
+
+            <div class="canvas-container">
+                <div class="controls">
+                    <label>Enter attention scores (comma-separated):</label>
+                    <input type="text" id="scoresInput" placeholder="e.g., 1.5, 0.3, 2.1, 0.8" value="1.5, 0.3, 2.1, 0.8" style="width: 100%; margin-top: 8px;">
+                </div>
+                <button onclick="computeSoftmax()">Compute Softmax</button>
+                <div id="softmaxOutput" class="demo-output" style="margin-top: 16px;">Results appear here...</div>
+            </div>
+
+            <h3>Attention Step-by-Step</h3>
+            <div class="canvas-container">
+                <div style="text-align: left;">
+                    <p><strong>Step 1: Compute Scores</strong></p>
+                    <p style="font-family: 'JetBrains Mono', monospace; font-size: 13px; margin: 8px 0;">query = decoder_hidden = [0.5, -0.2, 1.1]</p>
+                    <p style="font-family: 'JetBrains Mono', monospace; font-size: 13px; margin: 8px 0;">keys = encoder_hiddens = [[0.3, 0.1, 0.9], [1.0, -0.5, 0.2], [-0.1, 0.8, 0.4]]</p>
+                    <p style="font-family: 'JetBrains Mono', monospace; font-size: 13px; margin: 8px 0;">scores[i] = query · key[i] = [0.71, 0.41, 0.89]</p>
+
+                    <p style="margin-top: 16px;"><strong>Step 2: Softmax (Normalize)</strong></p>
+                    <p style="font-family: 'JetBrains Mono', monospace; font-size: 13px; margin: 8px 0;">weights = softmax(scores) = [0.35, 0.24, 0.41]</p>
+
+                    <p style="margin-top: 16px;"><strong>Step 3: Weighted Sum</strong></p>
+                    <p style="font-family: 'JetBrains Mono', monospace; font-size: 13px; margin: 8px 0;">context = 0.35 × values[0] + 0.24 × values[1] + 0.41 × values[2]</p>
+                    <p style="font-family: 'JetBrains Mono', monospace; font-size: 13px; margin: 8px 0;">context = [0.38, 0.25, 0.59]</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="war-room">
+            <h2>War Room: Advanced Scenarios and Trade-offs</h2>
+
+            <div class="socratic-box">
+                <h4>Scenario 1: Long-Tail Translations</h4>
+                <p>Building a neural machine translation system for low-resource language pair (English → Swahili) with only 10K parallel sentences. Baseline attention model (500K params) overfits rapidly.</p>
+                <ul>
+                    <li>What regularization techniques from Chapter 11 apply?</li>
+                    <li>How could transfer learning help? (English → German vs. English → Swahili)</li>
+                    <li>Would smaller hidden dimension help or hurt?</li>
+                    <li>What role might character-level models play for OOV words?</li>
+                </ul>
+            </div>
+
+            <div class="socratic-box">
+                <h4>Scenario 2: Real-Time Sentiment Classification</h4>
+                <p>Deploying sentiment classifier for live tweets with <100ms latency. Two options:</p>
+                <ul>
+                    <li>BiLSTM (2 layers, 256 hidden) with attention</li>
+                    <li>Simple LSTM (1 layer, 128 hidden) without attention</li>
+                </ul>
+                <ul style="margin-top: 12px;">
+                    <li>Which for latency-sensitive deployment?</li>
+                    <li>How could knowledge distillation compress the heavier model?</li>
+                    <li>What metrics beyond accuracy matter?</li>
+                </ul>
+            </div>
+
+            <div class="socratic-box">
+                <h4>Scenario 3: Debugging Attention Collapse</h4>
+                <p>Translation model converges, but attention always attends to the first word, ignoring source. Translations are poor.</p>
+                <ul>
+                    <li>Why might this happen?</li>
+                    <li>What training procedure changes could help?</li>
+                    <li>How would you visualize attention to detect early?</li>
+                    <li>Could entropy regularization help?</li>
+                </ul>
+            </div>
+
+            <div class="socratic-box">
+                <h4>Scenario 4: Multi-Task Learning</h4>
+                <p>Training single encoder on three tasks: sentiment analysis, semantic similarity, and named entity recognition. Task-specific decoders share encoder.</p>
+                <ul>
+                    <li>How would you design shared encoder and task-specific heads?</li>
+                    <li>How do you balance loss from three tasks?</li>
+                    <li>What are benefits of multi-task learning for low-resource tasks?</li>
+                    <li>When might multi-task learning hurt performance?</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="summary">
+            <h2>Chapter Summary & Key Takeaways</h2>
+
+            <div class="card highlight">
+                <h4>Core Concepts</h4>
+                <ul style="margin-top: 12px;">
+                    <li><strong>Character-Level RNNs:</strong> Generate text character-by-character, capturing grammar implicitly.</li>
+                    <li><strong>Sentiment Analysis:</strong> RNNs with pooling/attention classify sequences.</li>
+                    <li><strong>Encoder-Decoder (Seq2Seq):</strong> Compress variable-length input, decode to variable-length output.</li>
+                    <li><strong>Bidirectional RNNs:</strong> See full context for encoding tasks.</li>
+                    <li><strong>Beam Search:</strong> Explore multiple hypotheses during generation.</li>
+                    <li><strong>Attention Mechanisms:</strong> Dynamically focus on relevant input parts.</li>
+                    <li><strong>Visual Attention:</strong> Extend attention to images for captioning and VQA.</li>
+                </ul>
+            </div>
+
+            <h3>Practical Tips</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Challenge</th>
+                        <th>Solution</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Vanishing/exploding gradients</td>
+                        <td>LSTM/GRU, gradient clipping, batch norm</td>
+                    </tr>
+                    <tr>
+                        <td>Seq2seq ignores rare words</td>
+                        <td>BPE, character-level, copy mechanism</td>
+                    </tr>
+                    <tr>
+                        <td>Attention collapses</td>
+                        <td>Entropy regularization, scheduled sampling</td>
+                    </tr>
+                    <tr>
+                        <td>Slow generation</td>
+                        <td>Greedy decoding, smaller beam width, GPU batching</td>
+                    </tr>
+                    <tr>
+                        <td>OOV words</td>
+                        <td>Subword tokenization, back-translation</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Looking Ahead to Chapter 15</h3>
+            <p>This chapter gave you foundations: RNNs process sequences, attention focuses on relevant parts, multi-head attention applies this in parallel. The next chapter introduces <strong>Transformers</strong>, which:</p>
+            <ul>
+                <li>Replace recurrence with stacked self-attention</li>
+                <li>Enable full parallelization</li>
+                <li>Form backbone of modern NLP (BERT, GPT, T5)</li>
+                <li>Introduce positional encodings and causal masking</li>
+            </ul>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-nav">
+            <a href="chapter-13.html" class="nav-button">← Chapter 13: RNNs</a>
+            <span style="color: var(--text-secondary); font-weight: 500;">Chapter 14: RNNs & Attention</span>
+            <a href="chapter-15.html" class="nav-button next">Chapter 15: Transformers →</a>
+        </div>
+    </footer>
+
+    <script>
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.scrollY;
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const scrollPercent = (scrollTop / docHeight) * 100;
+            document.getElementById('progressBar').style.width = scrollPercent + '%';
+        });
+
+        function initializeAllCanvases() {
+            try { drawSeq2SeqDiagram(); } catch (e) { console.error('Seq2Seq error:', e); }
+            try { drawBeamSearchTree(); } catch (e) { console.error('Beam search error:', e); }
+            try { generateAttentionMap(); } catch (e) { console.error('Attention error:', e); }
+            try { drawVisualAttention(); } catch (e) { console.error('Visual attention error:', e); }
+        }
+
+        function drawSeq2SeqDiagram() {
+            const canvas = document.getElementById('seq2seqCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+
+            ctx.fillStyle = '#1a1a24';
+            ctx.fillRect(0, 0, w, h);
+
+            ctx.fillStyle = '#ce93d8';
+            ctx.font = 'bold 14px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('Encoder-Decoder Data Flow', w / 2, 25);
+
+            ctx.fillStyle = '#4fc3f7';
+            ctx.fillRect(20, 60, 120, 40);
+            ctx.fillStyle = '#0a0a0f';
+            ctx.font = '12px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('Encoder', 80, 85);
+            ctx.fillStyle = '#4fc3f7';
+            ctx.fillText('Input: "Je suis"', 80, 105);
+
+            ctx.strokeStyle = '#ce93d8';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(140, 80);
+            ctx.lineTo(180, 80);
+            ctx.stroke();
+
+            ctx.fillStyle = '#66bb6a';
+            ctx.fillRect(220, 60, 120, 40);
+            ctx.fillStyle = '#0a0a0f';
+            ctx.textAlign = 'center';
+            ctx.fillText('Decoder', 280, 85);
+            ctx.fillStyle = '#66bb6a';
+            ctx.fillText('Output: "I am"', 280, 105);
+
+            const srcTokens = ['Je', 'suis'];
+            const srcX = [40, 100];
+            for (let i = 0; i < srcTokens.length; i++) {
+                ctx.fillStyle = '#4fc3f7';
+                ctx.fillRect(srcX[i], 180, 50, 30);
+                ctx.fillStyle = '#0a0a0f';
+                ctx.font = '12px Inter';
+                ctx.textAlign = 'center';
+                ctx.fillText(srcTokens[i], srcX[i] + 25, 202);
+                ctx.strokeStyle = '#4fc3f7';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(srcX[i] + 25, 210);
+                ctx.lineTo(srcX[i] + 25, 145);
+                ctx.stroke();
+            }
+
+            ctx.fillStyle = '#a0a0a0';
+            ctx.font = '11px Inter';
+            ctx.textAlign = 'left';
+            ctx.fillText('Source Language', 20, 260);
+
+            const tgtTokens = ['I', 'am', '<EOS>'];
+            const tgtX = [260, 340, 420];
+            for (let i = 0; i < tgtTokens.length; i++) {
+                ctx.fillStyle = '#66bb6a';
+                ctx.fillRect(tgtX[i], 180, 50, 30);
+                ctx.fillStyle = '#0a0a0f';
+                ctx.font = '12px Inter';
+                ctx.textAlign = 'center';
+                ctx.fillText(tgtTokens[i], tgtX[i] + 25, 202);
+                ctx.strokeStyle = '#66bb6a';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(tgtX[i] + 25, 100);
+                ctx.lineTo(tgtX[i] + 25, 145);
+                ctx.stroke();
+            }
+
+            ctx.fillStyle = '#a0a0a0';
+            ctx.font = '11px Inter';
+            ctx.textAlign = 'left';
+            ctx.fillText('Target Language', 260, 260);
+        }
+
+        function drawBeamSearchTree() {
+            const canvas = document.getElementById('beamSearchCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+
+            ctx.fillStyle = '#1a1a24';
+            ctx.fillRect(0, 0, w, h);
+
+            ctx.fillStyle = '#ce93d8';
+            ctx.font = 'bold 14px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('Beam Search (width=3)', w / 2, 25);
+
+            ctx.fillStyle = '#4fc3f7';
+            ctx.fillRect(w / 2 - 20, 50, 40, 30);
+            ctx.fillStyle = '#0a0a0f';
+            ctx.font = '11px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('<s>', w / 2, 71);
+
+            const words1 = ['The', 'A', 'This'];
+            const scores1 = [0.8, 0.7, 0.5];
+            const x1Positions = [150, 400, 650];
+
+            for (let i = 0; i < 3; i++) {
+                ctx.strokeStyle = '#4fc3f7';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(w / 2, 80);
+                ctx.lineTo(x1Positions[i], 120);
+                ctx.stroke();
+
+                ctx.fillStyle = '#4fc3f7';
+                ctx.fillRect(x1Positions[i] - 25, 120, 50, 30);
+                ctx.fillStyle = '#0a0a0f';
+                ctx.font = '10px Inter';
+                ctx.textAlign = 'center';
+                ctx.fillText(words1[i], x1Positions[i], 141);
+                ctx.fillText(scores1[i].toFixed(1), x1Positions[i], 155);
+            }
+
+            const words2 = [['cat', 'dog', 'bird'], ['dog', 'cat', 'tree'], ['thing', 'cat', 'dog']];
+            const x2Base = [150, 400, 650];
+
+            for (let parent = 0; parent < 3; parent++) {
+                for (let child = 0; child < 3; child++) {
+                    const y2 = 200 + child * 35;
+                    ctx.strokeStyle = 'rgba(206, 147, 216, 0.4)';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(x2Base[parent], 150);
+                    ctx.lineTo(x2Base[parent], y2);
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#ce93d8';
+                    ctx.fillRect(x2Base[parent] - 20, y2, 40, 25);
+                    ctx.fillStyle = '#0a0a0f';
+                    ctx.font = '9px Inter';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(words2[parent][child].substring(0, 3), x2Base[parent], y2 + 15);
+                }
+            }
+
+            ctx.strokeStyle = '#66bb6a';
+            ctx.lineWidth = 2;
+            const topThree = [[150, 200], [400, 200], [650, 235]];
+            for (let i = 0; i < topThree.length; i++) {
+                ctx.strokeRect(topThree[i][0] - 22, topThree[i][1], 44, 25);
+            }
+
+            ctx.fillStyle = '#66bb6a';
+            ctx.font = '10px Inter';
+            ctx.textAlign = 'left';
+            ctx.fillText('Keep top-3 by cumulative probability', 20, 360);
+        }
+
+        function generateAttentionMap() {
+            const canvas = document.getElementById('attentionCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+
+            ctx.fillStyle = '#1a1a24';
+            ctx.fillRect(0, 0, w, h);
+
+            ctx.fillStyle = '#ce93d8';
+            ctx.font = 'bold 14px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('Attention Heatmap: English → French', w / 2, 25);
+
+            const srcTokens = ['the', 'cat', 'sat', 'down'];
+            const tgtTokens = ['le', 'chat', 's\'est', 'assis'];
+            const cellSize = 60;
+            const startX = 100;
+            const startY = 80;
+
+            const attention = [];
+            for (let i = 0; i < tgtTokens.length; i++) {
+                attention[i] = [];
+                for (let j = 0; j < srcTokens.length; j++) {
+                    attention[i][j] = Math.random();
+                }
+                const sum = attention[i].reduce((a, b) => a + b, 0);
+                for (let j = 0; j < srcTokens.length; j++) {
+                    attention[i][j] /= sum;
+                }
+            }
+
+            for (let j = 0; j < srcTokens.length; j++) {
+                ctx.fillStyle = '#a0a0a0';
+                ctx.font = '11px Inter';
+                ctx.textAlign = 'center';
+                ctx.fillText(srcTokens[j], startX + j * cellSize + cellSize / 2, startY - 10);
+            }
+
+            for (let i = 0; i < tgtTokens.length; i++) {
+                ctx.fillStyle = '#a0a0a0';
+                ctx.font = '11px Inter';
+                ctx.textAlign = 'right';
+                ctx.fillText(tgtTokens[i], startX - 10, startY + i * cellSize + cellSize / 2 + 4);
+
+                for (let j = 0; j < srcTokens.length; j++) {
+                    const val = attention[i][j];
+                    const hue = 240 - val * 60;
+                    const saturation = Math.min(100, val * 200);
+                    ctx.fillStyle = `hsla(${hue}, ${saturation}%, 50%, ${val * 0.8})`;
+                    ctx.fillRect(startX + j * cellSize, startY + i * cellSize, cellSize - 2, cellSize - 2);
+
+                    ctx.fillStyle = '#e0e0e0';
+                    ctx.font = '10px Inter';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(val.toFixed(2), startX + j * cellSize + cellSize / 2, startY + i * cellSize + cellSize / 2 + 3);
+                }
+            }
+
+            ctx.fillStyle = '#a0a0a0';
+            ctx.font = '11px Inter';
+            ctx.textAlign = 'left';
+            ctx.fillText('Darker = higher attention weight', startX, startY + srcTokens.length * cellSize + 30);
+        }
+
+        function drawVisualAttention() {
+            const canvas = document.getElementById('visualAttentionCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+
+            ctx.fillStyle = '#1a1a24';
+            ctx.fillRect(0, 0, w, h);
+
+            ctx.fillStyle = '#ce93d8';
+            ctx.font = 'bold 14px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('Visual Attention for Image Captioning', w / 2, 25);
+
+            const gridSize = 4;
+            const cellW = 80;
+            const cellH = 60;
+            const imgX = 50;
+            const imgY = 60;
+
+            const attn = [];
+            for (let i = 0; i < gridSize; i++) {
+                attn[i] = [];
+                for (let j = 0; j < gridSize; j++) {
+                    attn[i][j] = Math.random();
+                }
+            }
+
+            const sum = attn.flat().reduce((a, b) => a + b);
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    attn[i][j] /= sum;
+                }
+            }
+
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    const val = attn[i][j];
+                    const hue = 0 + val * 60;
+                    const saturation = Math.min(100, val * 300);
+                    ctx.fillStyle = `hsla(${hue}, ${saturation}%, 50%, ${val * 0.9})`;
+                    ctx.fillRect(imgX + j * cellW, imgY + i * cellH, cellW - 1, cellH - 1);
+
+                    ctx.strokeStyle = '#707080';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(imgX + j * cellW, imgY + i * cellH, cellW - 1, cellH - 1);
+                }
+            }
+
+            ctx.fillStyle = '#a0a0a0';
+            ctx.font = '12px Inter';
+            ctx.textAlign = 'left';
+            ctx.fillText('Attending when predicting "cat"', imgX, imgY + gridSize * cellH + 20);
+        }
+
+        function generateText() {
+            const seed = document.getElementById('seedText').value || 'The ';
+            const samples = [' king sat upon his throne.', ' dream was interrupted by a knock.', ' night was dark and full of whispers.', ' moment felt eternal.'];
+            const generated = seed + samples[Math.floor(Math.random() * samples.length)];
+            document.getElementById('generatedText').textContent = generated;
+        }
+
+        document.getElementById('tempSlider').addEventListener('input', (e) => {
+            document.getElementById('tempValue').textContent = e.target.value;
+        });
+
+        function classifySentiment() {
+            const input = document.getElementById('sentimentInput').value.toLowerCase();
+            const posWords = ['good', 'great', 'excellent', 'amazing', 'love', 'fantastic', 'wonderful', 'brilliant'];
+            const negWords = ['bad', 'terrible', 'awful', 'hate', 'horrible', 'worst', 'disappointing', 'poor'];
+
+            let posCount = 0, negCount = 0;
+            for (const word of posWords) if (input.includes(word)) posCount++;
+            for (const word of negWords) if (input.includes(word)) negCount++;
+
+            let sentiment = 'Neutral', confidence = 0;
+            if (posCount > negCount) { sentiment = 'Positive'; confidence = Math.min(0.99, 0.5 + posCount * 0.15); }
+            else if (negCount > posCount) { sentiment = 'Negative'; confidence = Math.min(0.99, 0.5 + negCount * 0.15); }
+            else { confidence = 0.5; }
+
+            const result = `Sentiment: ${sentiment}\nConfidence: ${(confidence * 100).toFixed(1)}%\nPositive: ${posCount}\nNegative: ${negCount}`;
+            document.getElementById('sentimentOutput').textContent = result;
+        }
+
+        function computeSoftmax() {
+            const input = document.getElementById('scoresInput').value;
+            const scores = input.split(',').map(x => parseFloat(x.trim()));
+
+            if (scores.some(isNaN)) {
+                document.getElementById('softmaxOutput').textContent = 'Invalid input. Enter comma-separated numbers.';
+                return;
+            }
+
+            const max = Math.max(...scores);
+            const shifted = scores.map(x => x - max);
+            const exps = shifted.map(x => Math.exp(x));
+            const sum = exps.reduce((a, b) => a + b);
+            const softmax = exps.map(x => x / sum);
+
+            let output = 'Input scores:\n';
+            output += scores.map((s, i) => `  s[${i}] = ${s.toFixed(3)}`).join('\n');
+            output += '\n\nExponentials:\n';
+            output += exps.map((e, i) => `  exp(s[${i}]) = ${e.toFixed(4)}`).join('\n');
+            output += '\n\nSoftmax weights:\n';
+            output += softmax.map((p, i) => `  σ[${i}] = ${p.toFixed(4)}`).join('\n');
+
+            document.getElementById('softmaxOutput').textContent = output;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try { initializeAllCanvases(); } catch (e) { console.error('Canvas error:', e); }
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left:'$$',right:'$$',display:true},
+                    {left:'\\[',right:'\\]',display:true},
+                    {left:'$',right:'$',display:false},
+                    {left:'\\(',right:'\\)',display:false}
+                ],
+                throwOnError: false
+            });
+        });
+    </script>
+</body>
+</html>

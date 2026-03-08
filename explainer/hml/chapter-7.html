@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 7: Dimensionality Reduction | Interactive ML Explainer</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a24;
+            --accent-blue: #4fc3f7;
+            --accent-green: #66bb6a;
+            --accent-red: #ef5350;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --text-tertiary: #707080;
+            --border-color: #2a2a35;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-green));
+            z-index: 1000;
+            transition: width 0.3s ease;
+        }
+
+        /* Header */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 70px;
+            background: rgba(10, 10, 15, 0.95);
+            border-bottom: 1px solid var(--border-color);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            padding: 0 40px;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .header-left h1 {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .header-left .chapter-badge {
+            display: inline-block;
+            background: var(--accent-blue);
+            color: #000;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 12px;
+        }
+
+        .header-right a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            margin-left: 30px;
+            transition: color 0.3s ease;
+        }
+
+        .header-right a:hover {
+            color: var(--accent-blue);
+        }
+
+        /* Main Content */
+        main {
+            margin-top: 70px;
+            padding: 0;
+        }
+
+        section {
+            padding: 80px 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        section:last-of-type {
+            border-bottom: none;
+        }
+
+        h2 {
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 30px;
+            color: var(--text-primary);
+        }
+
+        h3 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            margin-top: 40px;
+            color: var(--text-primary);
+        }
+
+        h4 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            color: var(--text-primary);
+        }
+
+        p {
+            font-size: 16px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            line-height: 1.8;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, rgba(79, 195, 247, 0.1), rgba(102, 187, 106, 0.1));
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 60px;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .hero h2 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 18px;
+            color: var(--text-secondary);
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 24px;
+            transition: border-color 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--accent-blue);
+        }
+
+        .card h4 {
+            color: var(--accent-blue);
+            margin-top: 0;
+        }
+
+        /* Canvas Container */
+        .canvas-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            margin: 30px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        canvas {
+            border: 1px solid var(--border-color);
+            background: white;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+
+        /* Interactive Controls */
+        .controls {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .slider-control {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .slider-control label {
+            color: var(--text-secondary);
+            font-weight: 500;
+            min-width: 150px;
+        }
+
+        input[type="range"] {
+            width: 200px;
+            cursor: pointer;
+        }
+
+        .slider-value {
+            color: var(--accent-blue);
+            font-weight: 600;
+            min-width: 50px;
+        }
+
+        button {
+            background: var(--accent-blue);
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        button:hover {
+            background: #2196F3;
+        }
+
+        /* Code Blocks */
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-tertiary);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: var(--accent-green);
+            font-size: 14px;
+        }
+
+        pre {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: var(--text-primary);
+        }
+
+        /* Math Rendering */
+        .katex {
+            color: var(--text-primary);
+        }
+
+        /* Comparison Grid */
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 30px 0;
+        }
+
+        @media (max-width: 768px) {
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .comparison-box {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+        }
+
+        .comparison-box h4 {
+            color: var(--accent-blue);
+            margin-top: 0;
+        }
+
+        /* Method Cards */
+        .method-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .method-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .method-card:hover {
+            border-color: var(--accent-blue);
+            background: var(--bg-tertiary);
+        }
+
+        .method-card h4 {
+            color: var(--accent-blue);
+            margin-top: 0;
+        }
+
+        .method-card .pros, .method-card .cons {
+            margin: 15px 0;
+        }
+
+        .method-card .pros h5, .method-card .cons h5 {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-tertiary);
+            margin-bottom: 8px;
+        }
+
+        .method-card ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .method-card li {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        /* War Room */
+        .war-room {
+            background: linear-gradient(135deg, rgba(239, 83, 80, 0.1), rgba(79, 195, 247, 0.1));
+            border: 2px solid var(--accent-red);
+            border-radius: 12px;
+            padding: 40px;
+            margin: 40px 0;
+        }
+
+        .war-room h3 {
+            color: var(--accent-red);
+        }
+
+        .scenario {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            font-style: italic;
+            color: var(--text-secondary);
+        }
+
+        .questions {
+            list-style: none;
+            padding: 0;
+            margin: 20px 0;
+        }
+
+        .questions li {
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        .questions li:last-child {
+            border-bottom: none;
+        }
+
+        .questions li:before {
+            content: "Q: ";
+            color: var(--accent-blue);
+            font-weight: 600;
+            margin-right: 8px;
+        }
+
+        /* Footer Navigation */
+        .footer-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: 30px 40px;
+            margin-top: 80px;
+        }
+
+        .nav-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-link:hover {
+            color: var(--accent-blue);
+        }
+
+        .nav-link.disabled {
+            color: var(--text-tertiary);
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .nav-arrow {
+            font-size: 20px;
+        }
+
+        /* Callout Boxes */
+        .callout {
+            background: var(--bg-secondary);
+            border-left: 4px solid var(--accent-blue);
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .callout.warning {
+            border-left-color: var(--accent-red);
+        }
+
+        .callout.success {
+            border-left-color: var(--accent-green);
+        }
+
+        .callout-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+
+        .callout p {
+            margin: 0;
+            font-size: 14px;
+        }
+
+        /* Equation Box */
+        .equation-box {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 25px;
+            margin: 25px 0;
+            text-align: center;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header {
+                padding: 0 20px;
+            }
+
+            section {
+                padding: 60px 20px;
+            }
+
+            h2 {
+                font-size: 32px;
+            }
+
+            h3 {
+                font-size: 22px;
+            }
+
+            .hero {
+                padding: 40px 20px;
+            }
+
+            .footer-nav {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-bar" id="progressBar"></div>
+
+    <header>
+        <div class="header-content">
+            <div class="header-left">
+                <span class="chapter-badge">Chapter 7</span>
+                <h1>Dimensionality Reduction</h1>
+            </div>
+            <div class="header-right">
+                <a href="ml-explainer-dashboard.html">Dashboard</a>
+                <a href="chapter-6.html">Previous</a>
+                <a href="chapter-8.html">Next</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero Section: Feynman Mental Model -->
+        <section id="feynman">
+            <div class="hero">
+                <h2>The Curse of Dimensionality</h2>
+                <p>
+                    High-dimensional data is surprisingly sparse. A 1000-dimensional hypercube has most volume near its edges.
+                    Dimensionality reduction compresses data while preserving its essential structure—like a shadow that
+                    captures the shape of a 3D object.
+                </p>
+            </div>
+            <p>
+                Imagine you have a photograph of a sculpture. The 2D image captures the essential form in far fewer dimensions
+                than the full 3D object. Similarly, your dataset might have thousands of features, but most of the meaningful
+                variation may lie along just a few principal directions. Dimensionality reduction finds those directions.
+            </p>
+        </section>
+
+        <!-- The Curse of Dimensionality -->
+        <section id="curse">
+            <h2>The Curse of Dimensionality</h2>
+            <p>
+                As the number of dimensions increases, the data becomes increasingly sparse. Consider a unit hypercube:
+                in 1D, random points are tightly packed. In 100D, almost all points are near the surface, far from each other.
+                This sparsity makes learning harder and requires exponentially more training data.
+            </p>
+
+            <div class="canvas-container">
+                <h3>Interactive: Distance in High Dimensions</h3>
+                <p>Drag the slider to see how average distances between random points increase with dimensionality.</p>
+                <div class="controls">
+                    <div class="slider-control">
+                        <label for="dimSlider">Dimensions:</label>
+                        <input type="range" id="dimSlider" min="1" max="100" value="2">
+                        <span class="slider-value" id="dimValue">2</span>
+                    </div>
+                </div>
+                <canvas id="curseCanvas" width="600" height="400"></canvas>
+                <p id="curseInfo" style="margin-top: 15px; text-align: center; color: var(--text-secondary);">
+                    Average distance between random points: <strong style="color: var(--accent-blue);">0.58</strong>
+                </p>
+            </div>
+
+            <div class="callout">
+                <div class="callout-title">Key Insight</div>
+                <p>
+                    To maintain the same data density, the amount of training data needed grows exponentially with the
+                    number of features. This is why dimensionality reduction is crucial for high-dimensional datasets.
+                </p>
+            </div>
+        </section>
+
+        <!-- Approaches Overview -->
+        <section id="approaches">
+            <h2>Approaches to Dimensionality Reduction</h2>
+
+            <h3>1. Projection</h3>
+            <p>
+                Project high-dimensional data onto a lower-dimensional subspace. For instance, a 3D point cloud might be
+                projected onto a 2D plane that captures the main variance.
+            </p>
+
+            <h3>2. Manifold Learning</h3>
+            <p>
+                Many datasets lie on or near a low-dimensional manifold (curved surface) embedded in high-dimensional space.
+                Manifold learning techniques "unroll" this surface to reveal the underlying structure. A classic example is
+                the Swiss Roll: it appears to occupy 3D space, but it's actually a 2D sheet rolled up.
+            </p>
+
+            <div class="comparison-grid">
+                <div class="comparison-box">
+                    <h4>Projection vs Manifold</h4>
+                    <p><strong>Projection</strong> works well when data variation is truly low-rank. Simple and fast.</p>
+                    <p><strong>Manifold Learning</strong> excels when data lies on curved structures. More complex, slower.</p>
+                </div>
+                <div class="comparison-box">
+                    <h4>Linear vs Nonlinear</h4>
+                    <p><strong>Linear (e.g., PCA)</strong>: Fast, interpretable, assumes flat structure.</p>
+                    <p><strong>Nonlinear (e.g., Kernel PCA)</strong>: Captures curves, slower, less interpretable.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- PCA: Principal Component Analysis -->
+        <section id="pca">
+            <h2>PCA — Principal Component Analysis</h2>
+
+            <h3>The Intuition</h3>
+            <p>
+                Find the axis with maximum variance—that's your first principal component (PC1). Then find the orthogonal
+                direction with the next most variance—that's PC2. Continue until you've explained enough variance.
+            </p>
+
+            <h3>Mathematical Foundation</h3>
+            <div class="equation-box">
+                <p style="margin: 0; font-size: 14px; color: var(--text-secondary); margin-bottom: 15px;">Singular Value Decomposition:</p>
+                $$\mathbf{X} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^T$$
+                <p style="margin: 0; font-size: 14px; color: var(--text-secondary); margin-top: 15px;">
+                    Where $$\mathbf{U}$$ and $$\mathbf{V}^T$$ are orthogonal, $$\boldsymbol{\Sigma}$$ contains singular values.
+                </p>
+            </div>
+
+            <div class="equation-box">
+                <p style="margin: 0; font-size: 14px; color: var(--text-secondary); margin-bottom: 15px;">Projection onto reduced space:</p>
+                $$\mathbf{X}_{d\text{-proj}} = \mathbf{X}\mathbf{W}_d$$
+                <p style="margin: 0; font-size: 14px; color: var(--text-secondary); margin-top: 15px;">
+                    Where $$\mathbf{W}_d$$ contains the first $$d$$ principal component vectors.
+                </p>
+            </div>
+
+            <h3>Interactive PCA Visualization</h3>
+            <div class="canvas-container">
+                <p>2D data cloud with principal component axes. The longer axis shows PC1 (max variance).</p>
+                <canvas id="pcaCanvas" width="600" height="500"></canvas>
+                <div class="controls">
+                    <div class="slider-control">
+                        <label for="pcaVariance">Variance to preserve:</label>
+                        <input type="range" id="pcaVariance" min="0.5" max="0.99" step="0.01" value="0.95">
+                        <span class="slider-value" id="pcaVarianceValue">95%</span>
+                    </div>
+                </div>
+            </div>
+
+            <h3>Explained Variance Ratio</h3>
+            <p>
+                Not all principal components are equally important. The explained variance ratio tells you what fraction
+                of total variance each component captures. A common rule: keep enough components to explain 95% of variance.
+            </p>
+
+            <div class="canvas-container">
+                <canvas id="varianceCanvas" width="600" height="400"></canvas>
+                <p style="text-align: center; color: var(--text-secondary);">
+                    The curve shows cumulative variance explained as you add more components.
+                </p>
+            </div>
+
+            <h3>Choosing the Number of Components</h3>
+            <pre><code>from sklearn.decomposition import PCA
+
+# Keep 95% of variance
+pca = PCA(n_components=0.95)
+X_reduced = pca.fit_transform(X_train)
+
+# Check variance captured
+print(f"Components needed: {pca.n_components_}")
+print(f"Variance ratio: {pca.explained_variance_ratio_}")
+print(f"Cumulative variance: {pca.explained_variance_ratio_.cumsum()}")</code></pre>
+        </section>
+
+        <!-- Kernel PCA -->
+        <section id="kernel-pca">
+            <h2>Kernel PCA — Nonlinear Dimensionality Reduction</h2>
+
+            <p>
+                Standard PCA is linear, so it fails on curved manifolds. Kernel PCA applies the kernel trick (like in SVMs)
+                to capture nonlinear structures. The RBF kernel is common:
+            </p>
+
+            <div class="equation-box">
+                $$K(\mathbf{a}, \mathbf{b}) = \exp(-\gamma\|\mathbf{a}-\mathbf{b}\|^2)$$
+            </div>
+
+            <p>
+                This kernel measures similarity: nearby points have high similarity, distant points have low similarity.
+                The parameter $$\gamma$$ controls the kernel's "reach."
+            </p>
+
+            <h3>Implementation</h3>
+            <pre><code>from sklearn.decomposition import KernelPCA
+
+# RBF kernel with gamma=0.04
+rbf_pca = KernelPCA(n_components=2, kernel="rbf", gamma=0.04)
+X_reduced = rbf_pca.fit_transform(X_train)
+
+# For new data, use fit_transform or transform
+# X_test_reduced = rbf_pca.transform(X_test)</code></pre>
+
+            <div class="callout warning">
+                <div class="callout-title">Important</div>
+                <p>
+                    Kernel PCA cannot transform new data with a simple matrix multiplication. You must refit or use
+                    approximations. For prediction on new data, fit on all training data or use preprocessing.
+                </p>
+            </div>
+        </section>
+
+        <!-- LLE: Locally Linear Embedding -->
+        <section id="lle">
+            <h2>LLE — Locally Linear Embedding</h2>
+
+            <p>
+                LLE is a manifold learning technique that preserves local structure. It assumes each point is a linear
+                combination of its k nearest neighbors, and finds low-dimensional coordinates that maintain these relationships.
+            </p>
+
+            <h3>Algorithm Steps</h3>
+            <ol style="color: var(--text-secondary); margin: 20px 0 20px 20px;">
+                <li>Find k nearest neighbors for each point</li>
+                <li>Express each point as a weighted combination of neighbors</li>
+                <li>Find low-dimensional coordinates preserving these weights</li>
+            </ol>
+
+            <h3>When to Use LLE</h3>
+            <div class="callout success">
+                <div class="callout-title">Best For</div>
+                <p>
+                    Datasets with clear local structure (e.g., manifolds). Poor for data with global structure importance.
+                    Sensitive to the neighborhood size k.
+                </p>
+            </div>
+
+            <pre><code>from sklearn.manifold import LocallyLinearEmbedding
+
+lle = LocallyLinearEmbedding(n_components=2, n_neighbors=10)
+X_reduced = lle.fit_transform(X_train)</code></pre>
+        </section>
+
+        <!-- Other Techniques -->
+        <section id="other-techniques">
+            <h2>Other Dimensionality Reduction Techniques</h2>
+
+            <div class="method-grid">
+                <div class="method-card">
+                    <h4>MDS (Multidimensional Scaling)</h4>
+                    <p>Preserves pairwise distances. Useful for visualizing similarity.</p>
+                    <div class="pros">
+                        <h5>Strengths</h5>
+                        <ul>
+                            <li>Intuitive: preserves distances</li>
+                            <li>Works with any distance metric</li>
+                        </ul>
+                    </div>
+                    <div class="cons">
+                        <h5>Weaknesses</h5>
+                        <ul>
+                            <li>Slow: O(n³) complexity</li>
+                            <li>No transform for new data</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="method-card">
+                    <h4>Isomap</h4>
+                    <p>Extends MDS by using geodesic distances along the manifold.</p>
+                    <div class="pros">
+                        <h5>Strengths</h5>
+                        <ul>
+                            <li>Captures manifold structure</li>
+                            <li>Better than Euclidean MDS for curves</li>
+                        </ul>
+                    </div>
+                    <div class="cons">
+                        <h5>Weaknesses</h5>
+                        <ul>
+                            <li>Slow: O(n³)</li>
+                            <li>Sensitive to noise</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="method-card">
+                    <h4>t-SNE</h4>
+                    <p>Converts similarities to probabilities. Excellent for visualization.</p>
+                    <div class="pros">
+                        <h5>Strengths</h5>
+                        <ul>
+                            <li>Beautiful visualizations</li>
+                            <li>Reveals cluster structure</li>
+                        </ul>
+                    </div>
+                    <div class="cons">
+                        <h5>Weaknesses</h5>
+                        <ul>
+                            <li>Not for new data (no transform)</li>
+                            <li>Non-deterministic, slow</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="method-card">
+                    <h4>UMAP</h4>
+                    <p>Similar to t-SNE but faster, preserves more global structure.</p>
+                    <div class="pros">
+                        <h5>Strengths</h5>
+                        <ul>
+                            <li>Fast and scalable</li>
+                            <li>Can transform new data</li>
+                        </ul>
+                    </div>
+                    <div class="cons">
+                        <h5>Weaknesses</h5>
+                        <ul>
+                            <li>Less well-understood theoretically</li>
+                            <li>Many hyperparameters</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <h3>Comparison Table</h3>
+            <div class="card" style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                    <thead style="border-bottom: 2px solid var(--border-color);">
+                        <tr style="color: var(--accent-blue);">
+                            <th style="text-align: left; padding: 12px; font-weight: 600;">Method</th>
+                            <th style="text-align: center; padding: 12px; font-weight: 600;">Linear?</th>
+                            <th style="text-align: center; padding: 12px; font-weight: 600;">Speed</th>
+                            <th style="text-align: center; padding: 12px; font-weight: 600;">Transform New?</th>
+                            <th style="text-align: center; padding: 12px; font-weight: 600;">Best Use</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                            <td style="padding: 12px;">PCA</td>
+                            <td style="text-align: center;">Yes</td>
+                            <td style="text-align: center;">Very Fast</td>
+                            <td style="text-align: center;">Yes</td>
+                            <td style="text-align: center;">General purpose</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                            <td style="padding: 12px;">Kernel PCA</td>
+                            <td style="text-align: center;">No</td>
+                            <td style="text-align: center;">Medium</td>
+                            <td style="text-align: center;">Difficult</td>
+                            <td style="text-align: center;">Curved manifolds</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                            <td style="padding: 12px;">LLE</td>
+                            <td style="text-align: center;">No</td>
+                            <td style="text-align: center;">Slow</td>
+                            <td style="text-align: center;">No</td>
+                            <td style="text-align: center;">Local structure</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                            <td style="padding: 12px;">t-SNE</td>
+                            <td style="text-align: center;">No</td>
+                            <td style="text-align: center;">Slow</td>
+                            <td style="text-align: center;">No</td>
+                            <td style="text-align: center;">Visualization only</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 12px;">UMAP</td>
+                            <td style="text-align: center;">No</td>
+                            <td style="text-align: center;">Fast</td>
+                            <td style="text-align: center;">Yes</td>
+                            <td style="text-align: center;">Visualization + embedding</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Production Code -->
+        <section id="production">
+            <h2>Production Code: Dimensionality Reduction Pipelines</h2>
+
+            <h3>Incremental PCA for Large Datasets</h3>
+            <p>
+                When data doesn't fit in memory, use IncrementalPCA. Process data in batches and accumulate statistics.
+            </p>
+
+            <pre><code>from sklearn.decomposition import IncrementalPCA
+import numpy as np
+
+# For a dataset with 1M samples, 50K features
+n_batches = 100
+inc_pca = IncrementalPCA(n_components=154)
+
+for X_batch in np.array_split(X_train, n_batches):
+    inc_pca.partial_fit(X_batch)
+
+X_reduced = inc_pca.transform(X_train)
+print(f"Explained variance: {inc_pca.explained_variance_ratio_.sum():.3f}")</code></pre>
+
+            <h3>Pipeline with Preprocessing</h3>
+            <pre><code>from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+
+# Create pipeline: scale, then reduce
+pipeline = Pipeline([
+    ('scaler', StandardScaler()),
+    ('pca', PCA(n_components=0.95))
+])
+
+X_train_reduced = pipeline.fit_transform(X_train)
+X_test_reduced = pipeline.transform(X_test)
+
+# Check dimensions
+print(f"Original shape: {X_train.shape}")
+print(f"Reduced shape: {X_train_reduced.shape}")
+print(f"Components: {pipeline['pca'].n_components_}")</code></pre>
+
+            <h3>Complete Example: Anomaly Detection</h3>
+            <pre><code>from sklearn.decomposition import PCA
+from sklearn.ensemble import IsolationForest
+
+# Reduce dimensionality
+pca = PCA(n_components=0.95)
+X_reduced = pca.fit_transform(X_train)
+
+# Detect anomalies in reduced space
+isolator = IsolationForest(contamination=0.05, random_state=42)
+anomaly_labels = isolator.fit_predict(X_reduced)
+
+# Reconstruct to original space
+X_reconstructed = pca.inverse_transform(X_reduced)
+
+# Calculate reconstruction error
+reconstruction_error = np.linalg.norm(X_train - X_reconstructed, axis=1)
+threshold = np.percentile(reconstruction_error, 95)
+
+anomalies = reconstruction_error > threshold
+print(f"Found {anomalies.sum()} anomalies")</code></pre>
+        </section>
+
+        <!-- War Room / Socratic Sandbox -->
+        <section id="war-room">
+            <div class="war-room">
+                <h3>War Room: Dimensionality Reduction in Practice</h3>
+
+                <div class="scenario">
+                    Your image classification model trains on 10,000 images with 50,000 features each (after feature extraction).
+                    Training takes 8 hours and achieves 72% accuracy. You want faster training and possibly better accuracy.
+                    How do you apply dimensionality reduction?
+                </div>
+
+                <ul class="questions">
+                    <li>Should you use PCA or a manifold learning technique like Isomap?</li>
+                    <li>How many components should you keep? 95% variance? 99%?</li>
+                    <li>Will reducing dimensions improve accuracy, or just speed?</li>
+                    <li>When does dimensionality reduction hurt model performance?</li>
+                    <li>What if important class-separating information lies in the discarded dimensions?</li>
+                    <li>How would you measure the trade-off between compression and performance?</li>
+                </ul>
+
+                <h4 style="margin-top: 30px;">Discussion Points</h4>
+                <div class="card">
+                    <p>
+                        <strong>PCA vs Manifold Learning:</strong> PCA is fast and works well if the data's variance is
+                        mostly in a low-rank subspace. Manifold learning captures curved structure but is slower. Start
+                        with PCA—it's often sufficient and interpretable.
+                    </p>
+                </div>
+                <div class="card">
+                    <p>
+                        <strong>Variance Threshold:</strong> 95% is a rule of thumb, but context matters. For image data,
+                        you might need 99%. For noisy data, 90% might suffice. Cross-validate to find the sweet spot.
+                    </p>
+                </div>
+                <div class="card">
+                    <p>
+                        <strong>Accuracy Trade-off:</strong> Dimensionality reduction typically trades some accuracy for
+                        speed and reduced overfitting. Paradoxically, removing noise (via reduction) can improve accuracy
+                        on test data despite lower training accuracy.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer Navigation -->
+        <section style="padding: 0; border: none;">
+            <div class="footer-nav">
+                <a href="chapter-6.html" class="nav-link">
+                    <span class="nav-arrow">←</span> Previous: Unsupervised Learning
+                </a>
+                <a href="ml-explainer-dashboard.html" class="nav-link">
+                    Home
+                </a>
+                <a href="chapter-8.html" class="nav-link">
+                    Next: Ensemble Methods <span class="nav-arrow">→</span>
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Progress bar
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.scrollY;
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const scrollPercent = (scrollTop / docHeight) * 100;
+            document.getElementById('progressBar').style.width = scrollPercent + '%';
+        });
+
+        // Dimension slider and curse canvas
+        const dimSlider = document.getElementById('dimSlider');
+        const dimValue = document.getElementById('dimValue');
+        const curseCanvas = document.getElementById('curseCanvas');
+        const ctx = curseCanvas.getContext('2d');
+
+        function calculateAverageDistance(dim, samples = 100) {
+            let totalDist = 0;
+            for (let i = 0; i < samples; i++) {
+                const p1 = Array.from({length: dim}, () => Math.random());
+                const p2 = Array.from({length: dim}, () => Math.random());
+                const dist = Math.sqrt(p1.reduce((sum, v, j) => sum + (v - p2[j]) ** 2, 0));
+                totalDist += dist;
+            }
+            return totalDist / samples;
+        }
+
+        function drawCurseChart(dims) {
+            ctx.clearRect(0, 0, curseCanvas.width, curseCanvas.height);
+            ctx.fillStyle = 'rgba(241, 241, 241, 0.05)';
+            ctx.fillRect(0, 0, curseCanvas.width, curseCanvas.height);
+
+            const maxDims = 100;
+            const padding = 50;
+            const graphWidth = curseCanvas.width - 2 * padding;
+            const graphHeight = curseCanvas.height - 2 * padding;
+
+            // Draw axes
+            ctx.strokeStyle = '#707080';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(padding, curseCanvas.height - padding);
+            ctx.lineTo(curseCanvas.width - padding, curseCanvas.height - padding);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, curseCanvas.height - padding);
+            ctx.stroke();
+
+            // Draw grid and labels
+            ctx.fillStyle = '#707080';
+            ctx.font = '12px Inter';
+            ctx.textAlign = 'center';
+
+            for (let i = 0; i <= 10; i++) {
+                const x = padding + (graphWidth / 10) * i;
+                ctx.fillText((i * 10).toString(), x, curseCanvas.height - padding + 20);
+            }
+
+            ctx.textAlign = 'right';
+            for (let i = 0; i <= 4; i++) {
+                const y = curseCanvas.height - padding - (graphHeight / 4) * i;
+                ctx.fillText((i * 0.5).toFixed(1), padding - 10, y + 4);
+            }
+
+            // Draw axis labels
+            ctx.fillStyle = '#a0a0a0';
+            ctx.font = '14px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('Dimensions', curseCanvas.width / 2, curseCanvas.height - 10);
+
+            ctx.save();
+            ctx.translate(15, curseCanvas.height / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText('Avg Distance', 0, 0);
+            ctx.restore();
+
+            // Draw curve
+            ctx.strokeStyle = '#4fc3f7';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+
+            for (let d = 1; d <= 100; d++) {
+                const avgDist = calculateAverageDistance(d, 50);
+                const x = padding + (graphWidth / 100) * d;
+                const y = curseCanvas.height - padding - (avgDist / 1.2) * graphHeight;
+
+                if (d === 1) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+
+            // Draw current point
+            const currentDist = calculateAverageDistance(dims, 50);
+            const currentX = padding + (graphWidth / 100) * dims;
+            const currentY = curseCanvas.height - padding - (currentDist / 1.2) * graphHeight;
+
+            ctx.fillStyle = '#ef5350';
+            ctx.beginPath();
+            ctx.arc(currentX, currentY, 6, 0, 2 * Math.PI);
+            ctx.fill();
+
+            // Update info text
+            document.getElementById('curseInfo').innerHTML =
+                `Average distance between random points: <strong style="color: var(--accent-blue);">${currentDist.toFixed(3)}</strong>`;
+        }
+
+        dimSlider.addEventListener('input', (e) => {
+            dimValue.textContent = e.target.value;
+            drawCurseChart(parseInt(e.target.value));
+        });
+
+        // Initial draw
+        drawCurseChart(2);
+
+        // PCA Canvas
+        const pcaCanvas = document.getElementById('pcaCanvas');
+        const pcaCtx = pcaCanvas.getContext('2d');
+        const pcaVarianceSlider = document.getElementById('pcaVariance');
+        const pcaVarianceValue = document.getElementById('pcaVarianceValue');
+
+        function generateGaussian2D(n = 300) {
+            const data = [];
+            for (let i = 0; i < n; i++) {
+                const angle = Math.random() * 2 * Math.PI;
+                const radius = Math.sqrt(Math.random()) * 150;
+                data.push({
+                    x: radius * Math.cos(angle + 0.3) + 250,
+                    y: radius * Math.sin(angle + 0.3) * 0.6 + 250
+                });
+            }
+            return data;
+        }
+
+        function drawPCAChart() {
+            pcaCtx.clearRect(0, 0, pcaCanvas.width, pcaCanvas.height);
+            pcaCtx.fillStyle = 'rgba(241, 241, 241, 0.02)';
+            pcaCtx.fillRect(0, 0, pcaCanvas.width, pcaCanvas.height);
+
+            const data = generateGaussian2D(300);
+
+            // Draw points
+            pcaCtx.fillStyle = '#4fc3f7';
+            data.forEach(p => {
+                pcaCtx.beginPath();
+                pcaCtx.arc(p.x, p.y, 3, 0, 2 * Math.PI);
+                pcaCtx.fill();
+            });
+
+            // Calculate mean
+            const meanX = data.reduce((s, p) => s + p.x, 0) / data.length;
+            const meanY = data.reduce((s, p) => s + p.y, 0) / data.length;
+
+            // Draw mean
+            pcaCtx.fillStyle = '#ef5350';
+            pcaCtx.beginPath();
+            pcaCtx.arc(meanX, meanY, 6, 0, 2 * Math.PI);
+            pcaCtx.fill();
+
+            // Draw PC1 (longest axis)
+            pcaCtx.strokeStyle = '#66bb6a';
+            pcaCtx.lineWidth = 3;
+            pcaCtx.beginPath();
+            pcaCtx.moveTo(meanX - 80, meanY - 60);
+            pcaCtx.lineTo(meanX + 80, meanY + 60);
+            ctx.stroke();
+
+            // Draw PC2 (perpendicular)
+            pcaCtx.strokeStyle = '#ffd54f';
+            pcaCtx.lineWidth = 2;
+            pcaCtx.setLineDash([5, 5]);
+            pcaCtx.beginPath();
+            pcaCtx.moveTo(meanX - 50, meanY + 65);
+            pcaCtx.lineTo(meanX + 50, meanY - 65);
+            pcaCtx.stroke();
+            pcaCtx.setLineDash([]);
+
+            // Legend
+            pcaCtx.fillStyle = '#a0a0a0';
+            pcaCtx.font = '12px Inter';
+            pcaCtx.fillText('● PC1 (max variance)', 20, 30);
+            pcaCtx.fillText('● PC2 (next variance)', 20, 50);
+        }
+
+        drawPCAChart();
+        pcaVarianceSlider.addEventListener('input', (e) => {
+            pcaVarianceValue.textContent = Math.round(parseFloat(e.target.value) * 100) + '%';
+            drawPCAChart();
+        });
+
+        // Variance explained canvas
+        const varianceCanvas = document.getElementById('varianceCanvas');
+        const varCtx = varianceCanvas.getContext('2d');
+
+        function drawVarianceChart() {
+            varCtx.clearRect(0, 0, varianceCanvas.width, varianceCanvas.height);
+            varCtx.fillStyle = 'rgba(241, 241, 241, 0.02)';
+            varCtx.fillRect(0, 0, varianceCanvas.width, varianceCanvas.height);
+
+            const padding = 40;
+            const graphWidth = varianceCanvas.width - 2 * padding;
+            const graphHeight = varianceCanvas.height - 2 * padding;
+
+            // Draw axes
+            varCtx.strokeStyle = '#707080';
+            varCtx.lineWidth = 2;
+            varCtx.beginPath();
+            varCtx.moveTo(padding, varianceCanvas.height - padding);
+            varCtx.lineTo(varianceCanvas.width - padding, varianceCanvas.height - padding);
+            varCtx.stroke();
+
+            varCtx.beginPath();
+            varCtx.moveTo(padding, padding);
+            varCtx.lineTo(padding, varianceCanvas.height - padding);
+            varCtx.stroke();
+
+            // Synthetic variance data
+            const variance = [0.45, 0.25, 0.15, 0.08, 0.04, 0.02, 0.01];
+            const cumulative = [];
+            let sum = 0;
+            variance.forEach(v => {
+                sum += v;
+                cumulative.push(sum);
+            });
+
+            // Draw bars
+            varCtx.fillStyle = '#4fc3f7';
+            variance.forEach((v, i) => {
+                const x = padding + (graphWidth / variance.length) * i + 10;
+                const h = (v / variance[0]) * graphHeight;
+                const y = varianceCanvas.height - padding - h;
+                varCtx.fillRect(x, y, graphWidth / variance.length - 20, h);
+            });
+
+            // Draw cumulative line
+            varCtx.strokeStyle = '#66bb6a';
+            varCtx.lineWidth = 3;
+            varCtx.beginPath();
+            cumulative.forEach((c, i) => {
+                const x = padding + (graphWidth / cumulative.length) * i;
+                const y = varianceCanvas.height - padding - c * graphHeight;
+                if (i === 0) {
+                    varCtx.moveTo(x, y);
+                } else {
+                    varCtx.lineTo(x, y);
+                }
+            });
+            varCtx.stroke();
+
+            // 95% threshold line
+            varCtx.strokeStyle = '#ef5350';
+            varCtx.setLineDash([5, 5]);
+            varCtx.beginPath();
+            varCtx.moveTo(padding, varianceCanvas.height - padding - 0.95 * graphHeight);
+            varCtx.lineTo(varianceCanvas.width - padding, varianceCanvas.height - padding - 0.95 * graphHeight);
+            varCtx.stroke();
+            varCtx.setLineDash([]);
+
+            // Labels
+            varCtx.fillStyle = '#a0a0a0';
+            varCtx.font = '12px Inter';
+            varCtx.textAlign = 'center';
+            for (let i = 0; i < variance.length; i++) {
+                varCtx.fillText('PC' + (i + 1), padding + (graphWidth / variance.length) * i, varianceCanvas.height - 15);
+            }
+        }
+
+        drawVarianceChart();
+
+        // KaTeX rendering
+        document.addEventListener('DOMContentLoaded', () => {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '\\[', right: '\\]', display: true},
+                    {left: '$', right: '$', display: false},
+                    {left: '\\(', right: '\\)', display: false}
+                ],
+                throwOnError: false
+            });
+        });
+    </script>
+</body>
+</html>

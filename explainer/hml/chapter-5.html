@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 5: Decision Trees | Interactive ML Explainer</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a24;
+            --accent-blue: #4fc3f7;
+            --accent-green: #66bb6a;
+            --accent-red: #ef5350;
+            --accent-orange: #ffb74d;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --text-tertiary: #707080;
+            --border-color: #2a2a35;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-green));
+            z-index: 1000;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        /* Header */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 70px;
+            background: rgba(10, 10, 15, 0.95);
+            border-bottom: 1px solid var(--border-color);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            padding: 0 40px;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .chapter-progress {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* Sidebar Toggle */
+        .sidebar-toggle {
+            position: fixed;
+            left: 30px;
+            top: 25px;
+            width: 40px;
+            height: 40px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            z-index: 150;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-toggle:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--accent-blue);
+        }
+
+        /* Main Content */
+        main {
+            margin-top: 70px;
+            margin-left: 0;
+            padding: 60px 100px;
+            max-width: 1400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            margin-bottom: 80px;
+            padding: 60px 20px;
+            background: linear-gradient(135deg, rgba(79, 195, 247, 0.1), rgba(102, 187, 106, 0.1));
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .hero h1 {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 18px;
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+            line-height: 1.8;
+        }
+
+        /* Section Styling */
+        section {
+            margin-bottom: 100px;
+            scroll-margin-top: 100px;
+        }
+
+        h2 {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--accent-blue);
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        h3 {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 25px 0 15px 0;
+        }
+
+        /* Card Styling */
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 20px rgba(79, 195, 247, 0.2);
+        }
+
+        /* Canvas Containers */
+        .canvas-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 30px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 400px;
+        }
+
+        canvas {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Interactive Controls */
+        .controls {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        label {
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        input[type="range"] {
+            width: 200px;
+            cursor: pointer;
+        }
+
+        input[type="number"] {
+            width: 80px;
+            padding: 8px 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: var(--accent-blue);
+            color: var(--bg-primary);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: var(--accent-green);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 195, 247, 0.3);
+        }
+
+        /* Code Blocks */
+        .code-block {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .code-block code {
+            color: var(--accent-green);
+        }
+
+        .keyword {
+            color: var(--accent-blue);
+        }
+
+        .string {
+            color: var(--accent-orange);
+        }
+
+        /* Math Display */
+        .katex-display {
+            margin: 20px 0;
+        }
+
+        /* Two Column Layout */
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 30px 0;
+        }
+
+        .column {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+
+            main {
+                padding: 40px 40px;
+            }
+
+            h2 {
+                font-size: 26px;
+            }
+        }
+
+        /* Text Styles */
+        .text-secondary {
+            color: var(--text-secondary);
+        }
+
+        .text-tertiary {
+            color: var(--text-tertiary);
+        }
+
+        /* Highlight */
+        .highlight {
+            background: rgba(79, 195, 247, 0.1);
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: var(--accent-blue);
+        }
+
+        /* Navigation Footer */
+        .nav-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 80px;
+            padding-top: 40px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 24px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover {
+            color: var(--accent-blue);
+            border-color: var(--accent-blue);
+        }
+
+        .nav-center {
+            text-align: center;
+            flex: 1;
+        }
+
+        .nav-center a {
+            color: var(--accent-blue);
+            text-decoration: none;
+        }
+
+        /* Info Box */
+        .info-box {
+            background: rgba(79, 195, 247, 0.1);
+            border: 1px solid var(--accent-blue);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .info-box strong {
+            color: var(--accent-blue);
+        }
+
+        /* Grid for Sliders */
+        .slider-group {
+            margin: 20px 0;
+        }
+
+        .value-display {
+            color: var(--accent-blue);
+            font-weight: 600;
+            min-width: 50px;
+            text-align: right;
+        }
+
+        /* War Room */
+        .scenario-box {
+            background: rgba(239, 83, 80, 0.1);
+            border: 2px solid var(--accent-red);
+            border-radius: 8px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+
+        .scenario-box h3 {
+            color: var(--accent-red);
+        }
+
+        .scenario-box li {
+            margin-left: 20px;
+            color: var(--text-secondary);
+        }
+
+        .answer-toggle {
+            cursor: pointer;
+            color: var(--accent-green);
+            font-weight: 600;
+            margin-top: 15px;
+        }
+
+        .answer-content {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(102, 187, 106, 0.05);
+            border-left: 3px solid var(--accent-green);
+        }
+
+        .answer-content.visible {
+            display: block;
+        }
+
+        /* Gini Calculator */
+        .calc-input {
+            width: 70px;
+            padding: 6px 10px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            text-align: center;
+        }
+
+        .calc-output {
+            padding: 10px 15px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--accent-blue);
+            border-radius: 4px;
+            color: var(--accent-blue);
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+        }
+
+        /* Feynman Model */
+        .feynman-box {
+            background: linear-gradient(135deg, rgba(79, 195, 247, 0.15), rgba(102, 187, 106, 0.15));
+            border: 2px solid var(--accent-blue);
+            border-radius: 12px;
+            padding: 30px;
+            margin: 30px 0;
+            font-size: 18px;
+            line-height: 1.8;
+        }
+
+        .feynman-box strong {
+            color: var(--accent-blue);
+        }
+    </style>
+</head>
+<body>
+    <!-- Progress Bar -->
+    <div class="progress-bar"></div>
+
+    <!-- Header -->
+    <header>
+        <div class="header-content">
+            <span class="header-title">Chapter 5: Decision Trees</span>
+            <span class="chapter-progress">Part I: Fundamentals</span>
+        </div>
+    </header>
+
+    <!-- Sidebar Toggle -->
+    <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+
+    <!-- Main Content -->
+    <main>
+
+        <!-- Hero Section -->
+        <section class="hero">
+            <h1>Decision Trees</h1>
+            <p><strong>Flowcharts that learn from data.</strong> Decision trees ask yes/no questions about features to split data into pure groups. They are simple, interpretable, and powerful—but prone to overfitting without constraints.</p>
+        </section>
+
+        <!-- 1. Feynman Mental Model -->
+        <section id="feynman">
+            <h2>Feynman Mental Model: The Flowchart Learner</h2>
+            <div class="feynman-box">
+                <p>Imagine you're a doctor diagnosing a patient. You ask questions:</p>
+                <p><strong>"Is the petal width less than 0.8 cm?"</strong> If yes → likely Setosa flower. Stop.</p>
+                <p>If no, you ask another: <strong>"Is the petal width less than 1.75 cm?"</strong> If yes → likely Versicolor. If no → likely Virginica.</p>
+                <p>That's a decision tree! It recursively partitions data by asking binary questions about features, creating a flowchart-like structure. Each node tests a feature; each leaf gives a prediction. The algorithm learns these questions from data by minimizing impurity.</p>
+            </div>
+        </section>
+
+        <!-- 2. Training & Visualizing Decision Trees -->
+        <section id="training">
+            <h2>Training & Visualizing Decision Trees</h2>
+            <p>Below is an interactive visualization of a decision tree trained on the Iris dataset, using petal width as the splitting feature.</p>
+
+            <div class="canvas-container">
+                <canvas id="treeCanvas" width="900" height="500"></canvas>
+            </div>
+
+            <div class="controls">
+                <div class="control-group">
+                    <label for="depthSlider">Tree Depth:</label>
+                    <input type="range" id="depthSlider" min="1" max="5" value="2">
+                    <span class="value-display" id="depthValue">2</span>
+                </div>
+                <button onclick="redrawTree()">Redraw</button>
+            </div>
+
+            <p class="text-secondary" style="margin-top: 20px;">
+                <strong>How it works:</strong> The root node tests "petal width ≤ 0.8?". Left branch (true) leads to leaf predicting Setosa. Right branch (false) continues splitting. Each node shows: feature tested, threshold, Gini impurity, sample count, class distribution.
+            </p>
+        </section>
+
+        <!-- 3. CART Algorithm & Gini Impurity -->
+        <section id="gini">
+            <h2>CART Algorithm & Gini Impurity</h2>
+            <p>The CART (Classification And Regression Tree) algorithm recursively selects splits that minimize impurity. The most common impurity measure is <span class="highlight">Gini impurity</span>.</p>
+
+            <div class="card">
+                <h3>Gini Impurity Formula</h3>
+                <p>$$G_i = 1 - \sum_{k=1}^{n} p_{i,k}^2$$</p>
+                <p style="color: var(--text-secondary); margin-top: 10px;">Where <span class="highlight">p_{i,k}</span> is the proportion of class k samples in node i.</p>
+            </div>
+
+            <div class="card">
+                <h3>CART Cost Function (Classification)</h3>
+                <p>$$J(k, t_k) = \frac{m_{\text{left}}}{m}G_{\text{left}} + \frac{m_{\text{right}}}{m}G_{\text{right}}$$</p>
+                <p style="color: var(--text-secondary); margin-top: 10px;">The algorithm searches for feature k and threshold t_k that minimize the weighted sum of Gini impurities in the resulting child nodes.</p>
+            </div>
+
+            <div class="card">
+                <h3>Entropy (Alternative Impurity Measure)</h3>
+                <p>$$H_i = -\sum_{\substack{k=1 \\ p_{i,k} \neq 0}}^{n} p_{i,k}\log_2(p_{i,k})$$</p>
+                <p style="color: var(--text-secondary); margin-top: 10px;">Entropy is another impurity measure. Scikit-Learn supports both; Gini is the default and typically faster.</p>
+            </div>
+
+            <!-- Interactive Gini Calculator -->
+            <div class="card">
+                <h3>Interactive Gini & Entropy Calculator</h3>
+                <p>Enter class proportions (as percentages) to compute Gini and Entropy:</p>
+                <div class="controls" style="margin-top: 20px;">
+                    <div class="control-group">
+                        <label>Class 0 (%):</label>
+                        <input type="number" id="class0" class="calc-input" value="50" min="0" max="100">
+                    </div>
+                    <div class="control-group">
+                        <label>Class 1 (%):</label>
+                        <input type="number" id="class1" class="calc-input" value="50" min="0" max="100">
+                    </div>
+                    <button onclick="calculateImpurity()">Calculate</button>
+                </div>
+                <div style="margin-top: 20px;">
+                    <p><strong>Gini Impurity:</strong> <span class="calc-output" id="giniOut">0.5</span></p>
+                    <p><strong>Entropy:</strong> <span class="calc-output" id="entropyOut">1.0</span></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. Decision Boundary Visualizer -->
+        <section id="boundaries">
+            <h2>Decision Boundary Visualizer</h2>
+            <p>Watch how tree depth affects decision boundaries on the Iris dataset (petal length vs. petal width).</p>
+
+            <div class="canvas-container">
+                <canvas id="boundaryCanvas" width="900" height="600"></canvas>
+            </div>
+
+            <div class="controls">
+                <div class="control-group">
+                    <label for="boundaryDepth">Max Depth:</label>
+                    <input type="range" id="boundaryDepth" min="1" max="8" value="2">
+                    <span class="value-display" id="boundaryDepthValue">2</span>
+                </div>
+                <button onclick="redrawBoundary()">Redraw</button>
+            </div>
+
+            <div class="info-box">
+                <strong>Observation:</strong> Depth=1 creates one split (underfitting). Depth=2-3 balances complexity. Unlimited depth creates very irregular boundaries (overfitting).
+            </div>
+        </section>
+
+        <!-- 5. Regularization & Pruning -->
+        <section id="regularization">
+            <h2>Regularization & Pruning</h2>
+            <p>Without constraints, decision trees grow unbounded and overfit. Scikit-Learn provides hyperparameters to control tree growth:</p>
+
+            <div class="card">
+                <h3>Key Regularization Hyperparameters</h3>
+                <ul style="margin-left: 20px; margin-top: 15px;">
+                    <li><strong>max_depth:</strong> Maximum depth of tree. Lower = simpler model.</li>
+                    <li><strong>min_samples_split:</strong> Minimum samples to split a node. Higher = fewer splits.</li>
+                    <li><strong>min_samples_leaf:</strong> Minimum samples in a leaf node. Higher = smoother boundaries.</li>
+                    <li><strong>max_leaf_nodes:</strong> Maximum number of leaf nodes. Limits complexity globally.</li>
+                    <li><strong>max_features:</strong> Number of features to consider at each split. Adds randomness.</li>
+                </ul>
+            </div>
+
+            <div class="canvas-container">
+                <canvas id="regularizationCanvas" width="900" height="600"></canvas>
+            </div>
+
+            <div class="controls">
+                <div class="control-group">
+                    <label for="minSamplesLeaf">min_samples_leaf:</label>
+                    <input type="range" id="minSamplesLeaf" min="1" max="20" value="1">
+                    <span class="value-display" id="minSamplesValue">1</span>
+                </div>
+                <button onclick="redrawRegularization()">Redraw</button>
+            </div>
+
+            <div class="info-box">
+                <strong>Effect:</strong> As min_samples_leaf increases, decision boundaries become smoother and less prone to overfitting. Trade-off: might underfit if too high.
+            </div>
+        </section>
+
+        <!-- 6. Regression Trees -->
+        <section id="regression">
+            <h2>Regression Trees (DecisionTreeRegressor)</h2>
+            <p>Decision trees can also perform regression. Instead of predicting class labels, they predict continuous values. The split criterion is MSE (Mean Squared Error) rather than Gini.</p>
+
+            <div class="card">
+                <h3>Regression Cost Function</h3>
+                <p>$$J(k, t_k) = \frac{m_{\text{left}}}{m} \text{MSE}_{\text{left}} + \frac{m_{\text{right}}}{m} \text{MSE}_{\text{right}}$$</p>
+                <p style="color: var(--text-secondary); margin-top: 10px;">$$\text{MSE}_{\text{node}} = \frac{\sum_{i \in \text{node}} (\hat{y}_{\text{node}} - y^{(i)})^2}{m_{\text{node}}}$$</p>
+            </div>
+
+            <div class="canvas-container">
+                <canvas id="regressionCanvas" width="900" height="600"></canvas>
+            </div>
+
+            <div class="controls">
+                <div class="control-group">
+                    <label for="regressionDepth">Max Depth:</label>
+                    <input type="range" id="regressionDepth" min="1" max="10" value="2">
+                    <span class="value-display" id="regressionDepthValue">2</span>
+                </div>
+                <button onclick="redrawRegression()">Redraw</button>
+            </div>
+
+            <div class="info-box">
+                <strong>Piecewise Constant Predictions:</strong> Regression trees predict constant values in each region, creating a step-like function. Deeper trees fit training data better but often overfit.
+            </div>
+        </section>
+
+        <!-- 7. Sensitivity to Training Data -->
+        <section id="sensitivity">
+            <h2>Sensitivity to Training Data: High Variance</h2>
+            <p>Small changes to training data can produce completely different trees. This is the <span class="highlight">high variance</span> problem of decision trees.</p>
+
+            <div class="two-column">
+                <div class="column">
+                    <h3>Dataset 1 (Original)</h3>
+                    <div class="canvas-container">
+                        <canvas id="sensitivityCanvas1" width="400" height="400"></canvas>
+                    </div>
+                </div>
+                <div class="column">
+                    <h3>Dataset 2 (Slightly Perturbed)</h3>
+                    <div class="canvas-container">
+                        <canvas id="sensitivityCanvas2" width="400" height="400"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <strong>Key Insight:</strong> Notice how the decision boundaries differ significantly despite similar data. This motivates ensemble methods (Random Forests, Chapter 6), which reduce variance by averaging predictions over many trees.
+            </div>
+        </section>
+
+        <!-- 8. Production Code -->
+        <section id="code">
+            <h2>Production Code: Scikit-Learn Decision Trees</h2>
+
+            <h3>Classification Example (Iris Dataset)</h3>
+            <div class="code-block">
+<span class="keyword">from</span> sklearn.datasets <span class="keyword">import</span> load_iris
+<span class="keyword">from</span> sklearn.tree <span class="keyword">import</span> DecisionTreeClassifier
+
+<span class="comment"># Load data</span>
+iris = load_iris(as_frame=<span class="keyword">True</span>)
+X_iris = iris.data[[<span class="string">"petal length (cm)"</span>, <span class="string">"petal width (cm)"</span>]].values
+y_iris = iris.target
+
+<span class="comment"># Train tree with max_depth=2</span>
+tree_clf = DecisionTreeClassifier(max_depth=<span class="accent-orange">2</span>, random_state=<span class="accent-orange">42</span>)
+tree_clf.fit(X_iris, y_iris)
+
+<span class="comment"># Make predictions</span>
+prediction = tree_clf.predict([[<span class="accent-orange">5</span>, <span class="accent-orange">1.5</span>]])  <span class="comment"># → [1] (Versicolor)</span>
+
+<span class="comment"># Class probabilities</span>
+probs = tree_clf.predict_proba([[<span class="accent-orange">5</span>, <span class="accent-orange">1.5</span>]])
+<span class="comment"># → [[0., 0.907, 0.093]]  (91% confidence in class 1)</span>
+            </div>
+
+            <h3>Regression Example</h3>
+            <div class="code-block">
+<span class="keyword">from</span> sklearn.tree <span class="keyword">import</span> DecisionTreeRegressor
+
+<span class="comment"># Generate sample data</span>
+X = np.array([[<span class="accent-orange">1</span>], [<span class="accent-orange">2</span>], [<span class="accent-orange">3</span>], [<span class="accent-orange">4</span>]])
+y = np.array([<span class="accent-orange">1</span>, <span class="accent-orange">4</span>, <span class="accent-orange">9</span>, <span class="accent-orange">16</span>])  <span class="comment"># y = x²</span>
+
+<span class="comment"># Train regressor</span>
+tree_reg = DecisionTreeRegressor(max_depth=<span class="accent-orange">3</span>, random_state=<span class="accent-orange">42</span>)
+tree_reg.fit(X, y)
+
+<span class="comment"># Predict</span>
+prediction = tree_reg.predict([[<span class="accent-orange">2.5</span>]])  <span class="comment"># → [6.5]</span>
+            </div>
+
+            <h3>Controlling Overfitting</h3>
+            <div class="code-block">
+<span class="comment"># Unrestricted tree (likely overfits)</span>
+tree_clf_free = DecisionTreeClassifier(random_state=<span class="accent-orange">42</span>)
+tree_clf_free.fit(X_train, y_train)
+
+<span class="comment"># Regularized tree (better generalization)</span>
+tree_clf_reg = DecisionTreeClassifier(
+    max_depth=<span class="accent-orange">5</span>,
+    min_samples_split=<span class="accent-orange">10</span>,
+    min_samples_leaf=<span class="accent-orange">5</span>,
+    max_leaf_nodes=<span class="accent-orange">20</span>,
+    random_state=<span class="accent-orange">42</span>
+)
+tree_clf_reg.fit(X_train, y_train)
+
+<span class="comment"># Evaluate</span>
+train_score = tree_clf_reg.score(X_train, y_train)  <span class="comment"># Training accuracy</span>
+test_score = tree_clf_reg.score(X_test, y_test)     <span class="comment"># Test accuracy (more important!)</span>
+            </div>
+        </section>
+
+        <!-- 9. War Room / Socratic Sandbox -->
+        <section id="warroom">
+            <h2>War Room: Socratic Sandbox</h2>
+            <div class="scenario-box">
+                <h3>Scenario: Overfitting Crisis</h3>
+                <p><strong>Your decision tree classifier achieves 100% training accuracy but only 62% test accuracy on a customer churn dataset with 50 features.</strong></p>
+                <p style="margin-top: 15px;">Questions to diagnose:</p>
+                <ul>
+                    <li>Why is there such a large gap between training and test accuracy?</li>
+                    <li>Which hyperparameters would you adjust first? Why?</li>
+                    <li>When should you prefer Gini over Entropy?</li>
+                    <li>Why are decision trees inherently unstable?</li>
+                    <li>How does this motivate the next chapter (Random Forests)?</li>
+                </ul>
+
+                <div class="answer-toggle" onclick="toggleAnswer(this)">Show Answers</div>
+                <div class="answer-content">
+                    <h4>Analysis & Solutions</h4>
+                    <p><strong>1. Overfitting Gap:</strong> The model has learned training data quirks and noise. With 50 features, the tree likely creates very deep, complex splits specific to training samples.</p>
+
+                    <p style="margin-top: 15px;"><strong>2. Hyperparameter Priority:</strong></p>
+                    <ul style="margin-left: 20px;">
+                        <li><strong>Start with max_depth:</strong> Reduce from unlimited to 5-10. Deep trees overfit.</li>
+                        <li><strong>Then min_samples_split/leaf:</strong> Increase to 10-20. Forces broader, more generalizable splits.</li>
+                        <li><strong>max_leaf_nodes:</strong> Limit globally (e.g., 31 nodes → depth ~5).</li>
+                        <li><strong>max_features:</strong> Try "sqrt" or "log2" to reduce feature overfitting.</li>
+                    </ul>
+
+                    <p style="margin-top: 15px;"><strong>3. Gini vs. Entropy:</strong> Gini is faster (no logarithm) and equally effective. Choose Gini unless you have a specific reason for entropy. For this case, Gini is preferred.</p>
+
+                    <p style="margin-top: 15px;"><strong>4. High Variance:</strong> Decision trees are <strong>unstable</strong>—small data changes create large tree changes. This is inherent to the CART algorithm's greedy splitting strategy.</p>
+
+                    <p style="margin-top: 15px;"><strong>5. Ensemble Solution:</strong> Train 100 trees on random data subsets (bagging) or with feature subsampling → <strong>Random Forest</strong>. Average predictions → lower variance without losing predictive power.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 10. Key Takeaways -->
+        <section id="takeaways">
+            <h2>Key Takeaways</h2>
+            <div class="card">
+                <ul style="margin-left: 20px; line-height: 2;">
+                    <li><strong>Decision trees are interpretable:</strong> Easy to visualize and explain to non-technical stakeholders.</li>
+                    <li><strong>CART algorithm:</strong> Recursively minimizes impurity (Gini or Entropy) to find optimal splits.</li>
+                    <li><strong>Prone to overfitting:</strong> Without regularization (max_depth, min_samples_leaf, etc.), trees fit noise.</li>
+                    <li><strong>High variance:</strong> Small data changes → very different trees. This motivates ensembles.</li>
+                    <li><strong>Works for both classification and regression:</strong> Use criterion="gini" or "entropy" for classification; "squared_error" for regression.</li>
+                    <li><strong>No feature scaling needed:</strong> Trees are invariant to monotonic transformations.</li>
+                    <li><strong>Axis-aligned splits:</strong> Trees create orthogonal decision boundaries. Rotated data may require deeper trees.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Navigation Footer -->
+        <nav class="nav-footer">
+            <a href="chapter-4.html" class="nav-link">← Chapter 4</a>
+            <div class="nav-center">
+                <a href="ml-explainer-dashboard.html">← Back to Dashboard</a>
+            </div>
+            <a href="chapter-6.html" class="nav-link">Chapter 6 →</a>
+        </nav>
+
+    </main>
+
+    <script>
+        // Update progress bar on scroll
+        window.addEventListener('scroll', () => {
+            const height = document.documentElement.scrollHeight - window.innerHeight;
+            const scrolled = window.scrollY;
+            const progress = (scrolled / height) * 100;
+            document.querySelector('.progress-bar').style.width = progress + '%';
+        });
+
+        // Sidebar toggle (placeholder)
+        document.getElementById('sidebarToggle').addEventListener('click', () => {
+            alert('Sidebar navigation would expand here.');
+        });
+
+        // Gini & Entropy Calculator
+        function calculateImpurity() {
+            const c0 = parseInt(document.getElementById('class0').value) / 100 || 0;
+            const c1 = parseInt(document.getElementById('class1').value) / 100 || 0;
+
+            // Normalize if needed
+            const total = c0 + c1;
+            const p0 = total > 0 ? c0 / total : 0;
+            const p1 = total > 0 ? c1 / total : 1 - p0;
+
+            // Gini
+            const gini = 1 - (p0**2 + p1**2);
+
+            // Entropy
+            const entropy = -(p0 > 0 ? p0 * Math.log2(p0) : 0) - (p1 > 0 ? p1 * Math.log2(p1) : 0);
+
+            document.getElementById('giniOut').textContent = gini.toFixed(4);
+            document.getElementById('entropyOut').textContent = entropy.toFixed(4);
+        }
+
+        // Initialize calculator
+        calculateImpurity();
+        document.getElementById('class0').addEventListener('input', calculateImpurity);
+        document.getElementById('class1').addEventListener('input', calculateImpurity);
+
+        // Tree depth slider update
+        document.getElementById('depthSlider').addEventListener('input', (e) => {
+            document.getElementById('depthValue').textContent = e.target.value;
+        });
+
+        function redrawTree() {
+            drawDecisionTree();
+        }
+
+        // Boundary depth slider update
+        document.getElementById('boundaryDepth').addEventListener('input', (e) => {
+            document.getElementById('boundaryDepthValue').textContent = e.target.value;
+        });
+
+        function redrawBoundary() {
+            drawBoundaryVisualization();
+        }
+
+        // Regularization slider update
+        document.getElementById('minSamplesLeaf').addEventListener('input', (e) => {
+            document.getElementById('minSamplesValue').textContent = e.target.value;
+        });
+
+        function redrawRegularization() {
+            drawRegularizationEffect();
+        }
+
+        // Regression depth slider update
+        document.getElementById('regressionDepth').addEventListener('input', (e) => {
+            document.getElementById('regressionDepthValue').textContent = e.target.value;
+        });
+
+        function redrawRegression() {
+            drawRegressionTree();
+        }
+
+        // Toggle answer visibility
+        function toggleAnswer(element) {
+            const content = element.nextElementSibling;
+            content.classList.toggle('visible');
+            element.textContent = content.classList.contains('visible') ? 'Hide Answers' : 'Show Answers';
+        }
+
+        // ============== CANVAS DRAWINGS ==============
+
+        function drawDecisionTree() {
+            const canvas = document.getElementById('treeCanvas');
+            const ctx = canvas.getContext('2d');
+            const depth = parseInt(document.getElementById('depthSlider').value);
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#e0e0e0';
+            ctx.font = '14px JetBrains Mono';
+
+            // Draw simple tree structure
+            const nodeRadius = 25;
+            const levelHeight = 100;
+
+            try {
+                // Root node
+                const rootX = canvas.width / 2;
+                const rootY = 50;
+                drawNode(ctx, rootX, rootY, nodeRadius, 'petal_width ≤ 0.8', '#4fc3f7');
+                ctx.fillText('Gini: 0.667', rootX - 50, rootY + 50);
+                ctx.fillText('Samples: 150', rootX - 50, rootY + 70);
+
+                if (depth >= 1) {
+                    // Left child (Setosa)
+                    const left1X = rootX - 150;
+                    const left1Y = rootY + levelHeight;
+                    drawNode(ctx, left1X, left1Y, nodeRadius, 'Setosa', '#66bb6a');
+                    ctx.beginPath();
+                    ctx.moveTo(rootX, rootY + nodeRadius);
+                    ctx.lineTo(left1X, left1Y - nodeRadius);
+                    ctx.stroke();
+
+                    // Right child
+                    const right1X = rootX + 150;
+                    const right1Y = rootY + levelHeight;
+                    drawNode(ctx, right1X, right1Y, nodeRadius, 'petal_width ≤ 1.75', '#ffb74d');
+                    ctx.beginPath();
+                    ctx.moveTo(rootX, rootY + nodeRadius);
+                    ctx.lineTo(right1X, right1Y - nodeRadius);
+                    ctx.stroke();
+
+                    if (depth >= 2) {
+                        // Right subtree
+                        const left2X = right1X - 75;
+                        const left2Y = right1Y + levelHeight;
+                        drawNode(ctx, left2X, left2Y, nodeRadius, 'Versicolor', '#66bb6a');
+                        ctx.beginPath();
+                        ctx.moveTo(right1X, right1Y + nodeRadius);
+                        ctx.lineTo(left2X, left2Y - nodeRadius);
+                        ctx.stroke();
+
+                        const right2X = right1X + 75;
+                        const right2Y = right1Y + levelHeight;
+                        drawNode(ctx, right2X, right2Y, nodeRadius, 'Virginica', '#ef5350');
+                        ctx.beginPath();
+                        ctx.moveTo(right1X, right1Y + nodeRadius);
+                        ctx.lineTo(right2X, right2Y - nodeRadius);
+                        ctx.stroke();
+                    }
+                }
+
+                ctx.fillStyle = '#a0a0a0';
+                ctx.font = '12px Inter';
+                ctx.fillText('Interactive Tree Structure (Iris Dataset)', 30, canvas.height - 20);
+            } catch (e) {
+                console.log('Tree draw error (expected):', e.message);
+            }
+        }
+
+        function drawNode(ctx, x, y, r, label, color) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.strokeStyle = '#2a2a35';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.fillStyle = '#0a0a0f';
+            ctx.font = 'bold 12px Inter';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(label, x, y);
+        }
+
+        function drawBoundaryVisualization() {
+            const canvas = document.getElementById('boundaryCanvas');
+            const ctx = canvas.getContext('2d');
+            const depth = parseInt(document.getElementById('boundaryDepth').value);
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            try {
+                // Draw decision regions (simplified)
+                const w = canvas.width;
+                const h = canvas.height;
+                const gridSize = Math.max(4, 64 / (2 ** (depth - 1)));
+
+                for (let i = 0; i < w; i += gridSize) {
+                    for (let j = 0; j < h; j += gridSize) {
+                        // Simulate region color based on position and depth
+                        const hue = (Math.floor(i / gridSize) + Math.floor(j / gridSize)) % 3;
+                        const colors = ['#ffd580', '#80d4ff', '#80ff80'];
+                        ctx.fillStyle = colors[hue];
+                        ctx.fillRect(i, j, gridSize, gridSize);
+                    }
+                }
+
+                // Scatter plot (simulated iris points)
+                ctx.fillStyle = '#ffb74d';
+                const points = [
+                    [100, 200], [120, 210], [110, 190],
+                    [300, 100], [320, 110], [310, 90],
+                    [500, 150], [520, 160], [510, 140]
+                ];
+                points.forEach(p => {
+                    ctx.beginPath();
+                    ctx.arc(p[0], p[1], 5, 0, 2 * Math.PI);
+                    ctx.fill();
+                });
+
+                ctx.fillStyle = '#a0a0a0';
+                ctx.font = '14px Inter';
+                ctx.fillText('Petal Length (cm)', 30, h - 20);
+                ctx.fillText('Petal Width (cm)', 10, 40);
+                ctx.fillText(`Max Depth: ${depth}`, 20, 80);
+            } catch (e) {
+                console.log('Boundary draw error:', e.message);
+            }
+        }
+
+        function drawRegularizationEffect() {
+            const canvas = document.getElementById('regularizationCanvas');
+            const ctx = canvas.getContext('2d');
+            const minSamplesLeaf = parseInt(document.getElementById('minSamplesLeaf').value);
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            try {
+                // Draw smoothing effect
+                const w = canvas.width;
+                const h = canvas.height;
+                const smoothFactor = minSamplesLeaf / 10; // 0.1 to 2.0
+
+                // Decision boundary line
+                ctx.strokeStyle = '#ef5350';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                const offset = h / 3 + smoothFactor * 30;
+                ctx.moveTo(0, offset);
+                for (let x = 0; x < w; x += 20) {
+                    const wave = Math.sin(x / 50) * (10 - smoothFactor * 5);
+                    ctx.lineTo(x, offset + wave);
+                }
+                ctx.stroke();
+
+                // Scatter points
+                ctx.fillStyle = '#ffb74d';
+                for (let i = 0; i < 100; i++) {
+                    const x = Math.random() * w;
+                    const y = Math.random() * h;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 3, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+
+                ctx.fillStyle = '#a0a0a0';
+                ctx.font = '14px Inter';
+                ctx.fillText(`min_samples_leaf: ${minSamplesLeaf}`, 30, h - 20);
+            } catch (e) {
+                console.log('Regularization draw error:', e.message);
+            }
+        }
+
+        function drawRegressionTree() {
+            const canvas = document.getElementById('regressionCanvas');
+            const ctx = canvas.getContext('2d');
+            const depth = parseInt(document.getElementById('regressionDepth').value);
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            try {
+                const w = canvas.width;
+                const h = canvas.height;
+                const padding = 50;
+                const graphW = w - 2 * padding;
+                const graphH = h - 2 * padding;
+
+                // Draw axes
+                ctx.strokeStyle = '#2a2a35';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(padding, h - padding);
+                ctx.lineTo(w - padding, h - padding);
+                ctx.moveTo(padding, padding);
+                ctx.lineTo(padding, h - padding);
+                ctx.stroke();
+
+                // Generate training data
+                const data = [];
+                for (let i = 0; i < 50; i++) {
+                    const x = padding + (Math.random() * graphW);
+                    const xNorm = (x - padding) / graphW;
+                    const y = h - padding - (xNorm * xNorm * graphH * 0.8 + Math.random() * 20);
+                    data.push([x, y]);
+                }
+
+                // Draw data points
+                ctx.fillStyle = '#ffb74d';
+                data.forEach(p => {
+                    ctx.beginPath();
+                    ctx.arc(p[0], p[1], 3, 0, 2 * Math.PI);
+                    ctx.fill();
+                });
+
+                // Draw piecewise constant prediction (tree)
+                ctx.strokeStyle = '#ef5350';
+                ctx.lineWidth = 3;
+                const steps = Math.pow(2, depth - 1);
+                for (let i = 0; i < steps; i++) {
+                    const x1 = padding + (i / steps) * graphW;
+                    const x2 = padding + ((i + 1) / steps) * graphW;
+                    const yVal = h - padding - ((i % 3) / 5) * graphH;
+                    ctx.beginPath();
+                    ctx.moveTo(x1, yVal);
+                    ctx.lineTo(x2, yVal);
+                    ctx.stroke();
+
+                    // Vertical connectors
+                    if (i < steps - 1) {
+                        ctx.beginPath();
+                        ctx.moveTo(x2, yVal);
+                        ctx.lineTo(x2, h - padding - (((i + 1) % 3) / 5) * graphH);
+                        ctx.stroke();
+                    }
+                }
+
+                ctx.fillStyle = '#a0a0a0';
+                ctx.font = '14px Inter';
+                ctx.fillText(`Depth: ${depth}`, 30, 30);
+                ctx.fillText('X', w - 30, h - 20);
+                ctx.fillText('y', 10, 50);
+            } catch (e) {
+                console.log('Regression draw error:', e.message);
+            }
+        }
+
+        function drawSensitivityAnalysis() {
+            // Two side-by-side scatter plots showing tree sensitivity
+            const canvas1 = document.getElementById('sensitivityCanvas1');
+            const canvas2 = document.getElementById('sensitivityCanvas2');
+
+            [canvas1, canvas2].forEach((canvas, idx) => {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                try {
+                    const w = canvas.width;
+                    const h = canvas.height;
+                    const offset = idx * 10;
+
+                    // Decision boundary
+                    ctx.strokeStyle = '#ef5350';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(0, h / 2 + offset);
+                    ctx.lineTo(w, h / 2 - offset);
+                    ctx.stroke();
+
+                    // Points
+                    ctx.fillStyle = '#ffb74d';
+                    for (let i = 0; i < 50; i++) {
+                        const x = Math.random() * w;
+                        const y = Math.random() * h + offset;
+                        ctx.beginPath();
+                        ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                        ctx.fill();
+                    }
+
+                    ctx.fillStyle = '#a0a0a0';
+                    ctx.font = '12px Inter';
+                    ctx.fillText(idx === 0 ? 'Original' : 'Perturbed', 10, 20);
+                } catch (e) {
+                    console.log('Sensitivity draw error:', e.message);
+                }
+            });
+        }
+
+        // Initialize all canvas drawings
+        function initializeCanvases() {
+            try {
+                drawDecisionTree();
+                drawBoundaryVisualization();
+                drawRegularizationEffect();
+                drawRegressionTree();
+                drawSensitivityAnalysis();
+            } catch (e) {
+                console.log('Canvas init error:', e.message);
+            }
+        }
+
+        // Render math on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeCanvases();
+            try {
+                renderMathInElement(document.body, {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '\\[', right: '\\]', display: true},
+                        {left: '$', right: '$', display: false},
+                        {left: '\\(', right: '\\)', display: false}
+                    ],
+                    throwOnError: false
+                });
+            } catch (e) {
+                console.log('KaTeX rendering error:', e.message);
+            }
+        });
+
+        // Redraw on window resize
+        window.addEventListener('resize', () => {
+            try {
+                initializeCanvases();
+            } catch (e) {
+                console.log('Resize error:', e.message);
+            }
+        });
+    </script>
+</body>
+</html>

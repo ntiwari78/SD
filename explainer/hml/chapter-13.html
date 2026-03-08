@@ -1,0 +1,1545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 13: Processing Sequences Using RNNs and CNNs | Interactive ML Explainer</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a24;
+            --accent-purple: #ce93d8;
+            --accent-blue: #4fc3f7;
+            --accent-green: #66bb6a;
+            --accent-red: #ef5350;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --text-tertiary: #707080;
+            --border-color: #2a2a35;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-purple), var(--accent-blue));
+            z-index: 1000;
+            transition: width 0.3s ease;
+        }
+
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 70px;
+            background: rgba(10, 10, 15, 0.95);
+            border-bottom: 1px solid var(--border-color);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            padding: 0 40px;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--accent-purple);
+            letter-spacing: 0.5px;
+        }
+
+        .nav-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s ease;
+        }
+
+        .nav-link:hover { color: var(--accent-purple); }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 70px;
+            width: 280px;
+            height: calc(100vh - 70px);
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            overflow-y: auto;
+            padding: 30px 0;
+            z-index: 50;
+        }
+
+        .sidebar-toggle {
+            display: none;
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 120;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 20px;
+            width: 40px;
+            height: 40px;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+        }
+
+        .toc {
+            list-style: none;
+        }
+
+        .toc-item {
+            padding: 12px 20px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 13px;
+            border-left: 3px solid transparent;
+        }
+
+        .toc-item:hover {
+            color: var(--accent-purple);
+            background: rgba(206, 147, 216, 0.1);
+            border-left-color: var(--accent-purple);
+        }
+
+        .toc-item.active {
+            color: var(--accent-purple);
+            background: rgba(206, 147, 216, 0.15);
+            border-left-color: var(--accent-purple);
+            font-weight: 600;
+        }
+
+        main {
+            margin-left: 280px;
+            margin-top: 70px;
+            padding: 60px 80px;
+            max-width: 1200px;
+        }
+
+        h1 {
+            font-size: 48px;
+            margin: 40px 0 20px 0;
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+
+        h2 {
+            font-size: 32px;
+            margin: 50px 0 20px 0;
+            color: var(--accent-purple);
+            font-weight: 700;
+        }
+
+        h3 {
+            font-size: 22px;
+            margin: 30px 0 15px 0;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        p {
+            margin-bottom: 16px;
+            line-height: 1.8;
+            color: var(--text-secondary);
+            font-size: 15px;
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            margin: 30px 0;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 30px rgba(206, 147, 216, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 12px;
+        }
+
+        .card-icon {
+            font-size: 24px;
+            color: var(--accent-purple);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .feynman-box {
+            background: linear-gradient(135deg, rgba(206, 147, 216, 0.1), rgba(79, 195, 247, 0.05));
+            border-left: 4px solid var(--accent-purple);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .feynman-label {
+            color: var(--accent-purple);
+            font-weight: 700;
+            font-size: 12px;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .math-box {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            background: var(--bg-tertiary);
+            color: var(--accent-green);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        pre {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+
+        pre code {
+            background: none;
+            color: var(--text-primary);
+            padding: 0;
+        }
+
+        .code-label {
+            color: var(--accent-blue);
+            font-weight: 600;
+            font-size: 12px;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        canvas {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-tertiary);
+            display: block;
+            margin: 20px 0;
+            width: 100%;
+            max-width: 100%;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: var(--accent-purple);
+            color: var(--bg-primary);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+        }
+
+        button:hover {
+            background: #e0a5e9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(206, 147, 216, 0.3);
+        }
+
+        button.secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        button.secondary:hover {
+            border-color: var(--accent-purple);
+            color: var(--accent-purple);
+        }
+
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border-color);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-purple);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(206, 147, 216, 0.5);
+        }
+
+        .slider-value {
+            min-width: 60px;
+            text-align: right;
+            color: var(--accent-purple);
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+        }
+
+        .collapsible {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            padding: 18px;
+            width: 100%;
+            text-align: left;
+            outline: none;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            border-radius: 8px;
+            margin: 15px 0;
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .collapsible:hover {
+            background: var(--bg-secondary);
+            border-color: var(--accent-purple);
+            color: var(--accent-purple);
+        }
+
+        .collapsible.active {
+            background: var(--bg-secondary);
+            border-color: var(--accent-purple);
+            color: var(--accent-purple);
+        }
+
+        .collapsible::after {
+            content: ' ▼';
+            float: right;
+            transition: transform 0.3s ease;
+        }
+
+        .collapsible.active::after {
+            transform: rotate(180deg);
+        }
+
+        .content {
+            display: none;
+            padding: 20px;
+            background: var(--bg-tertiary);
+            border-left: 3px solid var(--accent-purple);
+        }
+
+        .content.active {
+            display: block;
+        }
+
+        .war-room {
+            background: linear-gradient(135deg, rgba(206, 147, 216, 0.05), rgba(79, 195, 247, 0.05));
+            border: 2px solid var(--accent-purple);
+            border-radius: 12px;
+            padding: 30px;
+            margin: 30px 0;
+        }
+
+        .war-room-title {
+            color: var(--accent-purple);
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+        }
+
+        .scenario {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+
+        .scenario-question {
+            color: var(--accent-blue);
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .scenario-answer {
+            display: none;
+            color: var(--text-secondary);
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .scenario-answer.show {
+            display: block;
+        }
+
+        .reveal-btn {
+            background: var(--bg-tertiary);
+            color: var(--accent-blue);
+            border: 1px solid var(--accent-blue);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .reveal-btn:hover {
+            background: var(--accent-blue);
+            color: var(--bg-primary);
+        }
+
+        ul, ol {
+            margin: 20px 0 20px 30px;
+            color: var(--text-secondary);
+        }
+
+        li {
+            margin: 8px 0;
+        }
+
+        @media (max-width: 1024px) {
+            main {
+                margin-left: 0;
+                padding: 40px 40px;
+            }
+
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            .sidebar.active {
+                transform: translateX(0);
+            }
+
+            .sidebar-toggle {
+                display: flex;
+            }
+
+            header {
+                padding: 0 20px;
+            }
+        }
+
+        @media (max-width: 640px) {
+            main {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 32px;
+            }
+
+            h2 {
+                font-size: 24px;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-bar"></div>
+
+    <header>
+        <div class="header-content">
+            <div class="logo">ML Explainer</div>
+            <nav>
+                <a href="ml-explainer-dashboard.html" class="nav-link">← Back to Dashboard</a>
+            </nav>
+        </div>
+    </header>
+
+    <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+
+    <aside class="sidebar" id="sidebar">
+        <ul class="toc">
+            <li class="toc-item" data-section="intro">Introduction</li>
+            <li class="toc-item" data-section="rnn-basics">RNN Basics</li>
+            <li class="toc-item" data-section="bptt">BPTT & Training</li>
+            <li class="toc-item" data-section="time-series">Time Series</li>
+            <li class="toc-item" data-section="vanishing">Vanishing Gradients</li>
+            <li class="toc-item" data-section="lstm">LSTM Cells</li>
+            <li class="toc-item" data-section="gru">GRU Cells</li>
+            <li class="toc-item" data-section="conv-seq">1D Convolution</li>
+            <li class="toc-item" data-section="wavenet">WaveNet</li>
+            <li class="toc-item" data-section="seq2seq">Seq2Seq Models</li>
+            <li class="toc-item" data-section="implementation">Implementation</li>
+        </ul>
+    </aside>
+
+    <main>
+        <section id="intro">
+            <h1>Chapter 13: Processing Sequences Using RNNs and CNNs</h1>
+            <p style="margin-bottom: 30px; font-size: 16px; color: var(--text-primary);">
+                Welcome to sequential data processing! This chapter explores how neural networks understand and predict sequences—from time series forecasting to natural language processing.
+            </p>
+
+            <div class="feynman-box">
+                <div class="feynman-label">Feynman Mental Model</div>
+                <p style="margin: 0;">
+                    Think of RNNs as reading a book one word at a time, remembering what came before as you read each new word. They maintain a "hidden state"—your current understanding—that updates with each word, letting them understand context and predict what comes next. Just as you'd predict the next word of a sentence, RNNs predict the next value in a sequence.
+                </p>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">📚</div>
+                    <div class="card-title">What You'll Learn</div>
+                </div>
+                <ul>
+                    <li><strong>RNN Architecture:</strong> How neurons maintain memory through recurrent connections</li>
+                    <li><strong>Training Challenges:</strong> Vanishing and exploding gradients in sequential data</li>
+                    <li><strong>LSTM & GRU:</strong> Advanced cells that solve memory problems</li>
+                    <li><strong>Sequence Processing:</strong> Both RNNs and CNNs for handling sequences</li>
+                    <li><strong>WaveNet:</strong> State-of-the-art CNN for long sequences</li>
+                    <li><strong>Seq2Seq Models:</strong> Predicting entire sequences at once</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="rnn-basics">
+            <h2>Recurrent Neurons and Layers</h2>
+            <p>
+                Unlike feedforward networks where data flows in one direction, RNNs have <strong>feedback connections</strong>. Each neuron receives not only current inputs but also its own previous output, creating a loop.
+            </p>
+
+            <div class="feynman-box">
+                <div class="feynman-label">Why Recurrence?</div>
+                <p style="margin: 0;">
+                    Recurrence allows the network to "remember" previous information. This is essential for sequences where context matters. The order of words in a sentence matters; the output at time step 10 depends on all previous inputs.
+                </p>
+            </div>
+
+            <h3>Simple RNN: The Core Concept</h3>
+            <p>A recurrent neuron at time step $t$ computes:</p>
+
+            <div class="math-box">
+                $$\mathbf{h}^{(t)} = \sigma(\mathbf{W}_{hh} \cdot \mathbf{h}^{(t-1)} + \mathbf{W}_{xh} \cdot \mathbf{x}^{(t)} + \mathbf{b})$$
+            </div>
+
+            <p>Where:</p>
+            <ul>
+                <li>$\mathbf{h}^{(t)}$ = hidden state at time step $t$</li>
+                <li>$\mathbf{h}^{(t-1)}$ = hidden state from previous step (memory)</li>
+                <li>$\mathbf{x}^{(t)}$ = input at current time step</li>
+                <li>$\mathbf{W}_{hh}$, $\mathbf{W}_{xh}$ = weight matrices</li>
+                <li>$\sigma$ = activation function (tanh or ReLU)</li>
+            </ul>
+
+            <h3>Unrolling an RNN Through Time</h3>
+            <p>RNNs are typically visualized as "unrolled" through time, showing how the same weights process each time step sequentially.</p>
+
+            <canvas id="rnnUnrolling"></canvas>
+
+            <div class="controls">
+                <button id="playRnnBtn">Play Animation</button>
+                <button id="resetRnnBtn" class="secondary">Reset</button>
+            </div>
+        </section>
+
+        <section id="bptt">
+            <h2>Backpropagation Through Time (BPTT)</h2>
+            <p>
+                Training RNNs requires a modified backpropagation algorithm called <strong>Backpropagation Through Time (BPTT)</strong>. Instead of computing gradients through layers, we compute them through time steps.
+            </p>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">⚙️</div>
+                    <div class="card-title">BPTT Process</div>
+                </div>
+                <ol>
+                    <li><strong>Forward Pass:</strong> Compute hidden states for all time steps</li>
+                    <li><strong>Compute Loss:</strong> Calculate error at each time step</li>
+                    <li><strong>Backward Pass:</strong> Propagate gradients backward through time</li>
+                    <li><strong>Update Weights:</strong> Accumulate gradients across all time steps</li>
+                </ol>
+            </div>
+
+            <h3>The Gradient Flow</h3>
+            <p>The gradient at time step $t$ depends on all future time steps:</p>
+
+            <div class="math-box">
+                $$\frac{\partial L}{\partial \mathbf{h}^{(t)}} = \frac{\partial L}{\partial \mathbf{h}^{(t+1)}} \cdot \frac{\partial \mathbf{h}^{(t+1)}}{\partial \mathbf{h}^{(t)}} + \frac{\partial L}{\partial \mathbf{y}^{(t)}}$$
+            </div>
+
+            <p>The chain rule is applied repeatedly, multiplying Jacobian matrices. This chain of multiplications can cause gradients to vanish (become very small) or explode (become very large).</p>
+        </section>
+
+        <section id="time-series">
+            <h2>Forecasting a Time Series</h2>
+            <p>A practical application of RNNs is time series forecasting. Given historical data, predict future values.</p>
+
+            <canvas id="timeSeriesChart"></canvas>
+
+            <div class="controls">
+                <button id="generateTsBtn">Generate New Series</button>
+                <button id="forecastBtn">Forecast Next 20 Steps</button>
+                <button id="resetTsBtn" class="secondary">Reset</button>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">📊</div>
+                    <div class="card-title">ARMA as Baseline</div>
+                </div>
+                <p>In forecasting, RNNs are often compared to AutoRegressive Moving Average (ARMA) models:</p>
+                <div class="math-box">
+                    $$y_t = \phi_1 y_{t-1} + \phi_2 y_{t-2} + \cdots + \epsilon_t + \theta_1 \epsilon_{t-1} + \cdots$$
+                </div>
+                <p>Where $\phi$ are AR coefficients and $\theta$ are MA coefficients. RNNs are more flexible but require more data to train effectively.</p>
+            </div>
+        </section>
+
+        <section id="vanishing">
+            <h2>The Vanishing and Exploding Gradient Problem</h2>
+            <p>The core difficulty with RNNs is that gradients either <strong>vanish</strong> (become too small) or <strong>explode</strong> (become too large) when propagated through many time steps.</p>
+
+            <h3>Why This Happens</h3>
+            <div class="math-box">
+                $$\frac{\partial L}{\partial \mathbf{W}_{hh}} = \sum_{t=1}^{T} \frac{\partial L}{\partial \mathbf{h}^{(t)}} \frac{\partial \mathbf{h}^{(t)}}{\partial \mathbf{W}_{hh}}$$
+            </div>
+
+            <p>The gradient contains products of Jacobians where eigenvalues < 1 cause vanishing, > 1 cause exploding.</p>
+
+            <canvas id="gradientVisualization"></canvas>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🔧</div>
+                    <div class="card-title">Solutions</div>
+                </div>
+                <ul>
+                    <li><strong>Gradient Clipping:</strong> Cap gradients to prevent explosion</li>
+                    <li><strong>Weight Initialization:</strong> Start with careful weight setup (e.g., orthogonal)</li>
+                    <li><strong>Recurrent Dropout:</strong> Apply dropout to recurrent connections</li>
+                    <li><strong>Layer Normalization:</strong> Normalize hidden states across features</li>
+                    <li><strong>LSTM/GRU:</strong> Use special cell architectures</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="lstm">
+            <h2>Long Short-Term Memory (LSTM) Cells</h2>
+            <p>LSTMs solve the vanishing gradient problem by introducing a <strong>cell state</strong> that can preserve information over long sequences.</p>
+
+            <div class="feynman-box">
+                <div class="feynman-label">LSTM Intuition</div>
+                <p style="margin: 0;">
+                    An LSTM has a "memory cell" separate from its hidden state. Three gates control what information to forget, what new information to add, and what to output. Like an information filter system.
+                </p>
+            </div>
+
+            <h3>The Three LSTM Gates</h3>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🚪</div>
+                    <div class="card-title">LSTM Gates Mathematics</div>
+                </div>
+
+                <p><strong>Forget Gate:</strong> Decides what info to discard from cell state</p>
+                <div class="math-box">
+                    $$\mathbf{f}^{(t)} = \sigma(\mathbf{W}_{f} \cdot [\mathbf{h}^{(t-1)}, \mathbf{x}^{(t)}] + \mathbf{b}_{f})$$
+                </div>
+
+                <p><strong>Input Gate:</strong> Decides what new info to add to cell state</p>
+                <div class="math-box">
+                    $$\mathbf{i}^{(t)} = \sigma(\mathbf{W}_{i} \cdot [\mathbf{h}^{(t-1)}, \mathbf{x}^{(t)}] + \mathbf{b}_{i})$$
+                </div>
+
+                <p><strong>Cell Candidate:</strong> New values to add to cell state</p>
+                <div class="math-box">
+                    $$\tilde{\mathbf{C}}^{(t)} = \tanh(\mathbf{W}_{C} \cdot [\mathbf{h}^{(t-1)}, \mathbf{x}^{(t)}] + \mathbf{b}_{C})$$
+                </div>
+
+                <p><strong>Cell State Update:</strong> Combine forget and input</p>
+                <div class="math-box">
+                    $$\mathbf{C}^{(t)} = \mathbf{f}^{(t)} \odot \mathbf{C}^{(t-1)} + \mathbf{i}^{(t)} \odot \tilde{\mathbf{C}}^{(t)}$$
+                </div>
+
+                <p><strong>Output Gate:</strong> Decides what to output based on cell state</p>
+                <div class="math-box">
+                    $$\mathbf{o}^{(t)} = \sigma(\mathbf{W}_{o} \cdot [\mathbf{h}^{(t-1)}, \mathbf{x}^{(t)}] + \mathbf{b}_{o})$$
+                </div>
+
+                <p><strong>Hidden State (Output):</strong> Filtered cell state</p>
+                <div class="math-box">
+                    $$\mathbf{h}^{(t)} = \mathbf{o}^{(t)} \odot \tanh(\mathbf{C}^{(t)})$$
+                </div>
+
+                <p style="font-size: 13px; color: var(--text-tertiary); margin-top: 15px;">
+                    Note: $\sigma$ is the sigmoid function, $\odot$ is element-wise multiplication
+                </p>
+            </div>
+
+            <h3>LSTM Gate Visualization</h3>
+            <p>Below shows how the three gates control information flow:</p>
+
+            <canvas id="lstmVisualization"></canvas>
+
+            <div class="controls">
+                <div class="slider-group">
+                    <label>Forget Gate (f):</label>
+                    <input type="range" id="forgetSlider" min="0" max="1" step="0.1" value="0.3">
+                    <span class="slider-value" id="forgetValue">0.3</span>
+                </div>
+            </div>
+
+            <div class="controls">
+                <div class="slider-group">
+                    <label>Input Gate (i):</label>
+                    <input type="range" id="inputSlider" min="0" max="1" step="0.1" value="0.7">
+                    <span class="slider-value" id="inputValue">0.7</span>
+                </div>
+            </div>
+
+            <div class="controls">
+                <div class="slider-group">
+                    <label>Output Gate (o):</label>
+                    <input type="range" id="outputSlider" min="0" max="1" step="0.1" value="0.8">
+                    <span class="slider-value" id="outputValue">0.8</span>
+                </div>
+            </div>
+
+            <button id="resetLstmBtn" class="secondary">Reset Gates</button>
+
+            <h3>Why LSTM Works</h3>
+            <p>
+                The cell state provides a <strong>gradient highway</strong>. Gradients flow directly through the cell state with multiplication by gate values (0-1), preventing vanishing gradients.
+            </p>
+        </section>
+
+        <section id="gru">
+            <h2>Gated Recurrent Units (GRU)</h2>
+            <p>GRUs are a simplified variant of LSTMs with fewer parameters but similar effectiveness. They combine the forget and input gates into a single "update gate."</p>
+
+            <h3>GRU Mathematics</h3>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">⚡</div>
+                    <div class="card-title">GRU Equations</div>
+                </div>
+
+                <p><strong>Reset Gate:</strong> Controls how much past state to forget</p>
+                <div class="math-box">
+                    $$\mathbf{r}^{(t)} = \sigma(\mathbf{W}_{r} \cdot [\mathbf{h}^{(t-1)}, \mathbf{x}^{(t)}] + \mathbf{b}_{r})$$
+                </div>
+
+                <p><strong>Update Gate:</strong> Controls how much to update vs. keep</p>
+                <div class="math-box">
+                    $$\mathbf{z}^{(t)} = \sigma(\mathbf{W}_{z} \cdot [\mathbf{h}^{(t-1)}, \mathbf{x}^{(t)}] + \mathbf{b}_{z})$$
+                </div>
+
+                <p><strong>Candidate Hidden State:</strong> Proposed new state</p>
+                <div class="math-box">
+                    $$\tilde{\mathbf{h}}^{(t)} = \tanh(\mathbf{W}_{h} \cdot [\mathbf{r}^{(t)} \odot \mathbf{h}^{(t-1)}, \mathbf{x}^{(t)}] + \mathbf{b}_{h})$$
+                </div>
+
+                <p><strong>Hidden State Update:</strong> Interpolate between old and new</p>
+                <div class="math-box">
+                    $$\mathbf{h}^{(t)} = (1 - \mathbf{z}^{(t)}) \odot \tilde{\mathbf{h}}^{(t)} + \mathbf{z}^{(t)} \odot \mathbf{h}^{(t-1)}$$
+                </div>
+            </div>
+
+            <h3>GRU vs LSTM Comparison</h3>
+            <ul>
+                <li><strong>Faster to train:</strong> Fewer parameters (~75% of LSTM)</li>
+                <li><strong>Easier to tune:</strong> Simpler architecture</li>
+                <li><strong>Similar performance:</strong> On many tasks, GRU ≈ LSTM</li>
+                <li><strong>Better for limited data:</strong> Fewer parameters to fit</li>
+            </ul>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">📋</div>
+                    <div class="card-title">When to Use Each</div>
+                </div>
+                <p><strong>Choose LSTM if:</strong></p>
+                <ul>
+                    <li>You have plenty of training data</li>
+                    <li>You need maximum modeling capacity</li>
+                    <li>Your sequences are very long (100+ steps)</li>
+                </ul>
+                <p style="margin-top: 15px;"><strong>Choose GRU if:</strong></p>
+                <ul>
+                    <li>You have limited data</li>
+                    <li>You need faster training</li>
+                    <li>You want simpler code and fewer hyperparameters</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="conv-seq">
+            <h2>1D Convolutional Layers for Sequences</h2>
+            <p>Not all sequential problems require RNNs. For shorter sequences or when pattern matching is important, 1D convolutional layers can be surprisingly effective and are much faster.</p>
+
+            <h3>1D Convolution for Sequences</h3>
+            <div class="math-box">
+                $$y_t = \sum_{k=0}^{K-1} w_k \cdot x_{t+k} + b$$
+            </div>
+
+            <p>Unlike RNNs which process sequentially, CNNs can process entire sequences in parallel, making them much faster.</p>
+
+            <h3>Advantages of 1D Conv for Sequences</h3>
+            <ul>
+                <li><strong>Parallelizable:</strong> Process entire batch in parallel</li>
+                <li><strong>Fast:</strong> GPU-friendly, trains faster than RNNs</li>
+                <li><strong>Memory efficient:</strong> No need to maintain hidden states</li>
+                <li><strong>Good for long sequences:</strong> Can use dilated convolutions for large receptive fields</li>
+            </ul>
+
+            <canvas id="convVisualization"></canvas>
+        </section>
+
+        <section id="wavenet">
+            <h2>WaveNet Architecture</h2>
+            <p>WaveNet is a state-of-the-art CNN architecture that can handle sequences of tens of thousands of steps. It uses <strong>dilated convolutions</strong> to maintain a large receptive field while remaining efficient.</p>
+
+            <div class="feynman-box">
+                <div class="feynman-label">WaveNet Key Idea</div>
+                <p style="margin: 0;">
+                    WaveNet stacks 1D convolutions with exponentially increasing dilation rates (1, 2, 4, 8, 16...). This creates an exponentially growing receptive field while using relatively few parameters.
+                </p>
+            </div>
+
+            <h3>Dilated Convolution</h3>
+            <div class="math-box">
+                $$y_t = \sum_{k=0}^{K-1} w_k \cdot x_{t + d \cdot k} + b$$
+            </div>
+
+            <p>Where $d$ is the dilation rate. With $d=2$, the kernel looks at every other time step, greatly increasing the receptive field without increasing kernel size.</p>
+
+            <canvas id="wavenetArchitecture"></canvas>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🌊</div>
+                    <div class="card-title">WaveNet Features</div>
+                </div>
+                <ul>
+                    <li><strong>Dilated Convolutions:</strong> Exponentially increasing dilation</li>
+                    <li><strong>Residual Connections:</strong> Skip connections allow gradients to flow</li>
+                    <li><strong>Gated Activations:</strong> Separate tanh and sigmoid branches</li>
+                    <li><strong>Causal Convolutions:</strong> Only look at past, not future</li>
+                    <li><strong>Global/Local Conditioning:</strong> Can condition on metadata</li>
+                </ul>
+            </div>
+
+            <h3>Why WaveNet Works Well</h3>
+            <ul>
+                <li>Receptive field grows <strong>exponentially</strong> with depth: $2^L$ where $L$ is number of blocks</li>
+                <li>Can see thousands of steps back with relatively few layers</li>
+                <li>Fully parallelizable during training (unlike RNNs)</li>
+                <li>State-of-the-art on audio generation, music synthesis</li>
+            </ul>
+        </section>
+
+        <section id="seq2seq">
+            <h2>Sequence-to-Sequence (Seq2Seq) Models</h2>
+            <p>Seq2Seq models map variable-length input sequences to variable-length output sequences. Instead of predicting a single output, they predict entire sequences.</p>
+
+            <h3>Two Approaches</h3>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🔄</div>
+                    <div class="card-title">Vector-to-Vector at Each Step</div>
+                </div>
+                <p>At each time step, output a vector of predictions for the next 14 steps ahead:</p>
+                <div class="math-box">
+                    $$\mathbf{y}^{(t)} = [\hat{y}_{t+1}, \hat{y}_{t+2}, ..., \hat{y}_{t+14}]$$
+                </div>
+                <p>Shapes:</p>
+                <ul>
+                    <li>Input: $[\text{batch}, \text{time\_steps}, \text{features}]$</li>
+                    <li>Output: $[\text{batch}, \text{time\_steps}, 14]$</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">📡</div>
+                    <div class="card-title">Encoder-Decoder Seq2Seq</div>
+                </div>
+                <p>A more sophisticated approach uses an encoder-decoder architecture:</p>
+                <ol>
+                    <li><strong>Encoder:</strong> Reads entire input sequence, produces fixed-size context vector</li>
+                    <li><strong>Decoder:</strong> Uses context vector to generate output sequence, one step at a time</li>
+                </ol>
+                <p>This is the classic architecture for machine translation and other NLP tasks.</p>
+            </div>
+
+            <h3>Shapes and Data Flow</h3>
+            <div class="math-box">
+                \begin{align}
+                \text{Encoder: } & [batch, T_{in}, features_{in}] \to [batch, hidden\_size] \\
+                \text{Decoder: } & [batch, T_{out}, hidden\_size] \to [batch, T_{out}, features_{out}]
+                \end{align}
+            </div>
+
+            <canvas id="seq2seqVisualization"></canvas>
+        </section>
+
+        <section id="implementation">
+            <h2>Production-Grade Implementation</h2>
+            <p>Here are practical PyTorch implementations you can use in real projects:</p>
+
+            <button class="collapsible">Simple RNN Layer</button>
+            <div class="content">
+                <span class="code-label">Python - PyTorch</span>
+                <pre><code>import torch.nn as nn
+
+class SimpleRNNLayer(nn.Module):
+    def __init__(self, input_size, hidden_size, num_layers=1):
+        super().__init__()
+        self.rnn = nn.RNN(input_size, hidden_size, num_layers,
+                         batch_first=True)
+
+    def forward(self, x):
+        output, hidden = self.rnn(x)
+        return output, hidden
+
+# x: (batch=16, seq_len=50, input=10)
+# output: (batch=16, seq_len=50, hidden=32)
+# hidden: (num_layers=1, batch=16, hidden=32)</code></pre>
+            </div>
+
+            <button class="collapsible">LSTM for Time Series Forecasting</button>
+            <div class="content">
+                <span class="code-label">Python - PyTorch</span>
+                <pre><code>class LSTMForecaster(nn.Module):
+    def __init__(self, input_size, hidden_size, num_layers, output_size):
+        super().__init__()
+        self.lstm = nn.LSTM(input_size, hidden_size, num_layers,
+                           batch_first=True)
+        self.fc = nn.Linear(hidden_size, output_size)
+
+    def forward(self, x):
+        lstm_out, _ = self.lstm(x)
+        predictions = self.fc(lstm_out)
+        return predictions
+
+# Training with gradient clipping
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+for batch_x, batch_y in train_loader:
+    optimizer.zero_grad()
+    predictions = model(batch_x)
+    loss = criterion(predictions, batch_y)
+    loss.backward()
+    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+    optimizer.step()</code></pre>
+            </div>
+
+            <button class="collapsible">GRU-Based Seq2Seq Model</button>
+            <div class="content">
+                <span class="code-label">Python - PyTorch</span>
+                <pre><code>class Seq2SeqModel(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size, num_layers):
+        super().__init__()
+        self.encoder = nn.GRU(input_size, hidden_size, num_layers,
+                             batch_first=True)
+        self.decoder_gru = nn.GRU(output_size, hidden_size, num_layers,
+                                 batch_first=True)
+        self.decoder_fc = nn.Linear(hidden_size, output_size)
+
+    def forward(self, x, target_len=14):
+        _, hidden = self.encoder(x)
+        batch_size = x.size(0)
+        decoder_input = x[:, -1:, :self.output_size]
+        outputs = []
+
+        for _ in range(target_len):
+            out, hidden = self.decoder_gru(decoder_input, hidden)
+            pred = self.decoder_fc(out)
+            outputs.append(pred)
+            decoder_input = pred
+
+        return torch.cat(outputs, dim=1)</code></pre>
+            </div>
+
+            <button class="collapsible">1D Convolutional Network for Sequences</button>
+            <div class="content">
+                <span class="code-label">Python - PyTorch</span>
+                <pre><code>class Conv1DSequenceModel(nn.Module):
+    def __init__(self, input_channels, output_channels, kernel_size=3):
+        super().__init__()
+        padding = (kernel_size - 1) // 2
+        self.conv_stack = nn.Sequential(
+            nn.Conv1d(input_channels, 32, kernel_size, padding=padding),
+            nn.ReLU(),
+            nn.Conv1d(32, 64, kernel_size, padding=padding),
+            nn.ReLU(),
+            nn.Conv1d(64, 128, kernel_size, padding=padding),
+            nn.ReLU(),
+        )
+        self.fc = nn.Linear(128, output_channels)
+
+    def forward(self, x):
+        x = x.transpose(1, 2)  # (batch, features, seq_len)
+        conv_out = self.conv_stack(x)
+        conv_out = conv_out.transpose(1, 2)
+        output = self.fc(conv_out)
+        return output</code></pre>
+            </div>
+
+            <button class="collapsible">Dilated Convolution for WaveNet</button>
+            <div class="content">
+                <span class="code-label">Python - PyTorch</span>
+                <pre><code>class WaveNetLike(nn.Module):
+    def __init__(self, input_channels, output_channels, num_blocks=6):
+        super().__init__()
+        self.input_conv = nn.Conv1d(input_channels, 64, 1)
+        self.blocks = nn.ModuleList([
+            nn.Conv1d(64, 64, 3, padding=2**i, dilation=2**i)
+            for i in range(num_blocks)
+        ])
+        self.output_conv = nn.Conv1d(64, output_channels, 1)
+
+    def forward(self, x):
+        x = x.transpose(1, 2)
+        x = self.input_conv(x)
+        for block in self.blocks:
+            x = x + block(x)
+        x = self.output_conv(x)
+        return x.transpose(1, 2)</code></pre>
+            </div>
+
+            <h3>Training Tips</h3>
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">💡</div>
+                    <div class="card-title">Best Practices</div>
+                </div>
+                <ul>
+                    <li><strong>Gradient Clipping:</strong> Use <code>clip_grad_norm_()</code> to prevent exploding gradients</li>
+                    <li><strong>Layer Normalization:</strong> Use for RNNs, not batch norm</li>
+                    <li><strong>Learning Rate:</strong> Start with 0.001 for Adam optimizer</li>
+                    <li><strong>Sequence Length:</strong> Truncate very long sequences (100-300 steps) for BPTT stability</li>
+                    <li><strong>Data Preprocessing:</strong> Normalize inputs to mean 0, std 1</li>
+                    <li><strong>Validation:</strong> Monitor on held-out test set to detect overfitting</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="warroom">
+            <h2>Socratic Sandbox: Test Your Understanding</h2>
+            <p>Work through these scenarios to deepen your understanding. Try to answer before revealing the explanation.</p>
+
+            <div class="war-room">
+                <div class="war-room-title">Scenario 1: Choosing the Right Architecture</div>
+
+                <div class="scenario">
+                    <div class="scenario-question">
+                        You need to forecast daily stock prices for 30 days using 5 years of historical data. Which architecture: LSTM, GRU, or 1D CNN? Why?
+                    </div>
+                    <button class="reveal-btn" onclick="toggleAnswer(this)">Reveal Answer</button>
+                    <div class="scenario-answer">
+                        <strong>Best choice: LSTM</strong>
+                        <p style="margin-top: 10px;">Why LSTM wins:</p>
+                        <ul style="margin-top: 8px;">
+                            <li>Plenty of data available (5 years)</li>
+                            <li>Long-term dependencies (seasonal patterns, trends over months)</li>
+                            <li>LSTM's cell state perfect for maintaining long-term context</li>
+                            <li>Task requires true sequence understanding</li>
+                        </ul>
+                        <p style="margin-top: 10px;"><strong>Note:</strong> GRU would also work well and train faster.</p>
+                    </div>
+                </div>
+
+                <div class="scenario">
+                    <div class="scenario-question">
+                        You encounter vanishing gradients on sequences longer than 50 time steps. What three techniques could you try?
+                    </div>
+                    <button class="reveal-btn" onclick="toggleAnswer(this)">Reveal Answer</button>
+                    <div class="scenario-answer">
+                        <strong>Three solutions:</strong>
+                        <ol style="margin-top: 10px;">
+                            <li><strong>Gradient Clipping:</strong> <code>clip_grad_norm_(model.parameters(), max_norm=1.0)</code></li>
+                            <li><strong>Layer Normalization:</strong> Normalize hidden states or recurrent connections</li>
+                            <li><strong>Orthogonal Weight Initialization:</strong> Initialize RNN weights orthogonally</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div class="scenario">
+                    <div class="scenario-question">
+                        Why use "teacher forcing" during training but not during inference in Seq2Seq models?
+                    </div>
+                    <button class="reveal-btn" onclick="toggleAnswer(this)">Reveal Answer</button>
+                    <div class="scenario-answer">
+                        <strong>Teacher Forcing Paradox:</strong>
+                        <p style="margin-top: 10px;"><strong>Training:</strong> Feed ground truth outputs. Makes training stable, prevents error accumulation.</p>
+                        <p style="margin-top: 10px;"><strong>Inference:</strong> Feed own predictions. Tests actual generalization.</p>
+                        <p style="margin-top: 10px;"><strong>The Problem (Exposure Bias):</strong> Decoder never sees its own mistakes during training. At test time, errors accumulate. Solution: gradually reduce teacher forcing during training.</p>
+                    </div>
+                </div>
+
+                <div class="scenario">
+                    <div class="scenario-question">
+                        WaveNet uses dilations (1, 2, 4, 8, 16, 32). What's the receptive field size after 6 blocks with kernel size 3?
+                    </div>
+                    <button class="reveal-btn" onclick="toggleAnswer(this)">Reveal Answer</button>
+                    <div class="scenario-answer">
+                        <strong>Receptive Field: ~64 time steps</strong>
+                        <p style="margin-top: 10px;"><strong>Why better than large kernels:</strong></p>
+                        <ul style="margin-top: 8px;">
+                            <li>Fewer parameters: kernel size 3 vs 64</li>
+                            <li>Multiple scales: local patterns → global patterns</li>
+                            <li>Efficient gradient flow</li>
+                            <li>Parallel computation (unlike RNNs)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 40px; padding: 20px; background: var(--bg-secondary); border-left: 4px solid var(--accent-green); border-radius: 8px;">
+                <p style="color: var(--accent-green); font-weight: 600; margin-bottom: 10px;">
+                    You've completed Chapter 13!
+                </p>
+                <p style="color: var(--text-secondary);">
+                    You now understand RNNs, LSTMs, GRUs, sequence processing with CNNs, and when to use each approach. Ready for Chapter 14 (NLP & Attention) or Chapter 15 (Transformers)?
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        function toggleAnswer(btn) {
+            const answer = btn.nextElementSibling;
+            answer.classList.toggle('show');
+            btn.textContent = answer.classList.contains('show') ? 'Hide Answer' : 'Reveal Answer';
+        }
+
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const tocItems = document.querySelectorAll('.toc-item');
+
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('active');
+        });
+
+        tocItems.forEach(item => {
+            item.addEventListener('click', () => {
+                tocItems.forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                const sectionId = item.getAttribute('data-section');
+                document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
+                sidebar.classList.remove('active');
+            });
+        });
+
+        window.addEventListener('scroll', () => {
+            const sections = document.querySelectorAll('section');
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (pageYOffset >= sectionTop - 200) {
+                    current = section.getAttribute('id');
+                }
+            });
+            tocItems.forEach(item => item.classList.remove('active'));
+            if (current) {
+                document.querySelector(`[data-section="${current}"]`)?.classList.add('active');
+            }
+        });
+
+        const progressBar = document.querySelector('.progress-bar');
+        window.addEventListener('scroll', () => {
+            const scrollPercent = (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100;
+            progressBar.style.width = scrollPercent + '%';
+        });
+
+        // Canvas Visualizations
+        function initCanvases() {
+            // RNN Unrolling
+            const rnnCanvas = document.getElementById('rnnUnrolling');
+            if (rnnCanvas) {
+                const ctx = rnnCanvas.getContext('2d');
+                rnnCanvas.width = rnnCanvas.offsetWidth;
+                rnnCanvas.height = 300;
+
+                let frame = 0;
+                let animating = false;
+
+                function draw(progress) {
+                    ctx.fillStyle = 'var(--bg-tertiary)';
+                    ctx.fillRect(0, 0, rnnCanvas.width, rnnCanvas.height);
+
+                    const timeSteps = 5;
+                    const spacing = (rnnCanvas.width - 100) / timeSteps;
+                    const x = 50;
+
+                    ctx.fillStyle = 'var(--text-secondary)';
+                    ctx.font = '14px Inter';
+                    ctx.fillText('Unrolled RNN through time', 10, 25);
+
+                    for (let t = 0; t < timeSteps; t++) {
+                        const posX = x + t * spacing;
+                        const vis = t <= Math.floor(progress * timeSteps);
+
+                        if (!vis) continue;
+
+                        // Input
+                        ctx.fillStyle = 'rgba(79, 195, 247, 0.3)';
+                        ctx.fillRect(posX - 20, 50, 40, 40);
+                        ctx.strokeStyle = '#4fc3f7';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(posX - 20, 50, 40, 40);
+
+                        // Hidden
+                        ctx.fillStyle = 'rgba(206, 147, 216, 0.3)';
+                        ctx.beginPath();
+                        ctx.arc(posX, 150, 25, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.strokeStyle = '#ce93d8';
+                        ctx.stroke();
+
+                        // Output
+                        ctx.fillStyle = 'rgba(102, 187, 106, 0.3)';
+                        ctx.fillRect(posX - 20, 220, 40, 40);
+                        ctx.strokeStyle = '#66bb6a';
+                        ctx.strokeRect(posX - 20, 220, 40, 40);
+
+                        // Arrows
+                        ctx.strokeStyle = '#4fc3f7';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(posX, 90);
+                        ctx.lineTo(posX, 125);
+                        ctx.stroke();
+
+                        ctx.strokeStyle = '#66bb6a';
+                        ctx.beginPath();
+                        ctx.moveTo(posX, 175);
+                        ctx.lineTo(posX, 220);
+                        ctx.stroke();
+
+                        // Recurrent
+                        if (t > 0) {
+                            ctx.strokeStyle = '#ce93d8';
+                            ctx.lineWidth = 2;
+                            ctx.beginPath();
+                            ctx.moveTo(posX - 25, 150);
+                            ctx.bezierCurveTo(posX - 60, 120, posX - spacing - 60, 120, posX - spacing + 25, 150);
+                            ctx.stroke();
+                        }
+                    }
+                }
+
+                function animate() {
+                    if (frame < 200) {
+                        draw(frame / 200);
+                        frame++;
+                        if (animating) requestAnimationFrame(animate);
+                    }
+                }
+
+                document.getElementById('playRnnBtn').addEventListener('click', () => {
+                    animating = true;
+                    frame = 0;
+                    animate();
+                });
+
+                document.getElementById('resetRnnBtn').addEventListener('click', () => {
+                    animating = false;
+                    frame = 0;
+                    draw(0);
+                });
+
+                draw(0);
+            }
+
+            // Time Series
+            const tsCanvas = document.getElementById('timeSeriesChart');
+            if (tsCanvas) {
+                const ctx = tsCanvas.getContext('2d');
+                tsCanvas.width = tsCanvas.offsetWidth;
+                tsCanvas.height = 350;
+
+                let tsData = [];
+                let tsForecast = [];
+
+                function genTS() {
+                    tsData = [];
+                    let val = 100;
+                    for (let i = 0; i < 50; i++) {
+                        val += (Math.random() - 0.5) * 5 + Math.sin(i * 0.2) * 2;
+                        tsData.push(val);
+                    }
+                }
+
+                function drawTS() {
+                    ctx.fillStyle = 'var(--bg-tertiary)';
+                    ctx.fillRect(0, 0, tsCanvas.width, tsCanvas.height);
+
+                    if (!tsData.length) return;
+
+                    const pad = 60;
+                    const pw = tsCanvas.width - 2 * pad;
+                    const ph = tsCanvas.height - 2 * pad;
+
+                    let minVal = Math.min(...tsData, ...tsForecast);
+                    let maxVal = Math.max(...tsData, ...tsForecast);
+                    const range = maxVal - minVal || 1;
+
+                    ctx.strokeStyle = 'var(--border-color)';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(pad, pad);
+                    ctx.lineTo(pad, tsCanvas.height - pad);
+                    ctx.lineTo(tsCanvas.width - pad, tsCanvas.height - pad);
+                    ctx.stroke();
+
+                    ctx.strokeStyle = '#4fc3f7';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    for (let i = 0; i < tsData.length; i++) {
+                        const x = pad + (i / (tsData.length + tsForecast.length)) * pw;
+                        const y = tsCanvas.height - pad - ((tsData[i] - minVal) / range) * ph;
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                    ctx.stroke();
+
+                    if (tsForecast.length > 0) {
+                        ctx.strokeStyle = '#ce93d8';
+                        ctx.setLineDash([5, 5]);
+                        ctx.beginPath();
+                        for (let i = 0; i < tsForecast.length; i++) {
+                            const idx = tsData.length + i;
+                            const x = pad + (idx / (tsData.length + tsForecast.length)) * pw;
+                            const y = tsCanvas.height - pad - ((tsForecast[i] - minVal) / range) * ph;
+                            if (i === 0) {
+                                const px = pad + ((tsData.length - 1) / (tsData.length + tsForecast.length)) * pw;
+                                const py = tsCanvas.height - pad - ((tsData[tsData.length - 1] - minVal) / range) * ph;
+                                ctx.moveTo(px, py);
+                                ctx.lineTo(x, y);
+                            } else {
+                                ctx.lineTo(x, y);
+                            }
+                        }
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                    }
+                }
+
+                genTS();
+                drawTS();
+
+                document.getElementById('generateTsBtn').addEventListener('click', () => {
+                    genTS();
+                    tsForecast = [];
+                    drawTS();
+                });
+
+                document.getElementById('forecastBtn').addEventListener('click', () => {
+                    tsForecast = [];
+                    let last = tsData[tsData.length - 1];
+                    const trend = (tsData[tsData.length - 1] - tsData[tsData.length - 10]) / 10;
+                    for (let i = 0; i < 20; i++) {
+                        last += trend + (Math.random() - 0.5) * 2;
+                        tsForecast.push(last);
+                    }
+                    drawTS();
+                });
+
+                document.getElementById('resetTsBtn').addEventListener('click', () => {
+                    genTS();
+                    tsForecast = [];
+                    drawTS();
+                });
+            }
+
+            // LSTM Visualization
+            const lstmCanvas = document.getElementById('lstmVisualization');
+            if (lstmCanvas) {
+                const ctx = lstmCanvas.getContext('2d');
+                lstmCanvas.width = lstmCanvas.offsetWidth;
+                lstmCanvas.height = 350;
+
+                const forgetSlider = document.getElementById('forgetSlider');
+                const inputSlider = document.getElementById('inputSlider');
+                const outputSlider = document.getElementById('outputSlider');
+
+                function drawLSTM() {
+                    ctx.fillStyle = 'var(--bg-tertiary)';
+                    ctx.fillRect(0, 0, lstmCanvas.width, lstmCanvas.height);
+
+                    const f = parseFloat(forgetSlider.value);
+                    const i = parseFloat(inputSlider.value);
+                    const o = parseFloat(outputSlider.value);
+
+                    const cx = lstmCanvas.width / 2;
+                    const cy = lstmCanvas.height / 2;
+
+                    ctx.fillStyle = `rgba(206, 147, 216, ${0.3 + 0.5 * (f + i)})`;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, 60, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#ce93d8';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#e0e0e0';
+                    ctx.font = '14px JetBrains Mono';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('Cell', cx, cy - 20);
+                }
+
+                forgetSlider.addEventListener('input', drawLSTM);
+                inputSlider.addEventListener('input', drawLSTM);
+                outputSlider.addEventListener('input', drawLSTM);
+
+                document.getElementById('resetLstmBtn').addEventListener('click', () => {
+                    forgetSlider.value = 0.3;
+                    inputSlider.value = 0.7;
+                    outputSlider.value = 0.8;
+                    document.getElementById('forgetValue').textContent = '0.3';
+                    document.getElementById('inputValue').textContent = '0.7';
+                    document.getElementById('outputValue').textContent = '0.8';
+                    drawLSTM();
+                });
+
+                drawLSTM();
+            }
+
+            // Other canvases
+            ['gradientVisualization', 'convVisualization', 'wavenetArchitecture', 'seq2seqVisualization'].forEach(id => {
+                const canvas = document.getElementById(id);
+                if (canvas) {
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = 'var(--bg-tertiary)';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = 'var(--text-secondary)';
+                    ctx.font = '12px Inter';
+                    ctx.fillText('Interactive visualization placeholder', 10, 30);
+                }
+            });
+        }
+
+        const collapsibles = document.querySelectorAll('.collapsible');
+        collapsibles.forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.classList.toggle('active');
+                const content = this.nextElementSibling;
+                if (content?.classList.contains('content')) {
+                    content.classList.toggle('active');
+                }
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                renderMathInElement(document.body, {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '\\[', right: '\\]', display: true},
+                        {left: '$', right: '$', display: false},
+                        {left: '\\(', right: '\\)', display: false}
+                    ],
+                    throwOnError: false
+                });
+            } catch (e) {
+                console.error('KaTeX error:', e);
+            }
+
+            try {
+                initCanvases();
+            } catch (e) {
+                console.error('Canvas error:', e);
+            }
+        });
+    </script>
+</body>
+</html>

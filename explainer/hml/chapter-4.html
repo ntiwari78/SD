@@ -1,0 +1,2030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 4: Training Models - Interactive Explainer</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a24;
+            --accent-blue: #4fc3f7;
+            --accent-purple: #b39ddb;
+            --accent-green: #81c784;
+            --accent-orange: #ffb74d;
+            --accent-red: #e57373;
+            --text-primary: #e8e8f0;
+            --text-secondary: #a8a8b8;
+            --text-tertiary: #686878;
+            --border-color: #2a2a38;
+            --hover-color: #1f1f2e;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple), var(--accent-green));
+            z-index: 1000;
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.1s ease-out;
+        }
+
+        /* Header */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(10, 10, 15, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            z-index: 100;
+            margin-top: 3px;
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 80px;
+            width: 280px;
+            height: calc(100vh - 80px);
+            background-color: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            overflow-y: auto;
+            padding: 2rem 0;
+            z-index: 99;
+        }
+
+        .sidebar nav {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar nav a {
+            padding: 0.75rem 1.5rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-left: 3px solid transparent;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+        }
+
+        .sidebar nav a:hover {
+            background-color: var(--hover-color);
+            color: var(--accent-blue);
+            border-left-color: var(--accent-blue);
+        }
+
+        .sidebar nav a.active {
+            color: var(--accent-blue);
+            background-color: var(--bg-tertiary);
+            border-left-color: var(--accent-blue);
+        }
+
+        /* Main Content */
+        main {
+            margin-left: 280px;
+            margin-top: 80px;
+            padding: 3rem 4rem;
+            max-width: 1200px;
+        }
+
+        /* Sections */
+        section {
+            margin-bottom: 5rem;
+            opacity: 0;
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .section-header {
+            margin-bottom: 2rem;
+        }
+
+        .section-header h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .section-header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        /* Content Layout */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .content-block {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .content-block:hover {
+            border-color: var(--accent-blue);
+            transform: translateY(-2px);
+        }
+
+        .content-block h3 {
+            color: var(--accent-blue);
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+
+        .content-block p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        /* Math Rendering */
+        .math-display {
+            background-color: var(--bg-tertiary);
+            padding: 2rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-blue);
+            margin: 1.5rem 0;
+            overflow-x: auto;
+        }
+
+        .math-inline {
+            display: inline;
+        }
+
+        /* Canvas Containers */
+        .canvas-container {
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1.5rem 0;
+            text-align: center;
+        }
+
+        canvas {
+            max-width: 100%;
+            display: block;
+            margin: 0 auto;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .control-group label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            min-width: 120px;
+        }
+
+        input[type="range"] {
+            width: 150px;
+            accent-color: var(--accent-blue);
+        }
+
+        input[type="number"] {
+            width: 100px;
+            padding: 0.5rem;
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            border: none;
+            color: var(--text-primary);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(79, 195, 247, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        /* Code Display */
+        .code-block {
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+
+        .code-block code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .keyword { color: var(--accent-purple); }
+        .string { color: var(--accent-green); }
+        .number { color: var(--accent-orange); }
+        .comment { color: var(--text-tertiary); }
+        .function { color: var(--accent-blue); }
+
+        /* Collapsible Sections */
+        .collapsible {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            cursor: pointer;
+            padding: 1.5rem;
+            width: 100%;
+            border: none;
+            text-align: left;
+            outline: none;
+            font-size: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .collapsible:hover {
+            background-color: var(--hover-color);
+            border-color: var(--accent-blue);
+        }
+
+        .collapsible::after {
+            content: '▼';
+            float: right;
+            transition: transform 0.3s ease;
+        }
+
+        .collapsible.active::after {
+            transform: rotate(180deg);
+        }
+
+        .collapsible-content {
+            padding: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .collapsible-content.open {
+            padding: 1.5rem;
+            max-height: 2000px;
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 4rem 0;
+            margin-bottom: 3rem;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple), var(--accent-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto 2rem;
+        }
+
+        /* Quote */
+        .quote {
+            border-left: 4px solid var(--accent-purple);
+            padding-left: 1.5rem;
+            margin: 2rem 0;
+            font-style: italic;
+            color: var(--text-secondary);
+        }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .stat-card {
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .stat-card h4 {
+            color: var(--accent-blue);
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Diagnostic Output */
+        .diagnostic-output {
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--accent-green);
+            margin: 1.5rem 0;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        /* Footer */
+        footer {
+            background-color: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: 3rem 2rem;
+            text-align: center;
+            color: var(--text-secondary);
+            margin-left: 280px;
+            margin-top: 4rem;
+        }
+
+        footer nav {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        footer a {
+            color: var(--accent-blue);
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            main {
+                padding: 2rem;
+            }
+
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                position: absolute;
+                left: -280px;
+                transition: left 0.3s ease;
+            }
+
+            main {
+                margin-left: 0;
+                padding: 1.5rem;
+            }
+
+            footer {
+                margin-left: 0;
+            }
+
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .section-header h2 {
+                font-size: 1.8rem;
+            }
+
+            header {
+                padding: 1rem;
+            }
+
+            header h1 {
+                font-size: 1.2rem;
+            }
+        }
+
+        .highlight {
+            background-color: rgba(79, 195, 247, 0.1);
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            color: var(--accent-blue);
+        }
+    </style>
+</head>
+<body>
+    <!-- Progress Bar -->
+    <div class="progress-bar"></div>
+
+    <!-- Header -->
+    <header>
+        <h1>📚 Chapter 4: Training Models</h1>
+    </header>
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+        <nav>
+            <a href="#feynman" class="nav-link active">Feynman Mental Model</a>
+            <a href="#linear-regression" class="nav-link">Linear Regression</a>
+            <a href="#normal-equation" class="nav-link">Normal Equation</a>
+            <a href="#gradient-descent" class="nav-link">Gradient Descent</a>
+            <a href="#polynomial" class="nav-link">Polynomial Regression</a>
+            <a href="#learning-curves" class="nav-link">Learning Curves</a>
+            <a href="#regularization" class="nav-link">Regularization</a>
+            <a href="#logistic" class="nav-link">Logistic Regression</a>
+            <a href="#softmax" class="nav-link">Softmax Regression</a>
+            <a href="#production" class="nav-link">Production Code</a>
+            <a href="#war-room" class="nav-link">War Room</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Hero Section: Feynman Mental Model -->
+        <section id="feynman">
+            <div class="hero">
+                <h1>Training Models: The Complete Picture</h1>
+                <p>Master the mathematical foundations and practical techniques for training supervised learning models.</p>
+                <div class="quote">
+                    "If you can't explain it simply, you don't understand it well enough." — Richard Feynman
+                </div>
+            </div>
+
+            <div class="content-block">
+                <h3>Core Concepts at a Glance</h3>
+                <p>Training a machine learning model is fundamentally about finding the best parameters that minimize prediction error. This chapter explores four essential approaches:</p>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h4>📐</h4>
+                        <p><strong>Normal Equation</strong><br/>Closed-form solution</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>⬇️</h4>
+                        <p><strong>Gradient Descent</strong><br/>Iterative optimization</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>📊</h4>
+                        <p><strong>Regularization</strong><br/>Combat overfitting</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>🎯</h4>
+                        <p><strong>Classification</strong><br/>Logistic & Softmax</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Linear Regression & Normal Equation -->
+        <section id="linear-regression">
+            <div class="section-header">
+                <h2>Linear Regression</h2>
+                <p>The foundation of supervised learning: predicting a continuous value through a linear combination of features.</p>
+            </div>
+
+            <div class="content-block">
+                <h3>The Linear Regression Model</h3>
+                <p>Linear regression assumes a linear relationship between input features and the target variable:</p>
+                <div class="math-display">
+                    \[\hat{y} = \theta_0 + \theta_1 x_1 + \theta_2 x_2 + \ldots + \theta_n x_n = h_\theta(x)\]
+                </div>
+                <p>Where:</p>
+                <ul style="margin-left: 2rem; color: var(--text-secondary);">
+                    <li><span class="highlight">θ</span> are the parameters (weights)</li>
+                    <li><span class="highlight">x</span> are the feature values</li>
+                    <li><span class="highlight">ŷ</span> is the prediction</li>
+                </ul>
+            </div>
+
+            <div class="content-block">
+                <h3>Mean Squared Error (MSE) Loss</h3>
+                <p>We measure model performance using MSE, the average squared difference between predictions and actual values:</p>
+                <div class="math-display">
+                    \[MSE = \frac{1}{m} \sum_{i=1}^{m} (h_\theta(x^{(i)}) - y^{(i)})^2\]
+                </div>
+                <p>Minimizing this loss function finds the optimal parameters. Note that MSE is <span class="highlight">convex</span>, meaning it has a single global minimum—perfect for optimization.</p>
+            </div>
+        </section>
+
+        <!-- Normal Equation Section -->
+        <section id="normal-equation">
+            <div class="section-header">
+                <h2>The Normal Equation</h2>
+                <p>A closed-form, non-iterative solution to linear regression.</p>
+            </div>
+
+            <div class="content-grid">
+                <div class="content-block">
+                    <h3>Vector Form</h3>
+                    <p>We can write the prediction as:</p>
+                    <div class="math-display">
+                        \[\hat{\mathbf{y}} = \mathbf{X} \boldsymbol{\theta}\]
+                    </div>
+                    <p>Where <strong>X</strong> is the design matrix (m × n+1) containing all training examples and features, and <strong>θ</strong> is the parameter vector.</p>
+                </div>
+
+                <div class="content-block">
+                    <h3>The Solution</h3>
+                    <p>By taking the derivative of MSE with respect to <strong>θ</strong> and setting it to zero:</p>
+                    <div class="math-display">
+                        \[\boldsymbol{\theta} = (\mathbf{X}^T \mathbf{X})^{-1} \mathbf{X}^T \mathbf{y}\]
+                    </div>
+                    <p>This is the <span class="highlight">Normal Equation</span>—a direct formula for optimal parameters.</p>
+                </div>
+            </div>
+
+            <div class="content-block">
+                <h3>Computational Complexity Analysis</h3>
+                <table style="width: 100%; color: var(--text-secondary); margin-top: 1rem;">
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 0.75rem;"><strong>Aspect</strong></td>
+                        <td style="padding: 0.75rem;"><strong>Normal Equation</strong></td>
+                        <td style="padding: 0.75rem;"><strong>Gradient Descent</strong></td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 0.75rem;">Time Complexity</td>
+                        <td style="padding: 0.75rem; color: var(--accent-orange);">O(n³) for matrix inversion</td>
+                        <td style="padding: 0.75rem; color: var(--accent-green);">O(k·m·n) where k=iterations</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 0.75rem;">Space Complexity</td>
+                        <td style="padding: 0.75rem;">O(n²)</td>
+                        <td style="padding: 0.75rem;">O(n)</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 0.75rem;">Scaling</td>
+                        <td style="padding: 0.75rem;">Slow for large n</td>
+                        <td style="padding: 0.75rem;">Scales to millions of features</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.75rem;">Iterations</td>
+                        <td style="padding: 0.75rem;">None (direct solution)</td>
+                        <td style="padding: 0.75rem;">Many (convergence dependent)</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="content-block">
+                <h3>SVD Decomposition Alternative</h3>
+                <p>For numerical stability, the Singular Value Decomposition (SVD) provides an alternative:</p>
+                <div class="math-display">
+                    \[\mathbf{X} = \mathbf{U} \boldsymbol{\Sigma} \mathbf{V}^T\]
+                </div>
+                <p>Then:</p>
+                <div class="math-display">
+                    \[\boldsymbol{\theta} = \mathbf{V} \boldsymbol{\Sigma}^{-1} \mathbf{U}^T \mathbf{y}\]
+                </div>
+                <p>SVD is more numerically stable than directly computing <strong>X<sup>T</sup>X</strong>, especially when X is ill-conditioned. NumPy and scikit-learn use SVD internally for this reason.</p>
+            </div>
+
+            <div class="code-block">
+                <code>
+<span class="comment"># Python implementation using Normal Equation</span>
+<span class="keyword">import</span> numpy <span class="keyword">as</span> np
+
+<span class="keyword">def</span> <span class="function">normal_equation</span>(X, y):
+    <span class="string">"""Solve using Normal Equation: θ = (X^T X)^-1 X^T y"""</span>
+    X_with_bias = np.column_stack([np.ones(len(X)), X])
+    theta = np.linalg.inv(X_with_bias.T @ X_with_bias) @ X_with_bias.T @ y
+    <span class="keyword">return</span> theta
+
+<span class="comment"># Better: Use SVD via lstsq</span>
+theta_lstsq, _, _, _ = np.linalg.lstsq(X_with_bias, y, rcond=None)
+                </code>
+            </div>
+        </section>
+
+        <!-- Gradient Descent Section -->
+        <section id="gradient-descent">
+            <div class="section-header">
+                <h2>Gradient Descent</h2>
+                <p>An iterative algorithm that repeatedly adjusts parameters to reduce the loss function.</p>
+            </div>
+
+            <div class="content-block">
+                <h3>Core Algorithm</h3>
+                <p>Gradient Descent works by computing the gradient (derivative) of the loss function and moving parameters in the opposite direction:</p>
+                <div class="math-display">
+                    \[\boldsymbol{\theta}^{\text{next}} = \boldsymbol{\theta} - \eta \nabla J(\boldsymbol{\theta})\]
+                </div>
+                <p>Where:</p>
+                <ul style="margin-left: 2rem; color: var(--text-secondary);">
+                    <li><span class="highlight">η (eta)</span> is the learning rate—controls step size</li>
+                    <li><span class="highlight">∇J(θ)</span> is the gradient of the loss function</li>
+                    <li>We move against the gradient (steepest descent)</li>
+                </ul>
+            </div>
+
+            <div class="content-block">
+                <h3>Gradient for MSE Loss</h3>
+                <p>The gradient with respect to parameter θ<sub>j</sub> is:</p>
+                <div class="math-display">
+                    \[\frac{\partial J}{\partial \theta_j} = \frac{2}{m} \sum_{i=1}^{m} (h_\theta(x^{(i)}) - y^{(i)}) x_j^{(i)}\]
+                </div>
+                <p>This tells us how much to adjust each parameter to reduce error.</p>
+            </div>
+
+            <!-- Interactive Gradient Descent Visualizer -->
+            <div class="content-block">
+                <h3>Interactive Gradient Descent Visualizer</h3>
+                <p>Adjust the learning rate and see how it affects convergence. Too low = slow convergence. Too high = oscillation or divergence.</p>
+
+                <div class="controls">
+                    <div class="control-group">
+                        <label>Learning Rate (η):</label>
+                        <input type="range" id="learningRate" min="0.001" max="0.1" step="0.001" value="0.01">
+                        <span id="lrValue">0.01</span>
+                    </div>
+                    <button onclick="resetGradientDescent()">Reset</button>
+                    <button onclick="startGradientDescent()">Run</button>
+                </div>
+
+                <div class="canvas-container">
+                    <canvas id="gradientDescentCanvas" width="500" height="400"></canvas>
+                </div>
+                <p style="color: var(--text-tertiary); font-size: 0.9rem; margin-top: 1rem;">
+                    <strong>How to read this:</strong> Left plot shows the cost function (bowl shape). Right plot shows how the cost decreases over iterations. Blue dots trace the path of parameters during optimization.
+                </p>
+            </div>
+
+            <div class="content-grid">
+                <div class="content-block">
+                    <h3>Batch Gradient Descent</h3>
+                    <p>Use the <strong>entire training set</strong> to compute gradients before each update.</p>
+                    <p><strong>Pros:</strong> Stable, efficient computations</p>
+                    <p><strong>Cons:</strong> Slow on very large datasets, may get stuck in local minima</p>
+                </div>
+
+                <div class="content-block">
+                    <h3>Stochastic Gradient Descent (SGD)</h3>
+                    <p>Update parameters using <strong>one random example</strong> at a time.</p>
+                    <p><strong>Pros:</strong> Fast, escapes local minima, online learning</p>
+                    <p><strong>Cons:</strong> Noisy updates, harder to converge</p>
+                </div>
+
+                <div class="content-block">
+                    <h3>Mini-Batch Gradient Descent</h3>
+                    <p>Update using a <strong>small batch</strong> (32-256 examples) at a time.</p>
+                    <p><strong>Pros:</strong> Best of both worlds—stable and fast</p>
+                    <p><strong>Cons:</strong> Requires tuning batch size</p>
+                </div>
+
+                <div class="content-block">
+                    <h3>Feature Scaling</h3>
+                    <p>Features with different scales can make gradient descent converge slowly or diverge.</p>
+                    <div class="math-display">
+                        \[x_{\text{scaled}} = \frac{x - \mu}{\sigma}\]
+                    </div>
+                    <p>Standardization (zero mean, unit variance) helps tremendously.</p>
+                </div>
+            </div>
+
+            <div class="code-block">
+                <code>
+<span class="comment"># Gradient Descent from scratch</span>
+<span class="keyword">def</span> <span class="function">gradient_descent</span>(X, y, learning_rate=0.01, iterations=1000):
+    m = len(y)
+    theta = np.zeros(X.shape[1])
+    costs = []
+
+    <span class="keyword">for</span> i <span class="keyword">in</span> range(iterations):
+        predictions = X @ theta
+        errors = predictions - y
+        gradient = (2/m) * (X.T @ errors)
+        theta -= learning_rate * gradient
+
+        cost = np.mean(errors**2)
+        costs.append(cost)
+
+    <span class="keyword">return</span> theta, costs
+
+<span class="comment"># With scikit-learn</span>
+<span class="keyword">from</span> sklearn.linear_model <span class="keyword">import</span> SGDRegressor
+model = SGDRegressor(loss=<span class="string">'squared_loss'</span>, learning_rate=<span class="string">'optimal'</span>)
+                </code>
+            </div>
+        </section>
+
+        <!-- Polynomial Regression -->
+        <section id="polynomial">
+            <div class="section-header">
+                <h2>Polynomial Regression</h2>
+                <p>When linear relationships aren't enough: add polynomial features to capture curves.</p>
+            </div>
+
+            <div class="content-block">
+                <h3>The Idea</h3>
+                <p>Instead of:</p>
+                <div class="math-display">
+                    \[\hat{y} = \theta_0 + \theta_1 x\]
+                </div>
+                <p>We use:</p>
+                <div class="math-display">
+                    \[\hat{y} = \theta_0 + \theta_1 x + \theta_2 x^2 + \theta_3 x^3 + \ldots\]
+                </div>
+                <p>Polynomial regression is still <span class="highlight">linear</span> in the parameters—it's just a special case of linear regression with engineered features.</p>
+            </div>
+
+            <!-- Interactive Polynomial Visualizer -->
+            <div class="content-block">
+                <h3>Interactive Polynomial Fitting</h3>
+                <p>Adjust the polynomial degree to see overfitting. Low degree: underfitting. High degree: overfitting.</p>
+
+                <div class="controls">
+                    <div class="control-group">
+                        <label>Polynomial Degree:</label>
+                        <input type="range" id="polynomialDegree" min="1" max="10" value="2">
+                        <span id="degreeValue">2</span>
+                    </div>
+                    <button onclick="updatePolynomialVisualization()">Update</button>
+                </div>
+
+                <div class="canvas-container">
+                    <canvas id="polynomialCanvas" width="500" height="400"></canvas>
+                </div>
+                <p style="color: var(--text-tertiary); font-size: 0.9rem; margin-top: 1rem;">
+                    <strong>Blue dots:</strong> Training data. <strong>Red curve:</strong> Fitted polynomial. Watch for oscillation at edges (overfitting sign).
+                </p>
+            </div>
+
+            <div class="content-block">
+                <h3>Underfitting vs Overfitting</h3>
+                <table style="width: 100%; color: var(--text-secondary); margin-top: 1rem;">
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 0.75rem;"><strong>Aspect</strong></td>
+                        <td style="padding: 0.75rem;"><strong>Underfitting</strong></td>
+                        <td style="padding: 0.75rem;"><strong>Good Fit</strong></td>
+                        <td style="padding: 0.75rem;"><strong>Overfitting</strong></td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 0.75rem;">Train Error</td>
+                        <td style="padding: 0.75rem; color: var(--accent-red);">High</td>
+                        <td style="padding: 0.75rem; color: var(--accent-green);">Low</td>
+                        <td style="padding: 0.75rem; color: var(--accent-green);">Very Low</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 0.75rem;">Test Error</td>
+                        <td style="padding: 0.75rem; color: var(--accent-red);">High</td>
+                        <td style="padding: 0.75rem; color: var(--accent-green);">Low</td>
+                        <td style="padding: 0.75rem; color: var(--accent-red);">High</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 0.75rem;">Model Complexity</td>
+                        <td style="padding: 0.75rem;">Too simple</td>
+                        <td style="padding: 0.75rem;">Just right</td>
+                        <td style="padding: 0.75rem;">Too complex</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.75rem;">Bias-Variance</td>
+                        <td style="padding: 0.75rem;">High bias, low variance</td>
+                        <td style="padding: 0.75rem;">Balanced</td>
+                        <td style="padding: 0.75rem;">Low bias, high variance</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="code-block">
+                <code>
+<span class="keyword">from</span> sklearn.preprocessing <span class="keyword">import</span> PolynomialFeatures
+<span class="keyword">from</span> sklearn.linear_model <span class="keyword">import</span> LinearRegression
+
+<span class="comment"># Create polynomial features (degree 2)</span>
+poly = PolynomialFeatures(degree=2)
+X_poly = poly.fit_transform(X)
+
+<span class="comment"># Fit linear regression on polynomial features</span>
+model = LinearRegression()
+model.fit(X_poly, y)
+y_pred = model.predict(X_poly)
+                </code>
+            </div>
+        </section>
+
+        <!-- Learning Curves -->
+        <section id="learning-curves">
+            <div class="section-header">
+                <h2>Learning Curves</h2>
+                <p>Diagnose whether your model is underfitting or overfitting by analyzing performance vs training set size.</p>
+            </div>
+
+            <div class="content-block">
+                <h3>What Are Learning Curves?</h3>
+                <p>Learning curves plot training and validation errors as a function of training set size. They reveal:</p>
+                <ul style="margin-left: 2rem; color: var(--text-secondary);">
+                    <li><strong>If adding more data will help</strong>: convergence patterns</li>
+                    <li><strong>Model bias</strong>: train and validation error at large m</li>
+                    <li><strong>Model variance</strong>: gap between train and validation error</li>
+                    <li><strong>Bias-variance tradeoff</strong>: the fundamental learning tradeoff</li>
+                </ul>
+            </div>
+
+            <!-- Interactive Learning Curves Visualizer -->
+            <div class="content-block">
+                <h3>Interactive Learning Curves</h3>
+                <p>Observe how different model complexities behave as we increase training data.</p>
+
+                <div class="controls">
+                    <div class="control-group">
+                        <label>Model Type:</label>
+                        <select id="modelType" style="padding: 0.5rem; background-color: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px;">
+                            <option value="underfit">Underfit (Low Complexity)</option>
+                            <option value="good" selected>Good Fit (Balanced)</option>
+                            <option value="overfit">Overfit (High Complexity)</option>
+                        </select>
+                    </div>
+                    <button onclick="updateLearningCurves()">Update</button>
+                </div>
+
+                <div class="canvas-container">
+                    <canvas id="learningCurvesCanvas" width="500" height="400"></canvas>
+                </div>
+                <p style="color: var(--text-tertiary); font-size: 0.9rem; margin-top: 1rem;">
+                    <strong>Blue line:</strong> Training error. <strong>Red line:</strong> Validation error. Good models have small gap between train/val error.
+                </p>
+            </div>
+
+            <div class="content-block">
+                <h3>Interpreting Learning Curves</h3>
+                <p><strong>High Bias (Underfitting):</strong> Both train and validation errors are high and remain high as m increases. Adding more data won't help—the model is too simple.</p>
+                <p><strong>High Variance (Overfitting):</strong> Train error is low, validation error is high. Large gap indicates overfitting. More data may help bridge this gap.</p>
+                <p><strong>Just Right:</strong> Train error and validation error are both low and close together, with both gradually decreasing as m increases.</p>
+            </div>
+
+            <div class="code-block">
+                <code>
+<span class="keyword">from</span> sklearn.model_selection <span class="keyword">import</span> learning_curve
+
+<span class="comment"># Generate learning curves</span>
+train_sizes, train_scores, val_scores = learning_curve(
+    estimator=LinearRegression(),
+    X=X, y=y,
+    train_sizes=np.linspace(0.1, 1.0, 10),
+    cv=5,
+    scoring=<span class="string">'neg_mean_squared_error'</span>
+)
+
+train_mean = -train_scores.mean(axis=1)
+val_mean = -val_scores.mean(axis=1)
+
+plt.plot(train_sizes, train_mean, label=<span class="string">'Train Error'</span>)
+plt.plot(train_sizes, val_mean, label=<span class="string">'Validation Error'</span>)
+plt.legend()
+                </code>
+            </div>
+        </section>
+
+        <!-- Regularization -->
+        <section id="regularization">
+            <div class="section-header">
+                <h2>Regularization</h2>
+                <p>Control model complexity and combat overfitting by penalizing large parameter values.</p>
+            </div>
+
+            <div class="content-block">
+                <h3>The Problem: Overfitting</h3>
+                <p>Complex models fit the training data perfectly but generalize poorly. Regularization adds a <span class="highlight">penalty term</span> to the loss function:</p>
+                <div class="math-display">
+                    \[J(\boldsymbol{\theta}) = MSE(\boldsymbol{\theta}) + \lambda \cdot R(\boldsymbol{\theta})\]
+                </div>
+                <p>Where λ (lambda) controls regularization strength: higher λ means stronger regularization.</p>
+            </div>
+
+            <div class="content-grid">
+                <div class="content-block">
+                    <h3>Ridge Regression (L2)</h3>
+                    <p>Penalize the sum of squared parameters:</p>
+                    <div class="math-display">
+                        \[R(\boldsymbol{\theta}) = \sum_{j=1}^{n} \theta_j^2\]
+                    </div>
+                    <p><strong>Effect:</strong> Shrinks all parameters proportionally.</p>
+                    <p><strong>Best for:</strong> When all features are informative.</p>
+                </div>
+
+                <div class="content-block">
+                    <h3>Lasso Regression (L1)</h3>
+                    <p>Penalize the sum of absolute parameters:</p>
+                    <div class="math-display">
+                        \[R(\boldsymbol{\theta}) = \sum_{j=1}^{n} |\theta_j|\]
+                    </div>
+                    <p><strong>Effect:</strong> Shrinks unimportant features to exactly zero.</p>
+                    <p><strong>Best for:</strong> Feature selection, sparse solutions.</p>
+                </div>
+
+                <div class="content-block">
+                    <h3>Elastic Net</h3>
+                    <p>Combines L1 and L2 penalties:</p>
+                    <div class="math-display">
+                        \[R(\boldsymbol{\theta}) = r \sum |\theta_j| + (1-r) \sum \theta_j^2\]
+                    </div>
+                    <p><strong>Effect:</strong> Balances ridge and lasso benefits.</p>
+                    <p><strong>Best for:</strong> When you want both effects.</p>
+                </div>
+
+                <div class="content-block">
+                    <h3>Early Stopping</h3>
+                    <p>Stop training when validation error starts increasing, even if training error is still decreasing.</p>
+                    <p><strong>Effect:</strong> Implicit regularization without penalty term.</p>
+                    <p><strong>Best for:</strong> Iterative algorithms (SGD, neural networks).</p>
+                </div>
+            </div>
+
+            <div class="content-block">
+                <h3>Regularization Parameter Tuning</h3>
+                <p>The regularization strength λ must be tuned via cross-validation:</p>
+                <ul style="margin-left: 2rem; color: var(--text-secondary);">
+                    <li><strong>λ too small:</strong> Little regularization, overfitting risk</li>
+                    <li><strong>λ too large:</strong> Too much regularization, underfitting risk</li>
+                    <li><strong>λ just right:</strong> Best generalization performance</li>
+                </ul>
+            </div>
+
+            <div class="code-block">
+                <code>
+<span class="keyword">from</span> sklearn.linear_model <span class="keyword">import</span> Ridge, Lasso, ElasticNet
+<span class="keyword">from</span> sklearn.model_selection <span class="keyword">import</span> GridSearchCV
+
+<span class="comment"># Ridge regression with cross-validated parameter tuning</span>
+param_grid = {<span class="string">'alpha'</span>: [0.001, 0.01, 0.1, 1, 10, 100]}
+ridge = GridSearchCV(Ridge(), param_grid, cv=5)
+ridge.fit(X, y)
+
+<span class="comment"># Lasso (automatic feature selection)</span>
+lasso = Lasso(alpha=0.1)
+lasso.fit(X, y)
+
+<span class="comment"># Elastic Net (mix of L1 and L2)</span>
+elastic_net = ElasticNet(alpha=0.1, l1_ratio=0.5)
+elastic_net.fit(X, y)
+                </code>
+            </div>
+        </section>
+
+        <!-- Logistic Regression -->
+        <section id="logistic">
+            <div class="section-header">
+                <h2>Logistic Regression</h2>
+                <p>Transform linear regression for binary classification using the sigmoid function.</p>
+            </div>
+
+            <div class="content-block">
+                <h3>The Sigmoid Function</h3>
+                <p>Logistic regression outputs probabilities instead of continuous values using the sigmoid:</p>
+                <div class="math-display">
+                    \[\sigma(z) = \frac{1}{1 + e^{-z}} = \frac{1}{1 + e^{-\theta^T x}}\]
+                </div>
+                <p>Properties:</p>
+                <ul style="margin-left: 2rem; color: var(--text-secondary);">
+                    <li>Output range: (0, 1) — perfect for probabilities</li>
+                    <li>Smooth S-curve: no sharp transitions</li>
+                    <li>Differentiable: works with gradient descent</li>
+                </ul>
+            </div>
+
+            <div class="content-block">
+                <h3>Decision Boundary</h3>
+                <p>We predict class 1 when σ(z) > 0.5, which happens when:</p>
+                <div class="math-display">
+                    \[\theta^T x > 0\]
+                </div>
+                <p>This defines a linear decision boundary in feature space. The sigmoid maps distances to probabilities.</p>
+            </div>
+
+            <!-- Sigmoid Visualizer -->
+            <div class="content-block">
+                <h3>Sigmoid Function Visualizer</h3>
+                <p>See how the sigmoid smoothly transforms linear output (z) into probabilities:</p>
+                <div class="canvas-container">
+                    <canvas id="sigmoidCanvas" width="500" height="400"></canvas>
+                </div>
+                <p style="color: var(--text-tertiary); font-size: 0.9rem; margin-top: 1rem;">
+                    <strong>Left:</strong> Linear decision boundary in 2D space. <strong>Right:</strong> Sigmoid probability curve. Notice how z=0 maps to P(y=1)=0.5.
+                </p>
+            </div>
+
+            <div class="content-block">
+                <h3>Cross-Entropy Loss</h3>
+                <p>Logistic regression uses cross-entropy instead of MSE:</p>
+                <div class="math-display">
+                    \[J(\boldsymbol{\theta}) = -\frac{1}{m} \sum_{i=1}^{m} [y^{(i)} \log(\hat{y}^{(i)}) + (1-y^{(i)}) \log(1-\hat{y}^{(i)})]\]
+                </div>
+                <p>This loss heavily penalizes confident wrong predictions, which is desirable for classification.</p>
+            </div>
+
+            <div class="code-block">
+                <code>
+<span class="keyword">from</span> sklearn.linear_model <span class="keyword">import</span> LogisticRegression
+<span class="keyword">from</span> sklearn.metrics <span class="keyword">import</span> classification_report, roc_auc_score
+
+<span class="comment"># Train logistic regression classifier</span>
+model = LogisticRegression(solver=<span class="string">'lbfgs'</span>, max_iter=1000)
+model.fit(X_train, y_train)
+
+<span class="comment"># Get probability predictions</span>
+y_pred_proba = model.predict_proba(X_test)[:, 1]
+y_pred = model.predict(X_test)
+
+<span class="comment"># Evaluate</span>
+print(classification_report(y_test, y_pred))
+print(<span class="string">f"ROC-AUC: {roc_auc_score(y_test, y_pred_proba):.4f}"</span>)
+                </code>
+            </div>
+        </section>
+
+        <!-- Softmax Regression -->
+        <section id="softmax">
+            <div class="section-header">
+                <h2>Softmax Regression</h2>
+                <p>Extend binary logistic regression to multi-class classification problems.</p>
+            </div>
+
+            <div class="content-block">
+                <h3>Generalizing to Multiple Classes</h3>
+                <p>For K classes, softmax computes a probability for each class:</p>
+                <div class="math-display">
+                    \[P(y = k | x) = \frac{e^{\theta_k^T x}}{\sum_{j=1}^{K} e^{\theta_j^T x}}\]
+                </div>
+                <p>Where:</p>
+                <ul style="margin-left: 2rem; color: var(--text-secondary);">
+                    <li>We have K separate parameter vectors θ<sub>1</sub>, ..., θ<sub>K</sub></li>
+                    <li>Probabilities sum to 1</li>
+                    <li>Highest probability determines the predicted class</li>
+                </ul>
+            </div>
+
+            <div class="content-block">
+                <h3>Cross-Entropy Loss for Multi-Class</h3>
+                <p>We use categorical cross-entropy (one-hot encoded labels):</p>
+                <div class="math-display">
+                    \[J(\boldsymbol{\theta}) = -\frac{1}{m} \sum_{i=1}^{m} \sum_{k=1}^{K} y_k^{(i)} \log(\hat{y}_k^{(i)})\]
+                </div>
+                <p>Where y<sup>(i)</sup> is a one-hot vector (1 for true class, 0 elsewhere) and ŷ<sup>(i)</sup> are predicted probabilities.</p>
+            </div>
+
+            <div class="content-grid">
+                <div class="content-block">
+                    <h3>One-vs-All (OvA)</h3>
+                    <p>Train K separate binary classifiers, each distinguishing one class from the rest.</p>
+                    <p><strong>Simple to implement</strong>, but doesn't model class relationships.</p>
+                </div>
+
+                <div class="content-block">
+                    <h3>Softmax Regression</h3>
+                    <p>Train a single K-output classifier that models all classes jointly.</p>
+                    <p><strong>Preferred</strong> when classes are mutually exclusive.</p>
+                </div>
+            </div>
+
+            <div class="code-block">
+                <code>
+<span class="keyword">from</span> sklearn.linear_model <span class="keyword">import</span> LogisticRegression
+<span class="keyword">from</span> sklearn.metrics <span class="keyword">import</span> confusion_matrix, accuracy_score
+
+<span class="comment"># Softmax regression (multi-class logistic regression)</span>
+<span class="comment"># sklearn uses One-vs-Rest by default, but max_iter controls convergence</span>
+model = LogisticRegression(multi_class=<span class="string">'multinomial'</span>,
+                          solver=<span class="string">'lbfgs'</span>,
+                          max_iter=1000,
+                          random_state=42)
+model.fit(X_train, y_train)
+
+<span class="comment"># Predictions and probabilities</span>
+y_pred = model.predict(X_test)
+y_pred_proba = model.predict_proba(X_test)
+
+<span class="comment"># Evaluation</span>
+accuracy = accuracy_score(y_test, y_pred)
+conf_matrix = confusion_matrix(y_test, y_pred)
+print(<span class="string">f"Accuracy: {accuracy:.4f}"</span>)
+                </code>
+            </div>
+        </section>
+
+        <!-- Production Code -->
+        <section id="production">
+            <div class="section-header">
+                <h2>Production-Ready Code Patterns</h2>
+                <p>Best practices for training, evaluating, and deploying machine learning models.</p>
+            </div>
+
+            <div class="content-block">
+                <h3>Complete ML Pipeline</h3>
+                <p>A robust pipeline handles data preprocessing, model training, evaluation, and deployment:</p>
+            </div>
+
+            <div class="code-block">
+                <code>
+<span class="keyword">from</span> sklearn.pipeline <span class="keyword">import</span> Pipeline
+<span class="keyword">from</span> sklearn.preprocessing <span class="keyword">import</span> StandardScaler
+<span class="keyword">from</span> sklearn.linear_model <span class="keyword">import</span> Ridge
+<span class="keyword">from</span> sklearn.model_selection <span class="keyword">import</span> cross_val_score, GridSearchCV
+<span class="keyword">import</span> joblib
+
+<span class="comment"># 1. Create pipeline with preprocessing and model</span>
+pipeline = Pipeline([
+    (<span class="string">'scaler'</span>, StandardScaler()),
+    (<span class="string">'model'</span>, Ridge(alpha=1.0))
+])
+
+<span class="comment"># 2. Hyperparameter tuning with cross-validation</span>
+param_grid = {<span class="string">'model__alpha'</span>: [0.001, 0.01, 0.1, 1, 10, 100]}
+grid_search = GridSearchCV(pipeline, param_grid, cv=5, scoring=<span class="string">'neg_mean_squared_error'</span>)
+grid_search.fit(X_train, y_train)
+
+<span class="comment"># 3. Evaluate on test set</span>
+best_model = grid_search.best_estimator_
+test_score = best_model.score(X_test, y_test)
+print(<span class="string">f"Best Alpha: {grid_search.best_params_}"</span>)
+print(<span class="string">f"Test R² Score: {test_score:.4f}"</span>)
+
+<span class="comment"># 4. Save model for production</span>
+joblib.dump(best_model, <span class="string">'trained_model.pkl'</span>)
+
+<span class="comment"># 5. Load and use in production</span>
+loaded_model = joblib.load(<span class="string">'trained_model.pkl'</span>)
+predictions = loaded_model.predict(X_new)
+                </code>
+            </div>
+
+            <div class="content-block">
+                <h3>Evaluation Metrics</h3>
+                <table style="width: 100%; color: var(--text-secondary); margin-top: 1rem;">
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 0.75rem;"><strong>Metric</strong></td>
+                        <td style="padding: 0.75rem;"><strong>Regression</strong></td>
+                        <td style="padding: 0.75rem;"><strong>Classification</strong></td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 0.75rem;">Primary</td>
+                        <td style="padding: 0.75rem;">R² Score (0-1, higher better)</td>
+                        <td style="padding: 0.75rem;">Accuracy or F1 Score</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 0.75rem;">Error Measure</td>
+                        <td style="padding: 0.75rem;">MAE, RMSE, MSE</td>
+                        <td style="padding: 0.75rem;">Precision, Recall, ROC-AUC</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 0.75rem;">Cross-Val</td>
+                        <td style="padding: 0.75rem;">Use r2 or neg_mse scoring</td>
+                        <td style="padding: 0.75rem;">Use accuracy or f1 scoring</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.75rem;">Class Imbalance</td>
+                        <td style="padding: 0.75rem;">N/A</td>
+                        <td style="padding: 0.75rem;">Prefer F1, ROC-AUC over accuracy</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="code-block">
+                <code>
+<span class="keyword">from</span> sklearn.metrics <span class="keyword">import</span> mean_absolute_error, mean_squared_error, r2_score
+
+<span class="comment"># Regression evaluation</span>
+y_pred = model.predict(X_test)
+mae = mean_absolute_error(y_test, y_pred)
+rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+r2 = r2_score(y_test, y_pred)
+
+<span class="comment"># Classification evaluation</span>
+<span class="keyword">from</span> sklearn.metrics <span class="keyword">import</span> precision_score, recall_score, f1_score, roc_auc_score
+
+y_pred_proba = model.predict_proba(X_test)[:, 1]
+precision = precision_score(y_test, y_pred)
+recall = recall_score(y_test, y_pred)
+f1 = f1_score(y_test, y_pred)
+roc_auc = roc_auc_score(y_test, y_pred_proba)
+                </code>
+            </div>
+        </section>
+
+        <!-- War Room / Socratic Sandbox -->
+        <section id="war-room">
+            <div class="section-header">
+                <h2>The War Room: Diagnostic & Sandbox</h2>
+                <p>A space for testing your understanding through interactive questions and diagnostic analysis.</p>
+            </div>
+
+            <div class="content-block">
+                <h3>Concept Checker</h3>
+                <button class="collapsible" onclick="toggleCollapsible(this)">
+                    What's the difference between the Normal Equation and Gradient Descent?
+                </button>
+                <div class="collapsible-content">
+                    <p style="color: var(--text-secondary); margin-top: 1rem;">
+                        <strong>Normal Equation:</strong>
+                    </p>
+                    <ul style="margin-left: 2rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                        <li>Closed-form solution: θ = (X<sup>T</sup>X)<sup>-1</sup>X<sup>T</sup>y</li>
+                        <li>Solves in one step</li>
+                        <li>O(n³) complexity—slow for many features</li>
+                        <li>No hyperparameters to tune</li>
+                        <li>Works best when n < 10,000</li>
+                    </ul>
+                    <p style="color: var(--text-secondary);">
+                        <strong>Gradient Descent:</strong>
+                    </p>
+                    <ul style="margin-left: 2rem; color: var(--text-secondary);">
+                        <li>Iterative algorithm: update θ repeatedly</li>
+                        <li>O(k·m·n) where k = iterations</li>
+                        <li>Scales to millions of features</li>
+                        <li>Requires tuning learning rate</li>
+                        <li>Works for large datasets and streaming</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="content-block">
+                <button class="collapsible" onclick="toggleCollapsible(this)">
+                    Why does feature scaling matter for Gradient Descent?
+                </button>
+                <div class="collapsible-content">
+                    <p style="color: var(--text-secondary); margin-top: 1rem;">
+                        When features have different scales (e.g., age in years vs income in thousands), the contours of the cost function become elongated. This causes:
+                    </p>
+                    <ul style="margin-left: 2rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                        <li><strong>Slow convergence:</strong> Gradient descent must take tiny steps to avoid overshooting</li>
+                        <li><strong>Poor numerical stability:</strong> Matrix operations become ill-conditioned</li>
+                        <li><strong>Divergence risk:</strong> Learning rate suitable for one feature may be too large for another</li>
+                    </ul>
+                    <p style="color: var(--text-secondary);">
+                        <strong>Solution:</strong> Standardize features to zero mean and unit variance:
+                    </p>
+                    <div class="math-display" style="margin: 1rem 0;">
+                        \[x_{\text{scaled}} = \frac{x - \mu}{\sigma}\]
+                    </div>
+                    <p style="color: var(--text-secondary);">
+                        This makes the cost function more circular, enabling faster convergence with larger learning rates.
+                    </p>
+                </div>
+            </div>
+
+            <div class="content-block">
+                <button class="collapsible" onclick="toggleCollapsible(this)">
+                    What's the bias-variance tradeoff and why does it matter?
+                </button>
+                <div class="collapsible-content">
+                    <p style="color: var(--text-secondary); margin-top: 1rem;">
+                        Test error can be decomposed into three components:
+                    </p>
+                    <div class="math-display" style="margin: 1rem 0;">
+                        \[E[\text{Test Error}] = \text{Bias}^2 + \text{Variance} + \text{Irreducible Error}\]
+                    </div>
+                    <ul style="margin-left: 2rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                        <li><strong>Bias:</strong> Error from wrong assumptions (underfitting)</li>
+                        <li><strong>Variance:</strong> Sensitivity to training set fluctuations (overfitting)</li>
+                        <li><strong>Irreducible Error:</strong> Noise in the data itself</li>
+                    </ul>
+                    <p style="color: var(--text-secondary);">
+                        <strong>The Tradeoff:</strong> Simpler models have high bias but low variance. Complex models have low bias but high variance. The goal is finding the sweet spot that minimizes total error.
+                    </p>
+                </div>
+            </div>
+
+            <div class="content-block">
+                <button class="collapsible" onclick="toggleCollapsible(this)">
+                    When should I use Ridge vs Lasso vs Elastic Net?
+                </button>
+                <div class="collapsible-content">
+                    <p style="color: var(--text-secondary); margin-top: 1rem;">
+                        <strong>Ridge (L2):</strong> Use when you believe all features are useful.
+                    </p>
+                    <ul style="margin-left: 2rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                        <li>Shrinks all weights proportionally</li>
+                        <li>Never eliminates features (weights → 0 but never = 0)</li>
+                        <li>More stable numerically</li>
+                    </ul>
+                    <p style="color: var(--text-secondary);">
+                        <strong>Lasso (L1):</strong> Use when you suspect many features are irrelevant.
+                    </p>
+                    <ul style="margin-left: 2rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                        <li>Can shrink weights exactly to zero</li>
+                        <li>Automatic feature selection</li>
+                        <li>Produces sparse solutions</li>
+                    </ul>
+                    <p style="color: var(--text-secondary);">
+                        <strong>Elastic Net:</strong> Use when you're unsure or want a balanced approach.
+                    </p>
+                    <ul style="margin-left: 2rem; color: var(--text-secondary);">
+                        <li>Combines both L1 and L2 penalties</li>
+                        <li>Often more robust than pure L1 or L2</li>
+                        <li>Requires tuning an additional parameter (mixing ratio)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="content-block">
+                <h3>Model Diagnostic Console</h3>
+                <p>Enter observations about your model and get diagnostic suggestions:</p>
+
+                <div style="margin: 1.5rem 0;">
+                    <label style="color: var(--text-secondary); font-size: 0.9rem;">Describe your problem:</label>
+                    <textarea id="diagnosticInput" style="width: 100%; height: 80px; padding: 0.75rem; background-color: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px; font-family: 'JetBrains Mono', monospace; resize: vertical;" placeholder="e.g., Train error is low but test error is high..."></textarea>
+                </div>
+
+                <button onclick="runDiagnostic()">Analyze Model</button>
+
+                <div id="diagnosticOutput" class="diagnostic-output" style="display: none; margin-top: 1rem;"></div>
+            </div>
+
+            <div class="content-block">
+                <h3>Quick Reference: Algorithm Selector</h3>
+                <p>Choose the right algorithm for your task:</p>
+                <table style="width: 100%; color: var(--text-secondary); margin-top: 1rem; font-size: 0.9rem;">
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 0.75rem;"><strong>Task</strong></td>
+                        <td style="padding: 0.75rem;"><strong>Algorithm</strong></td>
+                        <td style="padding: 0.75rem;"><strong>When to Use</strong></td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 0.75rem;">Regression (n small)</td>
+                        <td style="padding: 0.75rem;">Normal Equation</td>
+                        <td style="padding: 0.75rem;">n < 10,000, no online learning needed</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 0.75rem;">Regression (n large)</td>
+                        <td style="padding: 0.75rem;">SGD / Mini-batch GD</td>
+                        <td style="padding: 0.75rem;">n > 10,000 or streaming data</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 0.75rem;">Prevent overfitting</td>
+                        <td style="padding: 0.75rem;">Ridge / Lasso / Elastic Net</td>
+                        <td style="padding: 0.75rem;">Always use with complex models</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 0.75rem;">Binary classification</td>
+                        <td style="padding: 0.75rem;">Logistic Regression</td>
+                        <td style="padding: 0.75rem;">Interpretability needed, linear boundary OK</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.75rem;">Multi-class</td>
+                        <td style="padding: 0.75rem;">Softmax Regression</td>
+                        <td style="padding: 0.75rem;">Mutually exclusive classes</td>
+                    </tr>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <nav>
+            <a href="#feynman">← Previous</a>
+            <a href="#feynman">Chapter 4 Home</a>
+            <a href="#war-room">Next →</a>
+        </nav>
+        <p>Interactive explainer for Hands-On Machine Learning with Scikit-Learn and PyTorch</p>
+        <p style="margin-top: 1rem; font-size: 0.85rem;">Built with care for deep understanding • Chapter 4: Training Models</p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // ============= Progress Bar =============
+        function updateProgressBar() {
+            const windowHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const scrolled = window.scrollY;
+            const scrollPercent = scrolled / windowHeight;
+            document.querySelector('.progress-bar').style.transform = `scaleX(${scrollPercent})`;
+        }
+
+        window.addEventListener('scroll', updateProgressBar);
+
+        // ============= Sidebar Navigation =============
+        document.querySelectorAll('.sidebar nav a').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                document.querySelectorAll('.sidebar nav a').forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+                const target = document.querySelector(this.getAttribute('href'));
+                target.scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+
+        // Update active nav on scroll
+        window.addEventListener('scroll', function() {
+            const sections = document.querySelectorAll('section');
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (pageYOffset >= sectionTop - 200) {
+                    current = section.getAttribute('id');
+                }
+            });
+            document.querySelectorAll('.sidebar nav a').forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+
+        // ============= Collapsible Sections =============
+        function toggleCollapsible(button) {
+            button.classList.toggle('active');
+            const content = button.nextElementSibling;
+            content.classList.toggle('open');
+        }
+
+        // ============= KaTeX Math Rendering =============
+        function renderMath() {
+            document.querySelectorAll('.math-display').forEach(el => {
+                const math = el.textContent;
+                try {
+                    katex.render(math, el, { throwOnError: false });
+                } catch (e) {
+                    console.error('KaTeX error:', e);
+                }
+            });
+        }
+
+        // Wait for KaTeX to load
+        if (window.katex) {
+            renderMath();
+        } else {
+            setTimeout(renderMath, 500);
+        }
+
+        // ============= Gradient Descent Visualizer =============
+        const lrSlider = document.getElementById('learningRate');
+        const lrValue = document.getElementById('lrValue');
+
+        lrSlider.addEventListener('input', function() {
+            lrValue.textContent = this.value;
+        });
+
+        function resetGradientDescent() {
+            const canvas = document.getElementById('gradientDescentCanvas');
+            canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function startGradientDescent() {
+            try {
+                const canvas = document.getElementById('gradientDescentCanvas');
+                const ctx = canvas.getContext('2d');
+                const lr = parseFloat(document.getElementById('learningRate').value);
+
+                ctx.fillStyle = 'var(--bg-tertiary)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // Draw cost function (parabola)
+                const width = canvas.width / 2;
+                const height = canvas.height;
+
+                ctx.strokeStyle = 'var(--accent-blue)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+
+                for (let x = 0; x < width; x++) {
+                    const normalized = (x / width - 0.5) * 4;
+                    const y = normalized * normalized * 100;
+                    const canvasY = height / 2 + y;
+                    if (x === 0) ctx.moveTo(x, canvasY);
+                    else ctx.lineTo(x, canvasY);
+                }
+                ctx.stroke();
+
+                // Simulate gradient descent
+                let theta = -1.5;
+                const iterations = 50;
+                const history = [];
+
+                ctx.strokeStyle = 'var(--accent-purple)';
+                ctx.lineWidth = 1;
+
+                for (let i = 0; i < iterations; i++) {
+                    const gradient = 2 * theta;
+                    theta -= lr * gradient;
+                    const normalized = (theta + 2) / 4;
+                    const x = normalized * width;
+                    const y = theta * theta * 100;
+                    const canvasY = height / 2 + y;
+
+                    history.push({ x, y: canvasY });
+
+                    if (i > 0) {
+                        ctx.beginPath();
+                        ctx.moveTo(history[i-1].x, history[i-1].y);
+                        ctx.lineTo(x, canvasY);
+                        ctx.stroke();
+                    }
+
+                    ctx.fillStyle = 'var(--accent-orange)';
+                    ctx.beginPath();
+                    ctx.arc(x, canvasY, 3, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+
+                // Draw cost curve on right side
+                const rightStart = canvas.width / 2;
+                ctx.strokeStyle = 'var(--accent-blue)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+
+                for (let i = 0; i < iterations; i++) {
+                    const x = rightStart + (i / iterations) * (width - 20);
+                    const cost = Math.exp(-i / 10) * 50;
+                    const y = height - cost - 30;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+
+                // Label
+                ctx.fillStyle = 'var(--text-secondary)';
+                ctx.font = '12px JetBrains Mono';
+                ctx.fillText('Cost function', 10, 20);
+                ctx.fillText(`η = ${parseFloat(document.getElementById('learningRate').value).toFixed(3)}`, 10, 40);
+            } catch (e) {
+                console.error('Canvas error:', e);
+            }
+        }
+
+        // ============= Polynomial Regression Visualizer =============
+        const degreeSlider = document.getElementById('polynomialDegree');
+        const degreeValue = document.getElementById('degreeValue');
+
+        degreeSlider.addEventListener('input', function() {
+            degreeValue.textContent = this.value;
+        });
+
+        function updatePolynomialVisualization() {
+            try {
+                const canvas = document.getElementById('polynomialCanvas');
+                const ctx = canvas.getContext('2d');
+                const degree = parseInt(document.getElementById('polynomialDegree').value);
+
+                ctx.fillStyle = '#1a1a24';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // Generate synthetic data
+                const padding = 40;
+                const plotWidth = canvas.width - 2 * padding;
+                const plotHeight = canvas.height - 2 * padding;
+
+                const points = [];
+                for (let i = 0; i < 15; i++) {
+                    const x = (i / 14) * 2 * Math.PI;
+                    const y = Math.sin(x) + (Math.random() - 0.5) * 0.5;
+                    points.push({ x, y });
+                }
+
+                // Draw grid
+                ctx.strokeStyle = '#2a2a38';
+                ctx.lineWidth = 1;
+                for (let i = 1; i < 5; i++) {
+                    const x = padding + (i / 5) * plotWidth;
+                    ctx.beginPath();
+                    ctx.moveTo(x, padding);
+                    ctx.lineTo(x, padding + plotHeight);
+                    ctx.stroke();
+                }
+
+                // Draw points
+                ctx.fillStyle = '#4fc3f7';
+                points.forEach(point => {
+                    const x = padding + (point.x / (2 * Math.PI)) * plotWidth;
+                    const y = padding + plotHeight / 2 - point.y * plotHeight / 4;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                    ctx.fill();
+                });
+
+                // Draw polynomial fit
+                ctx.strokeStyle = '#e57373';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+
+                for (let px = 0; px <= 100; px++) {
+                    const x = (px / 100) * 2 * Math.PI;
+                    let y = 0;
+                    for (let d = 0; d <= degree; d++) {
+                        y += (Math.pow(x, d) / factorial(d)) * 0.5;
+                    }
+                    const canvasX = padding + (px / 100) * plotWidth;
+                    const canvasY = padding + plotHeight / 2 - y * plotHeight / 4;
+                    if (px === 0) ctx.moveTo(canvasX, canvasY);
+                    else ctx.lineTo(canvasX, canvasY);
+                }
+                ctx.stroke();
+
+                // Draw axes
+                ctx.strokeStyle = 'var(--text-secondary)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(padding, padding + plotHeight);
+                ctx.lineTo(padding, padding);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(padding, padding + plotHeight);
+                ctx.lineTo(padding + plotWidth, padding + plotHeight);
+                ctx.stroke();
+
+                // Labels
+                ctx.fillStyle = 'var(--text-secondary)';
+                ctx.font = '12px Inter';
+                ctx.fillText(`Degree: ${degree}`, 10, 20);
+            } catch (e) {
+                console.error('Canvas error:', e);
+            }
+        }
+
+        function factorial(n) {
+            if (n <= 1) return 1;
+            return n * factorial(n - 1);
+        }
+
+        // ============= Sigmoid Visualizer =============
+        function drawSigmoidVisualizer() {
+            try {
+                const canvas = document.getElementById('sigmoidCanvas');
+                const ctx = canvas.getContext('2d');
+                const width = canvas.width;
+                const height = canvas.height;
+                const centerX = width / 2;
+                const centerY = height / 2;
+
+                ctx.fillStyle = '#1a1a24';
+                ctx.fillRect(0, 0, width, height);
+
+                // Draw 2D decision boundary (left)
+                const leftBoundary = width / 4;
+
+                // Draw background
+                ctx.fillStyle = 'rgba(79, 195, 247, 0.1)';
+                ctx.fillRect(10, 20, leftBoundary - 20, height - 40);
+
+                // Draw decision boundary line
+                ctx.strokeStyle = '#4fc3f7';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(leftBoundary, 20);
+                ctx.lineTo(leftBoundary, height - 20);
+                ctx.stroke();
+
+                // Draw sample points
+                ctx.fillStyle = '#81c784';
+                for (let i = 0; i < 5; i++) {
+                    const x = 30 + Math.random() * (leftBoundary - 50);
+                    const y = 40 + Math.random() * (height - 80);
+                    ctx.beginPath();
+                    ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+
+                ctx.fillStyle = '#e57373';
+                for (let i = 0; i < 5; i++) {
+                    const x = leftBoundary + 20 + Math.random() * (leftBoundary - 50);
+                    const y = 40 + Math.random() * (height - 80);
+                    ctx.beginPath();
+                    ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+
+                // Draw sigmoid curve (right)
+                const rightStart = leftBoundary + width / 4;
+                const padding = 40;
+
+                // Draw axes
+                ctx.strokeStyle = 'var(--text-secondary)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(rightStart - 30, height - padding);
+                ctx.lineTo(rightStart + width / 2 - 50, height - padding);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(rightStart - 30, padding);
+                ctx.lineTo(rightStart - 30, height - padding);
+                ctx.stroke();
+
+                // Draw sigmoid curve
+                ctx.strokeStyle = '#4fc3f7';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+
+                for (let x = -5; x <= 5; x += 0.1) {
+                    const z = x;
+                    const sigmoid = 1 / (1 + Math.exp(-z));
+                    const px = rightStart - 30 + ((x + 5) / 10) * (width / 2 - 50);
+                    const py = height - padding - sigmoid * (height - 2 * padding);
+                    if (x === -5) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.stroke();
+
+                // Mark the 0.5 point
+                const midX = rightStart - 30 + (5 / 10) * (width / 2 - 50);
+                const midY = height - padding - 0.5 * (height - 2 * padding);
+                ctx.fillStyle = '#b39ddb';
+                ctx.fillRect(midX - 2, midY - 2, 4, 4);
+
+                // Labels
+                ctx.fillStyle = 'var(--text-secondary)';
+                ctx.font = '12px Inter';
+                ctx.fillText('Class 0', 30, 30);
+                ctx.fillText('Class 1', leftBoundary + 40, 30);
+                ctx.fillText('z', rightStart + width / 4, height - 20);
+                ctx.fillText('σ(z)', rightStart - 60, 20);
+                ctx.fillText('0.5', midX - 10, height - padding + 20);
+            } catch (e) {
+                console.error('Canvas error:', e);
+            }
+        }
+
+        // ============= Learning Curves Visualizer =============
+        const modelTypeSelect = document.getElementById('modelType');
+
+        function updateLearningCurves() {
+            try {
+                const canvas = document.getElementById('learningCurvesCanvas');
+                const ctx = canvas.getContext('2d');
+                const modelType = document.getElementById('modelType').value;
+
+                ctx.fillStyle = '#1a1a24';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                const padding = 40;
+                const plotWidth = canvas.width - 2 * padding;
+                const plotHeight = canvas.height - 2 * padding;
+
+                // Generate data based on model type
+                const trainErrors = [];
+                const valErrors = [];
+
+                for (let m = 1; m <= 20; m++) {
+                    let trainErr, valErr;
+
+                    if (modelType === 'underfit') {
+                        trainErr = 0.7 - m * 0.01;
+                        valErr = 0.7 - m * 0.01;
+                    } else if (modelType === 'good') {
+                        trainErr = 0.5 * Math.exp(-m / 5);
+                        valErr = 0.6 * Math.exp(-m / 5);
+                    } else {
+                        trainErr = 0.1 * Math.exp(-m / 3);
+                        valErr = 0.7 - 0.05 * m;
+                    }
+
+                    trainErrors.push(Math.max(0.05, Math.min(1, trainErr)));
+                    valErrors.push(Math.max(0.05, Math.min(1, valErr)));
+                }
+
+                // Draw grid
+                ctx.strokeStyle = '#2a2a38';
+                ctx.lineWidth = 1;
+                for (let i = 1; i < 5; i++) {
+                    const x = padding + (i / 5) * plotWidth;
+                    ctx.beginPath();
+                    ctx.moveTo(x, padding);
+                    ctx.lineTo(x, padding + plotHeight);
+                    ctx.stroke();
+
+                    const y = padding + (i / 5) * plotHeight;
+                    ctx.beginPath();
+                    ctx.moveTo(padding, y);
+                    ctx.lineTo(padding + plotWidth, y);
+                    ctx.stroke();
+                }
+
+                // Draw training error
+                ctx.strokeStyle = '#4fc3f7';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                trainErrors.forEach((err, i) => {
+                    const x = padding + (i / 19) * plotWidth;
+                    const y = padding + plotHeight - err * plotHeight;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+
+                // Draw validation error
+                ctx.strokeStyle = '#e57373';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                valErrors.forEach((err, i) => {
+                    const x = padding + (i / 19) * plotWidth;
+                    const y = padding + plotHeight - err * plotHeight;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+
+                // Draw axes
+                ctx.strokeStyle = 'var(--text-secondary)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(padding, padding + plotHeight);
+                ctx.lineTo(padding, padding);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(padding, padding + plotHeight);
+                ctx.lineTo(padding + plotWidth, padding + plotHeight);
+                ctx.stroke();
+
+                // Labels
+                ctx.fillStyle = 'var(--text-secondary)';
+                ctx.font = '12px Inter';
+                ctx.fillText('Training Set Size (m)', padding + plotWidth / 2 - 60, canvas.height - 10);
+                ctx.fillText('Error', 5, padding - 10);
+
+                // Legend
+                ctx.fillStyle = '#4fc3f7';
+                ctx.fillRect(padding + 10, padding + 10, 12, 12);
+                ctx.fillStyle = 'var(--text-secondary)';
+                ctx.font = '11px Inter';
+                ctx.fillText('Train Error', padding + 30, padding + 20);
+
+                ctx.fillStyle = '#e57373';
+                ctx.fillRect(padding + 150, padding + 10, 12, 12);
+                ctx.fillStyle = 'var(--text-secondary)';
+                ctx.fillText('Validation Error', padding + 170, padding + 20);
+            } catch (e) {
+                console.error('Canvas error:', e);
+            }
+        }
+
+        // ============= Model Diagnostic =============
+        function runDiagnostic() {
+            const input = document.getElementById('diagnosticInput').value.toLowerCase();
+            const output = document.getElementById('diagnosticOutput');
+            let advice = '';
+
+            if (!input.trim()) {
+                output.textContent = 'Please describe your model issue.';
+                output.style.display = 'block';
+                return;
+            }
+
+            if (input.includes('train error') && input.includes('test error') && input.includes('high')) {
+                advice = '⚠️  DIAGNOSIS: High Bias (Underfitting)\n\n';
+                advice += 'Your model is too simple for the problem.\n\n';
+                advice += 'RECOMMENDATIONS:\n';
+                advice += '• Increase model complexity (polynomial degree, more features)\n';
+                advice += '• Add more features or engineer better features\n';
+                advice += '• Decrease regularization strength (λ)\n';
+                advice += '• Decrease regularization strength (λ)\n';
+                advice += '• Use more powerful algorithm (neural networks)\n';
+                advice += '• More training data won\'t help significantly\n';
+            } else if (input.includes('test error') && input.includes('high') && input.includes('train error') && input.includes('low')) {
+                advice = '⚠️  DIAGNOSIS: High Variance (Overfitting)\n\n';
+                advice += 'Your model is too complex and memorizing noise.\n\n';
+                advice += 'RECOMMENDATIONS:\n';
+                advice += '• Collect more training data (most effective)\n';
+                advice += '• Reduce model complexity (simpler polynomial, fewer features)\n';
+                advice += '• Increase regularization strength (λ)\n';
+                advice += '• Use dropout or early stopping (for neural nets)\n';
+                advice += '• Feature selection (remove noisy features)\n';
+                advice += '• Cross-validation for better error estimates\n';
+            } else if (input.includes('slow') && (input.includes('converge') || input.includes('gradient'))) {
+                advice = '⚠️  DIAGNOSIS: Gradient Descent Convergence Issue\n\n';
+                advice += 'Your optimization is progressing slowly.\n\n';
+                advice += 'SOLUTIONS:\n';
+                advice += '• Scale features: standardize to mean=0, std=1\n';
+                advice += '• Increase learning rate (but watch for divergence)\n';
+                advice += '• Use mini-batch gradient descent instead of full batch\n';
+                advice += '• Try adaptive learning rates (Adam, RMSprop)\n';
+                advice += '• Check for numerical instability in data\n';
+            } else if (input.includes('feature') || input.includes('scale')) {
+                advice = '✓ TIP: Feature Scaling\n\n';
+                advice += 'Standardization formula:\n';
+                advice += 'x_scaled = (x - mean) / std_dev\n\n';
+                advice += 'Benefits:\n';
+                advice += '• Faster gradient descent convergence\n';
+                advice += '• Better numerical stability\n';
+                advice += '• More stable regularization\n';
+                advice += '• Enables fairer feature comparison\n';
+            } else if (input.includes('ridge') || input.includes('lasso') || input.includes('elastic')) {
+                advice = '✓ REGULARIZATION GUIDE\n\n';
+                advice += 'Ridge (L2): Use when all features useful, shrinks weights proportionally\n';
+                advice += 'Lasso (L1): Use for feature selection, sets unimportant weights to 0\n';
+                advice += 'Elastic Net: Balanced hybrid, often most robust\n\n';
+                advice += 'Tuning: Use GridSearchCV to find optimal λ\n';
+            } else {
+                advice = '📚 GENERAL ADVICE\n\n';
+                advice += 'For regression problems:\n';
+                advice += '1. Start simple (linear, Ridge)\n';
+                advice += '2. Check train vs test error gap\n';
+                advice += '3. If overfit: add regularization, reduce features\n';
+                advice += '4. If underfit: add features, increase complexity\n';
+                advice += '5. Always scale features\n';
+                advice += '6. Use learning curves to diagnose issues\n';
+                advice += '7. Cross-validate to avoid lucky/unlucky splits\n';
+            }
+
+            output.textContent = advice;
+            output.style.display = 'block';
+        }
+
+        // ============= Initialize on Load =============
+        document.addEventListener('DOMContentLoaded', function() {
+            renderMath();
+            drawSigmoidVisualizer();
+            updatePolynomialVisualization();
+            updateLearningCurves();
+        });
+
+        // Re-render math when needed
+        document.addEventListener('scroll', function() {
+            // Lazy render for sections coming into view
+        });
+    </script>
+</body>
+</html>
