@@ -1,0 +1,2260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 20: Information Extraction - Relations, Events, and Time</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg-full.min.js" async></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --border: #334155;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --accent-rose: #f43f5e;
+            --accent-teal: #14b8a6;
+            --accent-amber: #f59e0b;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            gap: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            flex-wrap: wrap;
+        }
+
+        nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        nav a:hover {
+            color: var(--accent-rose);
+        }
+
+        nav a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--accent-rose);
+            transition: var(--transition);
+        }
+
+        nav a:hover::after {
+            width: 100%;
+        }
+
+        /* Main content */
+        main {
+            margin-top: 60px;
+        }
+
+        section {
+            min-height: 100vh;
+            padding: 4rem 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 20% 50%, rgba(244, 63, 94, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 80%, rgba(20, 184, 166, 0.1) 0%, transparent 50%);
+            z-index: -1;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--accent-rose), var(--accent-teal), var(--accent-amber));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: clamp(1rem, 2vw, 1.5rem);
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            max-width: 600px;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 1.5rem 0;
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            border-color: var(--accent-rose);
+            box-shadow: 0 8px 32px rgba(244, 63, 94, 0.15);
+        }
+
+        .card h3 {
+            color: var(--accent-rose);
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .card h4 {
+            color: var(--accent-teal);
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            font-size: 1.1rem;
+        }
+
+        /* Feynman Section */
+        .feynman-box {
+            background: linear-gradient(135deg, rgba(244, 63, 94, 0.1), rgba(20, 184, 166, 0.1));
+            border-left: 4px solid var(--accent-rose);
+            padding: 2rem;
+            margin: 2rem 0;
+            border-radius: 8px;
+            font-style: italic;
+            color: var(--text-primary);
+        }
+
+        /* Visualizer containers */
+        .visualizer {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 2rem 0;
+            min-height: 400px;
+        }
+
+        .visualizer h3 {
+            color: var(--accent-teal);
+            margin-bottom: 1rem;
+        }
+
+        .canvas-container {
+            width: 100%;
+            height: 400px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-top: 1rem;
+            background: rgba(30, 41, 59, 0.5);
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            background: var(--accent-rose);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: var(--transition);
+            font-size: 0.95rem;
+        }
+
+        .btn:hover {
+            background: var(--accent-amber);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: var(--accent-teal);
+        }
+
+        .btn-secondary:hover {
+            background: var(--accent-rose);
+        }
+
+        /* Code blocks */
+        .code-block {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .code-block code {
+            font-family: 'Courier New', monospace;
+            color: var(--accent-teal);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            padding: 0.5rem 1rem;
+            background: var(--accent-teal);
+            color: var(--bg-primary);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: var(--transition);
+        }
+
+        .copy-btn:hover {
+            background: var(--accent-rose);
+            color: white;
+        }
+
+        .copy-btn.copied {
+            background: var(--accent-amber);
+        }
+
+        /* Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            background: var(--bg-secondary);
+        }
+
+        table thead {
+            background: rgba(244, 63, 94, 0.2);
+        }
+
+        table th {
+            padding: 1rem;
+            text-align: left;
+            color: var(--accent-rose);
+            font-weight: 600;
+            border-bottom: 2px solid var(--border);
+        }
+
+        table td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        table tr:hover {
+            background: rgba(20, 184, 166, 0.1);
+        }
+
+        /* Challenge box */
+        .challenge-box {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(244, 63, 94, 0.1));
+            border: 1px solid var(--accent-amber);
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        .challenge-box h4 {
+            color: var(--accent-amber);
+            margin-bottom: 1rem;
+        }
+
+        .challenge-question {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: rgba(30, 41, 59, 0.5);
+            border-left: 3px solid var(--accent-amber);
+            border-radius: 4px;
+        }
+
+        .collapsible {
+            cursor: pointer;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+            font-weight: 600;
+            color: var(--accent-rose);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: var(--transition);
+        }
+
+        .collapsible:hover {
+            background: rgba(244, 63, 94, 0.1);
+            border-color: var(--accent-rose);
+        }
+
+        .collapsible-content {
+            display: none;
+            padding: 1rem;
+            background: rgba(30, 41, 59, 0.5);
+            border-left: 2px solid var(--accent-rose);
+            margin: -1rem 0 1rem 0;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        .collapsible-content.open {
+            display: block;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Scroll reveal */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            section {
+                padding: 2rem 1rem;
+            }
+
+            nav ul {
+                gap: 1rem;
+                font-size: 0.85rem;
+            }
+
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .card {
+                padding: 1.5rem;
+            }
+
+            .canvas-container {
+                height: 300px;
+            }
+
+            table {
+                font-size: 0.9rem;
+            }
+
+            table th, table td {
+                padding: 0.5rem;
+            }
+        }
+
+        /* Utility */
+        .text-center {
+            text-align: center;
+        }
+
+        .mt-2 {
+            margin-top: 2rem;
+        }
+
+        .mb-2 {
+            margin-bottom: 2rem;
+        }
+
+        .text-accent-rose {
+            color: var(--accent-rose);
+        }
+
+        .text-accent-teal {
+            color: var(--accent-teal);
+        }
+
+        .text-accent-amber {
+            color: var(--accent-amber);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .highlight {
+            background: rgba(244, 63, 94, 0.2);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+
+        select, input {
+            padding: 0.5rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            border-radius: 4px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: var(--accent-rose);
+            box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <ul>
+            <li><a href="#hero">Home</a></li>
+            <li><a href="#feynman">Overview</a></li>
+            <li><a href="#relations">Relations</a></li>
+            <li><a href="#algorithms">Algorithms</a></li>
+            <li><a href="#events">Events & Time</a></li>
+            <li><a href="#template">Templates</a></li>
+            <li><a href="#visualizers">Visualizers</a></li>
+            <li><a href="#code">Code Lab</a></li>
+            <li><a href="#challenge">Challenge</a></li>
+            <li><a href="#history">History</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <!-- Hero Section -->
+        <section id="hero" class="hero">
+            <h1>Information Extraction: Relations, Events, and Time</h1>
+            <p>Chapter 20 · Turning Unstructured Text into Structured Knowledge</p>
+            <p style="font-size: 1rem; color: var(--text-secondary); margin-top: 2rem;">From Jurafsky & Martin: Speech and Language Processing (3rd Ed)</p>
+        </section>
+
+        <!-- Feynman Bridge -->
+        <section id="feynman" class="reveal">
+            <h2 style="color: var(--accent-rose); margin-bottom: 2rem;">The Journalist's Notebook</h2>
+            <div class="feynman-box">
+                <p>Imagine you're a journalist reading thousands of news articles and your job is to extract structured facts: WHO did WHAT to WHOM, and WHEN and WHERE did it happen? You start with raw, unstructured text and need to output clean, queryable information—a knowledge graph linking entities and their relationships, a timeline of events, a database of transactions.</p>
+                <p style="margin-top: 1rem;">Information extraction (IE) bridges the gap between human-readable text and machine-readable data. We ask: What semantic relationships hold between entities? What events occur, and in what temporal order? Can we automatically fill in structured templates from documents? These are the questions of Chapter 20.</p>
+            </div>
+
+            <div class="grid-2 mt-2">
+                <div class="card">
+                    <h3>The Core Challenge</h3>
+                    <p>Text is rich, ambiguous, and context-dependent. Extracting structured facts requires solving multiple sub-problems simultaneously: entity recognition, relation classification, event identification, and temporal reasoning.</p>
+                </div>
+                <div class="card">
+                    <h3>Real-World Impact</h3>
+                    <p>IE powers knowledge graphs (Google, DBpedia), medical record processing, financial document analysis, and social media monitoring. Without IE, vast amounts of textual knowledge remain inaccessible to machines.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Relation Extraction (20.1) -->
+        <section id="relations" class="reveal">
+            <h2 style="color: var(--accent-teal); margin-bottom: 2rem;">20.1: Relation Extraction</h2>
+
+            <div class="card">
+                <h3>What Is a Relation?</h3>
+                <p>A <span class="highlight">relation</span> is a semantic connection between two entities. Relations are the edges in a knowledge graph.</p>
+                <h4>Example:</h4>
+                <p><strong>Sentence:</strong> "Steve Jobs founded Apple in 1976."</p>
+                <p><strong>Extracted relations:</strong></p>
+                <ul style="margin: 1rem 0 1rem 2rem;">
+                    <li>(Steve Jobs, <span class="text-accent-rose">founder-of</span>, Apple)</li>
+                    <li>(Apple, <span class="text-accent-rose">founded-by</span>, Steve Jobs)</li>
+                    <li>(Steve Jobs, <span class="text-accent-rose">date-of-founding</span>, 1976)</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>Relation Types: ACE Relations</h3>
+                <p>The ACE (Automatic Content Extraction) program defined 17 major relation types:</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Example Relations</th>
+                            <th>Example</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Person-Social</strong></td>
+                            <td>family, friendship, contact-info</td>
+                            <td>John is married to Mary</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Physical</strong></td>
+                            <td>location-of, near, part-of</td>
+                            <td>Paris is in France</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Org-Affiliation</strong></td>
+                            <td>employment, membership, founder</td>
+                            <td>Gates founded Microsoft</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Agent-Artifact</strong></td>
+                            <td>user-of, inventor-of</td>
+                            <td>Tim invented the web</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Event-Related</strong></td>
+                            <td>located, in-region, participant</td>
+                            <td>Protest in downtown Boston</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <h3>Knowledge Graphs & RDF Triples</h3>
+                <p>Relations can be represented as <span class="highlight">RDF triples</span> (Resource Description Framework):</p>
+                <p style="margin-top: 1rem; font-family: monospace; background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 4px;">
+                    <strong>Subject</strong> — <strong>Predicate</strong> — <strong>Object</strong>
+                </p>
+                <p style="margin-top: 1rem;">Example:</p>
+                <ul style="margin: 1rem 0 1rem 2rem;">
+                    <li><code style="background: rgba(20, 184, 166, 0.2); padding: 2px 6px; border-radius: 3px;">&lt;dbr:Steve_Jobs&gt; dbp:founded &lt;dbr:Apple_Inc&gt;</code></li>
+                    <li><code style="background: rgba(20, 184, 166, 0.2); padding: 2px 6px; border-radius: 3px;">&lt;dbr:Paris&gt; dbo:country &lt;dbr:France&gt;</code></li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>TACRED Dataset</h3>
+                <p>TACRED is a large-scale supervised dataset for relation extraction:</p>
+                <ul style="margin: 1rem 0 1rem 2rem;">
+                    <li><strong>106,264 sentences</strong> from newswire</li>
+                    <li><strong>41 relation types</strong> + no_relation class</li>
+                    <li><strong>Entity pairs:</strong> persons and organizations</li>
+                    <li><strong>Benchmark:</strong> used to evaluate supervised neural methods</li>
+                </ul>
+                <p style="margin-top: 1rem;">Example: (Barack Obama, org:founded, Democratic Party)</p>
+            </div>
+        </section>
+
+        <!-- Relation Extraction Algorithms (20.2) -->
+        <section id="algorithms" class="reveal">
+            <h2 style="color: var(--accent-amber); margin-bottom: 2rem;">20.2: Relation Extraction Algorithms</h2>
+
+            <div class="card">
+                <h3>20.2.1: Hearst Patterns (1992)</h3>
+                <p>One of the earliest and simplest approaches: use <span class="highlight">lexico-syntactic patterns</span> to extract semantic relations.</p>
+                <h4>The Hypernym Pattern</h4>
+                <p>For hypernymy (e.g., "dog" is a type of "animal"):</p>
+                <p style="margin: 1rem 0; font-family: monospace; background: rgba(244, 63, 94, 0.1); padding: 1rem; border-radius: 4px; border-left: 3px solid var(--accent-rose);">
+                    NP₀ such as NP₁, NP₂, ..., (and|or) NPᵢ, i ≥ 1
+                </p>
+                <p style="margin: 1rem 0; font-family: monospace; background: rgba(244, 63, 94, 0.1); padding: 1rem; border-radius: 4px; border-left: 3px solid var(--accent-rose);">
+                    ∀ NPᵢ, i ≥ 1, hyponym(NPᵢ, NP₀)
+                </p>
+
+                <h4 style="margin-top: 1.5rem;">Example:</h4>
+                <p style="margin: 0.5rem 0;"><strong>Text:</strong> "We have seen a similar pattern in other European countries such as France, Belgium, and Spain."</p>
+                <p style="margin: 0.5rem 0;"><strong>Extracted:</strong></p>
+                <ul style="margin: 1rem 0 1rem 2rem;">
+                    <li>hyponym(France, European countries)</li>
+                    <li>hyponym(Belgium, European countries)</li>
+                    <li>hyponym(Spain, European countries)</li>
+                </ul>
+
+                <h4 style="margin-top: 1.5rem;">Five Classic Patterns:</h4>
+                <ol style="margin: 1rem 0 1rem 2rem;">
+                    <li>NP₀ such as {NP₁, NP₂, ..., NP_n}</li>
+                    <li>such NP₀ as {NP₁, NP₂, ..., NP_n}</li>
+                    <li>NP₀ {, NP₁, ..., NP_n} or other NP</li>
+                    <li>NP₀ {, NP₁, ..., NP_n} and other NP</li>
+                    <li>NP₀ {,} including {NP₁, NP₂, ..., NP_n}</li>
+                </ol>
+
+                <p style="margin-top: 1rem; padding: 1rem; background: rgba(20, 184, 166, 0.1); border-radius: 4px; border-left: 3px solid var(--accent-teal);"><strong>Strengths:</strong> High precision, simple to implement, interpretable. <strong>Weaknesses:</strong> Low recall, requires hand-crafted patterns, doesn't scale to new relation types.</p>
+            </div>
+
+            <div class="card">
+                <h3>20.2.2: Supervised Learning</h3>
+                <p>Train a classifier on labeled data to predict relation types.</p>
+
+                <h4>Feature-Based Approach</h4>
+                <p>Extract features from the context and train a linear classifier:</p>
+                <ul style="margin: 1rem 0 1rem 2rem;">
+                    <li><strong>Word features:</strong> lemmas, POS tags, dependency paths between entities</li>
+                    <li><strong>Named entity features:</strong> entity types (PERSON, ORG, LOCATION)</li>
+                    <li><strong>Syntactic features:</strong> shortest path in dependency tree, subtree patterns</li>
+                    <li><strong>Lexical features:</strong> surrounding word windows, entity mention characteristics</li>
+                </ul>
+
+                <h4 style="margin-top: 1rem;">Neural Approach: BERT + Linear Classifier</h4>
+                <p>Modern supervised methods use pre-trained language models:</p>
+                <div class="code-block" style="margin: 1rem 0;">
+                    <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+                    <code>
+# Simplified BERT-based relation classifier
+import torch
+from transformers import AutoTokenizer, AutoModel
+
+tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+bert_model = AutoModel.from_pretrained("bert-base-uncased")
+
+# Input: sentence with marked entity positions
+sentence = "[CLS] Steve Jobs [unused1] founded [unused2] Apple [SEP]"
+tokens = tokenizer.encode(sentence, return_tensors="pt")
+
+# Get [CLS] representation (whole sentence encoding)
+with torch.no_grad():
+    outputs = bert_model(tokens)
+    cls_repr = outputs.last_hidden_state[:, 0, :]  # [batch, 768]
+
+# Linear layer for 41 relation types (TACRED)
+relation_classifier = torch.nn.Linear(768, 41)
+logits = relation_classifier(cls_repr)
+predicted_relation = torch.argmax(logits, dim=1)
+                    </code>
+                </div>
+
+                <p style="padding: 1rem; background: rgba(20, 184, 166, 0.1); border-radius: 4px; border-left: 3px solid var(--accent-teal); margin-top: 1rem;"><strong>Advantages:</strong> High accuracy on benchmark datasets, leverages large pre-trained models. <strong>Limitations:</strong> Requires labeled training data, domain transfer can be difficult.</p>
+            </div>
+
+            <div class="card">
+                <h3>20.2.3: Semi-Supervised Bootstrapping</h3>
+                <p>Start with a small set of seed tuples/patterns and iteratively grow the extraction set.</p>
+
+                <h4>The Bootstrapping Loop</h4>
+                <ol style="margin: 1rem 0 1rem 2rem;">
+                    <li><strong>Initialize:</strong> Start with a few hand-picked seed tuples or patterns (e.g., "Steve Jobs", "Apple")</li>
+                    <li><strong>Find sentences:</strong> Search a corpus for sentences containing the seed tuple members</li>
+                    <li><strong>Extract patterns:</strong> Identify textual patterns in those sentences (e.g., "[X] founded [Y]")</li>
+                    <li><strong>Find new tuples:</strong> Apply patterns to find new entity pairs in the corpus</li>
+                    <li><strong>Score & filter:</strong> Rank new tuples by confidence and add high-confidence ones back to seeds</li>
+                    <li><strong>Repeat:</strong> Continue until convergence or manual stop</li>
+                </ol>
+
+                <h4 style="margin-top: 1rem;">Confidence Scoring</h4>
+                <p>Two key confidence measures:</p>
+
+                <p style="margin: 1rem 0; padding: 1rem; background: rgba(0, 0, 0, 0.3); border-radius: 4px; border-left: 3px solid var(--accent-amber);">
+                    <strong>Pattern confidence (RlogF):</strong> $Conf_{RlogF}(p) = \frac{|hits(p)|}{|finds(p)|} \log(|finds(p)|)$
+                </p>
+
+                <p style="font-size: 0.9rem; margin: 0.5rem 0;">where |hits(p)| = correct extractions from pattern p, |finds(p)| = total extractions from p</p>
+
+                <p style="margin: 1rem 0; padding: 1rem; background: rgba(0, 0, 0, 0.3); border-radius: 4px; border-left: 3px solid var(--accent-amber);">
+                    <strong>Tuple confidence (noisy-or):</strong> $Conf(t) = 1 - \prod_{p \in P'} (1 - Conf(p))$
+                </p>
+
+                <p style="font-size: 0.9rem; margin: 0.5rem 0;">where P' = set of patterns that extracted tuple t</p>
+
+                <h4 style="margin-top: 1rem;">The Semantic Drift Problem</h4>
+                <p>As bootstrapping progresses, noisy extractions can contaminate the seed set. For example, starting with "founded", the algorithm might learn the polysemous "set" pattern, leading to incorrect relations like ("foundation", "set", "goal") instead of founder relations.</p>
+            </div>
+
+            <div class="card">
+                <h3>20.2.4: Distant Supervision</h3>
+                <p>Use a large knowledge base (KB) like Freebase or DBpedia to automatically generate training data.</p>
+
+                <h4>The Key Idea (Mintz et al. 2009)</h4>
+                <p>If a (subject, relation, object) triple exists in the KB, then any sentence mentioning both the subject and object might contain evidence for that relation.</p>
+
+                <h4 style="margin-top: 1rem;">Example</h4>
+                <p><strong>KB triple:</strong> (Barack Obama, spouse, Michelle Obama)</p>
+                <p><strong>Sentence 1:</strong> "Barack Obama married Michelle in 1992."</p>
+                <p style="margin: 0.75rem 0; padding: 0.75rem; background: rgba(245, 158, 11, 0.1); border-radius: 4px;"><span class="text-accent-amber">Label:</span> spouse relation (correct)</p>
+                <p><strong>Sentence 2:</strong> "Barack and Michelle Obama visited Kenya last year."</p>
+                <p style="margin: 0.75rem 0; padding: 0.75rem; background: rgba(245, 158, 11, 0.1); border-radius: 4px;"><span class="text-accent-amber">Label:</span> spouse relation (noisy—they're together, but sentence doesn't express spouse relation)</p>
+
+                <p style="margin-top: 1rem; padding: 1rem; background: rgba(244, 63, 94, 0.1); border-radius: 4px; border-left: 3px solid var(--accent-rose);"><strong>Challenge:</strong> Noisy labels. The assumption that co-occurrence implies the relation is too weak. Multi-instance learning approaches address this by only requiring one sentence per tuple to express the relation.</p>
+            </div>
+
+            <div class="card">
+                <h3>20.2.5: Unsupervised / Open IE</h3>
+                <p>Extract relations without predefined relation types. The system learns to identify and extract arbitrary relations.</p>
+
+                <h4>ReVerb System</h4>
+                <p>The ReVerb (Relation Verb) system extracts relations based on the structure of English verbs:</p>
+
+                <h4 style="margin-top: 1rem;">Pattern: (Arg1) — (Relation Phrase) — (Arg2)</h4>
+                <ul style="margin: 1rem 0 1rem 2rem;">
+                    <li><strong>Arg1 (Argument 1):</strong> Noun phrase (subject)</li>
+                    <li><strong>Relation Phrase:</strong> Verb-based phrase with constraints (stops before nested clauses)</li>
+                    <li><strong>Arg2 (Argument 2):</strong> Noun phrase (object)</li>
+                </ul>
+
+                <h4 style="margin-top: 1rem;">Examples:</h4>
+                <ul style="margin: 1rem 0 1rem 2rem;">
+                    <li>"Einstein won the Nobel Prize" → (Einstein, won, Nobel Prize)</li>
+                    <li>"Obama is president of USA" → (Obama, is president of, USA)</li>
+                    <li>"The Nile flows through Egypt" → (Nile, flows through, Egypt)</li>
+                </ul>
+
+                <p style="margin-top: 1rem; padding: 1rem; background: rgba(20, 184, 166, 0.1); border-radius: 4px; border-left: 3px solid var(--accent-teal);"><strong>Advantage:</strong> No predefined relation types needed. Works across domains. <strong>Tradeoff:</strong> Less structured relations, harder to use in downstream applications that expect specific relation types.</p>
+            </div>
+
+            <div class="card">
+                <h3>20.2.6: Evaluation Metrics</h3>
+                <p>How do we evaluate IE systems?</p>
+
+                <h4>Supervised (Labeled Test Set)</h4>
+                <p>Standard metrics: <strong>Precision</strong>, <strong>Recall</strong>, <strong>F₁ Score</strong></p>
+                <ul style="margin: 1rem 0 1rem 2rem;">
+                    <li><strong>Precision:</strong> Of extracted relations, how many are correct?</li>
+                    <li><strong>Recall:</strong> Of all relations in the gold standard, how many did we find?</li>
+                </ul>
+
+                <h4 style="margin-top: 1rem;">Semi-Supervised & Unsupervised (No Complete Gold Standard)</h4>
+                <p><strong>Sampled Precision:</strong> Randomly sample 100 extractions, manually judge them, estimate precision.</p>
+                <p style="margin: 1rem 0; padding: 1rem; background: rgba(0, 0, 0, 0.3); border-radius: 4px; border-left: 3px solid var(--accent-amber);">
+                    $\hat{P} = \frac{\text{correctly extracted tuples in sample}}{\text{total extracted tuples in sample}}$
+                </p>
+            </div>
+        </section>
+
+        <!-- Events and Time (20.3–20.7) -->
+        <section id="events" class="reveal">
+            <h2 style="color: var(--accent-rose); margin-bottom: 2rem;">20.3–20.7: Extracting Events and Representing Time</h2>
+
+            <div class="card">
+                <h3>20.3: Event Extraction</h3>
+                <p>An <span class="highlight">event</span> is an occurrence that happens at a specific time and place, typically involving entities as participants.</p>
+
+                <h4>Event Mention</h4>
+                <p>A textual reference to an event, often centered on a verb or action noun.</p>
+                <p style="margin-top: 1rem;"><strong>Example:</strong> "Apple announced the iPhone in 2007."</p>
+                <ul style="margin: 1rem 0 1rem 2rem;">
+                    <li><strong>Event mention:</strong> "announced"</li>
+                    <li><strong>Event type:</strong> ANNOUNCEMENT</li>
+                    <li><strong>Participants:</strong> Apple (agent), iPhone (theme), 2007 (temporal)</li>
+                </ul>
+
+                <h4 style="margin-top: 1rem;">Light Verbs & Complex Predicates</h4>
+                <p>Not all events are expressed as main verbs. English uses <span class="highlight">light verbs</span> to create complex predicates:</p>
+                <ul style="margin: 1rem 0 1rem 2rem;">
+                    <li>"make a decision" → event DECISION, light verb "make"</li>
+                    <li>"take a trip" → event TRAVEL, light verb "take"</li>
+                    <li>"have a conversation" → event COMMUNICATION, light verb "have"</li>
+                </ul>
+
+                <h4 style="margin-top: 1rem;">Extraction Approach: IOB Tagging</h4>
+                <p>Use sequence labeling to identify event trigger words:</p>
+                <div class="code-block">
+                    <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+                    <code>
+Sentence: "The president announced a major policy yesterday."
+
+IOB tags:
+The          O         (Outside)
+president    B-ARG     (Begin argument)
+announced    B-TRIG    (Begin trigger)
+a            I-TRIG    (Inside trigger)
+major        I-TRIG
+policy       I-ARG     (Inside argument)
+yesterday    B-TIME    (Time expression)
+                    </code>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>20.4: Representing Time</h3>
+
+                <h4>Allen's 13 Temporal Interval Relations (1984)</h4>
+                <p>Fundamental relations between two time intervals A and B:</p>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1rem 0;">
+                    <div style="background: rgba(244, 63, 94, 0.1); padding: 1rem; border-radius: 6px; border-left: 3px solid var(--accent-rose);">
+                        <strong>before</strong><br><code style="font-size: 0.85rem;">A &lt; B</code>
+                    </div>
+                    <div style="background: rgba(244, 63, 94, 0.1); padding: 1rem; border-radius: 6px; border-left: 3px solid var(--accent-rose);">
+                        <strong>after</strong><br><code style="font-size: 0.85rem;">A &gt; B</code>
+                    </div>
+                    <div style="background: rgba(20, 184, 166, 0.1); padding: 1rem; border-radius: 6px; border-left: 3px solid var(--accent-teal);">
+                        <strong>meets</strong><br><code style="font-size: 0.85rem;">A.end = B.start</code>
+                    </div>
+                    <div style="background: rgba(20, 184, 166, 0.1); padding: 1rem; border-radius: 6px; border-left: 3px solid var(--accent-teal);">
+                        <strong>met-by</strong><br><code style="font-size: 0.85rem;">B.end = A.start</code>
+                    </div>
+                    <div style="background: rgba(245, 158, 11, 0.1); padding: 1rem; border-radius: 6px; border-left: 3px solid var(--accent-amber);">
+                        <strong>overlaps</strong><br><code style="font-size: 0.85rem;">A.start &lt; B.start &lt; A.end</code>
+                    </div>
+                    <div style="background: rgba(245, 158, 11, 0.1); padding: 1rem; border-radius: 6px; border-left: 3px solid var(--accent-amber);">
+                        <strong>overlapped-by</strong><br><code style="font-size: 0.85rem;">B.start &lt; A.start &lt; B.end</code>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1rem 0;">
+                    <div style="background: rgba(244, 63, 94, 0.1); padding: 1rem; border-radius: 6px; border-left: 3px solid var(--accent-rose);">
+                        <strong>starts</strong><br><code style="font-size: 0.85rem;">A.start = B.start</code>
+                    </div>
+                    <div style="background: rgba(244, 63, 94, 0.1); padding: 1rem; border-radius: 6px; border-left: 3px solid var(--accent-rose);">
+                        <strong>started-by</strong><br><code style="font-size: 0.85rem;">B.start = A.start</code>
+                    </div>
+                    <div style="background: rgba(20, 184, 166, 0.1); padding: 1rem; border-radius: 6px; border-left: 3px solid var(--accent-teal);">
+                        <strong>finishes</strong><br><code style="font-size: 0.85rem;">A.end = B.end</code>
+                    </div>
+                    <div style="background: rgba(20, 184, 166, 0.1); padding: 1rem; border-radius: 6px; border-left: 3px solid var(--accent-teal);">
+                        <strong>finished-by</strong><br><code style="font-size: 0.85rem;">B.end = A.end</code>
+                    </div>
+                    <div style="background: rgba(245, 158, 11, 0.1); padding: 1rem; border-radius: 6px; border-left: 3px solid var(--accent-amber);">
+                        <strong>during</strong><br><code style="font-size: 0.85rem;">A inside B</code>
+                    </div>
+                    <div style="background: rgba(245, 158, 11, 0.1); padding: 1rem; border-radius: 6px; border-left: 3px solid var(--accent-amber);">
+                        <strong>contains</strong><br><code style="font-size: 0.85rem;">B inside A</code>
+                    </div>
+                </div>
+
+                <div style="background: rgba(244, 63, 94, 0.1); padding: 1rem; border-radius: 6px; border-left: 3px solid var(--accent-rose); margin: 1rem 0;">
+                    <strong>equals</strong><br><code>A.start = B.start AND A.end = B.end</code>
+                </div>
+
+                <h4 style="margin-top: 1.5rem;">Reichenbach's Reference Time (1947)</h4>
+                <p>Analyze tense using three time points:</p>
+                <ul style="margin: 1rem 0 1rem 2rem;">
+                    <li><strong>E (Event time):</strong> When the event occurred</li>
+                    <li><strong>R (Reference time):</strong> The perspective point from which we evaluate the event</li>
+                    <li><strong>S (Speech time):</strong> The moment of utterance (now)</li>
+                </ul>
+
+                <p style="margin: 1rem 0;"><strong>Example analyses:</strong></p>
+                <ul style="margin: 1rem 0 1rem 2rem;">
+                    <li><strong>Past simple:</strong> "I went home" → E &lt; R = S (event before now)</li>
+                    <li><strong>Present perfect:</strong> "I have gone home" → E &lt; S = R (event before now, result in present)</li>
+                    <li><strong>Future:</strong> "I will go home" → S = R &lt; E (now before event)</li>
+                    <li><strong>Past perfect:</strong> "I had gone home" → E &lt; R &lt; S (event before reference, reference before now)</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>20.5: Representing Aspect</h3>
+                <p><span class="highlight">Aspect</span> describes the internal temporal structure of an event (whether it's ongoing, habitual, completed, etc.).</p>
+
+                <h4>Vendler's 4 Classes (1957)</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Class</th>
+                            <th>Definition</th>
+                            <th>Example</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Stative</strong></td>
+                            <td>No change; no internal phases</td>
+                            <td>"know", "love", "be tall"</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Activity</strong></td>
+                            <td>Ongoing; can be interrupted</td>
+                            <td>"run", "eat", "swim" (for a time)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Accomplishment</strong></td>
+                            <td>Has result; reaches an endpoint</td>
+                            <td>"build a house", "run a mile"</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Achievement</strong></td>
+                            <td>Instantaneous; no duration</td>
+                            <td>"find", "reach", "win", "arrive"</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p style="margin-top: 1rem; padding: 1rem; background: rgba(20, 184, 166, 0.1); border-radius: 4px; border-left: 3px solid var(--accent-teal);">Aspect classification is important for NLU systems because it affects inference. "Mary is writing a letter" suggests an incomplete activity, while "Mary wrote a letter" suggests a completed accomplishment.</p>
+            </div>
+
+            <div class="card">
+                <h3>20.6: TimeBank and TimeML</h3>
+                <p><span class="highlight">TimeML</span> is an XML markup language for annotating temporal information in text.</p>
+
+                <h4>Key Annotations:</h4>
+                <ul style="margin: 1rem 0 1rem 2rem;">
+                    <li><strong>TIMEX3:</strong> Temporal expressions (dates, times, durations)</li>
+                    <li><strong>EVENT:</strong> Event mentions (verbs, action nouns, states)</li>
+                    <li><strong>TLINK:</strong> Temporal link between events or times</li>
+                    <li><strong>ALINK:</strong> Aspect link (how aspect applies)</li>
+                    <li><strong>SLINK:</strong> Subordination link (how events embed)</li>
+                </ul>
+
+                <h4 style="margin-top: 1rem;">Example TimeML Annotation:</h4>
+                <div class="code-block">
+                    <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+                    <code>
+&lt;text&gt;
+  John &lt;EVENT eid="e1" class="OCCURRENCE"&gt;started&lt;/EVENT&gt;
+  his job on &lt;TIMEX3 tid="t1" type="DATE" value="2020-01-15"&gt;
+  January 15, 2020&lt;/TIMEX3&gt;.
+&lt;/text&gt;
+
+&lt;TLINK eventInstanceID="e1" relType="IS_INCLUDED" timeID="t1"/&gt;
+                    </code>
+                </div>
+
+                <p style="margin-top: 1rem;"><strong>TimeBank:</strong> A corpus of 183 documents from newswire, fully annotated with TimeML. Used as benchmark for event extraction and temporal relation classification tasks.</p>
+            </div>
+
+            <div class="card">
+                <h3>20.7.1: Extracting Temporal Expressions</h3>
+                <p>Recognize and classify temporal expressions in text.</p>
+
+                <h4>Types of Temporal Expressions:</h4>
+                <ul style="margin: 1rem 0 1rem 2rem;">
+                    <li><strong>Absolute:</strong> "January 15, 2020", "Tuesday", "2:30 PM"</li>
+                    <li><strong>Relative:</strong> "yesterday", "next week", "last month", "in 3 days"</li>
+                    <li><strong>Duration:</strong> "3 hours", "2 weeks", "5 years"</li>
+                </ul>
+
+                <h4 style="margin-top: 1rem;">Extraction Method: IOB Sequence Labeling</h4>
+                <div class="code-block">
+                    <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+                    <code>
+Sentence: "The meeting is scheduled for next Tuesday at 2:00 PM."
+
+IOB:
+The              O
+meeting          O
+is               O
+scheduled        O
+for              O
+next             B-TIMEX3
+Tuesday          I-TIMEX3
+at               O
+2:00             B-TIMEX3
+PM               I-TIMEX3
+                    </code>
+                </div>
+
+                <p style="margin-top: 1rem;"><strong>Lexical triggers:</strong> Words that often signal temporal expressions (after, before, during, while, yesterday, tomorrow, etc.)</p>
+            </div>
+
+            <div class="card">
+                <h3>20.7.2: Temporal Normalization</h3>
+                <p>Convert temporal expressions to <span class="highlight">ISO 8601</span> standard format.</p>
+
+                <h4>ISO 8601 Format:</h4>
+                <ul style="margin: 1rem 0 1rem 2rem;">
+                    <li><strong>Date:</strong> YYYY-MM-DD (e.g., 2024-03-15)</li>
+                    <li><strong>Time:</strong> HH:MM:SS (e.g., 14:30:00)</li>
+                    <li><strong>DateTime:</strong> YYYY-MM-DDTHH:MM:SS (e.g., 2024-03-15T14:30:00)</li>
+                    <li><strong>Duration:</strong> P[n]Y[n]M[n]DT[n]H[n]M[n]S (e.g., P1Y2M3DT4H5M6S = 1 year, 2 months, 3 days, 4 hours, 5 minutes, 6 seconds)</li>
+                </ul>
+
+                <h4 style="margin-top: 1rem;">Examples of Normalization:</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Text Expression</th>
+                            <th>ISO 8601 Value</th>
+                            <th>Reference Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>"January 15, 2024"</td>
+                            <td>2024-01-15</td>
+                            <td>—</td>
+                        </tr>
+                        <tr>
+                            <td>"yesterday"</td>
+                            <td>2024-03-14</td>
+                            <td>2024-03-15</td>
+                        </tr>
+                        <tr>
+                            <td>"next week"</td>
+                            <td>2024-03-24</td>
+                            <td>2024-03-15</td>
+                        </tr>
+                        <tr>
+                            <td>"2 hours"</td>
+                            <td>PT2H</td>
+                            <td>—</td>
+                        </tr>
+                        <tr>
+                            <td>"Q3"</td>
+                            <td>2024-Q3</td>
+                            <td>2024</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p style="margin-top: 1rem; padding: 1rem; background: rgba(245, 158, 11, 0.1); border-radius: 4px; border-left: 3px solid var(--accent-amber);"><strong>Challenge:</strong> Relative expressions require a reference date (from context) and calendar knowledge (e.g., what date is "next Tuesday"?).</p>
+            </div>
+        </section>
+
+        <!-- Template Filling (20.8) -->
+        <section id="template" class="reveal">
+            <h2 style="color: var(--accent-teal); margin-bottom: 2rem;">20.8: Template Filling & Slot Filling</h2>
+
+            <div class="card">
+                <h3>Slot Filling and Template Filling</h3>
+                <p>Extract information to fill in a structured <span class="highlight">template</span> or form from unstructured text.</p>
+
+                <h4>Example: Airline Incident Template</h4>
+                <p><strong>Template schema:</strong></p>
+                <div style="background: rgba(0, 0, 0, 0.3); padding: 1rem; border-radius: 6px; margin: 1rem 0; font-family: monospace; font-size: 0.9rem;">
+INCIDENT:<br>
+&nbsp; Lead Airline: ___________<br>
+&nbsp; Incident Type: ___________<br>
+&nbsp; Amount Damaged: ___________<br>
+&nbsp; Date: ___________<br>
+&nbsp; Follower Airline: ___________
+                </div>
+
+                <p style="margin-top: 1rem;"><strong>Text:</strong> "United Airlines collided with a small jet yesterday, causing $2 million in damages. American Airlines was also involved."</p>
+
+                <p style="margin-top: 1rem;"><strong>Filled template:</strong></p>
+                <div style="background: rgba(20, 184, 166, 0.1); padding: 1rem; border-radius: 6px; margin: 1rem 0;">
+INCIDENT:<br>
+&nbsp; Lead Airline: United Airlines<br>
+&nbsp; Incident Type: collision<br>
+&nbsp; Amount Damaged: $2 million<br>
+&nbsp; Date: yesterday<br>
+&nbsp; Follower Airline: American Airlines
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Machine Reading Approaches</h3>
+
+                <h4>Rule-Based / Pattern-Based</h4>
+                <p>Define extraction rules for each slot. Simple but requires manual engineering for each template.</p>
+
+                <p style="margin-top: 1rem;"><strong>Example rule for Lead Airline:</strong></p>
+                <div class="code-block">
+                    <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+                    <code>
+IF sentence contains verb "collided" or "crashed"
+  AND sentence contains airline name
+  THEN Lead Airline = first airline mentioned
+
+IF sentence contains "United" or "American" or "Delta" ...
+  AND within 5 tokens of collision verb
+  THEN Lead Airline = that airline
+                    </code>
+                </div>
+
+                <h4 style="margin-top: 1rem;">Neural / Reading Comprehension Approaches</h4>
+                <p>Train a model (e.g., BERT-based span extraction) to predict which text span fills each slot.</p>
+
+                <div class="code-block">
+                    <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+                    <code>
+# Simplified span-based template filling
+from transformers import AutoTokenizer, AutoModelForQuestionAnswering
+
+tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+model = AutoModelForQuestionAnswering.from_pretrained("bert-base-uncased")
+
+text = "United Airlines collided with a jet, causing $2M in damages."
+question = "Which airline is the lead airline?"
+
+inputs = tokenizer.encode_plus(question, text, return_tensors="pt")
+outputs = model(**inputs)
+
+# Extract answer span
+answer_start = torch.argmax(outputs.start_logits)
+answer_end = torch.argmax(outputs.end_logits) + 1
+answer_tokens = inputs.input_ids[0][answer_start:answer_end]
+answer = tokenizer.decode(answer_tokens)
+print(answer)  # "United Airlines"
+                    </code>
+                </div>
+
+                <h4 style="margin-top: 1rem;">Zero-Shot with Large Language Models</h4>
+                <p>Use instruction-tuned LLMs (ChatGPT, Claude, etc.) with prompts to extract structured information.</p>
+
+                <div class="code-block">
+                    <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+                    <code>
+prompt = """
+Extract the following information from the text below.
+Return the result as JSON.
+
+Text: "United Airlines collided with a jet yesterday,
+        causing $2 million in damages. American Airlines
+        was also involved."
+
+Extract:
+- Lead Airline (the primary airline in the incident)
+- Incident Type
+- Amount Damaged
+- Date
+- Follower Airline
+
+Output JSON:
+"""
+
+# LLM responds:
+{
+  "Lead Airline": "United Airlines",
+  "Incident Type": "collision",
+  "Amount Damaged": "$2 million",
+  "Date": "yesterday",
+  "Follower Airline": "American Airlines"
+}
+                    </code>
+                </div>
+
+                <p style="margin-top: 1rem; padding: 1rem; background: rgba(20, 184, 166, 0.1); border-radius: 4px; border-left: 3px solid var(--accent-teal);"><strong>Modern advantage:</strong> LLMs require no task-specific training and generalize well to unseen template types. Tradeoff: Cost, latency, and hallucination risks.</p>
+            </div>
+        </section>
+
+        <!-- Visualizers -->
+        <section id="visualizers" class="reveal">
+            <h2 style="color: var(--accent-amber); margin-bottom: 2rem;">Interactive Visualizers</h2>
+
+            <!-- Visualizer 1: Relation Extraction -->
+            <div class="visualizer">
+                <h3>Visualizer 1: Relation Extraction Pipeline</h3>
+                <p>Click on entity pairs to extract relations between them. The system classifies the relation type.</p>
+
+                <div style="margin: 1rem 0; padding: 1rem; background: rgba(30, 41, 59, 0.5); border-radius: 6px; border-left: 3px solid var(--accent-teal);">
+                    <strong>Sentence:</strong> "Steve Jobs founded Apple in 1976. The company is headquartered in Cupertino."
+                </div>
+
+                <div class="controls">
+                    <button class="btn" onclick="visualizeRelations()">Show Entities</button>
+                    <button class="btn btn-secondary" onclick="resetRelations()">Reset</button>
+                </div>
+
+                <div class="canvas-container" id="relationCanvas" style="position: relative;">
+                    <canvas id="relationViz" style="position: absolute; top: 0; left: 0;"></canvas>
+                </div>
+
+                <div id="relationOutput" style="margin-top: 1rem; padding: 1rem; background: rgba(0, 0, 0, 0.3); border-radius: 6px; display: none;">
+                    <strong>Extracted Relations:</strong>
+                    <ul id="relationList" style="margin-top: 0.5rem; margin-left: 1.5rem;"></ul>
+                </div>
+            </div>
+
+            <!-- Visualizer 2: Allen's Temporal Relations -->
+            <div class="visualizer">
+                <h3>Visualizer 2: Allen's 13 Temporal Relations</h3>
+                <p>Drag the intervals A and B to explore different temporal relationships. The system identifies which of the 13 Allen relations holds.</p>
+
+                <div class="controls">
+                    <button class="btn" onclick="initAllenViz()">Initialize</button>
+                    <button class="btn btn-secondary" onclick="resetAllenViz()">Reset</button>
+                </div>
+
+                <div class="canvas-container" id="allenCanvas" style="position: relative;">
+                    <canvas id="allenViz" style="position: absolute; top: 0; left: 0;"></canvas>
+                </div>
+
+                <div id="allenOutput" style="margin-top: 1rem; padding: 1rem; background: rgba(0, 0, 0, 0.3); border-radius: 6px;">
+                    <div><strong>Relation:</strong> <span id="allenRelation" style="color: var(--accent-rose); font-weight: 700;">before</span></div>
+                    <div style="margin-top: 0.5rem;"><strong>Definition:</strong> <span id="allenDefinition" style="color: var(--text-secondary);">Event A finishes before event B begins.</span></div>
+                </div>
+            </div>
+
+            <!-- Visualizer 3: Bootstrapping Explorer -->
+            <div class="visualizer">
+                <h3>Visualizer 3: Semi-Supervised Bootstrapping Explorer</h3>
+                <p>Start with a seed tuple and watch the bootstrapping loop extract new tuples. See how confidence scores and semantic drift affect the results.</p>
+
+                <div class="controls">
+                    <label>Seed Tuple:</label>
+                    <select id="seedTuple" style="margin-left: 0.5rem;">
+                        <option value="jobs-apple">Steve Jobs, Apple</option>
+                        <option value="gates-microsoft">Bill Gates, Microsoft</option>
+                        <option value="paris-france">Paris, France</option>
+                    </select>
+                    <button class="btn" style="margin-left: 1rem;" onclick="startBootstrapping()">Start Bootstrapping</button>
+                    <button class="btn btn-secondary" onclick="resetBootstrapping()">Reset</button>
+                </div>
+
+                <div class="canvas-container" id="bootstrapCanvas" style="position: relative;">
+                    <canvas id="bootstrapViz" style="position: absolute; top: 0; left: 0;"></canvas>
+                </div>
+
+                <div id="bootstrapOutput" style="margin-top: 1rem;">
+                    <div style="padding: 1rem; background: rgba(0, 0, 0, 0.3); border-radius: 6px; margin-bottom: 1rem;">
+                        <strong>Iteration:</strong> <span id="bootIteration" style="color: var(--accent-rose); font-weight: 700;">0</span>
+                    </div>
+                    <div style="padding: 1rem; background: rgba(0, 0, 0, 0.3); border-radius: 6px;">
+                        <strong>Extracted Tuples:</strong>
+                        <ul id="bootstrapTuples" style="margin-top: 0.5rem; margin-left: 1.5rem;"></ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visualizer 4: Template Filler -->
+            <div class="visualizer">
+                <h3>Visualizer 4: Template Filler</h3>
+                <p>Watch as the system extracts information from text and fills in a structured template slot by slot.</p>
+
+                <div style="margin: 1rem 0; padding: 1rem; background: rgba(30, 41, 59, 0.5); border-radius: 6px; border-left: 3px solid var(--accent-teal);">
+                    <strong>Text:</strong> "United Airlines collided with a Cessna on the runway yesterday, causing an estimated $3.5 million in damage. American Airlines' ground crew was nearby."
+                </div>
+
+                <div class="controls">
+                    <button class="btn" onclick="startTemplateFilling()">Fill Template</button>
+                    <button class="btn btn-secondary" onclick="resetTemplateFilling()">Reset</button>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 1rem;">
+                    <div>
+                        <h4 style="color: var(--accent-teal); margin-bottom: 1rem;">Template Schema</h4>
+                        <div id="templateSchema" style="padding: 1rem; background: rgba(0, 0, 0, 0.3); border-radius: 6px; font-family: monospace; font-size: 0.9rem;">
+INCIDENT:<br>
+&nbsp; Lead Airline: _____<br>
+&nbsp; Incident Type: _____<br>
+&nbsp; Amount Damaged: _____<br>
+&nbsp; Date: _____<br>
+&nbsp; Follower Airline: _____
+                        </div>
+                    </div>
+                    <div>
+                        <h4 style="color: var(--accent-teal); margin-bottom: 1rem;">Filled Values</h4>
+                        <div id="templateFilled" style="padding: 1rem; background: rgba(0, 0, 0, 0.3); border-radius: 6px; font-family: monospace; font-size: 0.9rem;">
+INCIDENT:<br>
+&nbsp; Lead Airline: <span style="color: var(--accent-rose);">—</span><br>
+&nbsp; Incident Type: <span style="color: var(--accent-rose);">—</span><br>
+&nbsp; Amount Damaged: <span style="color: var(--accent-rose);">—</span><br>
+&nbsp; Date: <span style="color: var(--accent-rose);">—</span><br>
+&nbsp; Follower Airline: <span style="color: var(--accent-rose);">—</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Code Lab -->
+        <section id="code" class="reveal">
+            <h2 style="color: var(--accent-rose); margin-bottom: 2rem;">Code Lab: Practical Implementations</h2>
+
+            <div class="card">
+                <h3>Code 1: Hearst Pattern Extractor</h3>
+                <p>Extract hypernymy relations from text using Hearst patterns.</p>
+
+                <div class="code-block">
+                    <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+                    <code>
+import re
+
+def extract_hearst_patterns(text):
+    """
+    Extract hypernym relations using Hearst patterns.
+
+    Patterns:
+    1. NP0 such as NP1, NP2, ..., (and|or) NPn
+    2. such NP0 as NP1, NP2, ..., NPn
+    3. NP0, NP1, ..., or other NP
+    4. NP0, NP1, ..., and other NP
+    """
+
+    # Simplified NP pattern (word or phrase)
+    NP = r"([A-Z][a-z\s]+)"
+
+    patterns = [
+        # Pattern 1: NP such as NP, NP, ... (and|or) NP
+        re.compile(
+            NP + r"\s+such as\s+" + r"((?:" + NP + r"(?:,|and|or)\s*)+)"
+        ),
+        # Pattern 2: such NP as NP, NP, ...
+        re.compile(
+            r"such\s+" + NP + r"\s+as\s+" + r"((?:" + NP + r"(?:,|and|or)\s*)+)"
+        ),
+    ]
+
+    relations = []
+
+    for pattern in patterns:
+        for match in pattern.finditer(text):
+            hypernym = match.group(1).strip()
+            hyponym_str = match.group(2)
+            hyponyms = re.findall(NP, hyponym_str)
+
+            for hyponym in hyponyms:
+                relations.append((hyponym.strip(), "hypernym", hypernym))
+
+    return relations
+
+# Example usage
+text = """
+Pets such as dogs, cats, and rabbits require regular care.
+We have various fruits including apples, oranges, and bananas.
+"""
+
+results = extract_hearst_patterns(text)
+for hyponym, rel, hypernym in results:
+    print(f"({hyponym}, {rel}, {hypernym})")
+    </code>
+                </div>
+
+                <p style="margin-top: 1rem; padding: 1rem; background: rgba(245, 158, 11, 0.1); border-radius: 4px; border-left: 3px solid var(--accent-amber);">Note: This is a simplified implementation. Production systems would use proper NLP parsers (spaCy, Stanford CoreNLP) to identify noun phrases more accurately.</p>
+            </div>
+
+            <div class="card">
+                <h3>Code 2: Relation Classifier with BERT</h3>
+                <p>Classify relations between entity pairs using BERT embeddings.</p>
+
+                <div class="code-block">
+                    <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+                    <code>
+import torch
+from transformers import AutoTokenizer, AutoModel
+
+class BERTRelationClassifier(torch.nn.Module):
+    def __init__(self, num_relations=41):
+        super().__init__()
+        self.bert = AutoModel.from_pretrained("bert-base-uncased")
+        self.hidden_size = self.bert.config.hidden_size
+        # Concatenate [CLS], entity1, entity2 representations
+        self.classifier = torch.nn.Linear(self.hidden_size * 3, num_relations)
+
+    def forward(self, input_ids, entity1_mask, entity2_mask):
+        # Get BERT representations
+        outputs = self.bert(input_ids, output_hidden_states=True)
+        last_hidden = outputs.last_hidden_state  # [batch, seq, 768]
+
+        # Extract [CLS] representation (index 0)
+        cls_repr = last_hidden[:, 0, :]  # [batch, 768]
+
+        # Extract entity representations (average pooling over entity span)
+        entity1_repr = (last_hidden * entity1_mask.unsqueeze(-1)).sum(dim=1) / \
+                       entity1_mask.sum(dim=1, keepdim=True)  # [batch, 768]
+        entity2_repr = (last_hidden * entity2_mask.unsqueeze(-1)).sum(dim=1) / \
+                       entity2_mask.sum(dim=1, keepdim=True)  # [batch, 768]
+
+        # Concatenate
+        combined = torch.cat([cls_repr, entity1_repr, entity2_repr], dim=1)
+        logits = self.classifier(combined)  # [batch, 41]
+
+        return logits
+
+# Example usage
+tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+model = BERTRelationClassifier(num_relations=41)
+
+sentence = "Steve Jobs founded Apple Inc."
+tokens = tokenizer.encode(sentence, return_tensors="pt")
+
+# Mark entity positions: Steve Jobs (tokens 1-2), Apple Inc (tokens 3-4)
+entity1_mask = torch.tensor([[0, 1, 1, 0, 0, 0, 0]])  # Steve Jobs
+entity2_mask = torch.tensor([[0, 0, 0, 1, 1, 0, 0]])  # Apple Inc
+
+logits = model(tokens, entity1_mask, entity2_mask)
+predicted_relation = torch.argmax(logits, dim=1)
+print(f"Predicted relation ID: {predicted_relation.item()}")
+                    </code>
+                </div>
+
+                <p style="margin-top: 1rem; padding: 1rem; background: rgba(20, 184, 166, 0.1); border-radius: 4px; border-left: 3px solid var(--accent-teal);">This code shows the core architecture. A full implementation would include training loops, loss functions, and evaluation metrics on the TACRED dataset.</p>
+            </div>
+
+            <div class="card">
+                <h3>Code 3: Temporal Expression Normalizer</h3>
+                <p>Normalize temporal expressions to ISO 8601 format.</p>
+
+                <div class="code-block">
+                    <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+                    <code>
+from datetime import datetime, timedelta
+import re
+
+def normalize_temporal_expression(expr, reference_date=None):
+    """
+    Normalize temporal expressions to ISO 8601 format.
+
+    Args:
+        expr: Temporal expression string (e.g., "yesterday", "Q3 2024")
+        reference_date: Reference date for relative expressions (datetime object)
+
+    Returns:
+        ISO 8601 formatted string
+    """
+
+    if reference_date is None:
+        reference_date = datetime.now()
+
+    expr = expr.lower().strip()
+
+    # Absolute dates (YYYY-MM-DD format)
+    if re.match(r"\d{4}-\d{2}-\d{2}", expr):
+        return expr
+
+    # Relative dates
+    if expr == "yesterday":
+        return (reference_date - timedelta(days=1)).strftime("%Y-%m-%d")
+    elif expr == "today":
+        return reference_date.strftime("%Y-%m-%d")
+    elif expr == "tomorrow":
+        return (reference_date + timedelta(days=1)).strftime("%Y-%m-%d")
+
+    # Relative weeks/months/years
+    if expr == "next week":
+        return (reference_date + timedelta(weeks=1)).strftime("%Y-%m-%d")
+    elif expr == "last week":
+        return (reference_date - timedelta(weeks=1)).strftime("%Y-%m-%d")
+    elif expr == "next month":
+        # Approximate: add 30 days
+        return (reference_date + timedelta(days=30)).strftime("%Y-%m-%d")
+    elif expr == "last month":
+        return (reference_date - timedelta(days=30)).strftime("%Y-%m-%d")
+
+    # Duration expressions
+    duration_pattern = r"(\d+)\s+(hour|day|week|month|year)s?"
+    match = re.match(duration_pattern, expr)
+    if match:
+        amount = int(match.group(1))
+        unit = match.group(2)
+
+        if unit == "hour":
+            return f"PT{amount}H"
+        elif unit == "day":
+            return f"P{amount}D"
+        elif unit == "week":
+            return f"P{amount*7}D"
+        elif unit == "month":
+            return f"P{amount}M"
+        elif unit == "year":
+            return f"P{amount}Y"
+
+    # Month and year (e.g., "January 2024")
+    month_year_pattern = r"([A-Z][a-z]+)\s+(\d{4})"
+    match = re.match(month_year_pattern, expr)
+    if match:
+        month_str = match.group(1)
+        year = match.group(2)
+        months = {
+            "january": "01", "february": "02", "march": "03",
+            "april": "04", "may": "05", "june": "06",
+            "july": "07", "august": "08", "september": "09",
+            "october": "10", "november": "11", "december": "12"
+        }
+        month = months.get(month_str.lower())
+        if month:
+            return f"{year}-{month}"
+
+    # Quarters (e.g., "Q3 2024")
+    quarter_pattern = r"Q(\d)\s+(\d{4})"
+    match = re.match(quarter_pattern, expr)
+    if match:
+        quarter = match.group(1)
+        year = match.group(2)
+        return f"{year}-Q{quarter}"
+
+    return None  # Could not normalize
+
+# Example usage
+ref_date = datetime(2024, 3, 15)
+
+test_exprs = [
+    "yesterday",
+    "next week",
+    "3 days",
+    "January 2024",
+    "Q3 2024",
+    "2024-03-15"
+]
+
+for expr in test_exprs:
+    normalized = normalize_temporal_expression(expr, ref_date)
+    print(f"{expr:20} -> {normalized}")
+                    </code>
+                </div>
+
+                <p style="margin-top: 1rem; padding: 1rem; background: rgba(245, 158, 11, 0.1); border-radius: 4px; border-left: 3px solid var(--accent-amber);">Production systems would use libraries like <code>dateparser</code> or <code>natty</code> to handle more complex temporal expressions and ambiguities.</p>
+            </div>
+        </section>
+
+        <!-- Challenge Section -->
+        <section id="challenge" class="reveal">
+            <h2 style="color: var(--accent-amber); margin-bottom: 2rem;">The Knowledge Graph Detective: Socratic Challenge</h2>
+
+            <div class="challenge-box">
+                <h3>Your Mission</h3>
+                <p>You're a detective building a knowledge graph from a news article. Extract all entities, relations, events, and temporal information. Then answer the Socratic questions to test your understanding.</p>
+
+                <h4 style="margin-top: 1.5rem; color: var(--accent-amber);">Article: "The Great Battery Discovery"</h4>
+                <div style="padding: 1rem; background: rgba(30, 41, 59, 0.5); border-radius: 6px; margin: 1rem 0; border-left: 3px solid var(--accent-teal);">
+                    <p style="margin-bottom: 0.5rem;">"Dr. Sarah Chen, a researcher at MIT, announced on March 15, 2024, that her team had developed a revolutionary solid-state battery. The battery can store 50% more energy than lithium-ion batteries and charges in just 10 minutes. Chen founded the battery company SolidPower in 2019, and today's announcement marks the company's first commercial product launch. The battery will be used in electric vehicles manufactured by Tesla. In previous years, researchers at Stanford and Berkeley also worked on similar technologies, but Chen's team achieved the breakthrough first."</p>
+                </div>
+
+                <div class="challenge-question">
+                    <strong>Question 1: Entity Recognition</strong>
+                    <p>Identify all named entities in the article. Classify each as PERSON, ORGANIZATION, DATE, TECHNOLOGY, or LOCATION.</p>
+                    <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(0, 0, 0, 0.2); border-radius: 4px; color: var(--text-secondary);">
+                        <input type="text" placeholder="Your answer (comma-separated)" style="width: 100%; margin-top: 0.5rem;">
+                    </div>
+                </div>
+
+                <div class="challenge-question">
+                    <strong>Question 2: Relation Extraction</strong>
+                    <p>What are three (subject, predicate, object) relations you can extract from the article? Choose from these relation types: founder-of, works-for, uses, develops, announced, predecessor-of.</p>
+                    <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(0, 0, 0, 0.2); border-radius: 4px; color: var(--text-secondary);">
+                        <input type="text" placeholder="e.g., (Sarah Chen, founder-of, SolidPower)" style="width: 100%; margin-top: 0.5rem;">
+                    </div>
+                </div>
+
+                <div class="challenge-question">
+                    <strong>Question 3: Events and Temporal Reasoning</strong>
+                    <p>List the key events mentioned and their timestamps. Order them chronologically.</p>
+                    <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(0, 0, 0, 0.2); border-radius: 4px; color: var(--text-secondary);">
+                        <input type="text" placeholder="Event 1 (date) -> Event 2 (date) -> ..." style="width: 100%; margin-top: 0.5rem;">
+                    </div>
+                </div>
+
+                <div class="challenge-question">
+                    <strong>Question 4: Allen's Interval Relations</strong>
+                    <p>Consider two events: (A) "Chen founded SolidPower" and (B) "Chen announced the battery at MIT." What is the Allen temporal relation between them?</p>
+                    <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(0, 0, 0, 0.2); border-radius: 4px; color: var(--text-secondary);">
+                        <select style="width: 100%; margin-top: 0.5rem;">
+                            <option value="">Select a relation...</option>
+                            <option value="before">before</option>
+                            <option value="meets">meets</option>
+                            <option value="overlaps">overlaps</option>
+                            <option value="during">during</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="challenge-question">
+                    <strong>Question 5: Bootstrapping & Semantic Drift</strong>
+                    <p>If you started a bootstrapping algorithm with the seed tuple ("Chen", "founded", "SolidPower"), what new tuples might you extract in iteration 2? What risk do you see for semantic drift?</p>
+                    <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(0, 0, 0, 0.2); border-radius: 4px; color: var(--text-secondary);">
+                        <textarea placeholder="Your analysis..." style="width: 100%; height: 80px; margin-top: 0.5rem; padding: 0.5rem; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-primary); color: var(--text-primary); font-family: 'Inter', sans-serif; resize: none;"></textarea>
+                    </div>
+                </div>
+
+                <button class="btn" style="margin-top: 1.5rem;" onclick="showChallengeAnswers()">Show Model Answers</button>
+
+                <div id="challengeAnswers" style="margin-top: 1rem; display: none; padding: 1rem; background: rgba(20, 184, 166, 0.1); border-radius: 6px; border-left: 3px solid var(--accent-teal);">
+                    <h4 style="color: var(--accent-teal);">Model Answers</h4>
+
+                    <div style="margin-top: 1rem;">
+                        <strong>Q1 Entities:</strong>
+                        <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
+                            <li>Dr. Sarah Chen (PERSON)</li>
+                            <li>MIT (ORGANIZATION)</li>
+                            <li>SolidPower (ORGANIZATION)</li>
+                            <li>Tesla (ORGANIZATION)</li>
+                            <li>Stanford (ORGANIZATION)</li>
+                            <li>Berkeley (ORGANIZATION)</li>
+                            <li>solid-state battery (TECHNOLOGY)</li>
+                            <li>March 15, 2024 (DATE)</li>
+                        </ul>
+                    </div>
+
+                    <div style="margin-top: 1rem;">
+                        <strong>Q2 Relations:</strong>
+                        <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
+                            <li>(Sarah Chen, founder-of, SolidPower)</li>
+                            <li>(SolidPower, develops, solid-state battery)</li>
+                            <li>(Tesla, uses, solid-state battery)</li>
+                        </ul>
+                    </div>
+
+                    <div style="margin-top: 1rem;">
+                        <strong>Q3 Events (Chronological):</strong>
+                        <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
+                            <li>Chen founds SolidPower (2019)</li>
+                            <li>Chen announces battery at MIT (March 15, 2024)</li>
+                            <li>Battery will be used in Tesla vehicles (future)</li>
+                        </ul>
+                    </div>
+
+                    <div style="margin-top: 1rem;">
+                        <strong>Q4 Allen Relation:</strong>
+                        <p style="margin-top: 0.5rem;"><strong>before</strong> — Event A (founded in 2019) occurs before Event B (announced in March 2024).</p>
+                    </div>
+
+                    <div style="margin-top: 1rem;">
+                        <strong>Q5 Bootstrapping & Semantic Drift:</strong>
+                        <p style="margin-top: 0.5rem;">Starting with ("Chen", "founded", "SolidPower"), you might extract patterns like "[Person] founded [Organization]" and find new tuples: ("Founders", "founded", "Companies"). However, semantic drift could occur if the pattern becomes too general and begins matching unrelated contexts, such as "[Person] found [Object]" (different meaning of "found"). Confidence scoring (RlogF) and manual validation help mitigate this.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Modern Bridge -->
+        <section id="modern" class="reveal">
+            <h2 style="color: var(--accent-teal); margin-bottom: 2rem;">The Modern Era: Neural and Large Language Models</h2>
+
+            <div class="card">
+                <h3>LLMs for Zero-Shot Relation and Event Extraction</h3>
+                <p>Large language models like GPT-4, Claude, and others excel at information extraction with minimal supervision.</p>
+
+                <h4>Zero-Shot Extraction with Instructions</h4>
+                <p>No task-specific training required—just write a prompt:</p>
+
+                <div class="code-block">
+                    <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+                    <code>
+prompt = """
+You are an expert information extraction system.
+Extract all semantic relations from the following text.
+Return results as a JSON list of {subject, relation, object} triples.
+
+Text:
+"Apple was founded by Steve Jobs and Steve Wozniak in 1976.
+The company is headquartered in Cupertino, California."
+
+Relations to extract:
+1. Founder relations (X founded Y)
+2. Location relations (X is headquartered in Y)
+3. Time relations (X was founded in Y)
+
+Output:
+"""
+
+# Model response:
+[
+  {"subject": "Steve Jobs", "relation": "founder-of", "object": "Apple"},
+  {"subject": "Steve Wozniak", "relation": "founder-of", "object": "Apple"},
+  {"subject": "Apple", "relation": "headquartered-in", "object": "Cupertino"},
+  {"subject": "Apple", "relation": "founded-in", "object": "1976"}
+]
+                    </code>
+                </div>
+
+                <p style="margin-top: 1rem; padding: 1rem; background: rgba(20, 184, 166, 0.1); border-radius: 4px; border-left: 3px solid var(--accent-teal);"><strong>Advantages:</strong> No training data needed, handles complex relations, flexible output formats. <strong>Tradeoffs:</strong> API costs, latency, potential hallucinations, less deterministic than fine-tuned models.</p>
+            </div>
+
+            <div class="card">
+                <h3>Knowledge Graph Completion</h3>
+                <p>Neural methods can predict missing edges in knowledge graphs using graph embeddings.</p>
+
+                <h4>Graph Embedding Approaches</h4>
+                <ul style="margin: 1rem 0 1rem 2rem;">
+                    <li><strong>TransE:</strong> Model relations as translations in embedding space. If (h, r, t) is a fact, then h + r ≈ t.</li>
+                    <li><strong>Graph Neural Networks (GNNs):</strong> Learn entity and relation embeddings by message-passing over the graph structure.</li>
+                    <li><strong>Transformer-based:</strong> Encode multi-hop paths through the KB using attention mechanisms.</li>
+                </ul>
+
+                <p style="margin-top: 1rem; padding: 1rem; background: rgba(245, 158, 11, 0.1); border-radius: 4px; border-left: 3px solid var(--accent-amber);">Example: If we know (Apple, founded-by, Steve Jobs) and (Steve Jobs, year-of-birth, 1955), we can infer (Apple, founded-by-someone-born-in, 1955).</p>
+            </div>
+
+            <div class="card">
+                <h3>Event Extraction in Low-Resource and Multilingual Settings</h3>
+                <p>Modern approaches leverage multilingual pre-trained models for zero-shot and few-shot event extraction.</p>
+
+                <h4>Cross-Lingual Transfer</h4>
+                <p>Train on English data, test on other languages. Multilingual BERT and mT5 enable this:</p>
+
+                <ul style="margin: 1rem 0 1rem 2rem;">
+                    <li>Fine-tune mBERT on English event extraction</li>
+                    <li>Apply directly to Chinese, Arabic, Hindi, etc. without retraining</li>
+                    <li>Performance depends on language similarity and linguistic overlap</li>
+                </ul>
+
+                <p style="margin-top: 1rem; padding: 1rem; background: rgba(20, 184, 166, 0.1); border-radius: 4px; border-left: 3px solid var(--accent-teal);">This democratizes IE for under-resourced languages and domains where labeled data is scarce.</p>
+            </div>
+
+            <div class="card">
+                <h3>Multimodal Information Extraction</h3>
+                <p>Extract relations and events from text + images + video.</p>
+
+                <h4>Emerging Frontiers</h4>
+                <ul style="margin: 1rem 0 1rem 2rem;">
+                    <li><strong>Visual relations:</strong> Detect object-object relations in images ("woman riding a horse")</li>
+                    <li><strong>Video event detection:</strong> Temporal localization of events in video streams</li>
+                    <li><strong>Vision-language models:</strong> CLIP, LLaVA enable joint reasoning over text and images</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Historical Notes -->
+        <section id="history" class="reveal">
+            <h2 style="color: var(--accent-rose); margin-bottom: 2rem;">Historical Notes & Evolution</h2>
+
+            <div class="collapsible" onclick="toggleCollapsible(this)">
+                <span>The Pattern Era: Hearst (1992) to Early 2000s</span>
+                <span>▼</span>
+            </div>
+            <div class="collapsible-content">
+                <p>The field of information extraction began with <span class="highlight">hand-crafted patterns</span>. Marti Hearst's 1992 paper showed that simple lexico-syntactic patterns could reliably extract hypernym relations from raw text. This sparked decades of pattern engineering:</p>
+
+                <ul style="margin: 1rem 0 1rem 2rem;">
+                    <li><strong>MUC (Message Understanding Conferences, 1987-1997):</strong> First systematic evaluation of IE systems. Participants hand-built pattern-based extractors for structured templates (e.g., terrorist attacks, corporate management changes).</li>
+                    <li><strong>JAPE (Jape is Another Pattern Engine):</strong> Grammatical-engine-based patterns for Java-based IE.</li>
+                    <li><strong>Limitations:</strong> Labor-intensive, low recall, difficult to port to new domains or languages.</li>
+                </ul>
+            </div>
+
+            <div class="collapsible" onclick="toggleCollapsible(this)">
+                <span>The Learning Era: 2000s–2010s (Supervised and Semi-Supervised)</span>
+                <span>▼</span>
+            </div>
+            <div class="collapsible-content">
+                <p>As labeled data became available, machine learning approaches dominated:</p>
+
+                <ul style="margin: 1rem 0 1rem 2rem;">
+                    <li><strong>Feature-based classifiers:</strong> SVM and logistic regression on hand-engineered features (word, syntactic, dependency path).</li>
+                    <li><strong>Bootstrapping (Hearst, 1992; Brin, 1998; Agichtein & Gravano, 2000):</strong> Start with seed patterns, iteratively expand. Confidence scoring methods developed (RlogF, noisy-or).</li>
+                    <li><strong>Distant supervision (Mintz et al., 2009):</strong> Revolutionary idea: use knowledge bases (Freebase) to automatically generate training data at scale. Enabled large-scale RE.</li>
+                    <li><strong>ACE / TAC campaigns (2004–2012):</strong> Standard benchmarks for relation, event, and slot-filling tasks. TACRED (2017) extended ACE to 41 relations and 106k sentences.</li>
+                </ul>
+            </div>
+
+            <div class="collapsible" onclick="toggleCollapsible(this)">
+                <span>The Neural Era: 2015–Present (Deep Learning & Transformers)</span>
+                <span>▼</span>
+            </div>
+            <div class="collapsible-content">
+                <p>Deep learning transformed IE:</p>
+
+                <ul style="margin: 1rem 0 1rem 2rem;">
+                    <li><strong>Recurrent Neural Networks (RNNs) & LSTMs (2015–2016):</strong> Sequence labeling for event extraction and NER. Bidirectional LSTMs with CRF decoding became standard.</li>
+                    <li><strong>Convolutional Neural Networks for RE (Zeng et al., 2014):</strong> CNN over dependency trees for relation classification. High performance on TACRED (80%+ F₁).</li>
+                    <li><strong>Attention mechanisms (Bahdanau et al., 2014):</strong> Focus on relevant context. Enabled pointer networks for span extraction.</li>
+                    <li><strong>BERT & pre-trained transformers (Devlin et al., 2018):</strong> Transfer learning breakthrough. Fine-tuning BERT on TACRED achieved 88%+ F₁. Massively reduced need for task-specific architectures.</li>
+                    <li><strong>Knowledge graph embeddings (Bordes et al., 2013 TransE; etc.):</strong> Learned representations for link prediction and completion.</li>
+                </ul>
+            </div>
+
+            <div class="collapsible" onclick="toggleCollapsible(this)">
+                <span>Temporal Reasoning & TimeML</span>
+                <span>▼</span>
+            </div>
+            <div class="collapsible-content">
+                <p>Temporal reasoning has a rich history:</p>
+
+                <ul style="margin: 1rem 0 1rem 2rem;">
+                    <li><strong>Allen's Interval Algebra (1984):</strong> Foundational work on reasoning about time. The 13 relations remain the standard in NLP today.</li>
+                    <li><strong>Reichenbach's Tense Theory (1947):</strong> Pre-computational but deeply influential. E/R/S framework essential for understanding tense and aspect.</li>
+                    <li><strong>TimeML (2003–present):</strong> Developed collaboratively. Initial focus on event and temporal expression annotation. Evolved into TempEval shared tasks (2007–2013, assessing temporal relation extraction).</li>
+                    <li><strong>TimeBank (Pustejovsky et al., 2003):</strong> First large-scale corpus with rich temporal annotations. 183 documents, ~2,000 events, ~5,000 temporal relations.</li>
+                    <li><strong>Modern challenges:</strong> Implicit temporal relations (inferred but not explicitly stated), cross-document temporal ordering, temporal reasoning over narratives.</li>
+                </ul>
+            </div>
+
+            <div class="collapsible" onclick="toggleCollapsible(this)">
+                <span>Modern Era: 2018–Present (Large Language Models & Zero-Shot)</span>
+                <span>▼</span>
+            </div>
+            <div class="collapsible-content">
+                <p>Recent years have seen rapid progress toward more flexible, data-efficient IE:</p>
+
+                <ul style="margin: 1rem 0 1rem 2rem;">
+                    <li><strong>Pre-trained language models:</strong> GPT-2, RoBERTa, ELECTRA, T5 further improved performance. In-context learning (prompt-based) enabled few-shot extraction.</li>
+                    <li><strong>Large language models (GPT-3, GPT-4, Claude, etc.):</strong> Enabled true zero-shot IE without task-specific training. Prompt engineering became a critical skill.</li>
+                    <li><strong>Unified models:</strong> T5, BART, and others frame IE as text-to-text generation. A single model can perform relation extraction, event extraction, and slot filling.</li>
+                    <li><strong>Knowledge graph construction at scale:</strong> Companies like Google, Microsoft, Amazon use neural IE pipelines to build and maintain KGs with millions of entities and billions of relations.</li>
+                    <li><strong>Challenges remain:</strong> Out-of-distribution generalization, hallucinations in LLM-based extraction, resource efficiency, interpretability, and handling of adversarial/noisy text.</li>
+                </ul>
+            </div>
+
+            <div class="card" style="margin-top: 2rem;">
+                <h3>Key Figures and Institutions</h3>
+                <ul style="margin: 1rem 0 1rem 2rem;">
+                    <li><strong>Marti Hearst (UC Berkeley):</strong> Foundational work on pattern-based extraction and hypernym discovery.</li>
+                    <li><strong>Ellen Riloff (University of Utah):</strong> Pioneering work on semi-supervised extraction and bootstrapping.</li>
+                    <li><strong>James Pustejovsky (Brandeis):</strong> TimeML design and temporal annotation.</li>
+                    <li><strong>Mihai Surdeanu (University of Arizona):</strong> Neural IE architectures and datasets.</li>
+                    <li><strong>Google, Microsoft, FB/Meta Research, OpenAI:</strong> Modern scale IE systems and LLM-based approaches.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Summary -->
+        <section id="summary" class="reveal">
+            <h2 style="color: var(--accent-teal); margin-bottom: 2rem;">Summary & Key Takeaways</h2>
+
+            <div class="grid-2">
+                <div class="card">
+                    <h3>Relations & Extraction</h3>
+                    <ul style="margin: 1rem 0 1rem 1.5rem;">
+                        <li>Relations are edges in knowledge graphs linking entities.</li>
+                        <li>From Hearst patterns (high precision) to neural methods (high recall) to LLMs (flexible).</li>
+                        <li>Distant supervision leverages KBs; bootstrapping iteratively grows with confidence scoring.</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>Events & Time</h3>
+                    <ul style="margin: 1rem 0 1rem 1.5rem;">
+                        <li>Events are state changes at specific times/places; temporal expressions require normalization.</li>
+                        <li>Allen's 13 interval relations and Reichenbach's E/R/S framework structure temporal reasoning.</li>
+                        <li>TimeML enables rich annotation; TempEval assesses temporal reasoning systems.</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>Templates & Slot Filling</h3>
+                    <ul style="margin: 1rem 0 1rem 1.5rem;">
+                        <li>Structured templates capture facts from text (airline incident, financial news, etc.).</li>
+                        <li>Modern LLMs excel at zero-shot template filling via prompt engineering.</li>
+                        <li>Spans of text are extracted and mapped to template slots.</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>Evaluation & Impact</h3>
+                    <ul style="margin: 1rem 0 1rem 1.5rem;">
+                        <li>Precision/recall/F₁ for supervised; sampled precision for unsupervised.</li>
+                        <li>IE powers knowledge graphs, QA systems, document analysis, and decision support.</li>
+                        <li>Modern systems blend neural embeddings, large models, and structured reasoning.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // ========== Scroll Reveal ==========
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.reveal').forEach(el => {
+            observer.observe(el);
+        });
+
+        // ========== Copy to Clipboard ==========
+        function copyToClipboard(btn) {
+            const codeBlock = btn.parentElement;
+            const code = codeBlock.querySelector('code').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        }
+
+        // ========== Collapsible Sections ==========
+        function toggleCollapsible(header) {
+            const content = header.nextElementSibling;
+            content.classList.toggle('open');
+        }
+
+        // ========== Visualizer 1: Relation Extraction ==========
+        const relationVizCanvas = document.getElementById('relationViz');
+        const relationCanvas = document.getElementById('relationCanvas');
+
+        function visualizeRelations() {
+            const rect = relationCanvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+
+            relationVizCanvas.width = rect.width * dpr;
+            relationVizCanvas.height = rect.height * dpr;
+
+            const ctx = relationVizCanvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+
+            const width = rect.width;
+            const height = rect.height;
+
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.font = '14px Inter';
+            ctx.fillStyle = '#e2e8f0';
+
+            const sentence = "Steve Jobs founded Apple in 1976.";
+            const words = sentence.split(' ');
+            let x = 20;
+            const y = 40;
+
+            // Draw words and mark entities
+            words.forEach((word, i) => {
+                if (i < 2) ctx.fillStyle = '#f43f5e';  // Steve Jobs
+                else if (i === 3) ctx.fillStyle = '#14b8a6';  // Apple
+                else ctx.fillStyle = '#e2e8f0';
+
+                ctx.fillText(word, x, y);
+                x += ctx.measureText(word).width + 10;
+            });
+
+            // Draw relations
+            ctx.strokeStyle = '#f43f5e';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+
+            // Arrow from Steve Jobs to Apple (founder-of)
+            ctx.beginPath();
+            ctx.moveTo(80, 60);
+            ctx.lineTo(200, 60);
+            ctx.stroke();
+
+            ctx.setLineDash([]);
+            ctx.fillStyle = '#f43f5e';
+            ctx.font = 'bold 12px Inter';
+            ctx.fillText('founder-of', 130, 50);
+
+            // Display extracted relations
+            document.getElementById('relationOutput').style.display = 'block';
+            const relationList = document.getElementById('relationList');
+            relationList.innerHTML = `
+                <li><strong style="color: #f43f5e;">(Steve Jobs, founder-of, Apple)</strong> — ACE:Org-Affiliation</li>
+                <li><strong style="color: #f43f5e;">(Apple, founded-in, 1976)</strong> — ACE:Event-Related</li>
+            `;
+        }
+
+        function resetRelations() {
+            const ctx = relationVizCanvas.getContext('2d');
+            ctx.clearRect(0, 0, relationVizCanvas.width, relationVizCanvas.height);
+            document.getElementById('relationOutput').style.display = 'none';
+        }
+
+        // ========== Visualizer 2: Allen's Temporal Relations ==========
+        const allenVizCanvas = document.getElementById('allenViz');
+        const allenCanvas = document.getElementById('allenCanvas');
+
+        let allenA = { start: 50, end: 150 };
+        let allenB = { start: 200, end: 300 };
+        let draggingInterval = null;
+
+        function getAllenRelation(a, b) {
+            if (a.end < b.start) return 'before';
+            if (b.end < a.start) return 'after';
+            if (a.end === b.start) return 'meets';
+            if (b.end === a.start) return 'met-by';
+            if (a.start < b.start && a.end > b.start && a.end < b.end) return 'overlaps';
+            if (b.start < a.start && b.end > a.start && b.end < a.end) return 'overlapped-by';
+            if (a.start === b.start && a.end < b.end) return 'starts';
+            if (b.start === a.start && b.end < a.end) return 'started-by';
+            if (a.end === b.end && a.start > b.start) return 'finishes';
+            if (b.end === a.end && b.start > a.start) return 'finished-by';
+            if (a.start > b.start && a.end < b.end) return 'during';
+            if (b.start > a.start && b.end < a.end) return 'contains';
+            if (a.start === b.start && a.end === b.end) return 'equals';
+            return 'unknown';
+        }
+
+        const allenDefinitions = {
+            'before': 'Event A finishes before event B begins.',
+            'after': 'Event A begins after event B finishes.',
+            'meets': 'The end of A coincides with the start of B.',
+            'met-by': 'The end of B coincides with the start of A.',
+            'overlaps': 'A starts before B and ends in the middle of B.',
+            'overlapped-by': 'B starts before A and ends in the middle of A.',
+            'starts': 'A and B start at the same time, but A ends first.',
+            'started-by': 'A and B start at the same time, but B ends first.',
+            'finishes': 'A and B end at the same time, but A starts after B.',
+            'finished-by': 'A and B end at the same time, but B starts after A.',
+            'during': 'A is entirely within the time span of B.',
+            'contains': 'B is entirely within the time span of A.',
+            'equals': 'A and B span exactly the same time period.'
+        };
+
+        function drawAllenViz() {
+            const rect = allenCanvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+
+            allenVizCanvas.width = rect.width * dpr;
+            allenVizCanvas.height = rect.height * dpr;
+
+            const ctx = allenVizCanvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+
+            const width = rect.width;
+            const height = rect.height;
+
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw timeline
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(30, 150);
+            ctx.lineTo(width - 30, 150);
+            ctx.stroke();
+
+            // Draw A
+            ctx.fillStyle = '#f43f5e';
+            ctx.fillRect(allenA.start, 120, allenA.end - allenA.start, 20);
+            ctx.fillStyle = '#e2e8f0';
+            ctx.font = 'bold 14px Inter';
+            ctx.fillText('A', allenA.start + 5, 135);
+
+            // Draw B
+            ctx.fillStyle = '#14b8a6';
+            ctx.fillRect(allenB.start, 180, allenB.end - allenB.start, 20);
+            ctx.fillStyle = '#0f172a';
+            ctx.fillText('B', allenB.start + 5, 195);
+
+            // Update relation
+            const relation = getAllenRelation(allenA, allenB);
+            document.getElementById('allenRelation').textContent = relation;
+            document.getElementById('allenDefinition').textContent = allenDefinitions[relation] || '';
+        }
+
+        function initAllenViz() {
+            allenA = { start: 50, end: 150 };
+            allenB = { start: 200, end: 300 };
+            drawAllenViz();
+
+            allenVizCanvas.addEventListener('mousedown', (e) => {
+                const rect = allenCanvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                if (x > allenA.start && x < allenA.end && y > 120 && y < 140) {
+                    draggingInterval = 'A';
+                } else if (x > allenB.start && x < allenB.end && y > 180 && y < 200) {
+                    draggingInterval = 'B';
+                }
+            });
+
+            allenVizCanvas.addEventListener('mousemove', (e) => {
+                if (!draggingInterval) return;
+                const rect = allenCanvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+
+                if (draggingInterval === 'A') {
+                    const delta = x - allenA.start;
+                    allenA.start = Math.max(30, Math.min(x, width - 120));
+                    allenA.end = allenA.start + 100;
+                } else if (draggingInterval === 'B') {
+                    allenB.start = Math.max(30, Math.min(x, width - 120));
+                    allenB.end = allenB.start + 100;
+                }
+                drawAllenViz();
+            });
+
+            allenVizCanvas.addEventListener('mouseup', () => {
+                draggingInterval = null;
+            });
+        }
+
+        function resetAllenViz() {
+            allenA = { start: 50, end: 150 };
+            allenB = { start: 200, end: 300 };
+            drawAllenViz();
+        }
+
+        // ========== Visualizer 3: Bootstrapping ==========
+        const bootstrapVizCanvas = document.getElementById('bootstrapViz');
+        const bootstrapCanvas = document.getElementById('bootstrapCanvas');
+
+        let bootstrapData = {
+            iteration: 0,
+            tuples: [],
+            patterns: []
+        };
+
+        function startBootstrapping() {
+            const seedTuple = document.getElementById('seedTuple').value;
+
+            bootstrapData = {
+                iteration: 0,
+                tuples: [],
+                patterns: []
+            };
+
+            const seedMap = {
+                'jobs-apple': {
+                    tuple: ['Steve Jobs', 'Apple'],
+                    iterations: [
+                        { patterns: ['[PERSON] founded [ORG]'], newTuples: [['Elon Musk', 'Tesla'], ['Bill Gates', 'Microsoft']], confidence: 0.92 },
+                        { patterns: ['[PERSON] founded [ORG]', 'founder of [ORG] is [PERSON]'], newTuples: [['Satya Nadella', 'Microsoft']], confidence: 0.85 }
+                    ]
+                },
+                'gates-microsoft': {
+                    tuple: ['Bill Gates', 'Microsoft'],
+                    iterations: [
+                        { patterns: ['[PERSON] founded [ORG]'], newTuples: [['Steve Jobs', 'Apple'], ['Larry Page', 'Google']], confidence: 0.90 },
+                        { patterns: ['[PERSON] founded [ORG]', 'founder [PERSON] built [ORG]'], newTuples: [['Elon Musk', 'Tesla']], confidence: 0.78 }
+                    ]
+                },
+                'paris-france': {
+                    tuple: ['Paris', 'France'],
+                    iterations: [
+                        { patterns: ['[CITY] is in [COUNTRY]'], newTuples: [['London', 'England'], ['Tokyo', 'Japan']], confidence: 0.95 },
+                        { patterns: ['[CITY] is in [COUNTRY]', '[CITY], [COUNTRY]'], newTuples: [['Berlin', 'Germany']], confidence: 0.89 }
+                    ]
+                }
+            };
+
+            const data = seedMap[seedTuple];
+            bootstrapData.tuples.push(data.tuple);
+
+            drawBootstrappingStep(data);
+        }
+
+        function drawBootstrappingStep(data) {
+            const rect = bootstrapCanvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+
+            bootstrapVizCanvas.width = rect.width * dpr;
+            bootstrapVizCanvas.height = rect.height * dpr;
+
+            const ctx = bootstrapVizCanvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+
+            const width = rect.width;
+            const height = rect.height;
+
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.font = '14px Inter';
+            ctx.fillStyle = '#e2e8f0';
+
+            // Draw seed tuple
+            ctx.fillStyle = '#f43f5e';
+            ctx.fillText('Seed tuple:', 20, 40);
+            ctx.fillStyle = '#14b8a6';
+            ctx.fillText(`(${data.tuple.join(', ')})`, 130, 40);
+
+            if (bootstrapData.iteration > 0) {
+                const iter = data.iterations[bootstrapData.iteration - 1];
+                ctx.fillStyle = '#f59e0b';
+                ctx.fillText(`Iteration ${bootstrapData.iteration}:`, 20, 80);
+
+                ctx.fillStyle = '#e2e8f0';
+                ctx.fillText('Extracted patterns:', 20, 110);
+                iter.patterns.forEach((pattern, i) => {
+                    ctx.fillText(`  • ${pattern}`, 30, 130 + i * 20);
+                });
+
+                ctx.fillText('New tuples found:', 20, 190);
+                iter.newTuples.forEach((tuple, i) => {
+                    ctx.fillStyle = '#14b8a6';
+                    ctx.fillText(`  • (${tuple.join(', ')})`, 30, 210 + i * 20);
+                });
+
+                ctx.fillStyle = '#f59e0b';
+                ctx.fillText(`Confidence: ${iter.confidence.toFixed(2)}`, 20, 270);
+
+                document.getElementById('bootIteration').textContent = bootstrapData.iteration;
+                const tupleList = document.getElementById('bootstrapTuples');
+                tupleList.innerHTML = iter.newTuples.map(t => `<li>(${t.join(', ')}) — Conf: ${iter.confidence.toFixed(2)}</li>`).join('');
+            }
+        }
+
+        function resetBootstrapping() {
+            const ctx = bootstrapVizCanvas.getContext('2d');
+            ctx.clearRect(0, 0, bootstrapVizCanvas.width, bootstrapVizCanvas.height);
+            document.getElementById('bootIteration').textContent = '0';
+            document.getElementById('bootstrapTuples').innerHTML = '';
+            bootstrapData = { iteration: 0, tuples: [], patterns: [] };
+        }
+
+        // ========== Visualizer 4: Template Filler ==========
+        function startTemplateFilling() {
+            const slots = [
+                { slot: 'Lead Airline', value: 'United Airlines', delay: 0 },
+                { slot: 'Incident Type', value: 'collision', delay: 500 },
+                { slot: 'Amount Damaged', value: '$3.5 million', delay: 1000 },
+                { slot: 'Date', value: 'yesterday', delay: 1500 },
+                { slot: 'Follower Airline', value: 'American Airlines', delay: 2000 }
+            ];
+
+            slots.forEach(({ slot, value, delay }) => {
+                setTimeout(() => {
+                    fillTemplateSlot(slot, value);
+                }, delay);
+            });
+        }
+
+        function fillTemplateSlot(slot, value) {
+            const templateFilled = document.getElementById('templateFilled');
+            const regex = new RegExp(slot + ':\\s+<span[^>]*>.*?</span>');
+            templateFilled.innerHTML = templateFilled.innerHTML.replace(
+                regex,
+                `${slot}: <span style="color: #14b8a6;">${value}</span>`
+            );
+        }
+
+        function resetTemplateFilling() {
+            document.getElementById('templateFilled').innerHTML = `
+INCIDENT:<br>
+&nbsp; Lead Airline: <span style="color: var(--accent-rose);">—</span><br>
+&nbsp; Incident Type: <span style="color: var(--accent-rose);">—</span><br>
+&nbsp; Amount Damaged: <span style="color: var(--accent-rose);">—</span><br>
+&nbsp; Date: <span style="color: var(--accent-rose);">—</span><br>
+&nbsp; Follower Airline: <span style="color: var(--accent-rose);">—</span>
+            `;
+        }
+
+        // ========== Challenge Answers ==========
+        function showChallengeAnswers() {
+            const div = document.getElementById('challengeAnswers');
+            div.style.display = div.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // ========== Initialize Visualizers on Page Load ==========
+        window.addEventListener('load', () => {
+            initAllenViz();
+        });
+    </script>
+</body>
+</html>

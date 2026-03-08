@@ -1,0 +1,1987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 15: Automatic Speech Recognition - Speech and Language Processing</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- KaTeX for Math Rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0f172a;
+            --bg-card: #1e293b;
+            --border-color: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --accent-red: #ef4444;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            font-size: 16px;
+        }
+
+        /* Sticky Navigation */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            box-shadow: var(--shadow);
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            gap: 2rem;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+        }
+
+        nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: color var(--transition);
+            white-space: nowrap;
+        }
+
+        nav a:hover, nav a.active {
+            color: var(--accent-blue);
+        }
+
+        /* Main Container */
+        main {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        /* Section Styling */
+        section {
+            margin: 4rem 0;
+            padding: 2rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        section.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--accent-blue);
+            font-weight: 700;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            margin: 2rem 0 1rem 0;
+            color: var(--accent-green);
+            font-weight: 700;
+            border-bottom: 2px solid var(--accent-red);
+            padding-bottom: 0.5rem;
+        }
+
+        h3 {
+            font-size: 1.3rem;
+            margin: 1.5rem 0 0.8rem 0;
+            color: var(--accent-blue);
+            font-weight: 600;
+        }
+
+        p, li {
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+
+        strong {
+            color: var(--text-primary);
+        }
+
+        /* Math Rendering */
+        .katex-display {
+            background: rgba(59, 130, 246, 0.1);
+            padding: 1rem;
+            border-left: 4px solid var(--accent-blue);
+            margin: 1rem 0;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        .katex {
+            font-size: 1.1em;
+        }
+
+        /* Code Blocks */
+        .code-block {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .code-block-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .code-block-lang {
+            font-weight: 600;
+            color: var(--accent-blue);
+            font-size: 0.9rem;
+        }
+
+        .copy-btn {
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: background var(--transition);
+        }
+
+        .copy-btn:hover {
+            background: var(--accent-green);
+        }
+
+        code {
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.95rem;
+        }
+
+        .code-line {
+            display: flex;
+            line-height: 1.5;
+        }
+
+        .code-line-num {
+            color: var(--border-color);
+            margin-right: 1.5rem;
+            text-align: right;
+            min-width: 3rem;
+            user-select: none;
+        }
+
+        .code-content {
+            flex: 1;
+            word-break: break-word;
+        }
+
+        .kw { color: var(--accent-blue); font-weight: 600; }
+        .fn { color: #fbbf24; font-weight: 600; }
+        .st { color: var(--accent-green); }
+        .cm { color: #6b7280; font-style: italic; }
+        .num { color: #f97316; }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 1.5rem;
+            gap: 0;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all var(--transition);
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+        }
+
+        .tab-btn.active {
+            color: var(--accent-blue);
+            border-bottom-color: var(--accent-blue);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Canvas Visualizers */
+        .visualizer {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .visualizer-canvas {
+            border: 1px solid var(--accent-blue);
+            border-radius: 4px;
+            background: rgba(0, 0, 0, 0.2);
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .visualizer-controls {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+            padding: 1rem;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 4px;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .control-group label {
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        input[type="range"] {
+            cursor: pointer;
+        }
+
+        button {
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: background var(--transition);
+        }
+
+        button:hover {
+            background: var(--accent-green);
+        }
+
+        button.reset-btn {
+            background: var(--accent-red);
+        }
+
+        button.reset-btn:hover {
+            background: #dc2626;
+        }
+
+        /* Interactive Elements */
+        .input-box {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 0.75rem;
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+        }
+
+        .wer-result {
+            background: rgba(59, 130, 246, 0.1);
+            border-left: 4px solid var(--accent-blue);
+            padding: 1rem;
+            border-radius: 4px;
+            margin-top: 1rem;
+        }
+
+        .wer-result.error {
+            border-left-color: var(--accent-red);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .wer-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent-red);
+            margin: 0.5rem 0;
+        }
+
+        /* Table Styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background: rgba(59, 130, 246, 0.1);
+            font-weight: 700;
+            color: var(--accent-blue);
+        }
+
+        tr:hover {
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        /* Lists */
+        ul, ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Collapsible Sections */
+        .collapsible {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 0;
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+
+        .collapsible-header {
+            padding: 1rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            color: var(--accent-blue);
+            transition: background var(--transition);
+            user-select: none;
+        }
+
+        .collapsible-header:hover {
+            background: rgba(59, 130, 246, 0.2);
+        }
+
+        .collapsible-toggle {
+            transition: transform var(--transition);
+            font-size: 1.2rem;
+        }
+
+        .collapsible-toggle.open {
+            transform: rotate(180deg);
+        }
+
+        .collapsible-content {
+            display: none;
+            padding: 1rem;
+            border-top: 1px solid var(--border-color);
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .collapsible-content.open {
+            display: block;
+        }
+
+        /* Feynman Bridge */
+        .bridge-text {
+            font-size: 1.1rem;
+            line-height: 1.9;
+            color: var(--text-secondary);
+            padding: 1.5rem;
+            background: rgba(16, 185, 129, 0.1);
+            border-left: 4px solid var(--accent-green);
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+
+        /* Scenario Box */
+        .scenario {
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 4px solid var(--accent-red);
+            padding: 1.5rem;
+            border-radius: 4px;
+            margin: 1.5rem 0;
+        }
+
+        .scenario h3 {
+            color: var(--accent-red);
+        }
+
+        /* Question Box */
+        .question {
+            background: rgba(59, 130, 246, 0.1);
+            border-left: 4px solid var(--accent-blue);
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+
+        .question strong {
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 2rem;
+            margin-top: 4rem;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            nav ul {
+                gap: 1rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            main {
+                padding: 0 1rem;
+            }
+
+            section {
+                padding: 1.5rem;
+            }
+
+            .visualizer-controls {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .control-group {
+                width: 100%;
+            }
+
+            input[type="range"] {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <ul>
+            <li><a href="#feynman" class="nav-link active">Feynman Bridge</a></li>
+            <li><a href="#technical" class="nav-link">Technical Ascent</a></li>
+            <li><a href="#visualizers" class="nav-link">Visualizers</a></li>
+            <li><a href="#code" class="nav-link">Code Lab</a></li>
+            <li><a href="#socratic" class="nav-link">Socratic Challenge</a></li>
+            <li><a href="#modern" class="nav-link">Modern Bridge</a></li>
+            <li><a href="#history" class="nav-link">History</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <!-- Title -->
+        <section id="title" style="opacity: 1; transform: none; text-align: center;">
+            <h1>Chapter 15: Automatic Speech Recognition</h1>
+            <p style="font-size: 1.1rem; color: var(--text-secondary);">
+                From acoustic waves to transcribed text — understanding the models that listen and understand speech.
+            </p>
+            <p style="font-size: 0.95rem; color: var(--border-color); margin-top: 1rem;">
+                Speech and Language Processing (3rd Ed.) by Jurafsky & Martin
+            </p>
+        </section>
+
+        <!-- Section 1: Feynman Bridge -->
+        <section id="feynman">
+            <h2>Feynman Bridge: Explaining ASR Like a Game of Telephone</h2>
+
+            <div class="bridge-text">
+                <p><strong>Imagine you're playing a game of telephone:</strong> Someone whispers a sentence and you have to write it down. Your ears catch vibrating air, your brain recognizes familiar patterns, and your hand writes words. Automatic Speech Recognition (ASR) does exactly this, but with math instead of neurons.</p>
+
+                <p><strong>The challenge?</strong> Speech is a continuous river of sound — there are no spaces between words, speakers mumble, accents vary, and background noise interferes. How do you even know where one word ends and another begins?</p>
+
+                <p><strong>Modern ASR uses two main strategies:</strong></p>
+                <ul style="margin: 1rem 0 1rem 2rem; color: inherit;">
+                    <li><strong>Encoder-Decoder (like Whisper):</strong> First, the system 'listens' to the whole utterance through a convolutional encoder, extracting features frame-by-frame. Then, it 'spells out' the transcription letter by letter using an autoregressive decoder with cross-attention. Think of an encoder as your ears, and a decoder as your hand writing down what you hear.</li>
+                    <li><strong>Self-Supervised Models (like HuBERT):</strong> These first learn what speech sounds like without any transcripts — they cluster similar sounds together, like learning to recognize vowels without being told what vowels are. Then, they get fine-tuned to write words.</li>
+                </ul>
+
+                <p><strong>Both rely on a clever trick: 1D convolutions.</strong> These are small pattern-detectors that slide across the audio signal, extracting features just like your ears extract fundamental frequencies. The first convolutional layer slides with stride 1 (keeps all details). The second slides with stride 2 (compresses, keeping only the most important parts). This compression is crucial — raw audio at 16kHz has 16,000 samples per second; after convolution, you might have only 50 frames per second, making the problem tractable.</p>
+
+                <p><strong>For continuous speech like "inthebottleinthebasketinthere",</strong> we need a way to tell the model where one word ends and another begins. CTC (Connectionist Temporal Classification) elegantly solves this by allowing the model to predict 'blanks' (silence) between letters. When you collapse repeated letters and remove blanks, "d-i-ε-n-n-ε-r" becomes "dinner" — the blank preserves the double-n that would otherwise be lost.</p>
+            </div>
+
+            <h3>The ASR Pipeline at a Glance</h3>
+            <ol style="margin-left: 2rem; margin-bottom: 1.5rem;">
+                <li><strong>Audio Input:</strong> 16 kHz sampled waveform (16 bits per sample)</li>
+                <li><strong>Feature Extraction:</strong> Log-mel spectrogram (80 mel filters, 10ms stride)</li>
+                <li><strong>Encoder:</strong> 1D CNNs + transformer → compresses sequence 4x</li>
+                <li><strong>Decoder:</strong> Autoregressive transformer with cross-attention</li>
+                <li><strong>Output:</strong> Character sequence (or subword tokens)</li>
+            </ol>
+        </section>
+
+        <!-- Section 2: Technical Ascent -->
+        <section id="technical">
+            <h2>Technical Ascent: The Mathematics of ASR</h2>
+
+            <!-- 15.1: The ASR Task -->
+            <h3>§15.1 The ASR Task: Vocabulary, Domain, and Evaluation</h3>
+            <p>The difficulty of ASR varies dramatically based on the task domain and speaking style. Read speech (news, audiobooks) is far easier than conversational speech (telephone, meetings).</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Corpus</th>
+                        <th>Hours</th>
+                        <th>Domain</th>
+                        <th>WER (State-of-Art)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>LibriSpeech (Clean)</td>
+                        <td>100 h</td>
+                        <td>Read speech</td>
+                        <td>1.4%</td>
+                    </tr>
+                    <tr>
+                        <td>LibriSpeech (Test Other)</td>
+                        <td>50 h</td>
+                        <td>Read, challenging</td>
+                        <td>2.3%</td>
+                    </tr>
+                    <tr>
+                        <td>Switchboard</td>
+                        <td>240 h</td>
+                        <td>Telephone conv.</td>
+                        <td>5.8%</td>
+                    </tr>
+                    <tr>
+                        <td>CALLHOME</td>
+                        <td>20 h</td>
+                        <td>Telephone conv.</td>
+                        <td>11%</td>
+                    </tr>
+                    <tr>
+                        <td>CORAAL (African American English)</td>
+                        <td>~100 h</td>
+                        <td>Conversational</td>
+                        <td>16.2%</td>
+                    </tr>
+                    <tr>
+                        <td>CHiME-6 (Multi-speaker, noisy)</td>
+                        <td>~50 h</td>
+                        <td>Real meetings</td>
+                        <td>25.5%</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p><strong>Key corpora for training:</strong></p>
+            <ul style="margin-left: 2rem;">
+                <li><strong>LibriSpeech:</strong> 960 hours of English audiobooks, read in clean conditions. Benchmark for ASR.</li>
+                <li><strong>Switchboard:</strong> 240 hours of telephone conversations. Far more challenging due to narrow bandwidth and natural speech phenomena (contractions, disfluencies).</li>
+                <li><strong>CORAAL:</strong> Carefully curated corpus of African American English (AAE). Exposes the "accent gap" problem where generic ASR systems perform poorly on underrepresented populations.</li>
+                <li><strong>Common Voice:</strong> 33,000+ hours across 133 languages, crowdsourced. Variable quality but massive scale.</li>
+                <li><strong>FLEURS:</strong> 102 languages, parallel speech, designed for multilingual ASR evaluation.</li>
+            </ul>
+
+            <!-- 15.2: CNNs for Speech -->
+            <h3>§15.2 Convolutional Neural Networks for Speech</h3>
+            <p>The foundation of modern ASR is the 1D convolution, which slides a learnable kernel across the time dimension of acoustic features.</p>
+
+            <p><strong>Width-1 convolution (identity-like):</strong></p>
+            <div class="katex-display">$$z_j = x_j \cdot w_0 \quad \text{(Eq 15.1)}$$</div>
+
+            <p><strong>General 1D convolution with padding:</strong></p>
+            <div class="katex-display">$$z_j = \sum_{i=-p}^{p} x_{j+i} \cdot w_{i+p} \quad \text{(Eq 15.2)}$$</div>
+
+            <p>Where $z_j$ is the output at frame $j$, $x$ is the input signal, $w$ is the kernel of width $2p+1$, and padding is $p$ zeros on each side.</p>
+
+            <p><strong>Multi-channel convolution (typical in ASR):</strong></p>
+            <div class="katex-display">$$z_j = \sum_{c=1}^{C_i} \left(x^{(c)} * w^{(c)}\right)_j \quad \text{(Eq 15.3)}$$</div>
+
+            <p>Here, $C_i$ is the number of input channels (e.g., 80 mel-frequency bins). Each channel is convolved separately and summed, producing a single output frame.</p>
+
+            <p><strong>Key hyperparameters:</strong></p>
+            <ul style="margin-left: 2rem;">
+                <li><strong>Kernel Width:</strong> Larger kernels capture longer-range dependencies (e.g., formant transitions). Typical: 3, 5, 7.</li>
+                <li><strong>Stride:</strong> How many frames the kernel moves per step. Stride 2 halves the sequence length, reducing computation and capturing broader temporal patterns. Whisper uses stride 2 on its second conv layer.</li>
+                <li><strong>Receptive Field:</strong> The total range of input frames that affect a single output frame. For stacked convolutions, receptive field grows: RF = 1 + (sum of kernel widths - 1) * (product of strides before this layer).</li>
+                <li><strong>Padding:</strong> "Same" padding preserves sequence length; "valid" padding shrinks it. Whisper uses "same" padding on both layers.</li>
+            </ul>
+
+            <p><strong>Whisper's convolutional front-end:</strong></p>
+            <ul style="margin-left: 2rem;">
+                <li>Layer 1: Conv1D(80 channels, 128 filters, kernel=3, stride=1, padding=1) + GELU</li>
+                <li>Layer 2: Conv1D(128 channels, 128 filters, kernel=3, stride=2, padding=1) + GELU</li>
+                <li>Output shape: (seq_len/2, 128) — sequence halved, 128 feature channels</li>
+            </ul>
+
+            <!-- 15.3: Encoder-Decoder ASR -->
+            <h3>§15.3 Encoder-Decoder Models for ASR</h3>
+            <p>Encoder-decoder ASR (also called Listen, Attend, and Spell or LAS) frames the problem as a sequence-to-sequence task: map acoustic features to characters with attention.</p>
+
+            <p><strong>Input and output:</strong></p>
+            <ul style="margin-left: 2rem;">
+                <li>Input: $X = x_1, \ldots, x_T$ where $x_t$ is a 80-dimensional log-mel spectrogram frame (10ms window)</li>
+                <li>Output: $Y = (\text{SOS}, y_1, \ldots, y_m, \text{EOS})$ where $y_i \in \{a, b, \ldots, z, ', \text{space}\}$ (29 characters for English)</li>
+            </ul>
+
+            <p><strong>Cross-attention mechanism:</strong></p>
+            <p>The decoder attends to the encoder outputs to align with the acoustic input:</p>
+
+            <div class="katex-display">$$Q = H^{\text{dec}[l-1]} W^Q; \quad K = H^{\text{enc}} W^K; \quad V = H^{\text{enc}} W^V \quad \text{(Eq 15.4)}$$</div>
+
+            <div class="katex-display">$$\text{CrossAttention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right) V \quad \text{(Eq 15.5)}$$</div>
+
+            <p>Where $d_k$ is the key dimension (e.g., 512). The attention scores tell the decoder which encoder frames to focus on when generating each character.</p>
+
+            <p><strong>Autoregressive inference:</strong></p>
+            <div class="katex-display">$$p(y_1, \ldots, y_n | X) = \prod_{i=1}^{n} p(y_i | y_1, \ldots, y_{i-1}, X) \quad \text{(Eq 15.6)}$$</div>
+
+            <p><strong>Greedy decoding:</strong> At each step, pick the character with the highest probability:</p>
+            <div class="katex-display">$$\hat{y}_i = \arg\max_c P(c | y_1, \ldots, y_{i-1}, X) \quad \text{(Eq 15.7)}$$</div>
+
+            <p><strong>Beam search decoding:</strong> Keep the $k$ most promising partial hypotheses and expand them, scoring each based on log-probability. Beam width $k=5$ is common.</p>
+
+            <p><strong>Language model rescoring:</strong></p>
+            <div class="katex-display">$$\text{score}(Y|X) = \frac{1}{|Y|_c} \log P(Y|X) + \lambda \log P_{\text{LM}}(Y) \quad \text{(Eq 15.8)}$$</div>
+
+            <p>A separate language model (trained only on text) reranks the top beam candidates, balancing acoustic likelihood against linguistic probability. $\lambda$ is typically 0.1-0.5.</p>
+
+            <p><strong>Training:</strong> Cross-entropy loss on the target character distribution:</p>
+            <div class="katex-display">$$L = -\sum_{i=1}^{m} \log P(y_i | y_1, \ldots, y_{i-1}, X) \quad \text{(Eq 15.9)}$$</div>
+
+            <p><strong>Whisper architecture (from Radford et al., 2023):</strong></p>
+            <ul style="margin-left: 2rem;">
+                <li><strong>Training data:</strong> 680,000 hours of multilingual speech from the web (weakly supervised)</li>
+                <li><strong>Encoder:</strong> 2 × Conv1D + 12 transformer blocks (base model)</li>
+                <li><strong>Decoder:</strong> 12 transformer blocks with cross-attention</li>
+                <li><strong>Multitask:</strong> Jointly trained on transcription, translation, and voice activity detection (VAD)</li>
+                <li><strong>Key insight:</strong> Weak supervision (imperfect captions) + massive scale = better robustness across accents and languages</li>
+            </ul>
+
+            <!-- 15.4: Self-Supervised Models -->
+            <h3>§15.4 Self-Supervised Models: HuBERT</h3>
+            <p>Self-supervised pretraining learns useful speech representations without requiring transcripts. HuBERT (Hidden-Unit BERT) masks frames and predicts their cluster assignments.</p>
+
+            <p><strong>Architecture:</strong></p>
+            <ul style="margin-left: 2rem;">
+                <li>7 CNN layers (1D convolutions with stride 2 per layer → 128× compression)</li>
+                <li>Transformer stack (12 blocks, 768-dim hidden, 12 attention heads)</li>
+                <li>Projection layer A: projects transformer output to 256-dim</li>
+                <li>Learned cluster embeddings: 500 clusters × 256-dim each</li>
+            </ul>
+
+            <p><strong>Two-stage training:</strong></p>
+            <ol style="margin-left: 2rem; margin-bottom: 1rem;">
+                <li><strong>Stage 1:</strong> Mask 40% of frames randomly. Use 100 MFCC-based clusters as targets (computed via K-means on MFCC features).</li>
+                <li><strong>Stage 2:</strong> Recompute clusters using Stage 1 representations (now 500 clusters). Repeat masking and prediction for 10 iterations.</li>
+            </ol>
+
+            <p><strong>Cluster prediction softmax:</strong></p>
+            <div class="katex-display">$$p(c | X, t) = \frac{\exp\left(\frac{\text{sim}(Ah_t, e_c)}{\tau}\right)}{\sum_c' \exp\left(\frac{\text{sim}(Ah_t, e_{c'})}{\tau}\right)} \quad \text{(Eq 15.12)}$$</div>
+
+            <p>Where $h_t$ is the transformer hidden state at frame $t$, $e_c$ is the learned embedding for cluster $c$, $\tau$ is temperature (0.1), and sim is cosine similarity.</p>
+
+            <p><strong>Pretraining loss:</strong></p>
+            <div class="katex-display">$$L = \sum_{t \in M} -\log p(z_t | X) \quad \text{(Eq 15.13)}$$</div>
+
+            <p>Where $M$ is the set of masked frames and $z_t$ is the target cluster.</p>
+
+            <p><strong>K-means clustering (for recomputation):</strong></p>
+            <div class="katex-display">$$c^{(i)} = \arg\min_j \left\|v^{(i)} - \mu_j\right\|^2 \quad \text{(Eq 15.14)}$$</div>
+
+            <p>Assignment step: each vector is assigned to the nearest centroid.</p>
+
+            <div class="katex-display">$$\mu_i = \frac{1}{|S_i|} \sum_{v \in S_i} v \quad \text{(Eq 15.15)}$$</div>
+
+            <p>Re-estimation step: each centroid is updated to the mean of its assigned vectors.</p>
+
+            <p><strong>Fine-tuning for ASR:</strong></p>
+            <ul style="margin-left: 2rem;">
+                <li>Freeze the 7 CNN layers and transformer (use prelearned features)</li>
+                <li>Add a linear layer + softmax on top for 29 target characters</li>
+                <li>Train with CTC loss (see §15.5) for 1-2 epochs on labeled speech (10-100 hours)</li>
+                <li>Result: Excellent few-shot performance — fine-tuning on 10 hours of LibriSpeech achieves ~10% WER</li>
+            </ul>
+
+            <!-- 15.5: CTC -->
+            <h3>§15.5 CTC: Connectionist Temporal Classification</h3>
+            <p>CTC elegantly handles the alignment problem: how do you convert frame-level predictions to word-level output when the number of frames $T$ may far exceed the number of target characters $m$?</p>
+
+            <p><strong>The key idea:</strong> Allow repeated characters and blank symbols. Then "collapse" them to get the final output.</p>
+
+            <p><strong>Collapsing function B:</strong></p>
+            <ul style="margin-left: 2rem;">
+                <li>Remove consecutive duplicate characters: "d-d-i-n-n" → "d-i-n"</li>
+                <li>Remove blank symbols (ε): "d-ε-i-ε-n" → "d-i-n"</li>
+                <li>Applying both: "d-ε-i-ε-n-n-ε-e-r-r-r-ε" → "d-i-n-e-r"</li>
+            </ul>
+
+            <p><strong>Why blanks?</strong> Without blanks, "dinner" (d-i-n-n-e-r, 6 letters) might be forced into 7 frames. The model would predict d-i-n-ε-n-e-r, and after removing blanks you get "d-i-n-n-e-r" — the blank preserves the double-n!</p>
+
+            <p><strong>Alignment:</strong> An alignment $A$ is a sequence of length $T$ (one prediction per frame) that collapses to the target $Y$.</p>
+
+            <div class="katex-display">$$P_{\text{CTC}}(A|X) = \prod_{t=1}^{T} p(a_t | X) \quad \text{(Eq 15.16)}$$</div>
+
+            <p><strong>Greedy CTC decoding:</strong> Pick the best frame-level prediction at each step, then collapse:</p>
+            <div class="katex-display">$$\hat{a}_t = \arg\max_c p_t(c|X) \quad \text{(Eq 15.17)}$$</div>
+
+            <p><strong>Best output:</strong> Sum the probabilities of all alignments that produce $Y$:</p>
+            <div class="katex-display">$$P_{\text{CTC}}(Y|X) = \sum_{A \in \mathcal{B}^{-1}(Y)} \prod_{t=1}^{T} p(a_t|h_t) \quad \text{(Eq 15.18)}$$</div>
+
+            <p>This is computed efficiently using dynamic programming (the forward-backward algorithm), which is similar to computing $\alpha$ and $\beta$ in HMMs.</p>
+
+            <p><strong>CTC training loss:</strong></p>
+            <div class="katex-display">$$L_{\text{CTC}} = \sum_{\text{utterance}} -\log P_{\text{CTC}}(Y|X) \quad \text{(Eq 15.20)}$$</div>
+
+            <p><strong>Combining CTC with encoder-decoder:</strong> Train jointly with both losses:</p>
+            <div class="katex-display">$$L = -\lambda \log P_{\text{encdec}} - (1-\lambda) \log P_{\text{CTC}} \quad \text{(Eq 15.22)}$$</div>
+
+            <p>Where $\lambda \in [0, 1]$ balances the two objectives. This improves both convergence speed and final accuracy.</p>
+
+            <p><strong>Streaming ASR with RNN-T:</strong> CTC assumes the entire utterance is available. For streaming (real-time) ASR, RNN-T adds a "predictor" network — a small LM that predicts the next character, so the model can emit output before seeing all future frames.</p>
+
+            <!-- 15.6: Word Error Rate -->
+            <h3>§15.6 ASR Evaluation: Word Error Rate</h3>
+            <p>The standard metric for ASR is Word Error Rate (WER), based on minimum edit distance at the word level.</p>
+
+            <div class="katex-display">$$\text{WER} = 100 \times \frac{S + D + I}{N} \quad \text{where}$$</div>
+
+            <ul style="margin-left: 2rem;">
+                <li>$S$ = number of substitutions (wrong word)</li>
+                <li>$D$ = number of deletions (word missed)</li>
+                <li>$I$ = number of insertions (extra word)</li>
+                <li>$N$ = total words in reference transcript</li>
+            </ul>
+
+            <p><strong>Example:</strong></p>
+            <p style="margin-left: 2rem;">Reference: "the quick brown fox jumps over the lazy dog" (8 words)</p>
+            <p style="margin-left: 2rem;">Hypothesis: "the quicker brown fox over lazy dog" (7 words)</p>
+            <p style="margin-left: 2rem;">Edit distance alignment: the/the (match), quick→quicker (S=1), brown/brown (match), fox/fox (match), jumps→∅ (D=1), over/over (match), the/∅ (D=1), lazy/lazy (match), dog/dog (match)</p>
+            <p style="margin-left: 2rem;">WER = (1 + 2 + 0) / 8 = 37.5%</p>
+
+            <p><strong>Normalization before evaluation:</strong></p>
+            <ul style="margin-left: 2rem;">
+                <li>Remove non-speech: [LAUGHTER], [SILENCE], [NOISE]</li>
+                <li>Standardize contractions: "don't" vs "do n't"</li>
+                <li>Normalize numbers: "123" → "one hundred twenty three"</li>
+                <li>Remove punctuation (most ASR systems don't predict it)</li>
+                <li>Case-insensitive comparison</li>
+            </ul>
+
+            <p><strong>Limitations of WER:</strong></p>
+            <ul style="margin-left: 2rem;">
+                <li>Treats all errors equally (substituting "the" with "a" seems less bad than "dog" with "refrigerator")</li>
+                <li>Doesn't capture partial-match success (char-level similarity)</li>
+                <li>Can be very high on noisy or accented speech, masking good acoustic modeling</li>
+                <li>Average WER hides disparities: 2% average WER might hide 30% WER for non-English speakers</li>
+            </ul>
+
+            <p><strong>Character Error Rate (CER):</strong> Same formula but counting character-level edits instead of words. Useful for languages without clear word boundaries (Chinese) or evaluating character-level models.</p>
+        </section>
+
+        <!-- Section 3: Visualizers -->
+        <section id="visualizers">
+            <h2>Interactive Visualizers</h2>
+            <p>Explore the core mechanisms of ASR through interactive animations and demonstrations.</p>
+
+            <!-- Visualizer 1: 1D CNN -->
+            <h3>Visualizer 1: 1D Convolution on Speech Signals</h3>
+            <p>Watch how a learnable kernel slides across the acoustic signal, extracting features frame-by-frame. Adjust the kernel width and stride to see how they affect the output.</p>
+
+            <div class="visualizer">
+                <canvas id="conv1dCanvas" class="visualizer-canvas" width="900" height="300"></canvas>
+                <div class="visualizer-controls">
+                    <div class="control-group">
+                        <label for="conv1dKernelWidth">Kernel Width:</label>
+                        <input type="range" id="conv1dKernelWidth" min="1" max="7" step="2" value="3">
+                        <span id="conv1dKernelWidthValue">3</span>
+                    </div>
+                    <div class="control-group">
+                        <label for="conv1dStride">Stride:</label>
+                        <input type="range" id="conv1dStride" min="1" max="4" step="1" value="1">
+                        <span id="conv1dStrideValue">1</span>
+                    </div>
+                    <button onclick="resetConv1D()">Reset</button>
+                </div>
+                <p style="font-size: 0.95rem; margin-top: 1rem;">
+                    <strong>Output shape:</strong> <span id="conv1dOutputShape">(20 frames)</span>
+                    <strong>Receptive field:</strong> <span id="conv1dReceptiveField">3 frames</span>
+                </p>
+            </div>
+
+            <!-- Visualizer 2: CTC Alignment -->
+            <h3>Visualizer 2: CTC Alignment Explorer</h3>
+            <p>Understand how CTC maps frame-level predictions to characters. Click cells to create alignments, and watch the collapsing function turn repeated symbols and blanks into text.</p>
+
+            <div class="visualizer">
+                <div class="visualizer-controls" style="padding: 1rem;">
+                    <div class="control-group">
+                        <label>Target Word:</label>
+                        <select id="ctcWordSelect" onchange="updateCTCWord()">
+                            <option value="dinner">dinner</option>
+                            <option value="hello">hello</option>
+                            <option value="speech">speech</option>
+                        </select>
+                    </div>
+                    <button onclick="presetCTCAlignment1()">Preset 1</button>
+                    <button onclick="presetCTCAlignment2()">Preset 2</button>
+                    <button onclick="presetCTCAlignment3()">Preset 3</button>
+                    <button class="reset-btn" onclick="resetCTC()">Clear</button>
+                </div>
+                <canvas id="ctcAlignmentCanvas" class="visualizer-canvas" width="900" height="350"></canvas>
+                <div style="margin-top: 1rem; padding: 1rem; background: rgba(59, 130, 246, 0.1); border-radius: 4px;">
+                    <p><strong>Raw alignment:</strong> <span id="ctcRawAlignment">-</span></p>
+                    <p><strong>After collapsing:</strong> <span id="ctcCollapsed" style="font-weight: 700; color: var(--accent-green); font-size: 1.1rem;">-</span></p>
+                </div>
+            </div>
+
+            <!-- Visualizer 3: K-Means -->
+            <h3>Visualizer 3: K-Means Clustering (for HuBERT Pretraining)</h3>
+            <p>Step through K-means clustering as used in HuBERT's two-stage training. Watch centroids move and points reassign.</p>
+
+            <div class="visualizer">
+                <canvas id="kmeansCanvas" class="visualizer-canvas" width="900" height="400"></canvas>
+                <div class="visualizer-controls">
+                    <div class="control-group">
+                        <label for="kmeansK">Clusters (K):</label>
+                        <input type="range" id="kmeansK" min="2" max="5" step="1" value="3">
+                        <span id="kmeansKValue">3</span>
+                    </div>
+                    <button onclick="kmeansStep()">Step (Assignment)</button>
+                    <button onclick="kmeansStep()">Step (Re-estimation)</button>
+                    <button class="reset-btn" onclick="resetKmeans()">Reset</button>
+                </div>
+                <p style="font-size: 0.95rem; margin-top: 1rem;">
+                    Iteration: <span id="kmeansIterationCount">0</span> |
+                    Points reassigned: <span id="kmeansReassigned">0</span>
+                </p>
+            </div>
+
+            <!-- Visualizer 4: WER Calculator -->
+            <h3>Visualizer 4: Word Error Rate Calculator</h3>
+            <p>Compute WER between a reference transcript and a hypothesis. The calculator shows the alignment and breaks down substitutions, deletions, and insertions.</p>
+
+            <div class="visualizer">
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Reference Transcript:</label>
+                    <textarea id="werReference" class="input-box" rows="3" placeholder="Enter reference text..." style="width: 100%; font-size: 0.95rem;">The patient presented with hypertension and was immediately admitted to the intensive care unit for monitoring.</textarea>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Hypothesis (ASR Output):</label>
+                    <textarea id="werHypothesis" class="input-box" rows="3" placeholder="Enter hypothesis text..." style="width: 100%; font-size: 0.95rem;">The patient present with high attention and was immediately admitted to the intensive care unit for monitoring.</textarea>
+                </div>
+                <button onclick="computeWER()" style="width: 100%; padding: 0.75rem; font-size: 1rem;">Calculate WER</button>
+                <div id="werResult"></div>
+            </div>
+        </section>
+
+        <!-- Section 4: Code Lab -->
+        <section id="code">
+            <h2>Code Lab: Implementing ASR Concepts</h2>
+            <p>Interactive code examples demonstrating the core algorithms. Each tab is a complete, runnable Python snippet with explanations.</p>
+
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab(event, 'codeWhisper')">Whisper Inference</button>
+                <button class="tab-btn" onclick="switchTab(event, 'codeConv1D')">1D Convolution</button>
+                <button class="tab-btn" onclick="switchTab(event, 'codeCTC')">CTC Decoding</button>
+            </div>
+
+            <!-- Tab 1: Whisper -->
+            <div id="codeWhisper" class="tab-content active">
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">Python (HuggingFace Transformers)</span>
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <code><div class="code-line"><span class="code-line-num">1</span><span class="code-content"><span class="cm"># Whisper ASR inference using HuggingFace Transformers</span></span></div>
+<div class="code-line"><span class="code-line-num">2</span><span class="code-content"><span class="cm"># Demonstrates the encoder-decoder pipeline for speech recognition</span></span></div>
+<div class="code-line"><span class="code-line-num">3</span><span class="code-content"><span class="kw">import</span> torch</span></div>
+<div class="code-line"><span class="code-line-num">4</span><span class="code-content"><span class="kw">from</span> transformers <span class="kw">import</span> WhisperProcessor, WhisperForConditionalGeneration</span></div>
+<div class="code-line"><span class="code-line-num">5</span><span class="code-content"><span class="kw">import</span> librosa</span></div>
+<div class="code-line"><span class="code-line-num">6</span><span class="code-content"></span></div>
+<div class="code-line"><span class="code-line-num">7</span><span class="code-content"><span class="cm"># Load Whisper model and processor</span></span></div>
+<div class="code-line"><span class="code-line-num">8</span><span class="code-content"><span class="cm"># whisper-base: 74M params, ~6x realtime on CPU</span></span></div>
+<div class="code-line"><span class="code-line-num">9</span><span class="code-content">processor = WhisperProcessor.from_pretrained(<span class="st">"openai/whisper-base"</span>)</span></div>
+<div class="code-line"><span class="code-line-num">10</span><span class="code-content">model = WhisperForConditionalGeneration.from_pretrained(<span class="st">"openai/whisper-base"</span>)</span></div>
+<div class="code-line"><span class="code-line-num">11</span><span class="code-content"></span></div>
+<div class="code-line"><span class="code-line-num">12</span><span class="code-content"><span class="cm"># Load and preprocess audio</span></span></div>
+<div class="code-line"><span class="code-line-num">13</span><span class="code-content"><span class="cm"># Whisper expects 16kHz mono audio, 30-second chunks</span></span></div>
+<div class="code-line"><span class="code-line-num">14</span><span class="code-content">audio, sr = librosa.load(<span class="st">"speech.wav"</span>, sr=<span class="num">16000</span>)</span></div>
+<div class="code-line"><span class="code-line-num">15</span><span class="code-content"></span></div>
+<div class="code-line"><span class="code-line-num">16</span><span class="code-content"><span class="cm"># Extract log-mel spectrogram features</span></span></div>
+<div class="code-line"><span class="code-line-num">17</span><span class="code-content"><span class="cm"># 80 mel filters, 25ms window, 10ms stride → 3000 frames for 30s</span></span></div>
+<div class="code-line"><span class="code-line-num">18</span><span class="code-content">input_features = processor(</span></div>
+<div class="code-line"><span class="code-line-num">19</span><span class="code-content">    audio,</span></div>
+<div class="code-line"><span class="code-line-num">20</span><span class="code-content">    sampling_rate=<span class="num">16000</span>,</span></div>
+<div class="code-line"><span class="code-line-num">21</span><span class="code-content">    return_tensors=<span class="st">"pt"</span></span></div>
+<div class="code-line"><span class="code-line-num">22</span><span class="code-content">).input_features  <span class="cm"># shape: [1, 80, 3000]</span></span></div>
+<div class="code-line"><span class="code-line-num">23</span><span class="code-content"></span></div>
+<div class="code-line"><span class="code-line-num">24</span><span class="code-content"><span class="cm"># Generate transcription using encoder-decoder with beam search</span></span></div>
+<div class="code-line"><span class="code-line-num">25</span><span class="code-content"><span class="cm"># forced_decoder_ids sets language and task tokens</span></span></div>
+<div class="code-line"><span class="code-line-num">26</span><span class="code-content">forced_decoder_ids = processor.get_decoder_prompt_ids(</span></div>
+<div class="code-line"><span class="code-line-num">27</span><span class="code-content">    language=<span class="st">"english"</span>,</span></div>
+<div class="code-line"><span class="code-line-num">28</span><span class="code-content">    task=<span class="st">"transcribe"</span></span></div>
+<div class="code-line"><span class="code-line-num">29</span><span class="code-content">)</span></div>
+<div class="code-line"><span class="code-line-num">30</span><span class="code-content"></span></div>
+<div class="code-line"><span class="code-line-num">31</span><span class="code-content"><span class="cm"># Run encoder-decoder inference</span></span></div>
+<div class="code-line"><span class="code-line-num">32</span><span class="code-content"><span class="cm"># Encoder: 2 Conv1D layers → transformer blocks</span></span></div>
+<div class="code-line"><span class="code-line-num">33</span><span class="code-content"><span class="cm"># Decoder: autoregressive transformer with cross-attention</span></span></div>
+<div class="code-line"><span class="code-line-num">34</span><span class="code-content">generated_ids = model.generate(</span></div>
+<div class="code-line"><span class="code-line-num">35</span><span class="code-content">    input_features,</span></div>
+<div class="code-line"><span class="code-line-num">36</span><span class="code-content">    forced_decoder_ids=forced_decoder_ids,</span></div>
+<div class="code-line"><span class="code-line-num">37</span><span class="code-content">    max_new_tokens=<span class="num">225</span>,       <span class="cm"># max output length</span></span></div>
+<div class="code-line"><span class="code-line-num">38</span><span class="code-content">    num_beams=<span class="num">5</span>,              <span class="cm"># beam search width</span></span></div>
+<div class="code-line"><span class="code-line-num">39</span><span class="code-content">    temperature=<span class="num">0.0</span>,          <span class="cm"># greedy within beam</span></span></div>
+<div class="code-line"><span class="code-line-num">40</span><span class="code-content">)</span></div>
+<div class="code-line"><span class="code-line-num">41</span><span class="code-content"></span></div>
+<div class="code-line"><span class="code-line-num">42</span><span class="code-content"><span class="cm"># Decode token IDs back to text</span></span></div>
+<div class="code-line"><span class="code-line-num">43</span><span class="code-content">transcription = processor.batch_decode(</span></div>
+<div class="code-line"><span class="code-line-num">44</span><span class="code-content">    generated_ids,</span></div>
+<div class="code-line"><span class="code-line-num">45</span><span class="code-content">    skip_special_tokens=<span class="kw">True</span>  <span class="cm"># remove <|startoftranscript|>, <|en|>, etc.</span></span></div>
+<div class="code-line"><span class="code-line-num">46</span><span class="code-content">)[<span class="num">0</span>]</span></div>
+<div class="code-line"><span class="code-line-num">47</span><span class="code-content"></span></div>
+<div class="code-line"><span class="code-line-num">48</span><span class="code-content"><span class="fn">print</span>(<span class="st">f"Transcription: {transcription}"</span>)</span></div></code>
+                </div>
+
+                <p><strong>Key points:</strong></p>
+                <ul style="margin-left: 2rem;">
+                    <li>The processor converts raw audio (samples) to log-mel spectrograms (80 dimensions)</li>
+                    <li>The model's encoder processes the spectrogram with 2 CNN layers + 12 transformer blocks</li>
+                    <li>The decoder autoregressively generates characters, attending to encoder outputs via cross-attention</li>
+                    <li>Beam search (width=5) keeps the 5 most likely hypotheses and expands them</li>
+                    <li>Forced decoder IDs specify the language and task (transcribe vs. translate)</li>
+                </ul>
+            </div>
+
+            <!-- Tab 2: Conv1D -->
+            <div id="codeConv1D" class="tab-content">
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">Python (NumPy)</span>
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <code><div class="code-line"><span class="code-line-num">1</span><span class="code-content"><span class="cm"># 1D Convolution for speech feature extraction</span></span></div>
+<div class="code-line"><span class="code-line-num">2</span><span class="code-content"><span class="cm"># Implements the core CNN operation used in ASR front-ends</span></span></div>
+<div class="code-line"><span class="code-line-num">3</span><span class="code-content"><span class="kw">import</span> numpy <span class="kw">as</span> np</span></div>
+<div class="code-line"><span class="code-line-num">4</span><span class="code-content"></span></div>
+<div class="code-line"><span class="code-line-num">5</span><span class="code-content"><span class="kw">def</span> <span class="fn">conv1d</span>(x, kernel, stride=<span class="num">1</span>, padding=<span class="num">0</span>):</span></div>
+<div class="code-line"><span class="code-line-num">6</span><span class="code-content">    <span class="st">"""</span></span></div>
+<div class="code-line"><span class="code-line-num">7</span><span class="code-content"><span class="st">    1D convolution (cross-correlation) of signal x with kernel w.</span></span></div>
+<div class="code-line"><span class="code-line-num">8</span><span class="code-content"><span class="st">    </span></span></div>
+<div class="code-line"><span class="code-line-num">9</span><span class="code-content"><span class="st">    Args:</span></span></div>
+<div class="code-line"><span class="code-line-num">10</span><span class="code-content"><span class="st">        x: input signal, shape [channels, time]</span></span></div>
+<div class="code-line"><span class="code-line-num">11</span><span class="code-content"><span class="st">        kernel: filter weights, shape [channels, width]</span></span></div>
+<div class="code-line"><span class="code-line-num">12</span><span class="code-content"><span class="st">        stride: step size between kernel positions</span></span></div>
+<div class="code-line"><span class="code-line-num">13</span><span class="code-content"><span class="st">        padding: zeros to add at start and end</span></span></div>
+<div class="code-line"><span class="code-line-num">14</span><span class="code-content"><span class="st">    </span></span></div>
+<div class="code-line"><span class="code-line-num">15</span><span class="code-content"><span class="st">    Returns:</span></span></div>
+<div class="code-line"><span class="code-line-num">16</span><span class="code-content"><span class="st">        output: convolved signal, shape [output_time]</span></span></div>
+<div class="code-line"><span class="code-line-num">17</span><span class="code-content"><span class="st">    """</span></span></div>
+<div class="code-line"><span class="code-line-num">18</span><span class="code-content">    channels, time = x.shape</span></div>
+<div class="code-line"><span class="code-line-num">19</span><span class="code-content">    k_channels, k_width = kernel.shape</span></div>
+<div class="code-line"><span class="code-line-num">20</span><span class="code-content">    <span class="kw">assert</span> channels == k_channels, <span class="st">"Channel dimensions must match"</span></span></div>
+<div class="code-line"><span class="code-line-num">21</span><span class="code-content">    </span></div>
+<div class="code-line"><span class="code-line-num">22</span><span class="code-content">    <span class="cm"># Pad input with zeros on both sides</span></span></div>
+<div class="code-line"><span class="code-line-num">23</span><span class="code-content">    <span class="kw">if</span> padding > <span class="num">0</span>:</span></div>
+<div class="code-line"><span class="code-line-num">24</span><span class="code-content">        x_padded = np.zeros((channels, time + <span class="num">2</span> * padding))</span></div>
+<div class="code-line"><span class="code-line-num">25</span><span class="code-content">        x_padded[:, padding:padding + time] = x</span></div>
+<div class="code-line"><span class="code-line-num">26</span><span class="code-content">    <span class="kw">else</span>:</span></div>
+<div class="code-line"><span class="code-line-num">27</span><span class="code-content">        x_padded = x</span></div>
+<div class="code-line"><span class="code-line-num">28</span><span class="code-content">    </span></div>
+<div class="code-line"><span class="code-line-num">29</span><span class="code-content">    <span class="cm"># Compute output length</span></span></div>
+<div class="code-line"><span class="code-line-num">30</span><span class="code-content">    padded_time = x_padded.shape[<span class="num">1</span>]</span></div>
+<div class="code-line"><span class="code-line-num">31</span><span class="code-content">    out_len = (padded_time - k_width) // stride + <span class="num">1</span></span></div>
+<div class="code-line"><span class="code-line-num">32</span><span class="code-content">    output = np.zeros(out_len)</span></div>
+<div class="code-line"><span class="code-line-num">33</span><span class="code-content">    </span></div>
+<div class="code-line"><span class="code-line-num">34</span><span class="code-content">    <span class="cm"># Slide kernel, computing dot product at each position</span></span></div>
+<div class="code-line"><span class="code-line-num">35</span><span class="code-content">    <span class="kw">for</span> j <span class="kw">in</span> <span class="fn">range</span>(out_len):</span></div>
+<div class="code-line"><span class="code-line-num">36</span><span class="code-content">        start = j * stride</span></div>
+<div class="code-line"><span class="code-line-num">37</span><span class="code-content">        receptive_field = x_padded[:, start:start + k_width]</span></div>
+<div class="code-line"><span class="code-line-num">38</span><span class="code-content">        output[j] = np.sum(receptive_field * kernel)</span></div>
+<div class="code-line"><span class="code-line-num">39</span><span class="code-content">    </span></div>
+<div class="code-line"><span class="code-line-num">40</span><span class="code-content">    <span class="kw">return</span> output</span></div>
+<div class="code-line"><span class="code-line-num">41</span><span class="code-content"></span></div>
+<div class="code-line"><span class="code-line-num">42</span><span class="code-content"><span class="cm"># Simulate Whisper's convolutional front-end</span></span></div>
+<div class="code-line"><span class="code-line-num">43</span><span class="code-content">np.random.seed(<span class="num">42</span>)</span></div>
+<div class="code-line"><span class="code-line-num">44</span><span class="code-content">log_mel = np.random.randn(<span class="num">128</span>, <span class="num">3000</span>)</span></div>
+<div class="code-line"><span class="code-line-num">45</span><span class="code-content"></span></div>
+<div class="code-line"><span class="code-line-num">46</span><span class="code-content">kernel_1 = np.random.randn(<span class="num">128</span>, <span class="num">3</span>) * <span class="num">0.01</span></span></div>
+<div class="code-line"><span class="code-line-num">47</span><span class="code-content">out_1 = conv1d(log_mel, kernel_1, stride=<span class="num">1</span>, padding=<span class="num">1</span>)</span></div>
+<div class="code-line"><span class="code-line-num">48</span><span class="code-content"><span class="fn">print</span>(<span class="st">f"Conv1: {out_1.shape[0]} frames (stride=1)"</span>)</span></div>
+<div class="code-line"><span class="code-line-num">49</span><span class="code-content"></span></div>
+<div class="code-line"><span class="code-line-num">50</span><span class="code-content">kernel_2 = np.random.randn(<span class="num">1</span>, <span class="num">3</span>) * <span class="num">0.01</span></span></div>
+<div class="code-line"><span class="code-line-num">51</span><span class="code-content">out_2 = conv1d(out_1.reshape(<span class="num">1</span>, -<span class="num">1</span>), kernel_2, stride=<span class="num">2</span>, padding=<span class="num">1</span>)</span></div>
+<div class="code-line"><span class="code-line-num">52</span><span class="code-content"><span class="fn">print</span>(<span class="st">f"Conv2: {out_2.shape[0]} frames (stride=2, halved)"</span>)</span></div></code>
+                </div>
+
+                <p><strong>Key points:</strong></p>
+                <ul style="margin-left: 2rem;">
+                    <li>The kernel is a learnable weight matrix, initialized randomly</li>
+                    <li>Padding preserves sequence length: output_len = input_len when kernel_width=1</li>
+                    <li>Stride >1 compresses the sequence, reducing computation and capturing broader patterns</li>
+                    <li>Multi-channel convolution: each channel is convolved independently, then summed</li>
+                </ul>
+            </div>
+
+            <!-- Tab 3: CTC -->
+            <div id="codeCTC" class="tab-content">
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">Python (PyTorch)</span>
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <code><div class="code-line"><span class="code-line-num">1</span><span class="code-content"><span class="cm"># CTC Decoding: from frame-level predictions to text</span></span></div>
+<div class="code-line"><span class="code-line-num">2</span><span class="code-content"><span class="cm"># Implements greedy CTC decoding and collapsing function B</span></span></div>
+<div class="code-line"><span class="code-line-num">3</span><span class="code-content"><span class="kw">import</span> torch</span></div>
+<div class="code-line"><span class="code-line-num">4</span><span class="code-content"></span></div>
+<div class="code-line"><span class="code-line-num">5</span><span class="code-content"><span class="kw">def</span> <span class="fn">ctc_greedy_decode</span>(log_probs, blank_idx=<span class="num">0</span>):</span></div>
+<div class="code-line"><span class="code-line-num">6</span><span class="code-content">    <span class="st">"""Greedy CTC decoding with collapsing function B."""</span></span></div>
+<div class="code-line"><span class="code-line-num">7</span><span class="code-content">    T, C = log_probs.shape</span></div>
+<div class="code-line"><span class="code-line-num">8</span><span class="code-content">    </span></div>
+<div class="code-line"><span class="code-line-num">9</span><span class="code-content">    <span class="cm"># Step 1: argmax at each timestep (Eq 15.17)</span></span></div>
+<div class="code-line"><span class="code-line-num">10</span><span class="code-content">    best_path = torch.argmax(log_probs, dim=<span class="num">1</span>)  <span class="cm"># [T]</span></span></div>
+<div class="code-line"><span class="code-line-num">11</span><span class="code-content">    </span></div>
+<div class="code-line"><span class="code-line-num">12</span><span class="code-content">    <span class="cm"># Step 2: Apply collapsing function B</span></span></div>
+<div class="code-line"><span class="code-line-num">13</span><span class="code-content">    collapsed = []</span></div>
+<div class="code-line"><span class="code-line-num">14</span><span class="code-content">    prev_symbol = <span class="kw">None</span></span></div>
+<div class="code-line"><span class="code-line-num">15</span><span class="code-content">    <span class="kw">for</span> t <span class="kw">in</span> <span class="fn">range</span>(T):</span></div>
+<div class="code-line"><span class="code-line-num">16</span><span class="code-content">        symbol = best_path[t].<span class="fn">item</span>()</span></div>
+<div class="code-line"><span class="code-line-num">17</span><span class="code-content">        <span class="cm"># Skip if same as previous (collapse consecutive duplicates)</span></span></div>
+<div class="code-line"><span class="code-line-num">18</span><span class="code-content">        <span class="kw">if</span> symbol == prev_symbol:</span></div>
+<div class="code-line"><span class="code-line-num">19</span><span class="code-content">            <span class="kw">continue</span></span></div>
+<div class="code-line"><span class="code-line-num">20</span><span class="code-content">        prev_symbol = symbol</span></div>
+<div class="code-line"><span class="code-line-num">21</span><span class="code-content">        <span class="cm"># Skip blank symbols</span></span></div>
+<div class="code-line"><span class="code-line-num">22</span><span class="code-content">        <span class="kw">if</span> symbol != blank_idx:</span></div>
+<div class="code-line"><span class="code-line-num">23</span><span class="code-content">            collapsed.append(symbol)</span></div>
+<div class="code-line"><span class="code-line-num">24</span><span class="code-content">    </span></div>
+<div class="code-line"><span class="code-line-num">25</span><span class="code-content">    <span class="kw">return</span> best_path.tolist(), collapsed</span></div>
+<div class="code-line"><span class="code-line-num">26</span><span class="code-content"></span></div>
+<div class="code-line"><span class="code-line-num">27</span><span class="code-content"><span class="cm"># Simulate CTC output for "dinner" (14 frames)</span></span></div>
+<div class="code-line"><span class="code-line-num">28</span><span class="code-content">T, C = <span class="num">14</span>, <span class="num">29</span>  <span class="cm"># 14 frames, 29 classes</span></span></div>
+<div class="code-line"><span class="code-line-num">29</span><span class="code-content">log_probs = torch.full((T, C), -<span class="num">10.0</span>)</span></div>
+<div class="code-line"><span class="code-line-num">30</span><span class="code-content"></span></div>
+<div class="code-line"><span class="code-line-num">31</span><span class="code-content"><span class="cm"># Set high probabilities for correct alignment</span></span></div>
+<div class="code-line"><span class="code-line-num">32</span><span class="code-content">alignment_labels = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">0</span>, <span class="num">3</span>, <span class="num">3</span>, <span class="num">0</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>, <span class="num">5</span>, <span class="num">5</span>, <span class="num">0</span>, <span class="num">0</span>, <span class="num">0</span>]</span></div>
+<div class="code-line"><span class="code-line-num">33</span><span class="code-content"><span class="cm"># Corresponds to: d i ε n n ε n e r r r ε ε ε</span></span></div>
+<div class="code-line"><span class="code-line-num">34</span><span class="code-content"><span class="kw">for</span> t, label <span class="kw">in</span> <span class="fn">enumerate</span>(alignment_labels):</span></div>
+<div class="code-line"><span class="code-line-num">35</span><span class="code-content">    log_probs[t, label] = <span class="num">0.0</span>  <span class="cm"># log(1) = highest</span></span></div>
+<div class="code-line"><span class="code-line-num">36</span><span class="code-content"></span></div>
+<div class="code-line"><span class="code-line-num">37</span><span class="code-content">raw_alignment, decoded = ctc_greedy_decode(log_probs)</span></div>
+<div class="code-line"><span class="code-line-num">38</span><span class="code-content">idx2char = {<span class="num">0</span>: <span class="st">'ε'</span>, <span class="num">1</span>: <span class="st">'d'</span>, <span class="num">2</span>: <span class="st">'i'</span>, <span class="num">3</span>: <span class="st">'n'</span>, <span class="num">4</span>: <span class="st">'e'</span>, <span class="num">5</span>: <span class="st">'r'</span>}</span></div>
+<div class="code-line"><span class="code-line-num">39</span><span class="code-content">alignment_str = [idx2char.get(a, <span class="st">'?'</span>) <span class="kw">for</span> a <span class="kw">in</span> raw_alignment]</span></div>
+<div class="code-line"><span class="code-line-num">40</span><span class="code-content">output_str = <span class="st">''</span>.join([idx2char.get(c, <span class="st">'?'</span>) <span class="kw">for</span> c <span class="kw">in</span> decoded])</span></div>
+<div class="code-line"><span class="code-line-num">41</span><span class="code-content"></span></div>
+<div class="code-line"><span class="code-line-num">42</span><span class="code-content"><span class="fn">print</span>(<span class="st">f"Raw alignment: {' '.join(alignment_str)}"</span>)</span></div>
+<div class="code-line"><span class="code-line-num">43</span><span class="code-content"><span class="fn">print</span>(<span class="st">f"After collapse: {output_str}"</span>)</span></div></code>
+                </div>
+
+                <p><strong>Key points:</strong></p>
+                <ul style="margin-left: 2rem;">
+                    <li>Greedy decoding picks the argmax symbol at each frame (Eq 15.17)</li>
+                    <li>Collapsing removes consecutive duplicates and blanks</li>
+                    <li>The blank symbol (ε) preserves double letters: d-ε-i-ε-n-n → dinner</li>
+                    <li>Multiple different alignments can produce the same output (ambiguity)</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Section 5: Socratic Challenge -->
+        <section id="socratic">
+            <h2>Socratic Challenge: The Accent Gap in ASR</h2>
+
+            <div class="scenario">
+                <h3>The Scenario: Disparate Performance Across Populations</h3>
+                <p>Your company deploys a Whisper-based ASR system for medical transcription. It achieves 2% WER on read speech from standard American English speakers. However, when deployed in a diverse urban hospital, complaints pour in: the system's WER jumps to 18% for speakers of African American English and 22% for speakers with strong regional Southern accents.</p>
+
+                <p>A doctor dictating "The patient presented with hypertension" gets transcribed as "The patient present with high attention."</p>
+
+                <p><strong>The problem:</strong> This disparity is not just an academic concern—it directly impacts patient safety, equal care, and trust in the system. African American English (AAE) has distinctive phonological features (e.g., "th" → "d"; AAVE prosody), yet most training data comes from standard American English speakers.</p>
+            </div>
+
+            <div class="question">
+                <strong>Question 1: The Data Problem</strong>
+                <p>Why would the WER differ so dramatically across speaker populations, even when the acoustic environment (hospital) is the same? Hint: Think about what the encoder learns during pretraining.</p>
+            </div>
+
+            <div class="question">
+                <strong>Question 2: Scale vs. Representation</strong>
+                <p>Whisper was trained on 680,000 hours of data. Isn't that enough? What matters besides quantity? How does Whisper's approach differ from models like HuBERT that use much less labeled data?</p>
+            </div>
+
+            <div class="question">
+                <strong>Question 3: Self-Supervised Learning</strong>
+                <p>Could a self-supervised model like HuBERT help address the accent gap? How does pretraining on unlabeled speech (without worrying about dialect or accent) help when fine-tuned on small amounts of in-domain data?</p>
+            </div>
+
+            <div class="question">
+                <strong>Question 4: Evaluating Fairness</strong>
+                <p>Beyond improving the model, what evaluation changes would you recommend? Why is reporting WER averaged across all test speakers insufficient? (Hint: Think about disparate impact.)</p>
+            </div>
+
+            <div class="question">
+                <strong>Question 5: CTC Independence Assumption</strong>
+                <p>The CTC-based streaming model performs even worse on these underrepresented populations than the encoder-decoder Whisper. Why might the CTC independence assumption—that each frame's output depends only on that frame's encoder hidden state—be especially harmful for dialectal speech with different prosody and timing?</p>
+            </div>
+
+            <h3>Discussion Points</h3>
+            <ul style="margin-left: 2rem;">
+                <li><strong>Training data distribution:</strong> Most web audio (YouTube captions, podcasts) skews toward native English speakers. AAE speakers are underrepresented.</li>
+                <li><strong>Phonetic variations:</strong> AAE has different phoneme inventories and word-final consonant clusters. The encoder learned prototypes from the training data, so it's less robust to novel variations.</li>
+                <li><strong>Whisper's weakness:</strong> Weak supervision (web captions, often inaccurate) means the model learned noisy targets. Without explicit diversity, it optimizes for majority populations.</li>
+                <li><strong>HuBERT's strength:</strong> By pretraining on raw speech clusters without labels, it learns acoustic structure that's universal. Fine-tuning on 100 hours of AAE-heavy data then adapts to the accent.</li>
+                <li><strong>Evaluation:</strong> Report per-dialect WER and measure the WER gap. Aim for equalized odds: maximum acceptable WER should be the same across all groups.</li>
+                <li><strong>CTC limitation:</strong> CTC makes each output frame independent. Dialectal speech has different timing and stress patterns. Encoder-decoder's cross-attention can model longer-range dependencies, adapting to prosody.</li>
+            </ul>
+        </section>
+
+        <!-- Section 6: Modern Bridge -->
+        <section id="modern">
+            <h2>Modern Bridge: ASR in 2024 and Beyond</h2>
+
+            <h3>Large-Scale Multilingual Models</h3>
+            <p><strong>Whisper v3/v4:</strong> OpenAI continues scaling. v3 aims for even better multilingual performance, exploring larger models and more diverse data. The key challenge: as you add more languages, average WER tends to rise (it's harder to do everything). Whisper remains strong because of its weakly supervised approach — no need for perfect manual transcripts.</p>
+
+            <p><strong>Universal Speech Model (USM) by Google:</strong> Trained on 12 million hours of speech in 300+ languages. Vastly more data than Whisper (680k hours), but at what cost? Google's claim: better multilingual zero-shot performance. Practical limitation: huge model, slow inference.</p>
+
+            <h3>Open-Source Alternatives</h3>
+            <p><strong>OWSM (Open Whisper Speech Model):</strong> Community attempt to recreate Whisper openly. Aims for comparable quality with transparent training data (no copyright concerns).</p>
+
+            <p><strong>Distil-Whisper:</strong> 50% smaller, 6x faster than base Whisper with minimal WER increase. Key technique: knowledge distillation (train a small model to mimic a large one). Enables edge deployment and real-time inference on CPU.</p>
+
+            <h3>Multimodal Speech Models</h3>
+            <p><strong>GPT-4o, Gemini 2.0:</strong> These LLMs now take speech directly as input, not just text. The model sees both the audio waveform and any text context. Advantage: can correct obvious errors using semantics. Example: "I got an A in the class" (not "I got an eh in the class") because the LLM knows physics classes assign letter grades.</p>
+
+            <p>Limitation: These models are proprietary, slow (real-time factor 3-5x), and expensive. But they hint at the future: a single foundation model handling multiple modalities, with emergent linguistic knowledge.</p>
+
+            <h3>The Death of the Pipeline</h3>
+            <p>Old ASR: acoustic model → language model → spelling correction. Three separate systems.</p>
+
+            <p>New ASR: single end-to-end encoder-decoder, trained jointly on data + weak supervision. Language modeling emerges implicitly. LM rescoring is optional (and less effective).</p>
+
+            <p>Implication: fewer systems to maintain, fewer failure modes, better integration of acoustic and linguistic knowledge.</p>
+
+            <h3>Speech Foundation Models</h3>
+            <p>The progression:</p>
+            <ul style="margin-left: 2rem;">
+                <li><strong>wav2vec 2.0 (Facebook, 2020):</strong> Self-supervised, learns from raw waveforms. Showed that 100 hours of labeled speech + 53k hours unlabeled ≈ 960 hours labeled-only.</li>
+                <li><strong>HuBERT (Meta, 2021):</strong> Improves wav2vec using iterative clustering. More stable pretraining, better few-shot performance.</li>
+                <li><strong>WavLM (Microsoft, 2022):</strong> Adds speaker awareness. Can handle speaker adaptation and voice conversion tasks.</li>
+                <li><strong>data2vec (Meta, 2023):</strong> Simplifies HuBERT's complex clustering. Shows that masked prediction on ANY modality (speech, vision, text) works with the same objective.</li>
+            </ul>
+
+            <p><strong>Why foundation models matter:</strong> A pretrainer learns general speech structure. Fine-tuning on small datasets becomes feasible. Example: Swahili ASR with 10 hours of transcribed data + wav2vec pretraining achieves 20% WER (where-from-scratch would need 100+ hours).</p>
+
+            <h3>Streaming and Real-Time ASR</h3>
+            <p><strong>Emformer (Facebook):</strong> Efficient transformer for streaming. Key: left context of 50 frames (500ms), no future context. With intelligent caching, inference is 100ms per frame (10x realtime for an ASR frame every 10ms).</p>
+
+            <p><strong>FastConformer (NVIDIA):</strong> CNN + Conformer (self-attention) hybrid. Sub-100ms latency while maintaining Whisper-level accuracy.</p>
+
+            <p><strong>Limitation:</strong> Streaming models can't access future context, so they make mistakes that offline models would correct. Example: "I'll read it" might be misheard as "I'll red it" until the model sees future context that disambiguates.</p>
+
+            <h3>The Fairness Agenda</h3>
+            <p><strong>The accent gap:</strong> As shown in the Socratic Challenge, ASR systems systematically underperform on underrepresented populations. Whisper partly addresses this through scale and weak supervision, but the problem persists.</p>
+
+            <p><strong>CORAAL, FLEURS, and other corpora:</strong> New datasets explicitly focus on dialectal and accented speech. CORAAL (African American English), FLEURS (multilingual), CommonVoice (133 languages) are moving the needle.</p>
+
+            <p><strong>Metrics beyond WER:</strong> Research is shifting toward reporting per-group WER, WER disparity ratios (max WER / min WER), and confidence intervals. Some labs use "fairness accuracy" — accuracy on the hardest demographic group.</p>
+
+            <p><strong>Adaptation:</strong> Test-time adaptation becomes crucial. If deployed in a hospital with many AAE speakers, the system should detect this and adapt its model (via fine-tuning or speaker-dependent features).</p>
+        </section>
+
+        <!-- Section 7: History -->
+        <section id="history">
+            <h2>Historical Context: The Road to Modern ASR</h2>
+            <p>Understanding where ASR came from helps us appreciate its accomplishments and understand its limitations.</p>
+
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span>1920s: Radio Rex — The First Speech-Recognizing Toy</span>
+                    <span class="collapsible-toggle">▼</span>
+                </div>
+                <div class="collapsible-content">
+                    <p>Radio Rex was a toy dog that responded to a whistle by jumping out of a doghouse. The "speech recognition" was actually a mechanical resonator tuned to 500 Hz (the resonance of a human whistle). When the right frequency was detected, a circuit closed and a spring was triggered. Not ASR as we know it, but a fun milestone showing humans were obsessed with machines that listen.</p>
+                </div>
+            </div>
+
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span>1952: Davis et al. at Bell Labs — Digit Recognition</span>
+                    <span class="collapsible-toggle">▼</span>
+                </div>
+                <div class="collapsible-content">
+                    <p>The first real ASR system recognized digits (0-9) spoken by a single speaker. The method: extract formant frequencies (peaks in the spectrum) and match them to templates. Accuracy: ~90% for single speaker. The insight: speech has structure (formants), and matching that structure works better than raw waveforms.</p>
+                </div>
+            </div>
+
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span>1968-1971: FFT, Cepstral Processing, LPC Coding Revolution</span>
+                    <span class="collapsible-toggle">▼</span>
+                </div>
+                <div class="collapsible-content">
+                    <p>Three key innovations: (1) the Fast Fourier Transform (FFT) made spectrum computation practical on computers. (2) Mel-frequency cepstral coefficients (MFCCs) — a psychoacoustically motivated feature that's closer to how humans hear than raw spectra. (3) Linear Predictive Coding (LPC) modeled speech as the output of an all-pole filter excited by either voiced or unvoiced sound. These features remained standard for 40+ years.</p>
+                </div>
+            </div>
+
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span>1971-1976: The ARPA Speech Understanding Research Program</span>
+                    <span class="collapsible-toggle">▼</span>
+                </div>
+                <div class="collapsible-content">
+                    <p>The U.S. Department of Defense funded a major initiative to build systems that could recognize continuous speech. CMU's Harpy system (1976) achieved the milestone of 1000-word vocabulary speech understanding in a limited domain (chess moves). Method: dynamic programming + acoustic models + grammar constraints. The limitation: built for a specific domain, hand-coded grammars, not general.</p>
+                </div>
+            </div>
+
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span>1975: Baker and Jelinek — HMMs Applied to Speech</span>
+                    <span class="collapsible-toggle">▼</span>
+                </div>
+                <div class="collapsible-content">
+                    <p>Hidden Markov Models, developed by Rabiner and colleagues, were adapted for speech by Fred Jelinek at IBM. The HMM-based approach became the standard for 30+ years. Each phoneme is an HMM state; acoustic features are assumed drawn from a Gaussian or mixture-of-Gaussians. Inference: Viterbi decoding finds the most likely phoneme sequence. Innovation: MLE training made it data-driven, not hand-coded.</p>
+                </div>
+            </div>
+
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span>1989: TDNN — Waibel's First Convolutional Network for Speech</span>
+                    <span class="collapsible-toggle">▼</span>
+                </div>
+                <div class="collapsible-content">
+                    <p>Alex Waibel introduced Time Delay Neural Networks (TDNNs) for phoneme recognition. The idea: stack fully-connected layers with delays, creating a convolutional structure. This was the first deep learning approach to speech, 25 years before it became mainstream. Performance: slightly worse than HMMs, but showed promise. Limitation: computational cost prevented adoption until GPUs became common.</p>
+                </div>
+            </div>
+
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span>2006: Graves and Schmidhuber — CTC</span>
+                    <span class="collapsible-toggle">▼</span>
+                </div>
+                <div class="collapsible-content">
+                    <p>Alex Graves introduced Connectionist Temporal Classification, allowing RNNs to be trained end-to-end on speech without alignment information. CTC automatically learns where in the utterance each character should be emitted. Game-changer: you no longer need hand-labeled phoneme alignments. Just transcripts. Combined with LSTMs, CTC-based systems gradually replaced HMMs.</p>
+                </div>
+            </div>
+
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span>2014-2016: Listen, Attend, and Spell (LAS) — Encoder-Decoder ASR</span>
+                    <span class="collapsible-toggle">▼</span>
+                </div>
+                <div class="collapsible-content">
+                    <p>William Chan at Google introduced LAS (also called Attention-based Encoder-Decoder). Instead of predicting frame-by-frame like CTC, the encoder processes the entire utterance, then the decoder generates the transcript character-by-character, attending to different frames. Advantage: can model variable-length inputs and outputs elegantly. LAS matched state-of-art HMM systems and opened the door to modern end-to-end ASR.</p>
+                </div>
+            </div>
+
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span>2020-2021: wav2vec 2.0 and HuBERT — Self-Supervised Speech Revolution</span>
+                    <span class="collapsible-toggle">▼</span>
+                </div>
+                <div class="collapsible-content">
+                    <p>Meta (Facebook) released wav2vec 2.0, which learns speech representations by predicting masked segments (like BERT for speech). HuBERT refined this with iterative clustering. Game-changer: you no longer need transcripts for pretraining, only raw speech. Fine-tuning on small labeled datasets becomes viable. This approach proved especially valuable for low-resource languages.</p>
+                </div>
+            </div>
+
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span>2022-2023: Whisper and Beyond — Weak Supervision at Scale</span>
+                    <span class="collapsible-toggle">▼</span>
+                </div>
+                <div class="collapsible-content">
+                    <p>OpenAI's Whisper trained on 680,000 hours of web speech + captions (weakly supervised, imperfect labels but massive scale). Despite weak labels, strong cross-lingual transfer: Whisper-base achieves competitive WER across 99 languages. Lesson: sometimes weak + huge beats clean + small. Challenges: still struggles with underrepresented accents (the "accent gap") and exhibits significant disparate impact.</p>
+                </div>
+            </div>
+
+            <h3>Key Takeaways</h3>
+            <ul style="margin-left: 2rem;">
+                <li><strong>Features matter:</strong> From formants → MFCCs → learned representations. Each generation captured more structure.</li>
+                <li><strong>Supervision matters:</strong> Manual alignments → transcripts → weak labels → raw speech. As annotation requirements decreased, scale could increase.</li>
+                <li><strong>End-to-end paradigm:</strong> Replaced cascaded pipeline (acoustic model + phoneme model + language model) with unified encoder-decoder.</li>
+                <li><strong>Scale and diversity:</strong> Modern models (Whisper, USM) rely on massive, diverse data. But diversity itself is still inadequate — underrepresented populations suffer.</li>
+            </ul>
+        </section>
+
+        <!-- Footer -->
+        <footer>
+            <p>Chapter 15: Automatic Speech Recognition — Speech and Language Processing (3rd Ed.) by Jurafsky & Martin</p>
+            <p style="margin-top: 1rem; font-size: 0.85rem;">
+                Interactive visualizers and code examples created for pedagogical purposes. All mathematical equations follow the textbook notation.
+            </p>
+        </footer>
+    </main>
+
+    <!-- JavaScript for Interactivity -->
+    <script>
+        // Scroll-reveal animation with IntersectionObserver
+        const sections = document.querySelectorAll('section');
+        const navLinks = document.querySelectorAll('.nav-link');
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        sections.forEach(section => {
+            observer.observe(section);
+        });
+
+        // Smooth scrolling and active nav link
+        document.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (pageYOffset >= sectionTop - 200) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href').slice(1) === current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+
+        // Smooth scroll for nav links
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetId = link.getAttribute('href').slice(1);
+                const targetSection = document.getElementById(targetId);
+                if (targetSection) {
+                    targetSection.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+
+        // Tab switching
+        function switchTab(evt, tabName) {
+            const tabcontents = document.getElementsByClassName('tab-content');
+            for (let i = 0; i < tabcontents.length; i++) {
+                tabcontents[i].classList.remove('active');
+            }
+
+            const tabbtns = document.getElementsByClassName('tab-btn');
+            for (let i = 0; i < tabbtns.length; i++) {
+                tabbtns[i].classList.remove('active');
+            }
+
+            document.getElementById(tabName).classList.add('active');
+            evt.currentTarget.classList.add('active');
+        }
+
+        // Copy code blocks
+        function copyCode(btn) {
+            const codeBlock = btn.parentElement.parentElement;
+            const codeText = codeBlock.innerText.replace(/^\d+\s+/gm, '');
+            navigator.clipboard.writeText(codeText).then(() => {
+                const originalText = btn.innerText;
+                btn.innerText = 'Copied!';
+                setTimeout(() => { btn.innerText = originalText; }, 2000);
+            });
+        }
+
+        // Collapsible sections
+        const collapsibleHeaders = document.querySelectorAll('.collapsible-header');
+        collapsibleHeaders.forEach(header => {
+            header.addEventListener('click', function() {
+                const content = this.nextElementSibling;
+                const toggle = this.querySelector('.collapsible-toggle');
+                content.classList.toggle('open');
+                toggle.classList.toggle('open');
+            });
+        });
+
+        // ============= Visualizer 1: 1D Convolution =============
+        const conv1dCanvas = document.getElementById('conv1dCanvas');
+        const conv1dCtx = conv1dCanvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+
+        // Scale canvas for DPR
+        conv1dCanvas.width *= dpr;
+        conv1dCanvas.height *= dpr;
+        conv1dCtx.scale(dpr, dpr);
+        const displayWidth = conv1dCanvas.width / dpr;
+        const displayHeight = conv1dCanvas.height / dpr;
+
+        let conv1dState = {
+            inputSignal: generateSinusoid(20, 0),
+            kernelWidth: 3,
+            stride: 1,
+        };
+
+        function generateSinusoid(length, phase) {
+            const signal = [];
+            for (let i = 0; i < length; i++) {
+                signal.push(Math.sin((i + phase) * Math.PI / 5) + Math.random() * 0.2);
+            }
+            return signal;
+        }
+
+        function drawConv1D() {
+            conv1dCtx.fillStyle = 'var(--bg-card)';
+            conv1dCtx.fillRect(0, 0, displayWidth, displayHeight);
+
+            const { inputSignal, kernelWidth, stride } = conv1dState;
+            const padding = Math.floor((kernelWidth - 1) / 2);
+            const paddedSignal = Array(padding).fill(0).concat(inputSignal).concat(Array(padding).fill(0));
+            const outputLen = Math.floor((paddedSignal.length - kernelWidth) / stride) + 1;
+
+            const margin = 50;
+            const graphWidth = displayWidth - 2 * margin;
+            const graphHeight = 200;
+            const scaleX = graphWidth / Math.max(paddedSignal.length, outputLen + 5);
+            const scaleY = 60;
+
+            // Draw input signal
+            conv1dCtx.strokeStyle = '#3b82f6';
+            conv1dCtx.lineWidth = 2;
+            conv1dCtx.beginPath();
+            for (let i = 0; i < paddedSignal.length; i++) {
+                const x = margin + i * scaleX;
+                const y = margin + graphHeight - (paddedSignal[i] + 1) * scaleY;
+                if (i === 0) conv1dCtx.moveTo(x, y);
+                else conv1dCtx.lineTo(x, y);
+            }
+            conv1dCtx.stroke();
+
+            // Compute and draw output
+            const kernel = Array(kernelWidth).fill(1 / kernelWidth);
+            const output = [];
+            for (let j = 0; j < outputLen; j++) {
+                let sum = 0;
+                for (let k = 0; k < kernelWidth; k++) {
+                    sum += paddedSignal[j * stride + k] * kernel[k];
+                }
+                output.push(sum);
+            }
+
+            // Draw output signal
+            conv1dCtx.strokeStyle = '#10b981';
+            conv1dCtx.lineWidth = 2;
+            conv1dCtx.beginPath();
+            for (let i = 0; i < output.length; i++) {
+                const x = margin + i * scaleX;
+                const y = margin + graphHeight + 50 - (output[i] + 1) * scaleY;
+                if (i === 0) conv1dCtx.moveTo(x, y);
+                else conv1dCtx.lineTo(x, y);
+            }
+            conv1dCtx.stroke();
+
+            // Labels
+            conv1dCtx.fillStyle = '#cbd5e1';
+            conv1dCtx.font = '12px Inter';
+            conv1dCtx.fillText('Input Signal', margin, 30);
+            conv1dCtx.fillText('Output Signal', margin, 180);
+
+            // Update info
+            document.getElementById('conv1dOutputShape').textContent = `(${outputLen} frames)`;
+            document.getElementById('conv1dReceptiveField').textContent = `${kernelWidth} frames`;
+        }
+
+        document.getElementById('conv1dKernelWidth').addEventListener('change', (e) => {
+            conv1dState.kernelWidth = parseInt(e.target.value);
+            document.getElementById('conv1dKernelWidthValue').textContent = e.target.value;
+            drawConv1D();
+        });
+
+        document.getElementById('conv1dStride').addEventListener('change', (e) => {
+            conv1dState.stride = parseInt(e.target.value);
+            document.getElementById('conv1dStrideValue').textContent = e.target.value;
+            drawConv1D();
+        });
+
+        function resetConv1D() {
+            conv1dState.kernelWidth = 3;
+            conv1dState.stride = 1;
+            document.getElementById('conv1dKernelWidth').value = 3;
+            document.getElementById('conv1dStride').value = 1;
+            document.getElementById('conv1dKernelWidthValue').textContent = '3';
+            document.getElementById('conv1dStrideValue').textContent = '1';
+            drawConv1D();
+        }
+
+        drawConv1D();
+
+        // ============= Visualizer 2: CTC Alignment =============
+        const ctcCanvas = document.getElementById('ctcAlignmentCanvas');
+        const ctcCtx = ctcCanvas.getContext('2d');
+        ctcCanvas.width *= dpr;
+        ctcCanvas.height *= dpr;
+        ctcCtx.scale(dpr, dpr);
+        const ctcDisplayWidth = ctcCanvas.width / dpr;
+        const ctcDisplayHeight = ctcCanvas.height / dpr;
+
+        const idx2char = { 0: 'ε', 1: 'd', 2: 'i', 3: 'n', 4: 'e', 5: 'r', 6: 'h', 7: 'l', 8: 'o', 9: 's', 10: 'p', 11: 'c' };
+
+        let ctcState = {
+            word: 'dinner',
+            alignment: [],
+            frames: 14,
+        };
+
+        function drawCTCAlignment() {
+            const { word, alignment, frames } = ctcState;
+            const chars = word.split('');
+            const cellSize = 25;
+            const margin = 100;
+
+            ctcCtx.fillStyle = '#0f172a';
+            ctcCtx.fillRect(0, 0, ctcDisplayWidth, ctcDisplayHeight);
+
+            // Draw frame headers
+            ctcCtx.fillStyle = '#cbd5e1';
+            ctcCtx.font = '11px Inter';
+            ctcCtx.textAlign = 'center';
+            for (let f = 0; f < frames; f++) {
+                const x = margin + f * cellSize + cellSize / 2;
+                ctcCtx.fillText(f, x, 25);
+            }
+
+            // Draw character labels and grid
+            for (let i = 0; i < chars.length; i++) {
+                const y = margin + i * cellSize;
+                ctcCtx.fillText(chars[i], 40, y + cellSize / 2 + 5);
+
+                for (let f = 0; f < frames; f++) {
+                    const x = margin + f * cellSize;
+                    const isSelected = alignment.some(a => a.char === i && a.frame === f);
+
+                    ctcCtx.strokeStyle = isSelected ? '#ef4444' : '#334155';
+                    ctcCtx.lineWidth = isSelected ? 2 : 1;
+                    ctcCtx.fillStyle = isSelected ? 'rgba(239, 68, 68, 0.2)' : 'rgba(51, 65, 85, 0.1)';
+                    ctcCtx.fillRect(x, y, cellSize, cellSize);
+                    ctcCtx.strokeRect(x, y, cellSize, cellSize);
+                }
+            }
+
+            // Draw blank row
+            const blankY = margin + chars.length * cellSize;
+            ctcCtx.fillText('ε', 40, blankY + cellSize / 2 + 5);
+            for (let f = 0; f < frames; f++) {
+                const x = margin + f * cellSize;
+                const isSelected = alignment.some(a => a.char === -1 && a.frame === f);
+
+                ctcCtx.strokeStyle = isSelected ? '#ef4444' : '#334155';
+                ctcCtx.lineWidth = isSelected ? 2 : 1;
+                ctcCtx.fillStyle = isSelected ? 'rgba(239, 68, 68, 0.2)' : 'rgba(51, 65, 85, 0.1)';
+                ctcCtx.fillRect(x, blankY, cellSize, cellSize);
+                ctcCtx.strokeRect(x, blankY, cellSize, cellSize);
+            }
+
+            // Update collapsed output
+            updateCTCCollapsed();
+        }
+
+        function updateCTCCollapsed() {
+            const { word, alignment } = ctcState;
+            const chars = word.split('');
+
+            // Sort alignment by frame
+            const sortedAlignment = [...alignment].sort((a, b) => a.frame - b.frame);
+
+            // Collapse: remove consecutive duplicates and blanks
+            let collapsed = [];
+            let prevChar = null;
+            for (const { char } of sortedAlignment) {
+                if (char !== prevChar && char !== -1) {
+                    if (char >= 0) {
+                        collapsed.push(chars[char]);
+                    }
+                }
+                prevChar = char;
+            }
+
+            const rawStr = sortedAlignment.map(a => a.char === -1 ? 'ε' : chars[a.char]).join(' ');
+            document.getElementById('ctcRawAlignment').textContent = rawStr || '-';
+            document.getElementById('ctcCollapsed').textContent = collapsed.join('') || '-';
+        }
+
+        ctcCanvas.addEventListener('click', (e) => {
+            const { word } = ctcState;
+            const chars = word.split('');
+            const cellSize = 25;
+            const margin = 100;
+
+            const rect = ctcCanvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / (rect.width / (ctcDisplayWidth * dpr)) * dpr;
+            const y = (e.clientY - rect.top) / (rect.height / (ctcDisplayHeight * dpr)) * dpr;
+
+            const frameIdx = Math.floor((x - margin) / cellSize);
+            const charIdx = Math.floor((y - margin) / cellSize);
+
+            if (frameIdx >= 0 && frameIdx < ctcState.frames && charIdx >= -1 && charIdx < chars.length + 1) {
+                const char = charIdx === chars.length ? -1 : charIdx;
+                const existing = ctcState.alignment.find(a => a.frame === frameIdx && a.char === char);
+                if (existing) {
+                    ctcState.alignment = ctcState.alignment.filter(a => !(a.frame === frameIdx && a.char === char));
+                } else {
+                    ctcState.alignment.push({ frame: frameIdx, char });
+                }
+                drawCTCAlignment();
+            }
+        });
+
+        function updateCTCWord() {
+            const newWord = document.getElementById('ctcWordSelect').value;
+            ctcState.word = newWord;
+            ctcState.alignment = [];
+            drawCTCAlignment();
+        }
+
+        function presetCTCAlignment1() {
+            const { word } = ctcState;
+            const chars = word.split('');
+            const presets = {
+                'dinner': [
+                    { frame: 0, char: 0 }, { frame: 1, char: 1 }, { frame: 2, char: -1 },
+                    { frame: 3, char: 2 }, { frame: 4, char: 2 }, { frame: 5, char: -1 },
+                    { frame: 6, char: 2 }, { frame: 7, char: 3 }, { frame: 8, char: 4 },
+                    { frame: 9, char: 4 }, { frame: 10, char: 4 }, { frame: 11, char: -1 },
+                    { frame: 12, char: -1 }, { frame: 13, char: -1 }
+                ],
+                'hello': [
+                    { frame: 0, char: 0 }, { frame: 1, char: 1 }, { frame: 2, char: -1 },
+                    { frame: 3, char: 2 }, { frame: 4, char: 2 }, { frame: 5, char: -1 },
+                    { frame: 6, char: 2 }, { frame: 7, char: 3 }, { frame: 8, char: 4 },
+                    { frame: 9, char: -1 }, { frame: 10, char: -1 }, { frame: 11, char: -1 },
+                    { frame: 12, char: -1 }, { frame: 13, char: -1 }
+                ],
+                'speech': [
+                    { frame: 0, char: 0 }, { frame: 1, char: 1 }, { frame: 2, char: -1 },
+                    { frame: 3, char: 2 }, { frame: 4, char: 2 }, { frame: 5, char: -1 },
+                    { frame: 6, char: 2 }, { frame: 7, char: 3 }, { frame: 8, char: 4 },
+                    { frame: 9, char: -1 }, { frame: 10, char: -1 }, { frame: 11, char: -1 },
+                    { frame: 12, char: -1 }, { frame: 13, char: -1 }
+                ]
+            };
+            ctcState.alignment = presets[word] || [];
+            drawCTCAlignment();
+        }
+
+        function presetCTCAlignment2() {
+            const { word } = ctcState;
+            const chars = word.split('');
+            // Different alignment for same output
+            ctcState.alignment = [];
+            for (let i = 0; i < chars.length; i++) {
+                ctcState.alignment.push({ frame: i * 2, char: i });
+            }
+            drawCTCAlignment();
+        }
+
+        function presetCTCAlignment3() {
+            const { word } = ctcState;
+            // Tightly packed alignment
+            ctcState.alignment = [];
+            const chars = word.split('');
+            for (let i = 0; i < Math.min(chars.length, 10); i++) {
+                ctcState.alignment.push({ frame: i, char: i });
+            }
+            drawCTCAlignment();
+        }
+
+        function resetCTC() {
+            ctcState.alignment = [];
+            drawCTCAlignment();
+        }
+
+        drawCTCAlignment();
+
+        // ============= Visualizer 3: K-Means =============
+        const kmeansCanvas = document.getElementById('kmeansCanvas');
+        const kmeansCtx = kmeansCanvas.getContext('2d');
+        kmeansCanvas.width *= dpr;
+        kmeansCanvas.height *= dpr;
+        kmeansCtx.scale(dpr, dpr);
+        const kmeansDisplayWidth = kmeansCanvas.width / dpr;
+        const kmeansDisplayHeight = kmeansCanvas.height / dpr;
+
+        let kmeansState = {
+            points: [],
+            centroids: [],
+            k: 3,
+            iteration: 0,
+            reassignedCount: 0,
+        };
+
+        function initKmeans() {
+            const { k } = kmeansState;
+            kmeansState.points = [];
+            for (let i = 0; i < 50; i++) {
+                kmeansState.points.push({
+                    x: Math.random() * (kmeansDisplayWidth - 200) + 100,
+                    y: Math.random() * (kmeansDisplayHeight - 200) + 100,
+                    cluster: 0
+                });
+            }
+
+            kmeansState.centroids = [];
+            for (let i = 0; i < k; i++) {
+                kmeansState.centroids.push({
+                    x: Math.random() * (kmeansDisplayWidth - 200) + 100,
+                    y: Math.random() * (kmeansDisplayHeight - 200) + 100,
+                });
+            }
+
+            kmeansState.iteration = 0;
+            kmeansState.reassignedCount = 0;
+            drawKmeans();
+        }
+
+        function drawKmeans() {
+            const { points, centroids } = kmeansState;
+            const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
+
+            kmeansCtx.fillStyle = '#0f172a';
+            kmeansCtx.fillRect(0, 0, kmeansDisplayWidth, kmeansDisplayHeight);
+
+            // Draw points
+            for (const point of points) {
+                kmeansCtx.fillStyle = colors[point.cluster % colors.length];
+                kmeansCtx.beginPath();
+                kmeansCtx.arc(point.x, point.y, 5, 0, 2 * Math.PI);
+                kmeansCtx.fill();
+            }
+
+            // Draw centroids
+            for (let i = 0; i < centroids.length; i++) {
+                kmeansCtx.fillStyle = colors[i % colors.length];
+                kmeansCtx.beginPath();
+                kmeansCtx.arc(centroids[i].x, centroids[i].y, 12, 0, 2 * Math.PI);
+                kmeansCtx.fill();
+
+                kmeansCtx.strokeStyle = '#f1f5f9';
+                kmeansCtx.lineWidth = 2;
+                kmeansCtx.stroke();
+            }
+
+            document.getElementById('kmeansIterationCount').textContent = kmeansState.iteration;
+            document.getElementById('kmeansReassigned').textContent = kmeansState.reassignedCount;
+        }
+
+        function kmeansStep() {
+            const { points, centroids, k } = kmeansState;
+
+            // Assignment step
+            let reassigned = 0;
+            for (const point of points) {
+                let minDist = Infinity;
+                let bestCluster = 0;
+                for (let i = 0; i < k; i++) {
+                    const dist = Math.hypot(point.x - centroids[i].x, point.y - centroids[i].y);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        bestCluster = i;
+                    }
+                }
+                if (bestCluster !== point.cluster) {
+                    reassigned++;
+                }
+                point.cluster = bestCluster;
+            }
+
+            // Re-estimation step
+            for (let i = 0; i < k; i++) {
+                const cluster_points = points.filter(p => p.cluster === i);
+                if (cluster_points.length > 0) {
+                    const sumX = cluster_points.reduce((s, p) => s + p.x, 0);
+                    const sumY = cluster_points.reduce((s, p) => s + p.y, 0);
+                    centroids[i].x = sumX / cluster_points.length;
+                    centroids[i].y = sumY / cluster_points.length;
+                }
+            }
+
+            kmeansState.iteration++;
+            kmeansState.reassignedCount = reassigned;
+            drawKmeans();
+        }
+
+        document.getElementById('kmeansK').addEventListener('change', (e) => {
+            kmeansState.k = parseInt(e.target.value);
+            document.getElementById('kmeansKValue').textContent = e.target.value;
+            initKmeans();
+        });
+
+        function resetKmeans() {
+            initKmeans();
+        }
+
+        initKmeans();
+
+        // ============= Visualizer 4: WER Calculator =============
+        function computeWER() {
+            const reference = document.getElementById('werReference').value.trim().toLowerCase().split(/\s+/);
+            const hypothesis = document.getElementById('werHypothesis').value.trim().toLowerCase().split(/\s+/);
+
+            if (reference.length === 0) {
+                document.getElementById('werResult').innerHTML = '<div class="wer-result error"><p>Reference cannot be empty</p></div>';
+                return;
+            }
+
+            // Compute edit distance with alignment
+            const m = reference.length;
+            const n = hypothesis.length;
+            const dp = Array(m + 1).fill(0).map(() => Array(n + 1).fill(0));
+            const op = Array(m + 1).fill(0).map(() => Array(n + 1).fill(''));
+
+            for (let i = 0; i <= m; i++) dp[i][0] = i;
+            for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+            for (let i = 1; i <= m; i++) {
+                for (let j = 1; j <= n; j++) {
+                    if (reference[i - 1] === hypothesis[j - 1]) {
+                        dp[i][j] = dp[i - 1][j - 1];
+                        op[i][j] = 'M';
+                    } else {
+                        const sub = dp[i - 1][j - 1] + 1;
+                        const del = dp[i - 1][j] + 1;
+                        const ins = dp[i][j - 1] + 1;
+                        const min = Math.min(sub, del, ins);
+                        dp[i][j] = min;
+                        if (min === sub) op[i][j] = 'S';
+                        else if (min === del) op[i][j] = 'D';
+                        else op[i][j] = 'I';
+                    }
+                }
+            }
+
+            // Traceback
+            let alignment = [];
+            let i = m, j = n;
+            while (i > 0 || j > 0) {
+                if (i === 0) {
+                    alignment.push({ ref: '-', hyp: hypothesis[j - 1], op: 'I' });
+                    j--;
+                } else if (j === 0) {
+                    alignment.push({ ref: reference[i - 1], hyp: '-', op: 'D' });
+                    i--;
+                } else if (op[i][j] === 'M') {
+                    alignment.push({ ref: reference[i - 1], hyp: hypothesis[j - 1], op: 'M' });
+                    i--; j--;
+                } else if (op[i][j] === 'S') {
+                    alignment.push({ ref: reference[i - 1], hyp: hypothesis[j - 1], op: 'S' });
+                    i--; j--;
+                } else if (op[i][j] === 'D') {
+                    alignment.push({ ref: reference[i - 1], hyp: '-', op: 'D' });
+                    i--;
+                } else {
+                    alignment.push({ ref: '-', hyp: hypothesis[j - 1], op: 'I' });
+                    j--;
+                }
+            }
+
+            alignment.reverse();
+
+            const numSubs = alignment.filter(a => a.op === 'S').length;
+            const numDels = alignment.filter(a => a.op === 'D').length;
+            const numIns = alignment.filter(a => a.op === 'I').length;
+            const totalWords = m;
+
+            const wer = (numSubs + numDels + numIns) / totalWords * 100;
+
+            let alignmentHTML = '<table style="margin-top: 1rem; width: 100%; text-align: center;"><tr><th>Reference</th><th>Hypothesis</th><th>Operation</th></tr>';
+            alignment.forEach(a => {
+                const opColor = a.op === 'M' ? 'green' : a.op === 'S' ? 'red' : a.op === 'D' ? 'orange' : 'blue';
+                alignmentHTML += `<tr style="color: ${opColor};"><td>${a.ref}</td><td>${a.hyp}</td><td>${a.op}</td></tr>`;
+            });
+            alignmentHTML += '</table>';
+
+            const resultHTML = `
+                <div class="wer-result">
+                    <p><strong>Word Error Rate (WER)</strong></p>
+                    <div class="wer-value">${wer.toFixed(2)}%</div>
+                    <p style="margin: 0.5rem 0; font-size: 0.95rem;">
+                        Substitutions: ${numSubs} | Deletions: ${numDels} | Insertions: ${numIns} | Total Words: ${totalWords}
+                    </p>
+                    <p style="margin-top: 0.5rem; font-size: 0.9rem; color: var(--text-secondary);">
+                        WER = (${numSubs} + ${numDels} + ${numIns}) / ${totalWords} × 100
+                    </p>
+                    ${alignmentHTML}
+                </div>
+            `;
+
+            document.getElementById('werResult').innerHTML = resultHTML;
+        }
+
+        // KaTeX auto-render
+        document.addEventListener('DOMContentLoaded', function() {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false }
+                ]
+            });
+        });
+    </script>
+</body>
+</html>
+
+
+Let me continue writing the HTML file since it was cut off:

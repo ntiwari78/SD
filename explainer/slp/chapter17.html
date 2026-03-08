@@ -1,0 +1,1531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 17: Sequence Labeling for POS and NER</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <script>
+    MathJax = {
+      tex: { inlineMath: [['$','$'],['\\(','\\)']], displayMath: [['$$','$$'],['\\[','\\]']] },
+      svg: { fontCache: 'global' }
+    };
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg-full.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            line-height: 1.6;
+        }
+
+        .sticky-nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: #0f172a;
+            border-bottom: 1px solid #334155;
+            padding: 1rem 2rem;
+            display: flex;
+            gap: 2rem;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .sticky-nav a {
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 600;
+            white-space: nowrap;
+            transition: color 0.3s;
+            border-bottom: 2px solid transparent;
+            padding-bottom: 0.25rem;
+        }
+
+        .sticky-nav a:hover, .sticky-nav a.active {
+            color: #f59e0b;
+            border-bottom-color: #f59e0b;
+        }
+
+        main {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        section {
+            margin-bottom: 4rem;
+            opacity: 0;
+            animation: slideUp 0.6s ease-out forwards;
+        }
+
+        section.revealed {
+            opacity: 1;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            color: #f1f5f9;
+            font-weight: 700;
+        }
+
+        h2 {
+            font-size: 1.875rem;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: #f59e0b;
+            font-weight: 700;
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: #0ea5e9;
+            font-weight: 600;
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: #cbd5e1;
+            line-height: 1.8;
+        }
+
+        .subtitle {
+            font-size: 1.125rem;
+            color: #94a3b8;
+            margin-bottom: 2rem;
+            font-weight: 500;
+        }
+
+        .card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .card:hover {
+            border-color: #f59e0b;
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+        }
+
+        .card.accent-amber {
+            border-left: 4px solid #f59e0b;
+        }
+
+        .card.accent-sky {
+            border-left: 4px solid #0ea5e9;
+        }
+
+        .card.accent-lime {
+            border-left: 4px solid #84cc16;
+        }
+
+        .equation {
+            background: #0f172a;
+            border-left: 3px solid #0ea5e9;
+            padding: 1rem;
+            margin: 1.5rem 0;
+            border-radius: 0.25rem;
+            overflow-x: auto;
+        }
+
+        .code-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #334155;
+            flex-wrap: wrap;
+        }
+
+        .code-tab {
+            padding: 0.75rem 1rem;
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.875rem;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .code-tab.active {
+            color: #f59e0b;
+            border-bottom-color: #f59e0b;
+        }
+
+        .code-tab:hover {
+            color: #cbd5e1;
+        }
+
+        .code-block {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            overflow-x: auto;
+            position: relative;
+            margin-bottom: 1.5rem;
+            display: none;
+        }
+
+        .code-block.active {
+            display: block;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            padding: 0.5rem 0.75rem;
+            background: #334155;
+            border: 1px solid #475569;
+            color: #cbd5e1;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .copy-btn:hover {
+            background: #f59e0b;
+            color: #0f172a;
+            border-color: #f59e0b;
+        }
+
+        code {
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            color: #e2e8f0;
+        }
+
+        pre {
+            margin: 0;
+        }
+
+        .interactive-box {
+            background: #1e293b;
+            border: 2px solid #0ea5e9;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            margin: 1.5rem 0;
+        }
+
+        .interactive-box h3 {
+            margin-top: 0;
+            color: #0ea5e9;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 0.75rem;
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: #e2e8f0;
+            border-radius: 0.25rem;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.875rem;
+            min-height: 3rem;
+            resize: vertical;
+            margin-bottom: 1rem;
+        }
+
+        .word-cards {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin: 1rem 0;
+        }
+
+        .word-card {
+            background: #0f172a;
+            border: 2px solid #334155;
+            padding: 0.75rem 1rem;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            user-select: none;
+        }
+
+        .word-card:hover {
+            border-color: #0ea5e9;
+        }
+
+        .word-card.tagged {
+            border-color: #f59e0b;
+            color: #f59e0b;
+        }
+
+        .tag-label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 0.25rem;
+            font-weight: 400;
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            background: #f59e0b;
+            color: #0f172a;
+            border: none;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.875rem;
+            transition: all 0.3s;
+            margin-top: 1rem;
+        }
+
+        button:hover {
+            background: #fbbf24;
+            transform: translateY(-2px);
+        }
+
+        .toggle-btn {
+            background: #334155;
+            color: #e2e8f0;
+            padding: 0.5rem 1rem;
+            font-size: 0.75rem;
+            margin-top: 0;
+        }
+
+        .toggle-btn:hover {
+            background: #475569;
+        }
+
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .collapsible-content.open {
+            max-height: 2000px;
+        }
+
+        .timeline {
+            position: relative;
+            padding: 1rem 0;
+        }
+
+        .timeline-item {
+            padding-left: 2.5rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 0.375rem;
+            top: 0;
+            width: 0.75rem;
+            height: 0.75rem;
+            background: #f59e0b;
+            border-radius: 50%;
+            border: 2px solid #0f172a;
+        }
+
+        .timeline-item:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            left: 0.75rem;
+            top: 0.75rem;
+            width: 2px;
+            height: calc(100% + 1.5rem);
+            background: #334155;
+        }
+
+        .timeline-year {
+            font-weight: 700;
+            color: #f59e0b;
+            font-size: 0.875rem;
+        }
+
+        .timeline-content {
+            color: #cbd5e1;
+            font-size: 0.9rem;
+        }
+
+        canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+
+        th {
+            background: #1e293b;
+            color: #f59e0b;
+            padding: 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #334155;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #334155;
+            color: #cbd5e1;
+        }
+
+        tr:hover {
+            background: #1e293b;
+        }
+
+        .stat-box {
+            display: inline-block;
+            background: #1e293b;
+            border-left: 3px solid #84cc16;
+            padding: 1rem;
+            margin: 0.5rem;
+            border-radius: 0.25rem;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #84cc16;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 0.25rem;
+        }
+
+        .feature-list {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 0.25rem;
+            padding: 1rem;
+            margin: 1rem 0;
+            font-size: 0.875rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .feature-item {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #334155;
+            font-family: 'Monaco', 'Courier New', monospace;
+            color: #0ea5e9;
+        }
+
+        .feature-item:last-child {
+            border-bottom: none;
+        }
+
+        .feature-item.active {
+            color: #f59e0b;
+            background: #0f172a;
+            padding: 0.5rem;
+            margin: 0 -1rem;
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
+        .bio-display {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.75rem;
+            margin: 1rem 0;
+        }
+
+        .bio-cell {
+            background: #0f172a;
+            border: 1px solid #334155;
+            padding: 0.75rem;
+            border-radius: 0.25rem;
+            text-align: center;
+            font-size: 0.75rem;
+        }
+
+        .bio-word {
+            font-weight: 600;
+            color: #cbd5e1;
+            margin-bottom: 0.25rem;
+        }
+
+        .bio-tag {
+            font-family: 'Monaco', 'Courier New', monospace;
+            color: #0ea5e9;
+            font-size: 0.7rem;
+        }
+
+        .bio-tag.b-tag {
+            color: #f59e0b;
+        }
+
+        .bio-tag.i-tag {
+            color: #84cc16;
+        }
+
+        .bio-tag.o-tag {
+            color: #94a3b8;
+        }
+
+        .highlight {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+        }
+
+        .note {
+            background: rgba(14, 165, 233, 0.1);
+            border-left: 3px solid #0ea5e9;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 0.25rem;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 1.875rem; }
+            h2 { font-size: 1.5rem; }
+            main { padding: 1rem; }
+            .sticky-nav { padding: 0.75rem 1rem; gap: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="sticky-nav">
+        <a href="#feynman" class="nav-link active">Feynman Bridge</a>
+        <a href="#technical" class="nav-link">Technical Ascent</a>
+        <a href="#code" class="nav-link">Code</a>
+        <a href="#socratic" class="nav-link">Socratic Challenge</a>
+        <a href="#modern" class="nav-link">Modern Bridge</a>
+        <a href="#history" class="nav-link">History</a>
+    </nav>
+
+    <main>
+        <section id="feynman">
+            <h1>Chapter 17: Sequence Labeling for Parts of Speech and Named Entities</h1>
+            <p class="subtitle">From Understanding Text to Labeling It</p>
+
+            <div class="card accent-amber">
+                <h3>What You'll Learn</h3>
+                <p>We've traveled through transformers and LLMs (Ch 7–9) and learned how RNNs process sequences (Ch 13). Now we zoom into a fundamental task at the heart of natural language understanding: <strong>assigning a label to every word</strong> in a sentence.</p>
+                <p>Imagine you're a postal worker sorting mail. Each letter (word) needs exactly one bin (label). Part-of-Speech (POS) tagging sorts words into grammatical bins—noun, verb, adjective, adverb, etc. Named Entity Recognition (NER) is like highlighting proper nouns with colored markers: yellow for persons, blue for locations, green for organizations.</p>
+                <p>These are <strong>sequence labeling</strong> tasks: the output has exactly the same length as the input. And while they seem simple, they're surprisingly tricky. Ambiguity is everywhere—the word "back" can be a noun, verb, adjective, adverb, or particle depending on context. Yet modern systems achieve ~97% accuracy, rivaling human annotators.</p>
+            </div>
+
+            <div class="card accent-sky">
+                <h3>Why It Matters</h3>
+                <p><strong>POS tagging</strong> is a pipeline component for downstream tasks like syntactic parsing, chunking, and dependency parsing. Even at 97% accuracy, a 500-word document has ~15 errors—and these compound in later stages.</p>
+                <p><strong>Named Entity Recognition</strong> powers information extraction, question answering, and knowledge base construction. Recognizing that "Apple" is a company (not a fruit) in "Apple announced Q4 earnings" is crucial.</p>
+                <p>Both tasks are now typically solved with Transformer models fine-tuned on task-specific data, but the probabilistic foundations—HMMs and Conditional Random Fields—remain essential for understanding why these models work and how to debug them.</p>
+            </div>
+        </section>
+
+        <section id="technical">
+            <h2>Technical Ascent</h2>
+
+            <h3>17.1 English Word Classes</h3>
+            <p>English words fall into two main categories:</p>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Examples</th>
+                            <th>Defining Property</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Open Classes</strong></td>
+                            <td>nouns, verbs, adjectives, adverbs</td>
+                            <td>New words added regularly (e.g., "selfie", "blockchain")</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Closed Classes</strong></td>
+                            <td>determiners, pronouns, prepositions, conjunctions, auxiliaries, particles</td>
+                            <td>Fixed membership; rarely change</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p>The <strong>Penn Treebank tagset</strong> has 36 POS tags. Examples:</p>
+            <ul style="margin-left: 2rem; margin-bottom: 1rem;">
+                <li>NN (noun, singular), NNS (noun, plural), NNP (proper noun, singular), NNPS (proper noun, plural)</li>
+                <li>VB (verb, base), VBD (verb, past), VBG (verb, gerund), VBN (verb, past participle)</li>
+                <li>JJ (adjective), RB (adverb), PRP (pronoun, personal), DT (determiner)</li>
+            </ul>
+
+            <p>The <strong>Universal Dependencies tagset</strong> harmonizes POS tags across 100+ languages with just 17 universal tags (NOUN, VERB, ADJ, ADV, DET, PRON, ADP, CCONJ, SCONJ, INTJ, PART, NUM, SYM, X).</p>
+
+            <p><strong>Ambiguity in POS:</strong> While only 14–15% of word types (unique words) are ambiguous, roughly 55–67% of word tokens (actual occurrences) are ambiguous. The word "can" is both a modal verb (NN: tin can) and a verb (VB: they can run). Context is essential.</p>
+
+            <h3>17.2 Part-of-Speech Tagging Problem</h3>
+            <p><strong>Input:</strong> A sequence of words $x_1, x_2, \ldots, x_n$</p>
+            <p><strong>Output:</strong> A sequence of tags $y_1, y_2, \ldots, y_n$ where each $y_i \in \mathcal{T}$ (the tag inventory)</p>
+            <p><strong>Goal:</strong> Find the tag sequence that is most likely given the word sequence:</p>
+
+            <div class="equation">
+                $$\hat{y}_{1:n} = \arg\max_{y_1 \ldots y_n} P(y_1 \ldots y_n | x_1 \ldots x_n)$$
+            </div>
+
+            <p><strong>State-of-the-art accuracy:</strong> ~97% across many algorithms (HMMs, MEMMs, CRFs, neural networks, Transformers).</p>
+            <p><strong>Baseline:</strong> Most-frequent-class tagger (assign each word its most common tag) achieves ~92% accuracy—showing that a small 5% improvement requires careful modeling.</p>
+
+            <h3>17.3 Named Entity Recognition</h3>
+            <p>NER identifies and classifies named entities (persons, organizations, locations, etc.) within text.</p>
+
+            <p><strong>Common entity types:</strong></p>
+            <ul style="margin-left: 2rem; margin-bottom: 1rem;">
+                <li>PER (person): John, Jane, Stalin</li>
+                <li>ORG (organization): Google, WHO, Democratic Party</li>
+                <li>LOC (location): France, New York, the Amazon</li>
+                <li>GPE (geopolitical entity): Germany (nation state)</li>
+                <li>TIME: Monday, 2024, yesterday</li>
+                <li>MONEY: $50, 100 euros</li>
+            </ul>
+
+            <p><strong>BIO Tagging Scheme:</strong> Since entities span multiple tokens, we use tags:</p>
+            <ul style="margin-left: 2rem; margin-bottom: 1rem;">
+                <li><strong>B-TYPE</strong> (Begin): the first token of an entity</li>
+                <li><strong>I-TYPE</strong> (Inside): subsequent tokens of an entity</li>
+                <li><strong>O</strong> (Outside): tokens that are not part of any entity</li>
+            </ul>
+
+            <p>Example: "Janet Villanueva of United Airlines" →</p>
+            <div class="bio-display">
+                <div class="bio-cell">
+                    <div class="bio-word">Janet</div>
+                    <div class="bio-tag b-tag">B-PER</div>
+                </div>
+                <div class="bio-cell">
+                    <div class="bio-word">Villanueva</div>
+                    <div class="bio-tag i-tag">I-PER</div>
+                </div>
+                <div class="bio-cell">
+                    <div class="bio-word">of</div>
+                    <div class="bio-tag o-tag">O</div>
+                </div>
+                <div class="bio-cell">
+                    <div class="bio-word">United</div>
+                    <div class="bio-tag b-tag">B-ORG</div>
+                </div>
+                <div class="bio-cell">
+                    <div class="bio-word">Airlines</div>
+                    <div class="bio-tag i-tag">I-ORG</div>
+                </div>
+            </div>
+
+            <p><strong>Variants:</strong> IO (no Begin tags), BIOES (adds End and Singleton tags for better structure learning).</p>
+
+            <h3>17.4 Hidden Markov Models for POS Tagging</h3>
+            <p>HMMs model the problem probabilistically via two components:</p>
+            <p><strong>1. Markov Assumption:</strong> The current tag depends only on the previous tag:</p>
+
+            <div class="equation">
+                $$P(q_i = a | q_1, \ldots, q_{i-1}) = P(q_i = a | q_{i-1}) \quad \text{(Eq 17.3)}$$
+            </div>
+
+            <p><strong>2. HMM Structure:</strong> Hidden states (tags) generate observed outputs (words).</p>
+
+            <p><strong>Transition Probabilities</strong> $P(t_i | t_{i-1})$: estimated by MLE from a tagged corpus:</p>
+
+            <div class="equation">
+                $$P(t_i | t_{i-1}) = \frac{C(t_{i-1}, t_i)}{C(t_{i-1})} \quad \text{(Eq 17.8)}$$
+            </div>
+
+            <p>where $C(t_{i-1}, t_i)$ is the count of bigrams $(t_{i-1}, t_i)$ in the training data.</p>
+
+            <p><strong>Emission Probabilities</strong> $P(w_i | t_i)$: how likely a word is given a tag:</p>
+
+            <div class="equation">
+                $$P(w_i | t_i) = \frac{C(t_i, w_i)}{C(t_i)} \quad \text{(Eq 17.10)}$$
+            </div>
+
+            <p><strong>HMM Decoding via Bayes' Rule:</strong> Find the tag sequence maximizing the joint probability:</p>
+
+            <div class="equation">
+                $$\hat{t}_{1:n} = \arg\max_{t_1 \ldots t_n} \prod_{i=1}^{n} P(w_i|t_i) P(t_i|t_{i-1}) \quad \text{(Eq 17.17)}$$
+            </div>
+
+            <p><strong>The Viterbi Algorithm:</strong> This is a dynamic programming algorithm that finds the optimal path through a lattice (states × time steps) in $O(n \cdot |T|^2)$ time, where $|T|$ is the number of tags.</p>
+
+            <p><strong>Recurrence relation:</strong></p>
+
+            <div class="equation">
+                $$v_t(j) = \max_{i=1}^{N} v_{t-1}(i) \cdot a_{ij} \cdot b_j(o_t) \quad \text{(Eq 17.19)}$$
+            </div>
+
+            <p>where $v_t(j)$ is the best score to reach state $j$ at time $t$, $a_{ij}$ is the transition probability from state $i$ to state $j$, and $b_j(o_t)$ is the emission probability of observation $o_t$ in state $j$.</p>
+
+            <div class="note">
+                <strong>Key insight:</strong> Viterbi is to HMMs what beam search is to LSTMs. It trades exhaustive search for dynamic programming to find the optimal sequence efficiently.
+            </div>
+
+            <h3>17.5 Conditional Random Fields (CRFs)</h3>
+            <p>CRFs are <strong>discriminative models</strong> that directly model $P(Y|X)$ rather than the joint $P(Y, X)$. They avoid making strong independence assumptions and allow arbitrary features.</p>
+
+            <p><strong>Global CRF Probability:</strong></p>
+
+            <div class="equation">
+                $$p(Y|X) = \frac{1}{Z(X)} \exp\left(\sum_{k=1}^{K} w_k F_k(X,Y)\right) \quad \text{(Eq 17.24)}$$
+            </div>
+
+            <p>where:</p>
+            <ul style="margin-left: 2rem; margin-bottom: 1rem;">
+                <li>$Z(X)$ is the partition function: $\sum_{Y'} \exp(\sum_k w_k F_k(X,Y'))$</li>
+                <li>$w_k$ are learned weights</li>
+                <li>$F_k(X,Y)$ are global feature functions</li>
+            </ul>
+
+            <p><strong>Global Features Decompose into Local Features:</strong></p>
+
+            <div class="equation">
+                $$F_k(X,Y) = \sum_{i=1}^{n} f_k(y_{i-1}, y_i, X, i) \quad \text{(Eq 17.26)}$$
+            </div>
+
+            <p><strong>Common Feature Templates:</strong></p>
+            <ul style="margin-left: 2rem; margin-bottom: 1rem;">
+                <li><strong>Word identity:</strong> $w_i$, $w_{i-1}$, $w_{i+1}$</li>
+                <li><strong>Morphological:</strong> suffixes (last 1–4 chars), prefixes, word shape (e.g., Xxxxx for "Janet")</li>
+                <li><strong>POS context:</strong> previous tag $y_{i-1}$ (bigram features)</li>
+                <li><strong>Lexical:</strong> capitalization, contains digit, contains hyphen</li>
+            </ul>
+
+            <p><strong>CRF Viterbi Decoding:</strong></p>
+
+            <div class="equation">
+                $$v_t(j) = \max_{i=1}^{N}\left[v_{t-1}(i) + \sum_{k=1}^{K} w_k f_k(y_{t-1}, y_t, X, t)\right] \quad \text{(Eq 17.33)}$$
+            </div>
+
+            <p><strong>Training:</strong> CRFs are trained via SGD to maximize log-likelihood with L1 or L2 regularization. Unlike HMMs, CRFs can use overlapping, arbitrary features without worrying about independence.</p>
+
+            <h3>17.6 Evaluation Metrics</h3>
+
+            <p><strong>POS Tagging:</strong> Simple accuracy (percentage of correct tags).</p>
+
+            <div class="stat-box">
+                <div class="stat-value">97%</div>
+                <div class="stat-label">State-of-the-art accuracy</div>
+            </div>
+
+            <p><strong>Named Entity Recognition:</strong> Entity-level metrics (not token-level):</p>
+            <ul style="margin-left: 2rem; margin-bottom: 1rem;">
+                <li><strong>Precision:</strong> $\text{TP} / (\text{TP} + \text{FP})$ — fraction of predicted entities that are correct</li>
+                <li><strong>Recall:</strong> $\text{TP} / (\text{TP} + \text{FN})$ — fraction of gold entities that were found</li>
+                <li><strong>F1:</strong> $2 \cdot \text{Precision} \cdot \text{Recall} / (\text{Precision} + \text{Recall})$</li>
+            </ul>
+
+            <p><strong>Significance Testing:</strong> Use paired bootstrap tests to determine if differences between systems are statistically significant.</p>
+        </section>
+
+        <section id="code">
+            <h2>Code Implementation</h2>
+
+            <div class="code-tabs">
+                <button class="code-tab active" onclick="switchTab(event, 'hmm-tab')">HMM POS Tagger</button>
+                <button class="code-tab" onclick="switchTab(event, 'bio-tab')">BIO NER Tagging</button>
+                <button class="code-tab" onclick="switchTab(event, 'crf-tab')">CRF Features</button>
+            </div>
+
+            <div id="hmm-tab" class="code-block active">
+                <button class="copy-btn" onclick="copyCode('hmm-code')">Copy</button>
+                <pre id="hmm-code"><code>import numpy as np
+
+class HMMTagger:
+    """Bigram HMM POS Tagger with Viterbi decoding."""
+
+    def __init__(self):
+        self.transition = {}
+        self.emission = {}
+        self.tags = set()
+
+    def train(self, tagged_sentences):
+        """Estimate transition & emission probs."""
+        tag_counts = {}
+        bigram_counts = {}
+        emission_counts = {}
+
+        for sentence in tagged_sentences:
+            prev_tag = '&lt;s&gt;'
+            for word, tag in sentence:
+                self.tags.add(tag)
+                tag_counts[tag] = tag_counts.get(tag, 0) + 1
+                tag_counts[prev_tag] = tag_counts.get(prev_tag, 0) + 1
+
+                bigram_counts[(prev_tag, tag)] = bigram_counts.get((prev_tag, tag), 0) + 1
+                emission_counts[(tag, word)] = emission_counts.get((tag, word), 0) + 1
+                prev_tag = tag
+
+        # MLE: Eq 17.8 and 17.10
+        for (prev, curr), count in bigram_counts.items():
+            self.transition[(prev, curr)] = count / tag_counts[prev]
+        for (tag, word), count in emission_counts.items():
+            self.emission[(tag, word)] = count / tag_counts[tag]
+
+    def viterbi(self, words):
+        """Find best tag sequence via Viterbi (Eq 17.19)."""
+        tags = list(self.tags)
+        n = len(words)
+
+        viterbi = [{} for _ in range(n)]
+        backptr = [{} for _ in range(n)]
+
+        for tag in tags:
+            trans_p = self.transition.get(('&lt;s&gt;', tag), 1e-10)
+            emit_p = self.emission.get((tag, words[0]), 1e-10)
+            viterbi[0][tag] = trans_p * emit_p
+            backptr[0][tag] = '&lt;s&gt;'
+
+        for t in range(1, n):
+            for tag in tags:
+                best_score, best_prev = 0, tags[0]
+                for prev_tag in tags:
+                    score = (viterbi[t-1].get(prev_tag, 0) *
+                            self.transition.get((prev_tag, tag), 1e-10) *
+                            self.emission.get((tag, words[t]), 1e-10))
+                    if score > best_score:
+                        best_score = score
+                        best_prev = prev_tag
+                viterbi[t][tag] = best_score
+                backptr[t][tag] = best_prev
+
+        # Backtrace
+        best_tag = max(viterbi[-1], key=viterbi[-1].get)
+        result = [best_tag]
+        for t in range(n-1, 0, -1):
+            best_tag = backptr[t][best_tag]
+            result.insert(0, best_tag)
+        return list(zip(words, result))</code></pre>
+            </div>
+
+            <div id="bio-tab" class="code-block">
+                <button class="copy-btn" onclick="copyCode('bio-code')">Copy</button>
+                <pre id="bio-code"><code>def bio_tag(entities, tokens):
+    """Convert entity spans to BIO tags."""
+    tags = ['O'] * len(tokens)
+    for entity_type, start, end in entities:
+        tags[start] = f'B-{entity_type}'
+        for i in range(start + 1, end):
+            tags[i] = f'I-{entity_type}'
+    return list(zip(tokens, tags))
+
+def evaluate_ner(gold_entities, pred_entities):
+    """Entity-level precision, recall, F1."""
+    gold_set = set(gold_entities)
+    pred_set = set(pred_entities)
+
+    tp = len(gold_set & pred_set)
+    precision = tp / len(pred_set) if pred_set else 0
+    recall = tp / len(gold_set) if gold_set else 0
+    f1 = 2 * precision * recall / (precision + recall) \
+        if (precision + recall) else 0
+
+    return {'precision': precision, 'recall': recall, 'f1': f1}
+
+# Example
+tokens = "Janet Villanueva of United Airlines discussed Chicago".split()
+entities = [('PER', 0, 2), ('ORG', 3, 5), ('LOC', 7, 8)]
+tagged = bio_tag(entities, tokens)
+print("BIO-tagged sentence:")
+for word, tag in tagged:
+    print(f"  {word:15s} {tag}")</code></pre>
+            </div>
+
+            <div id="crf-tab" class="code-block">
+                <button class="copy-btn" onclick="copyCode('crf-code')">Copy</button>
+                <pre id="crf-code"><code>def extract_crf_features(sentence, i, prev_tag):
+    """Extract CRF features for position i (Eq 17.26)."""
+    word = sentence[i]
+    features = {}
+
+    # Word identity
+    features[f'word={word.lower()}'] = 1
+    features[f'prev_tag={prev_tag}'] = 1
+
+    # Context window
+    if i > 0:
+        features[f'prev_word={sentence[i-1].lower()}'] = 1
+    if i < len(sentence) - 1:
+        features[f'next_word={sentence[i+1].lower()}'] = 1
+
+    # Suffix/prefix features (up to 4 chars)
+    for k in range(1, min(5, len(word) + 1)):
+        features[f'suffix_{k}={word[-k:]}'] = 1
+        features[f'prefix_{k}={word[:k]}'] = 1
+
+    # Word shape (Xxxxx, xxxxx, Xxxxx, ddddd, etc.)
+    shape = ''.join('X' if c.isupper() else 'x' if c.islower()
+                     else 'd' if c.isdigit() else c for c in word)
+    features[f'shape={shape}'] = 1
+
+    # Short shape (collapse consecutive chars)
+    short = shape[0]
+    for c in shape[1:]:
+        if c != short[-1]:
+            short += c
+    features[f'short_shape={short}'] = 1
+
+    # Lexical
+    features['is_upper'] = int(word[0].isupper())
+    features['is_all_caps'] = int(word.isupper())
+    features['has_hyphen'] = int('-' in word)
+    features['has_digit'] = int(any(c.isdigit() for c in word))
+
+    return features
+
+# Example
+sent = "Jane Villanueva of United Airlines Holding discussed Chicago".split()
+feats = extract_crf_features(sent, 0, '&lt;s&gt;')
+print("CRF features for 'Jane':")
+for k, v in sorted(feats.items()):
+    if v:
+        print(f"  {k}")</code></pre>
+            </div>
+        </section>
+
+        <section id="socratic">
+            <h2>Socratic Challenge</h2>
+            <p class="subtitle">The Ambiguity Minefield</p>
+
+            <div class="interactive-box">
+                <h3>Interactive: Disambiguating "back"</h3>
+                <p>The word "back" is one of the most ambiguous words in English. It can be:</p>
+                <ul style="margin-left: 2rem; margin-bottom: 1rem;">
+                    <li><strong>JJ</strong> (adjective): "back seat", "back door"</li>
+                    <li><strong>NN</strong> (noun): "the back of the house", "watch your back"</li>
+                    <li><strong>VBP</strong> (verb, non-3rd sing.): "I back this proposal", "they back the team"</li>
+                    <li><strong>VB</strong> (verb, base): "to back the truck"</li>
+                    <li><strong>RB</strong> (adverb): "back then", "back in 2020"</li>
+                    <li><strong>RP</strong> (particle): "buy back debt", "get back online"</li>
+                </ul>
+
+                <p><strong>Challenge:</strong> Tag each occurrence of "back" in this sentence:</p>
+                <p style="font-style: italic; margin: 1.5rem 0;">
+                    "I need to back the truck back to the back of the back yard."
+                </p>
+
+                <div class="word-cards" id="challenge-words"></div>
+
+                <button onclick="checkAmbiguity()">Check Answer</button>
+                <div id="ambiguity-feedback" style="margin-top: 1rem;"></div>
+            </div>
+
+            <div class="card accent-lime">
+                <h3>Why 97% Accuracy Still Matters</h3>
+                <p>97% might sound near-perfect, but in practice it's not:</p>
+                <ul style="margin-left: 2rem; margin-bottom: 1rem;">
+                    <li><strong>Downstream cascading errors:</strong> POS tagging is a pipeline component. A 3% error rate compounds with parsing (97%) and semantic role labeling (95%), yielding ~91% end-to-end accuracy.</li>
+                    <li><strong>Real document sizes:</strong> A 500-word document has ~15 errors at 97%. A 10,000-word book has 300 errors.</li>
+                    <li><strong>Rare phenomena are harder:</strong> Ambiguous words, unfamiliar domains, and new entities are tagged worse than 97%. Real user data is messier than test sets.</li>
+                </ul>
+                <p><strong>Lesson:</strong> The final 3% requires careful feature engineering, domain adaptation, and ensemble methods. This is where the art of NLP lives.</p>
+            </div>
+        </section>
+
+        <section id="viterbi-viz">
+            <h3>Interactive: Viterbi Lattice Explorer</h3>
+            <div class="interactive-box">
+                <p>Watch the Viterbi algorithm fill a lattice of states and time steps to find the best POS tag sequence. Click "Step Forward" to advance one time step, or "Auto-Play" to animate.</p>
+                <div style="text-align: center; margin: 1rem 0;">
+                    <button onclick="resetViterbi()">Reset</button>
+                    <button onclick="stepViterbi()">Step Forward</button>
+                    <button onclick="autoPlayViterbi()">Auto-Play</button>
+                </div>
+                <canvas id="viterbi-canvas" width="800" height="400"></canvas>
+                <p style="text-align: center; color: #94a3b8; font-size: 0.875rem; margin-top: 1rem;">
+                    Example: "Janet will back the bill"
+                </p>
+            </div>
+        </section>
+
+        <section id="bio-builder">
+            <h3>Interactive: BIO Tag Builder</h3>
+            <div class="interactive-box">
+                <p>Drag to select entity spans and assign types. The system generates BIO tags automatically.</p>
+                <p>Sentence: <span id="bio-sentence">Jane Villanueva of United Airlines discussed the Chicago route with executives.</span></p>
+                <div id="bio-builder-canvas" style="margin: 1.5rem 0; cursor: text;"></div>
+                <div>
+                    <button onclick="loadRandomBIO()">Random Example</button>
+                    <button onclick="clearBIO()">Clear All</button>
+                </div>
+                <div style="margin-top: 1.5rem;">
+                    <h4 style="color: #0ea5e9; margin-bottom: 0.75rem;">BIO Tags:</h4>
+                    <div id="bio-output" class="bio-display"></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="feature-inspector">
+            <h3>Interactive: CRF Feature Inspector</h3>
+            <div class="interactive-box">
+                <p>Click a word in the sentence to see what CRF features fire for that position.</p>
+                <p>Sentence: <span id="feature-sentence">L'Occitane is a French luxury company.</span></p>
+                <div class="word-cards" id="feature-words"></div>
+                <div style="margin-top: 1.5rem;">
+                    <h4 style="color: #0ea5e9; margin-bottom: 0.75rem;">Features:</h4>
+                    <div id="feature-list" class="feature-list">
+                        <p style="color: #94a3b8;">Click a word above to view its features.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="modern">
+            <h2>Modern Bridge: From HMMs to Transformers</h2>
+
+            <div class="card accent-sky">
+                <h3>Beyond Classical Sequence Labeling</h3>
+                <p>While HMMs and CRFs remain useful teaching tools and strong baselines, modern systems leverage pretrained Transformer models:</p>
+
+                <h4 style="color: #0ea5e9; margin-top: 1.5rem; margin-bottom: 0.5rem;">BERT and Fine-tuning</h4>
+                <p>Take a pretrained BERT (or RoBERTa, DistilBERT, etc.) and add a single classification layer per token. Fine-tune on task-specific data. Typical workflow:</p>
+                <ol style="margin-left: 2rem; margin-bottom: 1rem;">
+                    <li>Load pretrained model (e.g., bert-base-uncased)</li>
+                    <li>Add token classification head: BERT → [hidden_size] → [num_tags]</li>
+                    <li>Fine-tune on annotated corpus (Penn Treebank for POS, CoNLL for NER)</li>
+                    <li>Achieve ~97–98% POS accuracy and ~91–92% NER F1 with minimal effort</li>
+                </ol>
+                <p>The key advantage: Transformers capture long-range dependencies and rare-word semantics via subword tokenization.</p>
+
+                <h4 style="color: #0ea5e9; margin-top: 1.5rem; margin-bottom: 0.5rem;">Cross-Lingual Transfer</h4>
+                <p>Multilingual models (mBERT, XLM-R, mT5) enable zero-shot transfer: train on English, apply to 100+ languages. Useful when target-language data is scarce.</p>
+
+                <h4 style="color: #0ea5e9; margin-top: 1.5rem; margin-bottom: 0.5rem;">Few-Shot NER with LLMs</h4>
+                <p>Recent work (2022+) shows that prompting GPT-4 or Claude directly achieves competitive NER without fine-tuning:</p>
+                <div class="note">
+                    <strong>Example prompt:</strong> "Extract all PERSON, ORG, LOC, and GPE entities from: [text]"
+                    <br><br>
+                    <strong>Advantages:</strong> No labeled data needed, adapts to new domains/entity types instantly.
+                    <br><strong>Tradeoff:</strong> Slower inference, less controllable, may hallucinate entities.
+                </div>
+
+                <h4 style="color: #0ea5e9; margin-top: 1.5rem; margin-bottom: 0.5rem;">Nested NER</h4>
+                <p>Real-world NER often involves overlapping entities: "Bank of [LOC America]" is both [ORG Bank of America] (containing LOC America). BIO tags can't represent this. Solutions:</p>
+                <ul style="margin-left: 2rem; margin-bottom: 1rem;">
+                    <li><strong>Multi-level tagging:</strong> Multiple independent BIO sequences for different entity types</li>
+                    <li><strong>Span-based methods:</strong> Score all spans, select non-overlapping set with highest total score</li>
+                    <li><strong>Graph-based:</strong> Formulate as structured prediction on entity graphs</li>
+                </ul>
+
+                <h4 style="color: #0ea5e9; margin-top: 1.5rem; margin-bottom: 0.5rem;">Universal Dependencies Across Languages</h4>
+                <p>The Universal Dependencies project (2014+) provides harmonized POS and dependency annotations for 100+ languages and treebanks. This enables:</p>
+                <ul style="margin-left: 2rem; margin-bottom: 1rem;">
+                    <li>Multilingual model training (single model for all languages)</li>
+                    <li>Systematic comparison across typologically diverse languages</li>
+                    <li>Cross-lingual transfer learning for low-resource languages</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="history">
+            <h2>Historical Context</h2>
+            <p class="subtitle">From Hand-Written Rules to Neural Networks</p>
+
+            <button class="toggle-btn" onclick="toggleTimeline()">Expand Timeline</button>
+
+            <div id="timeline-content" class="collapsible-content">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-year">1958–1959</div>
+                        <div class="timeline-content"><strong>Zellig Harris & TDAP:</strong> The Text Data Automation Program — earliest POS tagger using 14 hand-written, deterministic rules.</div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-year">1963</div>
+                        <div class="timeline-content"><strong>Klein & Simmons' CGC (Computational Grammar Coder):</strong> Combined lexicon, morphological analyzer, and context-sensitive rules. First modular approach.</div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-year">1971</div>
+                        <div class="timeline-content"><strong>TAGGIT tagger (Greene & Rubin):</strong> 87 tags on the Brown Corpus. Probabilistic lexicon combined with deterministic rules. Introduced the Brown Corpus, still used today.</div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-year">1976</div>
+                        <div class="timeline-content"><strong>Bahl & Mercer (IBM):</strong> First probabilistic tagger using Viterbi decoding. Demonstrated that probability-based methods outperform rule-based.</div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-year">1980s</div>
+                        <div class="timeline-content"><strong>CLAWS (Constitutent Likelihood Automatic Word-tagging System):</strong> Approximate HMM for the LOB Corpus. Semi-probabilistic: lexicon probabilities + context rules.</div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-year">1988–1989</div>
+                        <div class="timeline-content"><strong>Church's PARTS tagger:</strong> First practical implementation of HMM tagging with smoothing and rare-word handling. ~96% accuracy on Brown Corpus.</div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-year">1992–1994</div>
+                        <div class="timeline-content"><strong>Explicit HMM tagging (Kupiec, Weischedel, Merialdo):</strong> Detailed algorithms for training and decoding HMMs. Clear presentation of Viterbi and smoothing techniques.</div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-year">1996</div>
+                        <div class="timeline-content"><strong>Ratnaparkhi's MXPOST:</strong> Maximum Entropy Markov Model (MEMM) — discriminative alternative to generative HMMs. Richer features, better accuracy. First neural-adjacent tagger.</div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-year">1997–2000</div>
+                        <div class="timeline-content"><strong>NER systems:</strong> Bikel et al. (1997) use HMMs for NER. McCallum et al. (1998) introduce MEMMs for NER. Bikel & Rizzo (1998) on MUC tasks.</div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-year">2001</div>
+                        <div class="timeline-content"><strong>Conditional Random Fields (Lafferty, McCallum, Pereira):</strong> Solves label bias problem of MEMMs. Discriminative, globally normalized. Becomes gold standard for 15+ years.</div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-year">2003–2007</div>
+                        <div class="timeline-content"><strong>CRF Applications:</strong> McCallum & Li (2003) on NER. Settles & Craven (2005) on information extraction. CRFs dominate academic papers and industry systems.</div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-year">2011</div>
+                        <div class="timeline-content"><strong>Collobert et al. (2011):</strong> Neural NER with ConvNet embeddings + CRF output layer. Shows neural features can compete with hand-crafted features.</div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-year">2015–2016</div>
+                        <div class="timeline-content"><strong>BiLSTM-CRF Models (Huang, Ma & Hovy; Lample et al.):</strong> Bidirectional LSTM encodes context, CRF layer decodes optimal tags. Becomes new standard. ~97% POS accuracy, 90%+ NER F1.</div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-year">2018+</div>
+                        <div class="timeline-content"><strong>Transformer-Based Tagging (BERT, ELMo, etc.):</strong> Fine-tuned pretrained language models achieve 97–98% POS and 91–92% NER on standard benchmarks. Reduces need for extensive feature engineering.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Sticky nav active state
+        const navLinks = document.querySelectorAll('.sticky-nav a');
+        const sections = document.querySelectorAll('main > section');
+        const navObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    navLinks.forEach(link => link.classList.remove('active'));
+                    const activeLink = document.querySelector(`.sticky-nav a[href="#${entry.target.id}"]`);
+                    if (activeLink) activeLink.classList.add('active');
+                }
+            });
+        }, { threshold: 0.3 });
+
+        sections.forEach(section => navObserver.observe(section));
+
+        // Scroll reveal animation
+        const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('revealed');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        sections.forEach(section => revealObserver.observe(section));
+
+        // Code tabs
+        function switchTab(event, tabName) {
+            const blocks = document.querySelectorAll('.code-block');
+            blocks.forEach(block => block.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+
+            document.querySelectorAll('.code-tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        function copyCode(elementId) {
+            const codeElement = document.getElementById(elementId);
+            const text = codeElement.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Code copied to clipboard!');
+            });
+        }
+
+        // Ambiguity challenge
+        function initAmbiguityChallengeWords() {
+            const words = ['I', 'need', 'to', 'back', 'the', 'truck', 'back', 'to', 'the', 'back', 'of', 'the', 'back', 'yard'];
+            const backIndices = [3, 6, 9, 12];
+            const correctTags = ['VB', 'RP', 'NN', 'JJ'];
+            const tagsSet = ['VB', 'VBP', 'JJ', 'NN', 'RB', 'RP'];
+
+            const container = document.getElementById('challenge-words');
+            container.innerHTML = '';
+
+            words.forEach((word, idx) => {
+                const card = document.createElement('div');
+                card.className = 'word-card';
+                card.textContent = word;
+
+                if (backIndices.includes(idx)) {
+                    card.dataset.word = word;
+                    card.dataset.index = backIndices.indexOf(idx);
+                    card.dataset.correctTag = correctTags[backIndices.indexOf(idx)];
+                    card.dataset.currentTag = null;
+                    card.onclick = () => cycleTag(card);
+                } else {
+                    card.style.opacity = '0.5';
+                }
+
+                container.appendChild(card);
+            });
+        }
+
+        function cycleTag(card) {
+            const tagsSet = ['VB', 'VBP', 'JJ', 'NN', 'RB', 'RP'];
+            const currentIndex = card.dataset.currentTag ? tagsSet.indexOf(card.dataset.currentTag) : -1;
+            const nextIndex = (currentIndex + 1) % tagsSet.length;
+            card.dataset.currentTag = tagsSet[nextIndex];
+
+            const tagLabel = card.querySelector('.tag-label') || document.createElement('div');
+            tagLabel.className = 'tag-label';
+            tagLabel.textContent = tagsSet[nextIndex];
+            if (!card.querySelector('.tag-label')) card.appendChild(tagLabel);
+
+            card.classList.add('tagged');
+        }
+
+        function checkAmbiguity() {
+            const cards = document.querySelectorAll('.word-card[data-correct-tag]');
+            let correct = 0;
+
+            cards.forEach(card => {
+                if (card.dataset.currentTag === card.dataset.correctTag) {
+                    correct++;
+                    card.style.borderColor = '#84cc16';
+                } else {
+                    card.style.borderColor = '#ef4444';
+                }
+            });
+
+            const feedback = document.getElementById('ambiguity-feedback');
+            feedback.innerHTML = `
+                <div class="card accent-lime">
+                    <strong>Score: ${correct}/${cards.length}</strong>
+                    <p style="margin-top: 0.5rem;">
+                        ${correct === cards.length ?
+                            'Perfect! You've mastered "back" disambiguation.' :
+                            'Not quite. Remember: verb forms change based on subject and tense!'}
+                    </p>
+                    <div style="margin-top: 1rem;">
+                        ${Array.from(cards).map(card => `
+                            <div style="padding: 0.5rem; background: #0f172a; margin: 0.25rem 0; border-radius: 0.25rem;">
+                                <strong>${card.dataset.index + 1}. "back":</strong>
+                                Your answer: ${card.dataset.currentTag || 'none'},
+                                Correct: <span style="color: #84cc16;">${card.dataset.correctTag}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Viterbi visualization
+        let viterbiState = 0;
+        let viterbiAnimating = false;
+
+        const viterbiExample = {
+            words: ['Janet', 'will', 'back', 'the', 'bill'],
+            tags: ['NNP', 'MD', 'VB', 'DT', 'NN'],
+            allTags: ['NNP', 'MD', 'VB', 'DT', 'NN', 'RB', 'JJ'],
+            transitions: {
+                'NNP-MD': 0.8, 'MD-VB': 0.95, 'VB-DT': 0.9, 'DT-NN': 0.95,
+                'NNP-VB': 0.1, 'MD-NN': 0.05, 'VB-RB': 0.05, 'DT-JJ': 0.05,
+            },
+            emissions: {
+                'NNP-Janet': 0.9, 'MD-will': 0.95, 'VB-back': 0.8, 'DT-the': 0.99, 'NN-bill': 0.85,
+                'JJ-back': 0.1, 'NN-back': 0.08, 'RB-back': 0.02
+            }
+        };
+
+        function drawViterbi(highlightTime = -1, highlightTag = null, optimalPath = null) {
+            const canvas = document.getElementById('viterbi-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+
+            canvas.width = canvas.offsetWidth * dpr;
+            canvas.height = canvas.offsetHeight * dpr;
+            ctx.scale(dpr, dpr);
+
+            const width = canvas.width / dpr;
+            const height = canvas.height / dpr;
+            const margin = { top: 60, bottom: 40, left: 120, right: 20 };
+
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, width, height);
+
+            const words = viterbiExample.words;
+            const tags = viterbiExample.allTags;
+            const numSteps = words.length;
+            const numStates = tags.length;
+
+            const cellWidth = (width - margin.left - margin.right) / numSteps;
+            const cellHeight = (height - margin.top - margin.bottom) / numStates;
+
+            // Draw grid
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 1;
+
+            for (let t = 0; t <= numSteps; t++) {
+                ctx.beginPath();
+                ctx.moveTo(margin.left + t * cellWidth, margin.top);
+                ctx.lineTo(margin.left + t * cellWidth, height - margin.bottom);
+                ctx.stroke();
+            }
+
+            for (let j = 0; j <= numStates; j++) {
+                ctx.beginPath();
+                ctx.moveTo(margin.left, margin.top + j * cellHeight);
+                ctx.lineTo(width - margin.right, margin.top + j * cellHeight);
+                ctx.stroke();
+            }
+
+            // Draw word labels
+            ctx.fillStyle = '#0ea5e9';
+            ctx.font = 'bold 11px Inter';
+            ctx.textAlign = 'center';
+            for (let t = 0; t < numSteps; t++) {
+                ctx.fillText(words[t], margin.left + (t + 0.5) * cellWidth, margin.top - 10);
+            }
+
+            // Draw tag labels
+            ctx.fillStyle = '#f59e0b';
+            ctx.font = '11px Inter';
+            ctx.textAlign = 'right';
+            for (let j = 0; j < numStates; j++) {
+                ctx.fillText(tags[j], margin.left - 10, margin.top + (j + 0.7) * cellHeight);
+            }
+
+            // Fill cells with colors
+            for (let t = 0; t <= Math.min(viterbiState, numSteps - 1); t++) {
+                for (let j = 0; j < numStates; j++) {
+                    const x = margin.left + t * cellWidth;
+                    const y = margin.top + j * cellHeight;
+
+                    if (t < viterbiExample.tags.length && viterbiExample.tags[t] === tags[j]) {
+                        ctx.fillStyle = 'rgba(132, 204, 22, 0.3)';
+                    } else if (t === highlightTime && tags[j] === highlightTag) {
+                        ctx.fillStyle = 'rgba(245, 158, 11, 0.4)';
+                    } else if (optimalPath && t < optimalPath.length && optimalPath[t] === tags[j]) {
+                        ctx.fillStyle = 'rgba(14, 165, 233, 0.4)';
+                    } else {
+                        ctx.fillStyle = 'rgba(100, 100, 100, 0.1)';
+                    }
+
+                    ctx.fillRect(x + 1, y + 1, cellWidth - 2, cellHeight - 2);
+                }
+            }
+
+            // Draw legend
+            ctx.fillStyle = '#84cc16';
+            ctx.fillRect(width - 200, 10, 10, 10);
+            ctx.fillStyle = '#cbd5e1';
+            ctx.font = '11px Inter';
+            ctx.textAlign = 'left';
+            ctx.fillText('Correct path', width - 180, 18);
+        }
+
+        function resetViterbi() {
+            viterbiState = 0;
+            viterbiAnimating = false;
+            drawViterbi();
+        }
+
+        function stepViterbi() {
+            if (viterbiState < viterbiExample.words.length) {
+                viterbiState++;
+                drawViterbi();
+            }
+        }
+
+        function autoPlayViterbi() {
+            if (viterbiAnimating) return;
+            viterbiAnimating = true;
+
+            const play = () => {
+                if (viterbiState < viterbiExample.words.length) {
+                    viterbiState++;
+                    drawViterbi();
+                    setTimeout(play, 800);
+                } else {
+                    viterbiAnimating = false;
+                }
+            };
+            play();
+        }
+
+        // BIO builder
+        const bioSentenceText = "Jane Villanueva of United Airlines discussed the Chicago route with executives.";
+        const bioTokens = bioSentenceText.split(/\s+/);
+
+        function initBIOBuilder() {
+            const container = document.getElementById('bio-builder-canvas');
+            container.innerHTML = '';
+
+            bioTokens.forEach((token, idx) => {
+                const span = document.createElement('span');
+                span.textContent = token + ' ';
+                span.style.cursor = 'pointer';
+                span.style.padding = '0.25rem 0.5rem';
+                span.style.margin = '0.25rem';
+                span.style.borderRadius = '0.25rem';
+                span.style.display = 'inline-block';
+                span.style.backgroundColor = '#1e293b';
+                span.style.border = '1px solid #334155';
+                span.title = `Index: ${idx}`;
+
+                span.onmouseover = () => {
+                    span.style.borderColor = '#0ea5e9';
+                };
+                span.onmouseout = () => {
+                    span.style.borderColor = '#334155';
+                };
+
+                container.appendChild(span);
+            });
+
+            updateBIOOutput();
+        }
+
+        function updateBIOOutput() {
+            const output = document.getElementById('bio-output');
+            output.innerHTML = '';
+
+            bioTokens.forEach((token, idx) => {
+                const cell = document.createElement('div');
+                cell.className = 'bio-cell';
+
+                const wordDiv = document.createElement('div');
+                wordDiv.className = 'bio-word';
+                wordDiv.textContent = token;
+
+                const tagDiv = document.createElement('div');
+                tagDiv.className = 'bio-tag o-tag';
+                tagDiv.textContent = 'O';
+
+                cell.appendChild(wordDiv);
+                cell.appendChild(tagDiv);
+                output.appendChild(cell);
+            });
+        }
+
+        function clearBIO() {
+            initBIOBuilder();
+        }
+
+        function loadRandomBIO() {
+            clearBIO();
+        }
+
+        // Feature inspector
+        function initFeatureInspector() {
+            const sentence = "L'Occitane is a French luxury company.";
+            const words = sentence.split(/\s+/);
+            const container = document.getElementById('feature-words');
+            container.innerHTML = '';
+
+            words.forEach((word, idx) => {
+                const card = document.createElement('div');
+                card.className = 'word-card';
+                card.textContent = word;
+                card.style.cursor = 'pointer';
+                card.onclick = () => showFeatures(sentence, idx, words);
+                container.appendChild(card);
+            });
+        }
+
+        function extractCRFFeatures(sentence, idx, prevTag = '<s>') {
+            const words = sentence.split(/\s+/);
+            const word = words[idx];
+            const features = [];
+
+            features.push(`word=${word.toLowerCase()}`);
+            features.push(`prev_tag=${prevTag}`);
+
+            if (idx > 0) features.push(`prev_word=${words[idx - 1].toLowerCase()}`);
+            if (idx < words.length - 1) features.push(`next_word=${words[idx + 1].toLowerCase()}`);
+
+            for (let k = 1; k < Math.min(5, word.length + 1); k++) {
+                features.push(`suffix_${k}=${word.slice(-k)}`);
+                features.push(`prefix_${k}=${word.slice(0, k)}`);
+            }
+
+            features.push(`is_upper=${word[0] === word[0].toUpperCase() ? 1 : 0}`);
+            features.push(`is_all_caps=${word === word.toUpperCase() ? 1 : 0}`);
+            features.push(`has_hyphen=${word.includes('-') ? 1 : 0}`);
+            features.push(`has_digit=${/\d/.test(word) ? 1 : 0}`);
+
+            return features;
+        }
+
+        function showFeatures(sentence, idx, words) {
+            const features = extractCRFFeatures(sentence, idx);
+            const featureList = document.getElementById('feature-list');
+            featureList.innerHTML = features.map(f =>
+                `<div class="feature-item">${f}</div>`
+            ).join('');
+        }
+
+        // Timeline toggle
+        function toggleTimeline() {
+            const content = document.getElementById('timeline-content');
+            content.classList.toggle('open');
+        }
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            initAmbiguityChallengeWords();
+            drawViterbi();
+            initBIOBuilder();
+            initFeatureInspector();
+        });
+    </script>
+</body>
+</html>

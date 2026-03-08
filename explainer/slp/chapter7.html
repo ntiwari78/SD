@@ -1,0 +1,1993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 7: Large Language Models - Speech and Language Processing</title>
+    <script>
+MathJax = {
+  tex: { inlineMath: [['$','$'],['\\(','\\)']], displayMath: [['$$','$$'],['\\[','\\]']] },
+  svg: { fontCache: 'global' }
+};
+</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg-full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0d1117;
+            --bg-card: #1c2333;
+            --bg-secondary: #161b22;
+            --accent: #58a6ff;
+            --text: #e6edf3;
+            --text-dim: #8b949e;
+            --green: #3fb950;
+            --blue: #79c0ff;
+            --orange: #fb8500;
+            --purple: #d2a8ff;
+            --pink: #f97583;
+            --yellow: #ffd33d;
+            --red: #ff6b6b;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--green), var(--blue), var(--purple));
+            width: 0;
+            z-index: 1000;
+            transition: width 0.3s ease;
+        }
+
+        /* Sticky Navigation */
+        nav {
+            position: sticky;
+            top: 4px;
+            background-color: rgba(13, 17, 23, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--bg-card);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 999;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        nav a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+            margin: 0 1rem;
+        }
+
+        nav a:hover {
+            color: var(--blue);
+        }
+
+        .nav-home {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .nav-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, rgba(88, 166, 255, 0.1), rgba(209, 168, 255, 0.1));
+            border-bottom: 1px solid var(--bg-card);
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 3em;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(120deg, var(--accent), var(--blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .epigraph {
+            font-style: italic;
+            color: var(--text-dim);
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            border-left: 3px solid var(--purple);
+            background-color: var(--bg-secondary);
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .overview {
+            max-width: 900px;
+            margin: 2rem auto;
+            font-size: 1.1em;
+            color: var(--text-dim);
+            line-height: 1.8;
+        }
+
+        /* Badge System */
+        .badge {
+            display: inline-block;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-right: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .badge.feynman {
+            background-color: rgba(63, 185, 80, 0.2);
+            color: var(--green);
+            border: 1px solid var(--green);
+        }
+
+        .badge.technical {
+            background-color: rgba(121, 192, 255, 0.2);
+            color: var(--blue);
+            border: 1px solid var(--blue);
+        }
+
+        .badge.code {
+            background-color: rgba(251, 133, 0, 0.2);
+            color: var(--orange);
+            border: 1px solid var(--orange);
+        }
+
+        .badge.socratic {
+            background-color: rgba(210, 168, 255, 0.2);
+            color: var(--purple);
+            border: 1px solid var(--purple);
+        }
+
+        .badge.modern {
+            background-color: rgba(249, 117, 131, 0.2);
+            color: var(--pink);
+            border: 1px solid var(--pink);
+        }
+
+        .badge.history {
+            background-color: rgba(255, 211, 61, 0.2);
+            color: var(--yellow);
+            border: 1px solid var(--yellow);
+        }
+
+        .badge.viz {
+            background-color: rgba(255, 107, 107, 0.2);
+            color: var(--red);
+            border: 1px solid var(--red);
+        }
+
+        /* Progress Tracker */
+        .progress-tracker {
+            display: flex;
+            justify-content: center;
+            gap: 0.8rem;
+            padding: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .progress-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: var(--bg-card);
+            border: 2px solid var(--text-dim);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .progress-dot.active {
+            background-color: var(--accent);
+            border-color: var(--accent);
+            transform: scale(1.3);
+        }
+
+        /* Main Content */
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        section {
+            padding: 3rem 0;
+            border-bottom: 1px solid var(--bg-card);
+        }
+
+        section h2 {
+            font-size: 2em;
+            margin-bottom: 0.5rem;
+            color: var(--accent);
+        }
+
+        section h3 {
+            font-size: 1.4em;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: var(--blue);
+        }
+
+        section h4 {
+            font-size: 1.1em;
+            margin-top: 1.5rem;
+            margin-bottom: 0.8rem;
+            color: var(--text);
+        }
+
+        p {
+            margin-bottom: 1.2rem;
+            color: var(--text);
+        }
+
+        /* Math and Code */
+        code {
+            background-color: var(--bg-secondary);
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--blue);
+            font-size: 0.95em;
+        }
+
+        pre {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--bg-card);
+            border-radius: 8px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            line-height: 1.5;
+        }
+
+        pre code {
+            background-color: transparent;
+            padding: 0;
+            color: var(--text);
+            font-size: 0.9em;
+        }
+
+        .keyword { color: var(--purple); font-weight: bold; }
+        .string { color: var(--green); }
+        .comment { color: var(--text-dim); font-style: italic; }
+        .function { color: var(--blue); }
+        .number { color: var(--yellow); }
+
+        /* Lists */
+        ul, ol {
+            margin-left: 2rem;
+            margin-bottom: 1.2rem;
+        }
+
+        li {
+            margin-bottom: 0.6rem;
+        }
+
+        /* Card Sections */
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .card h4 {
+            margin-top: 0;
+        }
+
+        /* Reveal Buttons */
+        .reveal-btn {
+            background-color: var(--accent);
+            color: var(--bg-primary);
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            font-size: 0.95em;
+        }
+
+        .reveal-btn:hover {
+            background-color: var(--blue);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(88, 166, 255, 0.3);
+        }
+
+        .hidden-content {
+            display: none;
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: var(--bg-secondary);
+            border-left: 3px solid var(--accent);
+            border-radius: 4px;
+            animation: slideDown 0.3s ease;
+        }
+
+        .hidden-content.revealed {
+            display: block;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Visualizer Container */
+        .viz-container {
+            background-color: var(--bg-card);
+            border: 1px solid var(--bg-secondary);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        .viz-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 1.5rem;
+        }
+
+        .viz-controls {
+            background-color: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+
+        .control-group {
+            margin-bottom: 1rem;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-dim);
+            font-weight: 500;
+        }
+
+        input[type="range"],
+        input[type="number"],
+        input[type="text"],
+        select {
+            background-color: var(--bg-primary);
+            color: var(--text);
+            border: 1px solid var(--bg-card);
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95em;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+
+        input[type="number"] {
+            width: 80px;
+        }
+
+        canvas {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--bg-secondary);
+            border-radius: 8px;
+            display: block;
+            margin: 1.5rem 0;
+            max-width: 100%;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 0.8rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background-color: var(--green);
+            color: var(--bg-primary);
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            font-size: 0.95em;
+        }
+
+        button:hover {
+            background-color: #2ea043;
+            transform: translateY(-2px);
+        }
+
+        /* Timeline */
+        .timeline {
+            position: relative;
+            padding: 1rem;
+        }
+
+        .timeline-item {
+            display: flex;
+            margin-bottom: 1.5rem;
+        }
+
+        .timeline-dot {
+            width: 12px;
+            height: 12px;
+            background-color: var(--accent);
+            border-radius: 50%;
+            margin-right: 1rem;
+            margin-top: 0.3rem;
+            flex-shrink: 0;
+        }
+
+        .timeline-content {
+            flex: 1;
+        }
+
+        .timeline-year {
+            font-weight: bold;
+            color: var(--yellow);
+        }
+
+        .timeline-desc {
+            color: var(--text-dim);
+            margin-top: 0.3rem;
+        }
+
+        /* Collapsible Section */
+        .collapsible-header {
+            cursor: pointer;
+            padding: 1rem;
+            background-color: var(--bg-card);
+            border: 1px solid var(--bg-secondary);
+            border-radius: 8px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        .collapsible-header:hover {
+            background-color: var(--bg-secondary);
+        }
+
+        .collapsible-content {
+            display: none;
+            padding: 1rem;
+            background-color: var(--bg-secondary);
+            border-left: 3px solid var(--accent);
+        }
+
+        .collapsible-content.open {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        .chevron {
+            display: inline-block;
+            transition: transform 0.3s;
+        }
+
+        .chevron.open {
+            transform: rotate(180deg);
+        }
+
+        /* Socratic Section */
+        .socratic-scenario {
+            background-color: var(--bg-secondary);
+            border-left: 4px solid var(--purple);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+
+        .question-item {
+            background-color: var(--bg-card);
+            border: 1px solid var(--bg-secondary);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .question-text {
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 1rem;
+        }
+
+        .answer-reveal {
+            background-color: var(--purple);
+            color: var(--bg-primary);
+        }
+
+        .answer-reveal:hover {
+            background-color: #c2a0ff;
+        }
+
+        /* Chapter Navigation */
+        .chapter-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2rem 0;
+            margin-top: 3rem;
+            border-top: 1px solid var(--bg-card);
+        }
+
+        .chapter-nav a {
+            background-color: var(--accent);
+            color: var(--bg-primary);
+            padding: 0.8rem 1.5rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .chapter-nav a:hover {
+            background-color: var(--blue);
+            transform: translateY(-2px);
+        }
+
+        .chapter-nav-spacer {
+            flex: 1;
+            text-align: center;
+            color: var(--text-dim);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2em;
+            }
+
+            nav {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 1rem;
+            }
+
+            .nav-controls {
+                width: 100%;
+                justify-content: space-around;
+            }
+
+            section {
+                padding: 2rem 0;
+            }
+
+            .chapter-nav {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .chapter-nav a {
+                width: 100%;
+                text-align: center;
+            }
+
+            canvas {
+                max-width: 100%;
+                height: auto;
+            }
+        }
+
+        /* MathJax Display */
+        .math-display {
+            background-color: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            overflow-x: auto;
+        }
+
+        /* Summary Card */
+        .summary-card {
+            background: linear-gradient(135deg, rgba(88, 166, 255, 0.1), rgba(63, 185, 80, 0.1));
+            border: 1px solid var(--accent);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .summary-card h4 {
+            color: var(--green);
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-bar" id="progressBar"></div>
+
+    <!-- Navigation -->
+    <nav>
+        <a href="index.html" class="nav-home">← Dashboard</a>
+        <h2 style="margin: 0; font-size: 1.3em; color: var(--accent);">Chapter 7: Large Language Models</h2>
+        <div class="nav-controls">
+            <a href="chapter6.html">← Ch 6</a>
+            <a href="chapter8.html">Ch 8 →</a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="hero">
+        <h1>Chapter 7: Large Language Models</h1>
+        <div class="epigraph">
+            "How much do we know at any time? Much more, or so I believe, than we know we know."
+            <br>— Agatha Christie, <em>The Moving Finger</em>
+        </div>
+        <div class="overview">
+            Large Language Models (LLMs) represent a fundamental shift in natural language processing. By training neural networks on enormous corpora of text, we can create systems that generate coherent, contextually appropriate language across a vast array of tasks. This chapter explores the architectures that power LLMs—from decoder-only models like GPT to encoder-decoder systems for translation—and the techniques that make them work: prompting, sampling strategies, and alignment through instruction tuning and reinforcement learning from human feedback. We'll examine how these models are trained, evaluated, and deployed in real-world applications while grappling with critical questions about hallucination, safety, and fairness.
+        </div>
+    </div>
+
+    <!-- Progress Tracker -->
+    <div class="progress-tracker">
+        <div class="progress-dot" data-section="0"></div>
+        <div class="progress-dot" data-section="1"></div>
+        <div class="progress-dot" data-section="2"></div>
+        <div class="progress-dot" data-section="3"></div>
+        <div class="progress-dot" data-section="4"></div>
+        <div class="progress-dot" data-section="5"></div>
+        <div class="progress-dot" data-section="6"></div>
+        <div class="progress-dot" data-section="7"></div>
+        <div class="progress-dot" data-section="8"></div>
+        <div class="progress-dot" data-section="9"></div>
+    </div>
+
+    <div class="container">
+        <!-- Section 1: Feynman Bridge -->
+        <section id="section-0" class="tracking-section">
+            <span class="badge feynman">Feynman</span>
+            <h2>The World's Greatest Autocomplete: Understanding LLMs Without the Jargon</h2>
+
+            <p>Imagine a student who has read every book in every library in the world. Not just skimmed them—truly read them all. When you start typing a sentence, this student can predict what word you'll type next with remarkable accuracy. Not because they understand the deep meaning of what you're writing, but because they've seen billions of examples of how words follow one another. They've internalized the patterns.</p>
+
+            <p>That's essentially what a Large Language Model is: the world's most elaborate autocomplete system, trained on such a vast amount of text that it can generate coherent, sometimes creative, sometimes disturbingly plausible text on almost any topic.</p>
+
+            <h3>Three Types of Students (Three Architectures)</h3>
+
+            <p><strong>The Storyteller (Decoder-Only)</strong></p>
+            <p>This student can only look at what came before. Like writing left-to-right without looking ahead, they predict each next word based solely on the words that came before it. This is how GPT, Claude, and Llama work. They're unidirectional—reading the past to forecast the future.</p>
+
+            <p><strong>The Detective (Encoder-Only)</strong></p>
+            <p>This student reads the entire document first, trying to understand what each word means in the full context. Some words are hidden (masked), and the detective has to figure out what they are based on all the surrounding context. This is like BERT—better at understanding what a sentence means, but not naturally suited to generating new text.</p>
+
+            <p><strong>The Translator (Encoder-Decoder)</strong></p>
+            <p>This student reads the full input document (the source language), understands it completely, and then generates output (the translation) word-by-word. The encoder (detective phase) understands the input; the decoder (storyteller phase) generates the output. Perfect for machine translation and other structured input-to-output tasks.</p>
+
+            <h3>Training: A Billion Fill-in-the-Blank Tests</h3>
+
+            <p>How do we teach our student to be so good at predicting the next word? We give them a test with a billion examples. We show them a sentence with one word replaced by a blank: "The capital of France is _____." The student guesses "Paris." We tell them: "Correct! Paris had a probability of 0.95 in your prediction." Or if they guessed "London": "Wrong. London only had probability 0.03; Paris had 0.95." Over billions of these examples, the student's internal patterns crystallize—the weights in the neural network fine-tune to capture the real regularities in language.</p>
+
+            <p>That process is training. The test is called <em>teacher forcing</em>—we force the student to see the correct answer so they learn from it.</p>
+        </section>
+
+        <!-- Section 2: Technical Ascent -->
+        <section id="section-1" class="tracking-section">
+            <span class="badge technical">Technical</span>
+            <h2>7.1–7.7: The Complete Technical Picture</h2>
+
+            <h3>7.1 Three Language Model Architectures</h3>
+
+            <p>Language models come in three canonical flavors, each suited to different tasks:</p>
+
+            <h4>Decoder-Only (Autoregressive)</h4>
+            <p>Models like GPT-2, GPT-3, GPT-4, Claude, and Llama are decoder-only. They predict the next token conditioned only on previous tokens:</p>
+
+            <div class="math-display">
+                $$P(w_t | w_{<t}) = \text{decoder}(w_1, w_2, \ldots, w_{t-1})$$
+            </div>
+
+            <p>Generation is left-to-right and autoregressive: once you generate token $w_t$, it becomes input for predicting $w_{t+1}$. This architecture is powerful for open-ended generation but doesn't naturally leverage bidirectional context.</p>
+
+            <h4>Encoder-Only (Masked Language Model)</h4>
+            <p>Models like BERT mask (hide) random tokens and train the encoder to predict them using <em>all</em> surrounding context, both left and right:</p>
+
+            <div class="math-display">
+                $$P(w_i | w_{\neg i}) = \text{encoder}(\text{context with } w_i \text{ masked})$$
+            </div>
+
+            <p>Encoder-only models are excellent for understanding and classification but awkward for generation—there's no natural left-to-right generation mechanism.</p>
+
+            <h4>Encoder-Decoder (Sequence-to-Sequence)</h4>
+            <p>Models like T5, BART, and machine translation systems have an encoder that processes the full input, then a decoder that generates output autoregressively:</p>
+
+            <div class="math-display">
+                $$P(y_t | y_{<t}, x) = \text{decoder}(y_1, \ldots, y_{t-1}, \text{encoder}(x))$$
+            </div>
+
+            <p>The encoder can see the entire source; the decoder generates the target left-to-right. This is the classic seq2seq design, ideal for tasks with clear input-output structure (translation, summarization, question answering).</p>
+
+            <h3>7.2 Conditional Generation: Any Task as Text Generation</h3>
+
+            <p>One powerful perspective: <em>almost any NLP task is text generation conditioned on a prompt</em>.</p>
+
+            <div class="math-display">
+                $$P(w_i | w_{<i}, \text{prompt})$$
+            </div>
+
+            <p><strong>Sentiment Analysis as Generation:</strong> Instead of training a classifier, you prompt an LLM: "Classify the sentiment: [movie review]. Sentiment:" and let it generate "positive" or "negative". You compare $P(\text{"positive"}|\text{context})$ vs $P(\text{"negative"}|\text{context})$.</p>
+
+            <p><strong>Question Answering as Generation:</strong> Prompt: "Context: [document]. Question: [question]. Answer:" and let the model generate the answer. The model learns to produce relevant spans or summaries.</p>
+
+            <p><strong>Machine Translation:</strong> Prompt: "Translate to French: [English sentence]." The decoder generates French left-to-right.</p>
+
+            <p>This unification is why LLMs are so flexible—you're not building task-specific classifiers; you're leveraging a single generative model across domains.</p>
+
+            <h3>7.3 Prompting and In-Context Learning</h3>
+
+            <p><strong>Prompt Engineering:</strong> The way you phrase your prompt dramatically affects output quality. Compare:</p>
+            <ul>
+                <li>"Classify the sentiment: great movie!" → may be confused</li>
+                <li>"Classify the sentiment of the following movie review. Output only 'positive' or 'negative'. Review: great movie! Sentiment:" → much clearer</li>
+            </ul>
+
+            <p><strong>Instruction Tuning:</strong> LLMs are typically finetuned on (instruction, response) pairs to follow directions better. E.g., "Write a limerick about cats" → actual limerick, rather than random completions.</p>
+
+            <p><strong>Few-Shot Prompting:</strong> Include a few examples in the prompt:</p>
+            <pre><code>Classify sentiment:
+Review: "I loved it!" Sentiment: positive
+Review: "Terrible movie." Sentiment: negative
+Review: "Pretty good." Sentiment: positive</code></pre>
+
+            <p><strong>Zero-Shot Prompting:</strong> No examples, just the instruction. Modern LLMs are surprisingly good at this.</p>
+
+            <p><strong>In-Context Learning:</strong> The model learns from examples in the prompt <em>without any gradient updates</em>. It's not classical learning—the model's weights don't change—but it "learns" to follow the pattern shown in the examples. This is a profound difference from supervised learning.</p>
+
+            <p><strong>System Prompts:</strong> A hidden instruction at the beginning that sets the model's behavior. E.g., "You are a helpful, harmless, honest assistant." System prompts shape personality and safety constraints.</p>
+
+            <h3>7.4 Generation and Sampling</h3>
+
+            <p>Once you have logits (raw neural network outputs) for the next token, how do you turn them into a prediction?</p>
+
+            <h4>From Logits to Probabilities</h4>
+
+            <p>Logits $u$ are transformed via softmax:</p>
+
+            <div class="math-display">
+                $$y = \text{softmax}(u) = \frac{e^{u_i}}{\sum_j e^{u_j}} \tag{7.1}$$
+            </div>
+
+            <p>This gives a probability distribution over the vocabulary.</p>
+
+            <h4>Greedy Decoding</h4>
+
+            <p>Always pick the highest probability token:</p>
+
+            <div class="math-display">
+                $$\hat{w}_t = \arg\max_{w \in V} P(w | w_{<t}) \tag{7.2}$$
+            </div>
+
+            <p>Fast and deterministic, but can get stuck in boring, repetitive patterns.</p>
+
+            <h4>Random Sampling</h4>
+
+            <p>Sample from the probability distribution:</p>
+
+            <div class="math-display">
+                $$w_t \sim P(w | w_{<t})$$
+            </div>
+
+            <p>More diverse but can produce incoherent or off-topic text. Risk of sampling low-probability, silly tokens.</p>
+
+            <h4>Temperature Sampling</h4>
+
+            <p>Control the "randomness" with a temperature parameter $\tau$:</p>
+
+            <div class="math-display">
+                $$y = \text{softmax}(u / \tau) \tag{7.4}$$
+            </div>
+
+            <p>When $\tau \to 0$: distribution becomes sharper, approaching greedy decoding. When $\tau = 1$: normal softmax. When $\tau > 1$: distribution flattens, more uniform, higher entropy. </p>
+
+            <ul>
+                <li>$\tau = 0.1$: Very conservative, repetitive, deterministic. Use for factual questions.</li>
+                <li>$\tau = 1.0$: Default, balanced.</li>
+                <li>$\tau = 2.0$: Highly creative, often incoherent.</li>
+            </ul>
+
+            <h4>Top-k and Top-p Sampling</h4>
+
+            <p><strong>Top-k:</strong> Only sample from the $k$ most likely tokens. Prevents sampling from the long tail of unlikely options.</p>
+
+            <p><strong>Top-p (Nucleus Sampling):</strong> Sample from the smallest set of tokens whose cumulative probability is at least $p$ (e.g., $p=0.9$). More principled than top-k because it adapts to the entropy of the distribution.</p>
+
+            <h3>7.5 Training Large Language Models</h3>
+
+            <p>LLM training happens in three stages:</p>
+
+            <h4>Stage 1: Pretraining (Self-Supervised)</h4>
+
+            <p>Predict the next token using teacher forcing. Loss for a single example:</p>
+
+            <div class="math-display">
+                $$L_{CE} = -\log \hat{y}_t[w_{t+1}] \tag{7.6}$$
+            </div>
+
+            <p>where $\hat{y}_t[w_{t+1}]$ is the model's predicted probability of the true next token. Over a batch of $T$ tokens:</p>
+
+            <div class="math-display">
+                $$L_{CE} = \frac{1}{T} \sum_{t=1}^{T} -\log \hat{y}_t[w_{t+1}] \tag{7.7}$$
+            </div>
+
+            <p><strong>Pretraining Corpora:</strong> Massive text crawls:</p>
+            <ul>
+                <li><strong>Common Crawl:</strong> Snapshot of the public web, ~5 trillion tokens</li>
+                <li><strong>The Pile:</strong> Diverse collection (books, code, papers, web), ~825 GB</li>
+                <li><strong>Quality Filtering:</strong> Remove low-quality, toxic, or near-duplicate content</li>
+                <li><strong>Deduplication:</strong> Remove repeated documents to improve generalization</li>
+            </ul>
+
+            <p>Pretraining is computationally expensive (months on TPU clusters) but only done once. The resulting model is a strong foundation.</p>
+
+            <h4>Stage 2: Instruction Tuning (Supervised Fine-Tuning, SFT)</h4>
+
+            <p>Fine-tune the pretrained model on (instruction, response) pairs. Uses the same cross-entropy loss but on curated, high-quality examples. The model learns to follow instructions and be helpful.</p>
+
+            <h4>Stage 3: Alignment (RLHF or DPO)</h4>
+
+            <p><strong>Reinforcement Learning from Human Feedback (RLHF):</strong></p>
+            <ul>
+                <li>Generate candidate outputs from the SFT model</li>
+                <li>Get human raters to score which output is better</li>
+                <li>Train a reward model to predict human preference</li>
+                <li>Use reinforcement learning (PPO) to optimize the model to maximize reward</li>
+            </ul>
+
+            <p><strong>Direct Preference Optimization (DPO):</strong> A simpler approach that directly optimizes for human preferences without needing an explicit reward model.</p>
+
+            <p>These stages progressively make the model more useful, harmless, and honest.</p>
+
+            <h3>7.6 Evaluation</h3>
+
+            <h4>Perplexity</h4>
+
+            <p>Measure how "surprised" the model is by held-out test text. For a sequence $w_{1:n}$:</p>
+
+            <div class="math-display">
+                $$\text{PP}(w_{1:n}) = \frac{1}{P(w_{1:n})}^{1/n} \tag{7.10}$$
+            </div>
+
+            <p>Equivalently (using products of conditional probabilities):</p>
+
+            <div class="math-display">
+                $$\text{PP}(w_{1:n}) = \sqrt[n]{\prod_{i=1}^{n} \frac{1}{P(w_i | w_{<i})}} \tag{7.11}$$
+            </div>
+
+            <p>Lower perplexity = model assigns higher probability to the true text = better model. A perplexity of 100 means "on average, the model is choosing between ~100 equally likely words at each position." Perplexity of 2 means it's very certain.</p>
+
+            <h4>Downstream Benchmarks</h4>
+
+            <p><strong>MMLU (Massive Multitask Language Understanding):</strong> 57,000+ multiple-choice questions across diverse domains (science, history, law, medicine). Tests whether the model has learned factual knowledge.</p>
+
+            <p>Other benchmarks: SQuAD (reading comprehension), GLUE (language understanding), HumanEval (code generation), BLEU (translation).</p>
+
+            <h4>Data Contamination</h4>
+
+            <p><strong>Critical Issue:</strong> If your test set appears in the pretraining data, you get artificially high scores. Modern LLMs are trained on web data that may include benchmark leaderboards. Careful decontamination and periodic test set rotation are essential.</p>
+
+            <h4>Other Evaluation Dimensions</h4>
+
+            <ul>
+                <li><strong>Efficiency:</strong> Inference speed, memory, tokens/sec</li>
+                <li><strong>Energy:</strong> Carbon footprint of training and inference</li>
+                <li><strong>Fairness:</strong> Bias across demographic groups</li>
+                <li><strong>Safety:</strong> Resistance to jailbreaks, harmful outputs</li>
+                <li><strong>Human Preference:</strong> How well does it align with what humans want?</li>
+            </ul>
+
+            <h3>7.7 Ethics, Safety, and Failure Modes</h3>
+
+            <h4>Hallucination</h4>
+
+            <p>LLMs generate confident-sounding but completely false information. Why? The model is trained to predict likely-sounding text, not factually correct text. There's no built-in mechanism to verify truth. A model can "hallucinate" that your product has a feature it doesn't, or cite a paper that doesn't exist (and sound authoritative doing so).</p>
+
+            <h4>Sycophancy</h4>
+
+            <p>Models trained via RLHF to be "helpful and harmless" can become excessively agreeable. If a user says "The capital of France is London," the model might say "That's correct!" rather than correct them. It's been trained to be nice and not contradict users.</p>
+
+            <h4>Unsafe Actions</h4>
+
+            <p>Models can generate instructions for illegal activities, violence, or hacking. Alignment techniques help, but no method is perfect. Adversarial prompts ("jailbreaks") can sometimes bypass safety guards.</p>
+
+            <h4>Representational Harm</h4>
+
+            <p>Models trained on biased data will perpetuate stereotypes. They might consistently describe certain groups negatively or associate gender with stereotyped roles.</p>
+
+            <h4>Privacy</h4>
+
+            <p>Models trained on internet data may memorize and reproduce personal information, copyrighted text, or sensitive data. Training data documentation and privacy-preserving techniques (differential privacy) are important.</p>
+
+            <h4>Emotional Dependence</h4>
+
+            <p>As LLMs become more human-like, users may form inappropriate emotional attachments or rely on them for mental health support they should get from professionals.</p>
+
+            <h4>Misinformation and Fraud</h4>
+
+            <p>LLMs can be used to generate convincing phishing emails, deepfake captions, or false news articles at scale. The ease of generation outpaces detection capabilities.</p>
+        </section>
+
+        <!-- Section 3: Interactive Visualizers -->
+        <section id="section-2" class="tracking-section">
+            <span class="badge viz">Viz</span>
+            <h2>Interactive Visualizers: See LLMs in Action</h2>
+
+            <!-- Visualizer 1: Temperature Sampling -->
+            <div class="viz-container">
+                <div class="viz-title">Visualizer 1: Temperature Sampling Explorer</div>
+                <p>Adjust logit values and temperature to see how the probability distribution changes. Lower temperature makes it sharper (more greedy); higher temperature makes it flatter (more random).</p>
+
+                <div class="viz-controls">
+                    <div class="control-group">
+                        <label>Logit for "all": <input type="number" id="logit1" value="2.5" step="0.1"></label>
+                    </div>
+                    <div class="control-group">
+                        <label>Logit for "the": <input type="number" id="logit2" value="1.8" step="0.1"></label>
+                    </div>
+                    <div class="control-group">
+                        <label>Logit for "your": <input type="number" id="logit3" value="0.5" step="0.1"></label>
+                    </div>
+                    <div class="control-group">
+                        <label>Logit for "that": <input type="number" id="logit4" value="0.2" step="0.1"></label>
+                    </div>
+                    <div class="control-group">
+                        <label>Temperature (τ): <span id="tempValue">1.0</span>
+                            <input type="range" id="temperature" min="0.1" max="5.0" value="1.0" step="0.1">
+                        </label>
+                    </div>
+                </div>
+
+                <canvas id="tempCanvas" width="700" height="300"></canvas>
+
+                <div class="button-group">
+                    <button onclick="updateTempChart()">Update Distribution</button>
+                    <button onclick="sampleToken()">Sample Token</button>
+                </div>
+
+                <div id="sampledToken" style="margin-top: 1rem; padding: 1rem; background-color: var(--bg-secondary); border-radius: 8px; display: none;">
+                    <strong>Sampled token:</strong> <span id="sampledTokenText" style="color: var(--green); font-size: 1.2em; font-weight: bold;"></span>
+                </div>
+            </div>
+
+            <!-- Visualizer 2: Autoregressive Generator -->
+            <div class="viz-container">
+                <div class="viz-title">Visualizer 2: Autoregressive Text Generator</div>
+                <p>Start with a prompt and generate text token by token. Watch the probability distribution shift as each new token becomes context for the next.</p>
+
+                <div class="viz-controls">
+                    <div class="control-group">
+                        <label>Prompt:
+                            <input type="text" id="prompt" value="The dog">
+                        </label>
+                    </div>
+                    <div class="control-group">
+                        <label>Generation Mode:
+                            <select id="genMode">
+                                <option value="greedy">Greedy</option>
+                                <option value="sampling">Sampling</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="control-group">
+                        <label>Temperature (τ): <span id="genTempValue">1.0</span>
+                            <input type="range" id="genTemperature" min="0.1" max="5.0" value="1.0" step="0.1">
+                        </label>
+                    </div>
+                </div>
+
+                <div id="generatedText" style="background-color: var(--bg-secondary); padding: 1rem; border-radius: 8px; min-height: 60px; margin-bottom: 1rem; line-height: 1.8;">
+                    <span id="promptDisplay" style="color: var(--text-dim);">The dog</span><span id="generatedSpan"></span>
+                </div>
+
+                <canvas id="genChart" width="700" height="250"></canvas>
+
+                <div class="button-group">
+                    <button onclick="generateNextToken()">Generate Next Token</button>
+                    <button onclick="resetGenerator()">Reset</button>
+                </div>
+
+                <div style="margin-top: 1rem; padding: 1rem; background-color: var(--bg-secondary); border-radius: 8px;">
+                    <strong>Current Distribution:</strong>
+                    <div id="distDisplay" style="margin-top: 0.5rem; font-family: 'JetBrains Mono', monospace; font-size: 0.9em;"></div>
+                </div>
+            </div>
+
+            <!-- Visualizer 3: Training Pipeline -->
+            <div class="viz-container">
+                <div class="viz-title">Visualizer 3: LLM Training Pipeline</div>
+                <p>Click each stage to see what happens at different phases of LLM training. From raw pretraining to aligned model.</p>
+
+                <svg width="100%" height="400" style="background-color: var(--bg-secondary); border-radius: 8px;">
+                    <!-- Stage 1: Pretraining -->
+                    <rect x="50" y="80" width="180" height="120" fill="var(--bg-card)" stroke="var(--green)" stroke-width="2" rx="8" onclick="toggleStage(0)"></rect>
+                    <text x="140" y="110" text-anchor="middle" fill="var(--green)" font-weight="bold" font-size="16">Stage 1: Pretraining</text>
+                    <text x="140" y="135" text-anchor="middle" fill="var(--text-dim)" font-size="12">Next-word Prediction</text>
+                    <text x="140" y="155" text-anchor="middle" fill="var(--text-dim)" font-size="12">100B+ tokens</text>
+                    <text x="140" y="175" text-anchor="middle" fill="var(--text-dim)" font-size="12" cursor="pointer">Click for details</text>
+
+                    <!-- Stage 2: Instruction Tuning -->
+                    <rect x="310" y="80" width="180" height="120" fill="var(--bg-card)" stroke="var(--blue)" stroke-width="2" rx="8" onclick="toggleStage(1)"></rect>
+                    <text x="400" y="110" text-anchor="middle" fill="var(--blue)" font-weight="bold" font-size="16">Stage 2: SFT</text>
+                    <text x="400" y="135" text-anchor="middle" fill="var(--text-dim)" font-size="12">Instruction Following</text>
+                    <text x="400" y="155" text-anchor="middle" fill="var(--text-dim)" font-size="12">100k+ examples</text>
+                    <text x="400" y="175" text-anchor="middle" fill="var(--text-dim)" font-size="12" cursor="pointer">Click for details</text>
+
+                    <!-- Stage 3: Alignment -->
+                    <rect x="570" y="80" width="180" height="120" fill="var(--bg-card)" stroke="var(--purple)" stroke-width="2" rx="8" onclick="toggleStage(2)"></rect>
+                    <text x="660" y="110" text-anchor="middle" fill="var(--purple)" font-weight="bold" font-size="16">Stage 3: RLHF</text>
+                    <text x="660" y="135" text-anchor="middle" fill="var(--text-dim)" font-size="12">Human Preference</text>
+                    <text x="660" y="155" text-anchor="middle" fill="var(--text-dim)" font-size="12">10k+ comparisons</text>
+                    <text x="660" y="175" text-anchor="middle" fill="var(--text-dim)" font-size="12" cursor="pointer">Click for details</text>
+
+                    <!-- Arrows -->
+                    <line x1="230" y1="140" x2="310" y2="140" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrowhead)"></line>
+                    <line x1="490" y1="140" x2="570" y2="140" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrowhead)"></line>
+
+                    <!-- Arrow marker definition -->
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <polygon points="0 0, 10 3, 0 6" fill="var(--accent)"></polygon>
+                        </marker>
+                    </defs>
+
+                    <!-- Output -->
+                    <text x="400" y="280" text-anchor="middle" fill="var(--text)" font-size="16" font-weight="bold">Output Model</text>
+                    <line x1="140" y1="200" x2="100" y2="240" stroke="var(--text-dim)" stroke-width="1" stroke-dasharray="5,5"></line>
+                    <line x1="400" y1="200" x2="400" y2="240" stroke="var(--text-dim)" stroke-width="1" stroke-dasharray="5,5"></line>
+                    <line x1="660" y1="200" x2="700" y2="240" stroke="var(--text-dim)" stroke-width="1" stroke-dasharray="5,5"></line>
+                </svg>
+
+                <div id="stageDetail0" class="hidden-content" style="margin-top: 1rem;">
+                    <strong>Pretraining Details:</strong>
+                    <ul>
+                        <li><strong>Data:</strong> Common Crawl, The Pile, books, code (100B+ tokens)</li>
+                        <li><strong>Objective:</strong> Cross-entropy loss for next-word prediction</li>
+                        <li><strong>Duration:</strong> Weeks to months on large clusters</li>
+                        <li><strong>Result:</strong> Foundation model that understands language patterns</li>
+                    </ul>
+                </div>
+
+                <div id="stageDetail1" class="hidden-content" style="margin-top: 1rem;">
+                    <strong>Instruction Tuning (SFT) Details:</strong>
+                    <ul>
+                        <li><strong>Data:</strong> (Instruction, response) pairs, high-quality curated data</li>
+                        <li><strong>Objective:</strong> Same cross-entropy loss, but on curated examples</li>
+                        <li><strong>Duration:</strong> Hours to a day on the same cluster</li>
+                        <li><strong>Result:</strong> Model now follows instructions, more helpful</li>
+                    </ul>
+                </div>
+
+                <div id="stageDetail2" class="hidden-content" style="margin-top: 1rem;">
+                    <strong>Alignment (RLHF) Details:</strong>
+                    <ul>
+                        <li><strong>Data:</strong> Human preference judgments between pairs of model outputs</li>
+                        <li><strong>Objective:</strong> Train reward model, then optimize policy with RL</li>
+                        <li><strong>Duration:</strong> Days, iterative with human feedback</li>
+                        <li><strong>Result:</strong> Model aligns with human preferences, safer & more useful</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Visualizer 4: Perplexity Calculator -->
+            <div class="viz-container">
+                <div class="viz-title">Visualizer 4: Perplexity Calculator</div>
+                <p>Input probabilities that a model assigns to a sequence of tokens. Compare two models and see which has better perplexity (lower = better).</p>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+                    <div>
+                        <h4>Model A</h4>
+                        <div class="viz-controls">
+                            <div class="control-group">
+                                <label>P(token 1): <input type="number" id="modelA1" value="0.8" min="0.01" max="1" step="0.01"></label>
+                            </div>
+                            <div class="control-group">
+                                <label>P(token 2): <input type="number" id="modelA2" value="0.6" min="0.01" max="1" step="0.01"></label>
+                            </div>
+                            <div class="control-group">
+                                <label>P(token 3): <input type="number" id="modelA3" value="0.7" min="0.01" max="1" step="0.01"></label>
+                            </div>
+                            <div class="control-group">
+                                <label>P(token 4): <input type="number" id="modelA4" value="0.5" min="0.01" max="1" step="0.01"></label>
+                            </div>
+                        </div>
+                        <div style="background-color: var(--bg-secondary); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                            <div>Avg -log P: <strong id="modelAAvg">0.00</strong></div>
+                            <div style="margin-top: 0.5rem;">Perplexity: <strong id="modelAPP" style="font-size: 1.2em;">0.00</strong></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4>Model B</h4>
+                        <div class="viz-controls">
+                            <div class="control-group">
+                                <label>P(token 1): <input type="number" id="modelB1" value="0.9" min="0.01" max="1" step="0.01"></label>
+                            </div>
+                            <div class="control-group">
+                                <label>P(token 2): <input type="number" id="modelB2" value="0.75" min="0.01" max="1" step="0.01"></label>
+                            </div>
+                            <div class="control-group">
+                                <label>P(token 3): <input type="number" id="modelB3" value="0.85" min="0.01" max="1" step="0.01"></label>
+                            </div>
+                            <div class="control-group">
+                                <label>P(token 4): <input type="number" id="modelB4" value="0.7" min="0.01" max="1" step="0.01"></label>
+                            </div>
+                        </div>
+                        <div style="background-color: var(--bg-secondary); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                            <div>Avg -log P: <strong id="modelBAvg">0.00</strong></div>
+                            <div style="margin-top: 0.5rem;">Perplexity: <strong id="modelBPP" style="font-size: 1.2em;">0.00</strong></div>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="calculatePerplexity()">Calculate Perplexity</button>
+
+                <div id="ppComparison" style="margin-top: 2rem; padding: 1.5rem; background-color: var(--bg-secondary); border-radius: 8px; display: none;">
+                    <strong>Winner:</strong> <span id="winner" style="color: var(--green); font-size: 1.1em;"></span>
+                    <p style="margin-top: 1rem; color: var(--text-dim);">
+                        <strong>Interpretation:</strong> The model with lower perplexity is more confident in the test data.
+                        Perplexity ≈ "how many equally likely tokens the model is choosing between, on average."
+                        Model A has PP = X means the model is effectively "choosing between ~X equally likely words at each position."
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Code Implementation -->
+        <section id="section-3" class="tracking-section">
+            <span class="badge code">Code</span>
+            <h2>Implementing Key LLM Concepts in Python</h2>
+
+            <h3>Sampling Strategies</h3>
+
+            <pre><code><span class="keyword">import</span> numpy <span class="keyword">as</span> np
+
+<span class="keyword">def</span> <span class="function">softmax</span>(logits, temperature=<span class="number">1.0</span>):
+    <span class="string">"""Convert logits to probability distribution."""</span>
+    scaled = logits / temperature
+    exp_scaled = np.exp(scaled - np.max(scaled))  <span class="comment"># Numerical stability</span>
+    <span class="keyword">return</span> exp_scaled / np.sum(exp_scaled)
+
+<span class="keyword">def</span> <span class="function">greedy_decode</span>(logits):
+    <span class="string">"""Select the highest probability token."""</span>
+    <span class="keyword">return</span> np.argmax(logits)
+
+<span class="keyword">def</span> <span class="function">sample_from_distribution</span>(probs):
+    <span class="string">"""Sample a token index from probability distribution."""</span>
+    <span class="keyword">return</span> np.random.choice(len(probs), p=probs)
+
+<span class="keyword">def</span> <span class="function">temperature_sample</span>(logits, temperature=<span class="number">1.0</span>):
+    <span class="string">"""Sample with temperature control."""</span>
+    probs = softmax(logits, temperature)
+    <span class="keyword">return</span> sample_from_distribution(probs)
+
+<span class="keyword">def</span> <span class="function">nucleus_sample</span>(logits, p=<span class="number">0.9</span>):
+    <span class="string">"""Top-p (nucleus) sampling."""</span>
+    probs = softmax(logits)
+    sorted_idx = np.argsort(probs)[::<span class="number">-1</span>]  <span class="comment"># Sort descending</span>
+    cumsum = np.cumsum(probs[sorted_idx])
+    <span class="comment"># Keep tokens until cumulative probability exceeds p</span>
+    mask = cumsum <= p
+    mask[<span class="number">0</span>] = <span class="keyword">True</span>  <span class="comment"># Always include top token</span>
+    probs[~mask[np.argsort(sorted_idx)]] = <span class="number">0</span>
+    probs /= np.sum(probs)  <span class="comment"># Renormalize</span>
+    <span class="keyword">return</span> sample_from_distribution(probs)
+</code></pre>
+
+            <h3>Autoregressive Generation Loop</h3>
+
+            <pre><code><span class="keyword">def</span> <span class="function">generate_text</span>(model, prompt_tokens, max_length=<span class="number">50</span>,
+                       temperature=<span class="number">1.0</span>, method=<span class="string">"sample"</span>):
+    <span class="string">"""
+    Generate text token-by-token.
+
+    Args:
+        model: Language model (must have .forward() method)
+        prompt_tokens: List of initial token IDs
+        max_length: Maximum tokens to generate
+        temperature: Temperature for sampling
+        method: "greedy" or "sample"
+
+    Returns:
+        List of generated token IDs
+    """</span>
+    generated = list(prompt_tokens)
+
+    <span class="keyword">for</span> _ <span class="keyword">in</span> range(max_length):
+        <span class="comment"># Get model output (logits) for current sequence</span>
+        logits = model.forward(generated)
+        next_logits = logits[<span class="number">-1</span>]  <span class="comment"># Logits for next token</span>
+
+        <span class="comment"># Choose next token</span>
+        <span class="keyword">if</span> method == <span class="string">"greedy"</span>:
+            next_token = greedy_decode(next_logits)
+        <span class="keyword">else</span>:
+            next_token = temperature_sample(next_logits, temperature)
+
+        generated.append(next_token)
+
+        <span class="comment"># Check for end-of-sequence token</span>
+        <span class="keyword">if</span> next_token == <span class="number">0</span>:  <span class="comment"># Assuming 0 is EOS</span>
+            <span class="keyword">break</span>
+
+    <span class="keyword">return</span> generated
+</code></pre>
+
+            <h3>Perplexity Computation</h3>
+
+            <pre><code><span class="keyword">def</span> <span class="function">compute_perplexity</span>(model, test_tokens):
+    <span class="string">"""
+    Compute perplexity of a model on test data.
+
+    PP(w) = (1 / P(w))^(1/n) = exp(-(1/n) * sum(log P(w_i | w_{<i})))
+
+    Args:
+        model: Language model
+        test_tokens: List of token IDs
+
+    Returns:
+        Perplexity (float)
+    """</span>
+    total_log_prob = <span class="number">0.0</span>
+
+    <span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">1</span>, len(test_tokens)):
+        <span class="comment"># Get probability of w_i given w_{<i}</span>
+        context = test_tokens[:i]
+        logits = model.forward(context)
+        probs = softmax(logits[<span class="number">-1</span>])
+        true_token = test_tokens[i]
+        prob = probs[true_token]
+
+        <span class="comment"># Add to running sum (avoid log(0))</span>
+        total_log_prob += np.log(np.clip(prob, <span class="number">1e-10</span>, <span class="number">1.0</span>))
+
+    <span class="comment"># Average and exponentiate</span>
+    avg_log_prob = total_log_prob / (len(test_tokens) - <span class="number">1</span>)
+    perplexity = np.exp(-avg_log_prob)
+
+    <span class="keyword">return</span> perplexity
+</code></pre>
+
+            <h3>Few-Shot Prompt Template Builder</h3>
+
+            <pre><code><span class="keyword">class</span> <span class="function">FewShotPrompt</span>:
+    <span class="string">"""Build few-shot prompts for in-context learning."""</span>
+
+    <span class="keyword">def</span> <span class="function">__init__</span>(<span class="keyword">self</span>, task_description):
+        <span class="keyword">self</span>.task = task_description
+        <span class="keyword">self</span>.examples = []
+
+    <span class="keyword">def</span> <span class="function">add_example</span>(<span class="keyword">self</span>, input_text, output_text):
+        <span class="string">"""Add an example to the prompt."""</span>
+        <span class="keyword">self</span>.examples.append({<span class="string">"input"</span>: input_text, <span class="string">"output"</span>: output_text})
+        <span class="keyword">return</span> <span class="keyword">self</span>
+
+    <span class="keyword">def</span> <span class="function">build</span>(<span class="keyword">self</span>, new_input):
+        <span class="string">"""Build the final prompt."""</span>
+        prompt = <span class="string">f"Task: </span>{<span class="keyword">self</span>.task}\n\n"</span>
+
+        <span class="comment"># Add examples</span>
+        <span class="keyword">for</span> i, ex <span class="keyword">in</span> enumerate(<span class="keyword">self</span>.examples, <span class="number">1</span>):
+            prompt += <span class="string">f"Example </span>{i}:\n"</span>
+            prompt += <span class="string">f"Input: </span>{ex[<span class="string">'input'</span>]}\n"</span>
+            prompt += <span class="string">f"Output: </span>{ex[<span class="string">'output'</span>]}\n\n"</span>
+
+        <span class="comment"># Add new input</span>
+        prompt += <span class="string">f"Input: </span>{new_input}\n"</span>
+        prompt += <span class="string">"Output:"</span>
+
+        <span class="keyword">return</span> prompt
+
+<span class="comment"># Example usage:</span>
+prompter = FewShotPrompt(<span class="string">"Classify sentiment as positive or negative"</span>)
+prompter.add_example(<span class="string">"I love this movie!"</span>, <span class="string">"positive"</span>)
+prompter.add_example(<span class="string">"Terrible experience."</span>, <span class="string">"negative"</span>)
+final_prompt = prompter.build(<span class="string">"The service was great!"</span>)
+<span class="comment"># Pass final_prompt to LLM for generation</span>
+</code></pre>
+
+            <h3>Cross-Entropy Loss During Training</h3>
+
+            <pre><code><span class="keyword">def</span> <span class="function">compute_ce_loss</span>(predictions, targets):
+    <span class="string">"""
+    Compute cross-entropy loss for language modeling.
+
+    L = -log P(w_true)
+
+    Args:
+        predictions: Shape (batch_size, seq_len, vocab_size) from model
+        targets: Shape (batch_size, seq_len) with true token IDs
+
+    Returns:
+        Scalar loss (average over batch and sequence)
+    """</span>
+    batch_size, seq_len, vocab_size = predictions.shape
+    loss = <span class="number">0.0</span>
+
+    <span class="keyword">for</span> b <span class="keyword">in</span> range(batch_size):
+        <span class="keyword">for</span> t <span class="keyword">in</span> range(seq_len):
+            probs = softmax(predictions[b, t])  <span class="comment"># Logits → probs</span>
+            true_token = targets[b, t]
+            true_prob = probs[true_token]
+            loss += -np.log(np.clip(true_prob, <span class="number">1e-10</span>, <span class="number">1.0</span>))
+
+    <span class="keyword">return</span> loss / (batch_size * seq_len)
+</code></pre>
+        </section>
+
+        <!-- Section 5: Modern Bridge -->
+        <section id="section-4" class="tracking-section">
+            <span class="badge modern">Modern</span>
+            <h2>The 2026 LLM Landscape: From GPT-2 to Multimodal Agents</h2>
+
+            <h3>A Brief Evolution</h3>
+
+            <p><strong>2019-2020:</strong> GPT-2 (1.5B params, 40GB text) shows impressive few-shot learning. OpenAI chooses not to release the largest version due to safety concerns. BERT dominates benchmarks for understanding tasks.</p>
+
+            <p><strong>2020-2021:</strong> GPT-3 (175B params) released. With scale comes emergent abilities—models can do tasks never seen in training (true few-shot learning). The cost is high: training takes months and costs millions.</p>
+
+            <p><strong>2022-2023:</strong> Instruction tuning (Ouyang et al., 2022) and RLHF from OpenAI dramatically improve usability. ChatGPT launches and breaks adoption records. Open-source models (Llama, Falcon) arrive. Claude 1 (Anthropic). Constitutional AI as an alternative to RLHF.</p>
+
+            <p><strong>2024-2026:</strong> Frontier models (GPT-4, Claude 3, Gemini, Llama 3.1) reach ~100 trillion parameter training, multimodal (text+image+video), tool use, extended context (100k+ tokens). Scaling laws hold: performance predictably improves with more data, compute, parameters. Open debate on whether we've hit diminishing returns or if better algorithms (e.g., test-time scaling, chain-of-thought, search) unlock new capabilities.</p>
+
+            <h3>Scaling Laws and Emergent Abilities</h3>
+
+            <p>Empirically, language model performance follows a power law with compute:</p>
+
+            <div class="math-display">
+                $$L(C) = aC^{-\alpha}$$
+            </div>
+
+            <p>where $L$ is loss, $C$ is compute (FLOPs), and $\alpha \approx 0.07-0.08$. This means:</p>
+
+            <ul>
+                <li>10x more compute → ~15-20% lower loss (equivalent to lower perplexity)</li>
+                <li>Performance improves smoothly, not suddenly</li>
+                <li>But at certain scales, new capabilities "emerge"—e.g., GPT-3 can do math problems it was never trained on</li>
+            </ul>
+
+            <p>Whether emergence is truly sudden or just smooth improvement is an open question.</p>
+
+            <h3>Chain-of-Thought and Extended Reasoning</h3>
+
+            <p>Wei et al. (2022) showed that asking models to "think step by step" dramatically improves performance on complex reasoning tasks. Rather than asking "Q: What is 10 + 2 × 3? A:", you ask "Q: What is 10 + 2 × 3? Let me think step by step. A:", and the model generates intermediate reasoning.</p>
+
+            <p>This taps into a key LLM property: generating text is cheap compared to computing answers directly. Making reasoning visible helps.</p>
+
+            <h3>Tool Use and Agents</h3>
+
+            <p>Modern LLMs can call external tools (calculators, search engines, APIs). An LLM decides when to call a tool, passes arguments, receives results, and continues generation. This lets LLMs:</p>
+
+            <ul>
+                <li>Do accurate math (via calculator tool)</li>
+                <li>Retrieve current information (via search)</li>
+                <li>Execute code (via Python REPL)</li>
+                <li>Query databases</li>
+            </ul>
+
+            <p>Agentic LLMs—systems that repeatedly decide-act-observe—are the frontier in 2026. They're more powerful than single-shot generation but more complex to build and reason about.</p>
+
+            <h3>Multimodal LLMs</h3>
+
+            <p>GPT-4V, Claude 3 (Sonnet/Opus/Haiku), and others accept images as input. An image encoder extracts visual features, which are prepended to the token sequence as "visual tokens." The LLM then generates text about the image.</p>
+
+            <p>Video LLMs extend this to temporal understanding. Audio LLMs (like Gemini) fuse multiple modalities.</p>
+
+            <h3>Open vs. Closed Models</h3>
+
+            <p><strong>Open Models:</strong> Llama, Falcon, Mistral, etc. Anyone can download weights, finetune, deploy. Pros: transparency, customization, reproducibility. Cons: harder to monetize, no safety guarantee from the provider.</p>
+
+            <p><strong>Closed (Proprietary) Models:</strong> GPT-4, Claude, Gemini Ultra—accessed via API. Providers control safety, can update models, monetize. Cons: less transparency, vendor lock-in, privacy concerns (data goes to provider).</p>
+
+            <p>2026 sees both thriving. Open models are competitive for many tasks; frontier capability still favors well-funded labs (OpenAI, Anthropic, Google, Meta).</p>
+
+            <h3>Safety and Alignment Techniques</h3>
+
+            <ul>
+                <li><strong>RLHF (Reinforcement Learning from Human Feedback):</strong> Train a reward model on human judgments, then optimize the LLM with RL. Effective but labor-intensive.</li>
+                <li><strong>Constitutional AI (Anthropic):</strong> Rather than human raters, have the model critique its own outputs against a constitution of principles (helpfulness, harmlessness, honesty). Scales better.</li>
+                <li><strong>Direct Preference Optimization (DPO) (Rafailov et al., 2023):</strong> Directly optimize for human preference without an explicit reward model. Simpler, sometimes as effective as RLHF.</li>
+                <li><strong>Supervised Fine-Tuning (SFT):</strong> Simple approach: just train on high-quality (instruction, response) pairs. Less sophisticated than RLHF but surprisingly effective.</li>
+            </ul>
+
+            <h3>Key Remaining Challenges</h3>
+
+            <ul>
+                <li><strong>Hallucination:</strong> No solution has fully solved confabulation. Retrieval Augmented Generation (RAG) helps for knowledge-dependent tasks.</li>
+                <li><strong>Reasoning:</strong> LLMs still struggle with true logical reasoning, especially long-chain dependencies. Whether scaling alone fixes this is unclear.</li>
+                <li><strong>Safety at Scale:</strong> Aligning larger models is harder; new jailbreaks emerge. The arms race between adversarial prompt injection and defense continues.</li>
+                <li><strong>Compute Cost:</strong> Training and inference of frontier models is expensive, favoring rich labs/companies.</li>
+                <li><strong>Environmental Impact:</strong> LLM training consumes enormous energy. Carbon-aware training and efficient architectures matter.</li>
+            </ul>
+        </section>
+
+        <!-- Section 6: Historical Context -->
+        <section id="section-5" class="tracking-section">
+            <span class="badge history">History</span>
+            <h2>Historical Timeline: The Rise of Language Models</h2>
+
+            <div class="collapsible-header" onclick="toggleTimeline()">
+                <span>Expand Timeline</span>
+                <span class="chevron" id="timelineChevron">▼</span>
+            </div>
+
+            <div class="collapsible-content" id="timelineContent">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-year">1975</div>
+                            <div class="timeline-desc">Jelinek & Baker at IBM coin the term "language model" in the context of speech recognition. Markov chains model word sequences.</div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-year">1988-1990s</div>
+                            <div class="timeline-desc">Rosenfeld's maximum entropy language models. Deerwester et al.'s Latent Semantic Analysis (LSA) shows you can learn latent semantic structure from text. Landauer & Dumais extend with Latent Semantic Indexing.</div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-year">2003</div>
+                            <div class="timeline-desc">Bengio et al. train the first neural language model: a feedforward network predicting the next word. Embeds words in continuous space; network learns distributed representations. Major conceptual shift from discrete n-grams to neural learning.</div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-year">2010-2013</div>
+                            <div class="timeline-desc">Mikolov et al. develop RNN Language Models, reducing perplexity significantly. Word2Vec (Mikolov et al., 2013) becomes ubiquitous for learning word embeddings. Show that word embeddings capture semantic structure (king - man + woman ≈ queen).</div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-year">2015-2016</div>
+                            <div class="timeline-desc">Attention mechanism (Bahdanau et al.) allows RNNs to focus on relevant input parts. Transformers architecture (Vaswani et al.) introduced but not yet mainstream. State-of-the-art on many benchmarks still held by LSTMs.</div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-year">2017</div>
+                            <div class="timeline-desc">"Attention Is All You Need" (Vaswani et al., 2017). Transformer architecture published. Pure attention-based, no recurrence. Trains faster and scales better than RNNs. Becomes foundation for all modern LLMs.</div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-year">2018-2019</div>
+                            <div class="timeline-desc">Peters et al. release ELMo, showing pretrained contextual embeddings outperform static embeddings. Devlin et al. release BERT (2018), an encoder-only model trained via masked LM. Dominates understanding tasks. OpenAI releases GPT (2018) and GPT-2 (2019), decoder-only pretraining shows impressive few-shot ability.</div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-year">2020</div>
+                            <div class="timeline-desc">GPT-3 released with 175B parameters. Few-shot learning reaches new levels. Can do math, code, prose generation—many tasks not explicitly in training. Cost: millions to train, inference expensive. Accessibility gap: only OpenAI has this.</div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-year">2021-2022</div>
+                            <div class="timeline-desc">Instruction tuning (Wei et al., Ouyang et al.) shows finetuning on (instruction, response) pairs dramatically improves usability. RLHF (Christiano et al.'s framework, applied by OpenAI) aligns models with human preference. InstructGPT (2022) outperforms larger base GPT-3 on human evaluations.</div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-year">Nov 2022</div>
+                            <div class="timeline-desc">ChatGPT launches. Reaches 1 million users in 5 days. LLMs become mainstream. Public suddenly aware of AI's capabilities and limitations. Triggers AI safety discussions and regulatory interest globally.</div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-year">2023</div>
+                            <div class="timeline-desc">GPT-4 released by OpenAI (March). Claude 1 released by Anthropic. Constitutional AI (Bai et al., Anthropic) proposes alternative to RLHF using model self-critique. Open-source models explode: Llama (Meta), Falcon (TII), Mistral, Alpaca, etc. Fine-tuning becomes accessible to researchers/startups.</div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-year">2024-2026</div>
+                            <div class="timeline-desc">Frontier models saturate public benchmarks. Race shifts to longer contexts (100k+ tokens), multimodality (vision+audio+video+text), tool-use agents, and reasoning. Scaling laws continue to hold. Claude 3 (Opus/Sonnet), GPT-4 Turbo, Gemini Ultra compete on frontier capability. Llama 3.1 shows open models are competitive for many applications.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 7: Socratic Knowledge Check -->
+        <section id="section-6" class="tracking-section">
+            <span class="badge socratic">Socratic</span>
+            <h2>Knowledge Check: Diagnosing LLM Failures</h2>
+
+            <div class="socratic-scenario">
+                <strong>Scenario:</strong> You're building a customer support chatbot using an LLM for a software company. During testing, you notice:
+                <ul>
+                    <li>The bot sometimes gives confident but completely wrong answers about your product's features.</li>
+                    <li>When a user says "Feature X doesn't exist on the Pro plan," the bot agrees, even though it does exist.</li>
+                    <li>Once, the bot suggested a "factory reset procedure" that doesn't actually exist for your product.</li>
+                </ul>
+                <p>Your manager wants to deploy it next week. A customer already saw these errors and is unhappy.</p>
+            </div>
+
+            <div style="display: grid; gap: 1.5rem;">
+                <div class="question-item">
+                    <div class="question-text">Q1: What's the fundamental issue causing wrong but confident answers?</div>
+                    <button class="reveal-btn answer-reveal" onclick="toggleAnswer(0)">Reveal Answer</button>
+                    <div class="hidden-content" id="answer-0">
+                        <strong>A:</strong> <strong>Hallucination</strong>. Language models are trained to predict the next likely token, not to verify factual accuracy. The model has learned patterns in text (like "to reset, go to Settings → Reset") but has no mechanism to verify whether the procedure actually exists for your product. It generates plausible-sounding text confidently, even when wrong. The model doesn't "know" the truth—it just predicts probable tokens.
+                    </div>
+                </div>
+
+                <div class="question-item">
+                    <div class="question-text">Q2: Why does the model agree with incorrect user statements instead of correcting them?</div>
+                    <button class="reveal-btn answer-reveal" onclick="toggleAnswer(1)">Reveal Answer</button>
+                    <div class="hidden-content" id="answer-1">
+                        <strong>A:</strong> <strong>Sycophancy</strong>. During RLHF or instruction tuning, models are trained to be "helpful and harmless," which can mean being agreeable and non-confrontational. The model learns that saying "You're right!" scores higher with human raters than saying "That's incorrect." It avoids contradiction even when the user is objectively wrong, especially on subjective matters. This is a known alignment failure.
+                    </div>
+                </div>
+
+                <div class="question-item">
+                    <div class="question-text">Q3: What temperature setting should you use for factual support responses? Why?</div>
+                    <button class="reveal-btn answer-reveal" onclick="toggleAnswer(2)">Reveal Answer</button>
+                    <div class="hidden-content" id="answer-2">
+                        <strong>A:</strong> <strong>Low temperature (0.1–0.3)</strong>. Lower temperature makes the probability distribution sharper, causing the model to pick more confident (high-probability) tokens. For factual questions, you want deterministic, repeatable outputs. High temperature (>1.0) increases randomness and can produce diverse but unreliable outputs. Use temperature <0.5 for customer support where consistency matters; higher temperature only for creative tasks.
+                    </div>
+                </div>
+
+                <div class="question-item">
+                    <div class="question-text">Q4: How could you reduce hallucination for product-specific information?</div>
+                    <button class="reveal-btn answer-reveal" onclick="toggleAnswer(3)">Reveal Answer</button>
+                    <div class="hidden-content" id="answer-3">
+                        <strong>A:</strong> Multiple strategies:
+                        <ul>
+                            <li><strong>Retrieval Augmented Generation (RAG):</strong> Include your actual product documentation in the prompt. Pass relevant docs to the model so it grounds answers in real facts.</li>
+                            <li><strong>Finetuning:</strong> Collect support conversations + correct answers, finetune the model on (product doc + question → accurate answer) pairs.</li>
+                            <li><strong>Fact-checking:</strong> Have the model retrieve relevant docs, then check if its answer matches them before responding.</li>
+                            <li><strong>Prompt engineering:</strong> Instruct the model: "Only answer questions about features listed in the official documentation. If uncertain, say 'I don't have that information.'"</li>
+                            <li><strong>Hybrid:</strong> For edge cases, route to a human agent instead of letting the model answer alone.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="question-item">
+                    <div class="question-text">Q5: Is this model safe to deploy next week? What would you recommend?</div>
+                    <button class="reveal-btn answer-reveal" onclick="toggleAnswer(4)">Reveal Answer</button>
+                    <div class="hidden-content" id="answer-4">
+                        <strong>A:</strong> <strong>No, do not deploy.</strong> Recommended steps:
+                        <ul>
+                            <li><strong>Systematic evaluation:</strong> Create a test set of 100+ product questions with correct answers. Measure accuracy before and after fixes.</li>
+                            <li><strong>Implement RAG:</strong> Integrate your knowledge base. Don't let the model answer without grounding.</li>
+                            <li><strong>Add guardrails:</strong> If the model detects uncertainty, route to human. Implement "fallback" responses like "Let me connect you with a specialist."</li>
+                            <li><strong>Monitor & iterate:</strong> Track errors post-deployment. Log every factual mistake and retrain periodically.</li>
+                            <li><strong>Disclosure:</strong> Be transparent: "This is AI-assisted support, not perfect. Always verify critical info."</li>
+                            <li><strong>Legal/liability:</strong> Ensure terms of service clarify that the chatbot is informational, not a guarantee of accuracy.</li>
+                        </ul>
+                        Deploy when you have high confidence (>90%) on test questions, not before.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Chapter Navigation -->
+        <section id="section-7" class="tracking-section">
+            <div class="chapter-nav">
+                <a href="chapter6.html">← Chapter 6: Neural Networks</a>
+                <div class="chapter-nav-spacer">End of Chapter 7</div>
+                <a href="chapter8.html">Chapter 8: Transformers →</a>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // ============================================
+        // SECTION TRACKING & PROGRESS BAR
+        // ============================================
+        const progressBar = document.getElementById('progressBar');
+        const progressDots = document.querySelectorAll('.progress-dot');
+        const trackingSections = document.querySelectorAll('.tracking-section');
+
+        const observerOptions = { threshold: 0.5 };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                const index = Array.from(trackingSections).indexOf(entry.target);
+                if (entry.isIntersecting) {
+                    updateProgress(index);
+                }
+            });
+        }, observerOptions);
+
+        trackingSections.forEach(section => observer.observe(section));
+
+        function updateProgress(sectionIndex) {
+            const progress = ((sectionIndex + 1) / trackingSections.length) * 100;
+            progressBar.style.width = progress + '%';
+
+            progressDots.forEach((dot, i) => {
+                if (i <= sectionIndex) {
+                    dot.classList.add('active');
+                } else {
+                    dot.classList.remove('active');
+                }
+            });
+        }
+
+        // ============================================
+        // VISUALIZER 1: TEMPERATURE SAMPLING
+        // ============================================
+        const tempCanvas = document.getElementById('tempCanvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        const tempInput = document.getElementById('temperature');
+        const tempValue = document.getElementById('tempValue');
+
+        tempInput.addEventListener('input', (e) => {
+            tempValue.textContent = e.target.value;
+            updateTempChart();
+        });
+
+        function softmax(logits, temperature = 1.0) {
+            const scaled = logits.map(x => x / temperature);
+            const maxVal = Math.max(...scaled);
+            const exp = scaled.map(x => Math.exp(x - maxVal));
+            const sum = exp.reduce((a, b) => a + b);
+            return exp.map(x => x / sum);
+        }
+
+        function updateTempChart() {
+            const logit1 = parseFloat(document.getElementById('logit1').value) || 0;
+            const logit2 = parseFloat(document.getElementById('logit2').value) || 0;
+            const logit3 = parseFloat(document.getElementById('logit3').value) || 0;
+            const logit4 = parseFloat(document.getElementById('logit4').value) || 0;
+            const temperature = parseFloat(tempInput.value);
+
+            const logits = [logit1, logit2, logit3, logit4];
+            const probs = softmax(logits, temperature);
+            const tokens = ["all", "the", "your", "that"];
+
+            // Draw chart
+            tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+
+            const padding = 40;
+            const chartWidth = tempCanvas.width - 2 * padding;
+            const chartHeight = tempCanvas.height - 2 * padding;
+            const barWidth = chartWidth / tokens.length / 1.5;
+            const barSpacing = chartWidth / tokens.length;
+
+            // Draw axes
+            tempCtx.strokeStyle = '#8b949e';
+            tempCtx.lineWidth = 2;
+            tempCtx.beginPath();
+            tempCtx.moveTo(padding, padding);
+            tempCtx.lineTo(padding, tempCanvas.height - padding);
+            tempCtx.lineTo(tempCanvas.width - padding, tempCanvas.height - padding);
+            tempCtx.stroke();
+
+            // Draw bars
+            probs.forEach((prob, i) => {
+                const barHeight = prob * chartHeight;
+                const x = padding + i * barSpacing + (barSpacing - barWidth) / 2;
+                const y = tempCanvas.height - padding - barHeight;
+
+                tempCtx.fillStyle = '#58a6ff';
+                tempCtx.fillRect(x, y, barWidth, barHeight);
+
+                // Label
+                tempCtx.fillStyle = '#e6edf3';
+                tempCtx.font = '12px Inter';
+                tempCtx.textAlign = 'center';
+                tempCtx.fillText(tokens[i], x + barWidth / 2, tempCanvas.height - padding + 20);
+                tempCtx.fillText(prob.toFixed(3), x + barWidth / 2, y - 10);
+            });
+
+            // Title
+            tempCtx.fillStyle = '#e6edf3';
+            tempCtx.font = 'bold 14px Inter';
+            tempCtx.textAlign = 'left';
+            tempCtx.fillText(`Temperature = ${temperature}`, padding, 25);
+        }
+
+        function sampleToken() {
+            const logit1 = parseFloat(document.getElementById('logit1').value) || 0;
+            const logit2 = parseFloat(document.getElementById('logit2').value) || 0;
+            const logit3 = parseFloat(document.getElementById('logit3').value) || 0;
+            const logit4 = parseFloat(document.getElementById('logit4').value) || 0;
+            const temperature = parseFloat(tempInput.value);
+
+            const logits = [logit1, logit2, logit3, logit4];
+            const probs = softmax(logits, temperature);
+            const tokens = ["all", "the", "your", "that"];
+
+            // Sample from distribution
+            let rand = Math.random();
+            let cumsum = 0;
+            let sampledIdx = 0;
+            for (let i = 0; i < probs.length; i++) {
+                cumsum += probs[i];
+                if (rand < cumsum) {
+                    sampledIdx = i;
+                    break;
+                }
+            }
+
+            const sampledDiv = document.getElementById('sampledToken');
+            sampledDiv.style.display = 'block';
+            document.getElementById('sampledTokenText').textContent = tokens[sampledIdx];
+        }
+
+        // Initial render
+        updateTempChart();
+
+        // ============================================
+        // VISUALIZER 2: AUTOREGRESSIVE GENERATOR
+        // ============================================
+        const genCanvas = document.getElementById('genChart');
+        const genCtx = genCanvas.getContext('2d');
+        const promptInput = document.getElementById('prompt');
+        const genModeSelect = document.getElementById('genMode');
+        const genTempInput = document.getElementById('genTemperature');
+        const genTempValue = document.getElementById('genTempValue');
+
+        // Simple vocabulary
+        const vocab = {
+            "the": [0.3, 0.25, 0.2, 0.15],
+            "dog": [0.4, 0.3, 0.15, 0.15],
+            "cat": [0.35, 0.3, 0.2, 0.15],
+            "and": [0.2, 0.25, 0.3, 0.25],
+            "is": [0.25, 0.25, 0.25, 0.25],
+            "runs": [0.4, 0.3, 0.2, 0.1],
+            "sits": [0.35, 0.35, 0.2, 0.1],
+            "happy": [0.45, 0.3, 0.15, 0.1],
+            "lazy": [0.4, 0.3, 0.2, 0.1]
+        };
+
+        const tokens = ["very", "in", "park", "away"];
+        let generatedTokens = [];
+
+        genTempInput.addEventListener('input', (e) => {
+            genTempValue.textContent = e.target.value;
+        });
+
+        function resetGenerator() {
+            generatedTokens = [];
+            document.getElementById('generatedSpan').innerHTML = '';
+            document.getElementById('promptDisplay').textContent = promptInput.value;
+            genCtx.clearRect(0, 0, genCanvas.width, genCanvas.height);
+            document.getElementById('distDisplay').innerHTML = '';
+        }
+
+        function generateNextToken() {
+            const temperature = parseFloat(genTempInput.value);
+            const mode = genModeSelect.value;
+
+            // Simple heuristic: pick next distribution based on last token
+            let lastToken = generatedTokens.length > 0 ? generatedTokens[generatedTokens.length - 1] : promptInput.value.split(' ').pop();
+            let probs = vocab[lastToken] || [0.25, 0.25, 0.25, 0.25];
+
+            // Apply temperature
+            probs = softmax(probs.map((p, i) => Math.log(p + 1e-10)), temperature);
+
+            // Sample or greedy
+            let sampledIdx = 0;
+            if (mode === 'greedy') {
+                sampledIdx = probs.indexOf(Math.max(...probs));
+            } else {
+                let rand = Math.random();
+                let cumsum = 0;
+                for (let i = 0; i < probs.length; i++) {
+                    cumsum += probs[i];
+                    if (rand < cumsum) {
+                        sampledIdx = i;
+                        break;
+                    }
+                }
+            }
+
+            const token = tokens[sampledIdx];
+            generatedTokens.push(token);
+
+            // Update display
+            const newSpan = document.createElement('span');
+            newSpan.style.color = '#3fb950';
+            newSpan.style.fontWeight = 'bold';
+            newSpan.textContent = ' ' + token;
+            document.getElementById('generatedSpan').appendChild(newSpan);
+
+            // Draw distribution
+            drawGenChart(probs, tokens);
+
+            // Display probabilities
+            let distHTML = '';
+            probs.forEach((p, i) => {
+                distHTML += `${tokens[i]}: ${p.toFixed(3)}<br>`;
+            });
+            document.getElementById('distDisplay').innerHTML = distHTML;
+        }
+
+        function drawGenChart(probs, labels) {
+            genCtx.clearRect(0, 0, genCanvas.width, genCanvas.height);
+
+            const padding = 40;
+            const chartWidth = genCanvas.width - 2 * padding;
+            const chartHeight = genCanvas.height - 2 * padding;
+            const barWidth = chartWidth / labels.length / 1.5;
+            const barSpacing = chartWidth / labels.length;
+
+            // Axes
+            genCtx.strokeStyle = '#8b949e';
+            genCtx.lineWidth = 2;
+            genCtx.beginPath();
+            genCtx.moveTo(padding, padding);
+            genCtx.lineTo(padding, genCanvas.height - padding);
+            genCtx.lineTo(genCanvas.width - padding, genCanvas.height - padding);
+            genCtx.stroke();
+
+            // Bars
+            probs.forEach((prob, i) => {
+                const barHeight = prob * chartHeight;
+                const x = padding + i * barSpacing + (barSpacing - barWidth) / 2;
+                const y = genCanvas.height - padding - barHeight;
+
+                genCtx.fillStyle = '#79c0ff';
+                genCtx.fillRect(x, y, barWidth, barHeight);
+
+                genCtx.fillStyle = '#e6edf3';
+                genCtx.font = '12px Inter';
+                genCtx.textAlign = 'center';
+                genCtx.fillText(labels[i], x + barWidth / 2, genCanvas.height - padding + 20);
+                genCtx.fillText(prob.toFixed(3), x + barWidth / 2, y - 10);
+            });
+        }
+
+        // ============================================
+        // VISUALIZER 3: TRAINING PIPELINE
+        // ============================================
+        function toggleStage(stageIdx) {
+            const detailId = `stageDetail${stageIdx}`;
+            const detail = document.getElementById(detailId);
+            detail.classList.toggle('revealed');
+        }
+
+        // ============================================
+        // VISUALIZER 4: PERPLEXITY CALCULATOR
+        // ============================================
+        function calculatePerplexity() {
+            const modelAProbs = [
+                parseFloat(document.getElementById('modelA1').value),
+                parseFloat(document.getElementById('modelA2').value),
+                parseFloat(document.getElementById('modelA3').value),
+                parseFloat(document.getElementById('modelA4').value)
+            ];
+
+            const modelBProbs = [
+                parseFloat(document.getElementById('modelB1').value),
+                parseFloat(document.getElementById('modelB2').value),
+                parseFloat(document.getElementById('modelB3').value),
+                parseFloat(document.getElementById('modelB4').value)
+            ];
+
+            // Compute avg -log P
+            const computeAvgLogProb = (probs) => {
+                const logProbs = probs.map(p => -Math.log(Math.max(p, 1e-10)));
+                return logProbs.reduce((a, b) => a + b) / logProbs.length;
+            };
+
+            const avgLogProbA = computeAvgLogProb(modelAProbs);
+            const avgLogProbB = computeAvgLogProb(modelBProbs);
+
+            // Compute perplexity = exp(avg -log P)
+            const ppA = Math.exp(avgLogProbA);
+            const ppB = Math.exp(avgLogProbB);
+
+            // Display
+            document.getElementById('modelAAvg').textContent = avgLogProbA.toFixed(3);
+            document.getElementById('modelAPP').textContent = ppA.toFixed(2);
+            document.getElementById('modelBAvg').textContent = avgLogProbB.toFixed(3);
+            document.getElementById('modelBPP').textContent = ppB.toFixed(2);
+
+            // Show comparison
+            const compDiv = document.getElementById('ppComparison');
+            compDiv.style.display = 'block';
+            const winner = ppA < ppB ? 'Model A' : 'Model B';
+            document.getElementById('winner').textContent = winner + ` (PP = ${Math.min(ppA, ppB).toFixed(2)})`;
+        }
+
+        // ============================================
+        // TIMELINE COLLAPSIBLE
+        // ============================================
+        function toggleTimeline() {
+            const content = document.getElementById('timelineContent');
+            const chevron = document.getElementById('timelineChevron');
+            content.classList.toggle('open');
+            chevron.classList.toggle('open');
+        }
+
+        // ============================================
+        // REVEAL BUTTONS
+        // ============================================
+        function toggleAnswer(idx) {
+            const answer = document.getElementById(`answer-${idx}`);
+            answer.classList.toggle('revealed');
+        }
+
+        // ============================================
+        // MATHJAX RENDERING
+        // ============================================
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.MathJax && window.MathJax.typeset) {
+                MathJax.typeset();
+            }
+        });
+
+        // Re-render MathJax after dynamic content loads
+        setTimeout(() => {
+            if (window.MathJax && window.MathJax.typeset) {
+                MathJax.typeset();
+            }
+        }, 500);
+    </script>
+</body>
+</html>

@@ -1,1 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SLP 3ed Interactive Explainer — Researcher Dashboard</title>
+<style>
+/* ═══════════════════════════════════════════════════════════
+   RESET & ROOT
+   ═══════════════════════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg-primary:   #0d1117;
+  --bg-secondary: #161b22;
+  --bg-card:      #1c2333;
+  --bg-card-hover:#252d3d;
+  --accent:       #58a6ff;
+  --accent-glow:  rgba(88,166,255,.15);
+  --accent2:      #3fb950;
+  --accent3:      #d2a8ff;
+  --accent4:      #f0883e;
+  --accent5:      #f778ba;
+  --text-primary: #e6edf3;
+  --text-muted:   #8b949e;
+  --border:       #30363d;
+  --mono:         'JetBrains Mono','Fira Code','SF Mono',Consolas,monospace;
+  --sans:         'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+  --radius:       10px;
+  --transition:   .25s cubic-bezier(.4,0,.2,1);
+}
+html{scroll-behavior:smooth;font-size:15px}
+body{
+  font-family:var(--sans);background:var(--bg-primary);color:var(--text-primary);
+  line-height:1.6;min-height:100vh;overflow-x:hidden;
+}
+a{color:var(--accent);text-decoration:none;transition:color var(--transition)}
+a:hover{color:#79c0ff}
 
+/* ═══════════════════════════════════════════════════════════
+   ANIMATED BACKGROUND
+   ═══════════════════════════════════════════════════════════ */
+.bg-grid{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    radial-gradient(ellipse 800px 600px at 20% 30%, rgba(88,166,255,.06) 0%, transparent 70%),
+    radial-gradient(ellipse 600px 500px at 80% 70%, rgba(214,168,255,.05) 0%, transparent 70%);
+}
+.bg-grid::after{
+  content:'';position:absolute;inset:0;
+  background-size:60px 60px;
+  background-image:
+    linear-gradient(rgba(88,166,255,.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(88,166,255,.03) 1px,transparent 1px);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HEADER
+   ═══════════════════════════════════════════════════════════ */
+header{
+  position:relative;z-index:1;text-align:center;
+  padding:3.5rem 1.5rem 2rem;
+  border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg,rgba(13,17,23,.9),var(--bg-primary));
+}
+header .badge{
+  display:inline-block;font-family:var(--mono);font-size:.7rem;
+  letter-spacing:.12em;text-transform:uppercase;
+  color:var(--accent);border:1px solid var(--accent);
+  border-radius:999px;padding:.25rem .85rem;margin-bottom:1rem;
+}
+header h1{
+  font-size:clamp(1.8rem,4.5vw,3rem);font-weight:800;
+  letter-spacing:-.03em;line-height:1.15;
+  background:linear-gradient(135deg,#e6edf3 30%,var(--accent) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+header .subtitle{
+  font-size:1.05rem;color:var(--text-muted);max-width:700px;
+  margin:.8rem auto 0;
+}
+header .meta{
+  display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;
+  margin-top:1.2rem;font-family:var(--mono);font-size:.78rem;color:var(--text-muted);
+}
+header .meta span::before{content:'›  ';color:var(--accent)}
+
+/* ═══════════════════════════════════════════════════════════
+   STATS BAR
+   ═══════════════════════════════════════════════════════════ */
+.stats-bar{
+  position:relative;z-index:1;
+  display:flex;justify-content:center;gap:2.5rem;flex-wrap:wrap;
+  padding:1.5rem 1rem;
+  border-bottom:1px solid var(--border);
+  background:var(--bg-secondary);
+}
+.stat{text-align:center}
+.stat .num{
+  font-family:var(--mono);font-size:1.6rem;font-weight:700;
+  background:linear-gradient(135deg,var(--accent),var(--accent3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.stat .label{font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted)}
+
+/* ═══════════════════════════════════════════════════════════
+   SEARCH
+   ═══════════════════════════════════════════════════════════ */
+.search-wrap{
+  position:relative;z-index:1;max-width:620px;margin:2rem auto 0;padding:0 1.5rem;
+}
+.search-wrap input{
+  width:100%;padding:.75rem 1rem .75rem 2.8rem;
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius);color:var(--text-primary);
+  font-family:var(--mono);font-size:.88rem;
+  transition:border-color var(--transition),box-shadow var(--transition);
+}
+.search-wrap input:focus{
+  outline:none;border-color:var(--accent);
+  box-shadow:0 0 0 3px var(--accent-glow);
+}
+.search-wrap .icon{
+  position:absolute;left:1.9rem;top:50%;transform:translateY(-50%);
+  color:var(--text-muted);font-size:1rem;pointer-events:none;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MAIN CONTENT
+   ═══════════════════════════════════════════════════════════ */
+main{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:2rem 1.5rem 4rem}
+
+/* Part header */
+.part-header{
+  display:flex;align-items:center;gap:.8rem;
+  margin:2.8rem 0 1.2rem;padding-bottom:.6rem;
+  border-bottom:1px solid var(--border);
+}
+.part-header .part-num{
+  font-family:var(--mono);font-size:.68rem;
+  letter-spacing:.14em;text-transform:uppercase;
+  color:var(--bg-primary);padding:.2rem .65rem;border-radius:4px;
+  font-weight:700;white-space:nowrap;
+}
+.part-header h2{font-size:1.35rem;font-weight:700;letter-spacing:-.02em}
+
+/* Chapter cards grid */
+.chapters-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(340px,1fr));
+  gap:1rem;
+}
+.chapter-card{
+  position:relative;overflow:hidden;
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius);padding:1.35rem 1.4rem;
+  transition:transform var(--transition),border-color var(--transition),
+             box-shadow var(--transition),background var(--transition);
+  cursor:pointer;
+}
+.chapter-card:hover{
+  transform:translateY(-3px);
+  border-color:var(--accent);
+  background:var(--bg-card-hover);
+  box-shadow:0 8px 30px rgba(0,0,0,.35),0 0 0 1px var(--accent-glow);
+}
+.chapter-card .ch-num{
+  font-family:var(--mono);font-size:.68rem;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:.45rem;
+}
+.chapter-card h3{font-size:1.05rem;font-weight:700;margin-bottom:.5rem;line-height:1.3}
+.chapter-card .ch-desc{font-size:.82rem;color:var(--text-muted);line-height:1.55}
+.chapter-card .ch-topics{
+  display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.75rem;
+}
+.chapter-card .ch-topics span{
+  font-family:var(--mono);font-size:.64rem;
+  padding:.15rem .5rem;border-radius:4px;
+  background:rgba(88,166,255,.08);color:var(--accent);border:1px solid rgba(88,166,255,.15);
+}
+.chapter-card .status-badge{
+  position:absolute;top:1rem;right:1rem;
+  font-family:var(--mono);font-size:.6rem;font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;
+  padding:.18rem .55rem;border-radius:4px;
+}
+.status-locked{background:rgba(139,148,158,.12);color:var(--text-muted);border:1px solid var(--border)}
+.status-ready{background:rgba(63,185,80,.12);color:var(--accent2);border:1px solid rgba(63,185,80,.3)}
+
+/* glow line on left of card */
+.chapter-card::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+  border-radius:3px 0 0 3px;opacity:0;
+  transition:opacity var(--transition);
+}
+.chapter-card:hover::before{opacity:1}
+
+/* ═══════════════════════════════════════════════════════════
+   SIDEBAR TOGGLE (Deep Dive)
+   ═══════════════════════════════════════════════════════════ */
+.sidebar-toggle{
+  position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:100;
+  writing-mode:vertical-rl;text-orientation:mixed;
+  font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;
+  background:var(--bg-card);border:1px solid var(--border);
+  border-right:none;border-radius:var(--radius) 0 0 var(--radius);
+  padding:.8rem .4rem;color:var(--accent);cursor:pointer;
+  transition:background var(--transition);
+}
+.sidebar-toggle:hover{background:var(--bg-card-hover)}
+
+.sidebar-panel{
+  position:fixed;right:-380px;top:0;bottom:0;width:380px;z-index:99;
+  background:var(--bg-secondary);border-left:1px solid var(--border);
+  padding:2rem 1.5rem;overflow-y:auto;
+  transition:right .35s cubic-bezier(.4,0,.2,1);
+}
+.sidebar-panel.open{right:0}
+.sidebar-panel h3{font-size:1.1rem;margin-bottom:1rem;color:var(--accent3)}
+.sidebar-panel p{font-size:.85rem;color:var(--text-muted);line-height:1.65;margin-bottom:1rem}
+.sidebar-close{
+  position:absolute;top:1rem;right:1rem;background:none;border:none;
+  color:var(--text-muted);font-size:1.3rem;cursor:pointer;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   INTERACTIVE DEMO SECTION
+   ═══════════════════════════════════════════════════════════ */
+.demo-section{
+  position:relative;z-index:1;
+  margin:3rem 0;padding:2rem;
+  background:var(--bg-secondary);border:1px solid var(--border);
+  border-radius:var(--radius);
+}
+.demo-section h3{font-size:1.15rem;margin-bottom:.5rem}
+.demo-section .demo-subtitle{font-size:.82rem;color:var(--text-muted);margin-bottom:1.5rem}
+
+/* Attention visualizer */
+.attention-matrix{display:flex;flex-direction:column;align-items:center;gap:1rem}
+.attn-sentence{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center}
+.attn-sentence .token{
+  font-family:var(--mono);font-size:.82rem;padding:.35rem .6rem;
+  border-radius:4px;border:1px solid var(--border);
+  cursor:pointer;transition:all var(--transition);user-select:none;
+}
+.attn-sentence .token:hover,.attn-sentence .token.active{
+  border-color:var(--accent);background:var(--accent-glow);color:var(--accent);
+}
+.attn-grid{
+  display:grid;gap:2px;
+  background:var(--bg-primary);border:1px solid var(--border);border-radius:6px;
+  padding:4px;overflow:hidden;
+}
+.attn-cell{
+  width:38px;height:38px;border-radius:3px;
+  transition:background .15s;position:relative;
+}
+.attn-cell .tooltip{
+  display:none;position:absolute;bottom:110%;left:50%;transform:translateX(-50%);
+  font-family:var(--mono);font-size:.62rem;white-space:nowrap;
+  background:var(--bg-card);border:1px solid var(--border);
+  padding:.2rem .5rem;border-radius:4px;z-index:10;color:var(--text-primary);
+}
+.attn-cell:hover .tooltip{display:block}
+
+/* ═══════════════════════════════════════════════════════════
+   FOOTER
+   ═══════════════════════════════════════════════════════════ */
+footer{
+  position:relative;z-index:1;text-align:center;
+  padding:2rem 1rem;border-top:1px solid var(--border);
+  font-size:.78rem;color:var(--text-muted);
+}
+footer a{color:var(--accent)}
+
+/* ═══════════════════════════════════════════════════════════
+   SCROLL TO TOP
+   ═══════════════════════════════════════════════════════════ */
+.scroll-top{
+  position:fixed;bottom:2rem;right:2rem;z-index:50;
+  width:42px;height:42px;border-radius:50%;
+  background:var(--accent);color:var(--bg-primary);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.1rem;cursor:pointer;border:none;
+  opacity:0;transform:translateY(10px);
+  transition:opacity var(--transition),transform var(--transition);
+}
+.scroll-top.visible{opacity:1;transform:translateY(0)}
+
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════ */
+@media(max-width:600px){
+  .chapters-grid{grid-template-columns:1fr}
+  .stats-bar{gap:1.2rem}
+  header h1{font-size:1.6rem}
+}
+</style>
+</head>
+<body>
+
+<!-- Background grid -->
+<div class="bg-grid"></div>
+
+<!-- ═══════════════ HEADER ═══════════════ -->
+<header>
+  <div class="badge">Interactive Explainer v1.0</div>
+  <h1>Speech &amp; Language Processing</h1>
+  <p class="subtitle">An immersive, interactive web curriculum based on Jurafsky &amp; Martin's 3rd Edition (Jan 2026 Draft) — built with Feynman &amp; Socratic pedagogy.</p>
+  <div class="meta">
+    <span>Daniel Jurafsky &amp; James H. Martin</span>
+    <span>25 Chapters</span>
+    <span>2 Parts &bull; 625+ Pages</span>
+    <span>Draft Jan 6 2026</span>
+  </div>
+</header>
+
+<!-- ═══════════════ STATS BAR ═══════════════ -->
+<div class="stats-bar">
+  <div class="stat"><div class="num" id="chapCount">25</div><div class="label">Chapters</div></div>
+  <div class="stat"><div class="num">2</div><div class="label">Parts</div></div>
+  <div class="stat"><div class="num">0 / 25</div><div class="label">Unlocked</div></div>
+  <div class="stat"><div class="num">4</div><div class="label">Visualizers</div></div>
+  <div class="stat"><div class="num">∞</div><div class="label">Socratic Qs</div></div>
+</div>
+
+<!-- ═══════════════ SEARCH ═══════════════ -->
+<div class="search-wrap">
+  <span class="icon">⌕</span>
+  <input type="text" id="searchInput" placeholder='Search chapters, topics, concepts…  (e.g. "attention", "BERT", "parsing")'>
+</div>
+
+<!-- ═══════════════ MAIN ═══════════════ -->
+<main>
+
+<!-- ──────── INTERACTIVE DEMO: Attention Visualizer ──────── -->
+<div class="demo-section" id="attentionDemo">
+  <h3>⚡ Live Demo — Transformer Self-Attention</h3>
+  <p class="demo-subtitle">Hover over a token to see simulated attention weights across the sentence. This is the kind of interactive visualizer embedded in every chapter.</p>
+  <div class="attention-matrix">
+    <div class="attn-sentence" id="attnTokens"></div>
+    <div class="attn-grid" id="attnGrid" style="margin-top:.5rem"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     PART I — LARGE LANGUAGE MODELS
+     ════════════════════════════════════════════════ -->
+<div class="part-header">
+  <span class="part-num" style="background:var(--accent)">Part I</span>
+  <h2>Large Language Models</h2>
+</div>
+<div class="chapters-grid" id="part1Grid"></div>
+
+<!-- ════════════════════════════════════════════════
+     PART II — ANNOTATING LINGUISTIC STRUCTURE
+     ════════════════════════════════════════════════ -->
+<div class="part-header">
+  <span class="part-num" style="background:var(--accent3)">Part II</span>
+  <h2>Annotating Linguistic Structure</h2>
+</div>
+<div class="chapters-grid" id="part2Grid"></div>
+
+</main>
+
+<!-- ═══════════════ DEEP DIVE SIDEBAR ═══════════════ -->
+<div class="sidebar-toggle" id="sidebarToggle">Deep Dive ✦</div>
+<div class="sidebar-panel" id="sidebarPanel">
+  <button class="sidebar-close" id="sidebarClose">✕</button>
+  <h3>✦ Historical Context</h3>
+  <p><strong>From Markov to Transformers:</strong> The journey of language modeling spans over a century. Andrei Markov first analyzed letter sequences in Pushkin's <em>Eugene Onegin</em> (1913). Shannon applied information theory to language (1948). N-gram models dominated for decades until Bengio's neural LMs (2003). The attention mechanism (Bahdanau 2014) and Transformer architecture (Vaswani 2017) revolutionized the field, leading to today's LLMs.</p>
+  <p><strong>The Chomsky Hierarchy meets Deep Learning:</strong> Formal language theory classified grammars into a hierarchy (regular, context-free, context-sensitive, unrestricted). Modern neural models blur these boundaries — Transformers can implicitly learn context-sensitive patterns without explicit grammar rules, yet constituency and dependency parsing remain vital for evaluation and interpretability.</p>
+  <p><strong>Why Classical NLP Still Matters:</strong> Techniques like POS tagging, dependency parsing, and coreference resolution are not relics. They serve as evaluation frameworks for LLMs, features in hybrid systems, and essential tools for linguistic analysis. Every chapter bridges classical and modern approaches.</p>
+</div>
+
+<!-- ═══════════════ SCROLL TOP ═══════════════ -->
+<button class="scroll-top" id="scrollTop">↑</button>
+
+<!-- ═══════════════ FOOTER ═══════════════ -->
+<footer>
+  <p>SLP 3ed Interactive Explainer &bull; Based on <a href="https://web.stanford.edu/~jurafsky/slp3/" target="_blank">Jurafsky &amp; Martin (2026)</a> &bull; Pedagogy: Feynman + Socratic</p>
+  <p style="margin-top:.3rem">Send <code style="color:var(--accent);font-family:var(--mono)">Unlock Chapter [N]</code> to generate a full interactive chapter page.</p>
+</footer>
+
+<!-- ═══════════════════════════════════════════════════════════
+     JAVASCRIPT
+     ═══════════════════════════════════════════════════════════ -->
+<script>
+// ──────────────────────────────────────────────
+// DATA: All 25 chapters with sub-sections
+// ──────────────────────────────────────────────
+const chapters = [
+  // ═══ PART I: Large Language Models ═══
+  {
+    ch:1, part:1, title:"Introduction",
+    desc:"A roadmap of NLP, computational linguistics, and language models — from symbolic AI to the era of LLMs.",
+    topics:["NLP overview","Ambiguity","Language & AI"],
+    color:"var(--accent)", sections:[]
+  },
+  {
+    ch:2, part:1, title:"Words and Tokens",
+    desc:"Text normalization, tokenization (BPE, WordPiece), regular expressions, Unicode, corpora, and minimum edit distance.",
+    topics:["Regex","BPE","Unicode","Edit Distance","Corpora"],
+    color:"var(--accent)",
+    sections:["2.1 Words","2.2 Morphemes","2.3 Unicode","2.4 Subword Tokenization: BPE","2.5 Corpora","2.6 Regular Expressions","2.7 Simple Unix Tools","2.8 Rule-based Tokenization","2.9 Minimum Edit Distance"]
+  },
+  {
+    ch:3, part:1, title:"N-gram Language Models",
+    desc:"Estimating probabilities of word sequences with n-grams, smoothing, interpolation, backoff, and perplexity.",
+    topics:["N-grams","Perplexity","Smoothing","Backoff","Entropy"],
+    color:"var(--accent)",
+    sections:["3.1 N-Grams","3.2 Training and Test Sets","3.3 Perplexity","3.4 Sampling Sentences","3.5 Overfitting","3.6 Smoothing, Interpolation, Backoff","3.7 Perplexity & Entropy"]
+  },
+  {
+    ch:4, part:1, title:"Logistic Regression",
+    desc:"The workhorse classifier: sigmoid, cross-entropy loss, gradient descent, regularization, precision/recall, and multinomial extension.",
+    topics:["Sigmoid","Cross-Entropy","SGD","F-measure","Regularization"],
+    color:"var(--accent)",
+    sections:["4.1 ML & Classification","4.2 Sigmoid Function","4.3 Classification with LR","4.4 Learning","4.5 Cross-Entropy Loss","4.6 Gradient Descent","4.7 Multinomial LR","4.8 Learning in MLR","4.9 Precision, Recall, F-measure","4.10 Cross-validation","4.11 Significance Testing","4.12 Avoiding Harms","4.13 Interpreting Models","4.14 Regularization","4.15 Deriving the Gradient"]
+  },
+  {
+    ch:5, part:1, title:"Embeddings",
+    desc:"Vector semantics from count-based methods to Word2Vec — distributional hypothesis, cosine similarity, bias in embeddings.",
+    topics:["Word2Vec","Cosine Similarity","tf-idf","PMI","Bias"],
+    color:"var(--accent)",
+    sections:["5.1 Lexical Semantics","5.2 Vector Semantics Intuition","5.3 Count-based Embeddings","5.4 Cosine Similarity","5.5 Word2Vec","5.6 Visualizing Embeddings","5.7 Semantic Properties","5.8 Bias & Embeddings","5.9 Evaluating Vector Models"]
+  },
+  {
+    ch:6, part:1, title:"Neural Networks",
+    desc:"From perceptrons to feedforward nets — XOR problem, activation functions, backpropagation, and NLP classification.",
+    topics:["Perceptron","ReLU","Backprop","XOR","Feedforward"],
+    color:"var(--accent)",
+    sections:["6.1 Units","6.2 The XOR Problem","6.3 Feedforward Neural Networks","6.4 NLP Classification","6.5 Embeddings as Input","6.6 Training Neural Nets"]
+  },
+  {
+    ch:7, part:1, title:"Large Language Models",
+    desc:"Autoregressive generation, prompting, sampling (top-k, nucleus), training at scale, evaluation benchmarks, and safety/ethics.",
+    topics:["Autoregressive","Prompting","Top-k","Scaling Laws","Ethics"],
+    color:"var(--accent)",
+    sections:["7.1 Three Architectures","7.2 Conditional Generation","7.3 Prompting","7.4 Generation & Sampling","7.5 Training LLMs","7.6 Evaluating LLMs","7.7 Ethical & Safety Issues"]
+  },
+  {
+    ch:8, part:1, title:"Transformers",
+    desc:"Self-attention, multi-head attention, positional encoding, layer normalization, and scaling strategies.",
+    topics:["Self-Attention","Multi-Head","Positional Enc.","LayerNorm","Scale"],
+    color:"var(--accent)",
+    sections:["8.1 Attention","8.2 Transformer Blocks","8.3 Matrix X Computation","8.4 Input Embeddings & Position","8.5 Language Modeling Head","8.6 Sampling","8.7 Training","8.8 Dealing with Scale","8.9 Interpreting Transformers"]
+  },
+  {
+    ch:9, part:1, title:"Masked Language Models",
+    desc:"BERT and bidirectional encoders — MLM pre-training, contextual embeddings, fine-tuning for classification and NER.",
+    topics:["BERT","MLM","Fine-Tuning","Contextual Emb.","NER"],
+    color:"var(--accent)",
+    sections:["9.1 Bidirectional Transformer Encoders","9.2 Training Bidirectional Encoders","9.3 Contextual Embeddings","9.4 Fine-Tuning for Classification","9.5 Fine-Tuning for Sequence Labeling"]
+  },
+  {
+    ch:10, part:1, title:"Post-training: Instruction Tuning, Alignment & Test-Time Compute",
+    desc:"Instruction tuning, RLHF, DPO, preference learning, and test-time compute strategies for modern LLMs.",
+    topics:["RLHF","DPO","Instruction Tuning","Alignment","Test-Time"],
+    color:"var(--accent)",
+    sections:["10.1 Instruction Tuning","10.2 Learning from Preferences","10.3 Preference-Based Learning","10.4 Test-time Compute"]
+  },
+  {
+    ch:11, part:1, title:"Retrieval-based Models",
+    desc:"Information retrieval, dense retrieval vectors, RAG (Retrieval-Augmented Generation), and QA evaluation.",
+    topics:["IR","Dense Vectors","RAG","QA","BM25"],
+    color:"var(--accent)",
+    sections:["11.1 Information Retrieval","11.2 Evaluation of IR Systems","11.3 IR with Dense Vectors","11.4 Retrieval-Augmented Generation","11.5 Datasets","11.6 Evaluating QA"]
+  },
+  {
+    ch:12, part:1, title:"Machine Translation",
+    desc:"Encoder-decoder architectures, beam search, typological divergences, low-resource MT, BLEU, and ethical issues.",
+    topics:["Enc-Dec","Beam Search","BLEU","Low-Resource","Typology"],
+    color:"var(--accent)",
+    sections:["12.1 Language Divergences & Typology","12.2 MT with Encoder-Decoder","12.3 Encoder-Decoder Details","12.4 Beam Search","12.5 Low-resource MT","12.6 MT Evaluation","12.7 Bias & Ethics"]
+  },
+  {
+    ch:13, part:1, title:"RNNs and LSTMs",
+    desc:"Recurrent architectures, vanishing gradients, LSTM gates, stacked/bidirectional RNNs, and the encoder-decoder model with attention.",
+    topics:["RNN","LSTM","Bidirectional","Seq2Seq","Attention"],
+    color:"var(--accent)",
+    sections:["13.1 Recurrent Neural Networks","13.2 RNNs as LMs","13.3 RNNs for NLP","13.4 Stacked & Bidirectional","13.5 The LSTM","13.6 Common Architectures","13.7 Encoder-Decoder with RNNs","13.8 Attention"]
+  },
+  {
+    ch:14, part:1, title:"Phonetics and Speech Feature Extraction",
+    desc:"Articulatory & acoustic phonetics, prosody, spectrograms, MFCCs, and the log Mel spectrum.",
+    topics:["MFCCs","Spectrogram","Prosody","Mel Scale","Phonetics"],
+    color:"var(--accent)",
+    sections:["14.1 Speech Sounds","14.2 Articulatory Phonetics","14.3 Prosody","14.4 Acoustic Phonetics","14.5 Log Mel Spectrum","14.6 MFCCs"]
+  },
+  {
+    ch:15, part:1, title:"Automatic Speech Recognition",
+    desc:"End-to-end ASR with CTC, encoder-decoder, CNNs, HuBERT self-supervised models, and word error rate.",
+    topics:["ASR","CTC","HuBERT","CNN","WER"],
+    color:"var(--accent)",
+    sections:["15.1 The ASR Task","15.2 CNNs","15.3 Encoder-Decoder for ASR","15.4 HuBERT","15.5 CTC","15.6 Word Error Rate"]
+  },
+  {
+    ch:16, part:1, title:"Text-to-Speech",
+    desc:"TTS overview, discrete audio tokens via codecs, VALL-E 2-stage LM, TTS evaluation, and spoken language models.",
+    topics:["TTS","VALL-E","Codecs","Evaluation","Spoken LM"],
+    color:"var(--accent)",
+    sections:["16.1 TTS Overview","16.2 Codecs for Discrete Audio Tokens","16.3 VALL-E","16.4 TTS Evaluation","16.5 Other Speech Tasks","16.6 Spoken Language Models"]
+  },
+  // ═══ PART II: Annotating Linguistic Structure ═══
+  {
+    ch:17, part:2, title:"Sequence Labeling for Parts of Speech and Named Entities",
+    desc:"POS tagging, NER, HMM taggers, CRFs, and evaluation of named entity recognition systems.",
+    topics:["POS Tagging","NER","HMM","CRF","Viterbi"],
+    color:"var(--accent3)",
+    sections:["17.1 English Word Classes","17.2 POS Tagging","17.3 NER Tagging","17.4 HMM POS Tagging","17.5 CRFs","17.6 NER Evaluation","17.7 Further Details"]
+  },
+  {
+    ch:18, part:2, title:"Context-Free Grammars and Constituency Parsing",
+    desc:"CFGs, treebanks, CKY parsing, span-based neural parsing, ambiguity, and parser evaluation.",
+    topics:["CFG","CKY","Treebank","Ambiguity","Span-based"],
+    color:"var(--accent3)",
+    sections:["18.1 Constituency","18.2 Context-Free Grammars","18.3 Treebanks","18.4 Normal Form","18.5 Ambiguity","18.6 CKY Parsing","18.7 Span-Based Neural Parsing","18.8 Evaluating Parsers","18.9 Heads & Head-Finding"]
+  },
+  {
+    ch:19, part:2, title:"Dependency Parsing",
+    desc:"Dependency relations, transition-based and graph-based parsing, and evaluation metrics (UAS/LAS).",
+    topics:["Dependencies","Transition-Based","Graph-Based","UAS/LAS"],
+    color:"var(--accent3)",
+    sections:["19.1 Dependency Relations","19.2 Transition-Based Parsing","19.3 Graph-Based Parsing","19.4 Evaluation"]
+  },
+  {
+    ch:20, part:2, title:"Information Extraction: Relations, Events, and Time",
+    desc:"Relation extraction, event extraction, temporal reasoning, TimeBank, and template filling.",
+    topics:["Relation Extraction","Events","TimeML","Template Filling"],
+    color:"var(--accent3)",
+    sections:["20.1 Relation Extraction","20.2 RE Algorithms","20.3 Extracting Events","20.4 Representing Time","20.5 Aspect","20.6 TimeBank","20.7 Temporal Analysis","20.8 Template Filling"]
+  },
+  {
+    ch:21, part:2, title:"Semantic Role Labeling",
+    desc:"Thematic roles, PropBank, FrameNet, selectional restrictions, and primitive decomposition of predicates.",
+    topics:["SRL","PropBank","FrameNet","Thematic Roles","Selectional"],
+    color:"var(--accent3)",
+    sections:["21.1 Semantic Roles","21.2 Diathesis Alternations","21.3 Problems with Thematic Roles","21.4 PropBank","21.5 FrameNet","21.6 SRL","21.7 Selectional Restrictions","21.8 Primitive Decomposition"]
+  },
+  {
+    ch:22, part:2, title:"Lexicons for Sentiment, Affect, and Connotation",
+    desc:"Sentiment lexicons, affect recognition, connotation frames, and semi-supervised lexicon induction.",
+    topics:["Sentiment","Affect","Connotation","Lexicons","Valence"],
+    color:"var(--accent3)",
+    sections:["22.1 Defining Emotion","22.2 Sentiment & Affect Lexicons","22.3 Human Labeling","22.4 Semi-supervised Induction","22.5 Supervised Learning","22.6 Sentiment Recognition","22.7 Affect Recognition","22.8 Entity-Centric Affect","22.9 Connotation Frames"]
+  },
+  {
+    ch:23, part:2, title:"Coreference Resolution and Entity Linking",
+    desc:"Mention detection, neural coreference architectures, entity linking, Winograd schemas, and gender bias.",
+    topics:["Coreference","Entity Linking","Winograd","Mention Detection","Bias"],
+    color:"var(--accent3)",
+    sections:["23.1 Linguistic Background","23.2 Tasks & Datasets","23.3 Mention Detection","23.4 Coreference Algorithms","23.5 Hand-built Features","23.6 Neural Mention-Ranking","23.7 Entity Linking","23.8 Evaluation","23.9 Winograd Schema","23.10 Gender Bias"]
+  },
+  {
+    ch:24, part:2, title:"Discourse Coherence",
+    desc:"Coherence relations, RST parsing, centering theory, entity-based models, and global coherence.",
+    topics:["RST","Centering","Coherence Relations","Entity-Based","Global"],
+    color:"var(--accent3)",
+    sections:["24.1 Coherence Relations","24.2 Discourse Structure Parsing","24.3 Centering & Entity-Based","24.4 Representation Learning","24.5 Global Coherence"]
+  },
+  {
+    ch:25, part:2, title:"Conversation and its Structure",
+    desc:"Properties of human conversation, dialog acts, corpora, and the structure of conversational interaction.",
+    topics:["Dialog Acts","Turn-Taking","Grounding","Conversational AI"],
+    color:"var(--accent3)",
+    sections:["25.1 Properties of Human Conversation","25.2 Dialog Acts & Corpora"]
+  }
+];
+
+// ──────────────────────────────────────────────
+// RENDER CHAPTER CARDS
+// ──────────────────────────────────────────────
+function renderCards(filter=''){
+  const p1 = document.getElementById('part1Grid');
+  const p2 = document.getElementById('part2Grid');
+  p1.innerHTML = '';
+  p2.innerHTML = '';
+  const lc = filter.toLowerCase();
+  chapters.forEach(c => {
+    const searchStr = `${c.title} ${c.desc} ${c.topics.join(' ')} ${(c.sections||[]).join(' ')}`.toLowerCase();
+    if(lc && !searchStr.includes(lc)) return;
+    const card = document.createElement('div');
+    card.className = 'chapter-card';
+    card.style.setProperty('--card-color', c.color);
+    card.innerHTML = `
+      <style>.chapter-card[data-ch="${c.ch}"]::before{background:${c.color}}</style>
+      <span class="status-badge status-locked">🔒 Locked</span>
+      <div class="ch-num" style="color:${c.color}">Chapter ${c.ch}</div>
+      <h3>${c.title}</h3>
+      <p class="ch-desc">${c.desc}</p>
+      <div class="ch-topics">${c.topics.map(t=>`<span>${t}</span>`).join('')}</div>
+    `;
+    card.dataset.ch = c.ch;
+    card.addEventListener('click',()=>{
+      alert(`🔒 Chapter ${c.ch}: ${c.title}\n\nSend "Unlock Chapter ${c.ch}" in the chat to generate this interactive chapter page.\n\nSections:\n${(c.sections||['Coming soon']).join('\n')}`);
+    });
+    if(c.part === 1) p1.appendChild(card);
+    else p2.appendChild(card);
+  });
+}
+renderCards();
+
+// ──────────────────────────────────────────────
+// SEARCH
+// ──────────────────────────────────────────────
+document.getElementById('searchInput').addEventListener('input', e => {
+  renderCards(e.target.value.trim());
+});
+
+// ──────────────────────────────────────────────
+// SIDEBAR TOGGLE
+// ──────────────────────────────────────────────
+const panel = document.getElementById('sidebarPanel');
+document.getElementById('sidebarToggle').addEventListener('click',()=> panel.classList.toggle('open'));
+document.getElementById('sidebarClose').addEventListener('click',()=> panel.classList.remove('open'));
+
+// ──────────────────────────────────────────────
+// SCROLL TO TOP
+// ──────────────────────────────────────────────
+const stb = document.getElementById('scrollTop');
+window.addEventListener('scroll',()=>{
+  stb.classList.toggle('visible', window.scrollY > 400);
+});
+stb.addEventListener('click',()=> window.scrollTo({top:0,behavior:'smooth'}));
+
+// ──────────────────────────────────────────────
+// ATTENTION MATRIX DEMO
+// ──────────────────────────────────────────────
+(function(){
+  const sentence = ["The","cat","sat","on","the","mat","<EOS>"];
+  const n = sentence.length;
+  // Simulated attention weights (row=query, col=key)
+  const weights = [
+    [.05,.30,.10,.05,.35,.10,.05],
+    [.10,.25,.30,.05,.05,.20,.05],
+    [.05,.35,.15,.10,.05,.25,.05],
+    [.05,.10,.40,.10,.05,.25,.05],
+    [.35,.05,.05,.05,.10,.35,.05],
+    [.05,.10,.25,.10,.35,.10,.05],
+    [.02,.15,.20,.08,.05,.40,.10],
+  ];
+
+  const tokensDiv = document.getElementById('attnTokens');
+  const gridDiv   = document.getElementById('attnGrid');
+  gridDiv.style.gridTemplateColumns = `repeat(${n}, 38px)`;
+
+  sentence.forEach((w,i)=>{
+    const el = document.createElement('span');
+    el.className = 'token';
+    el.textContent = w;
+    el.dataset.idx = i;
+    tokensDiv.appendChild(el);
+  });
+
+  // build cells
+  for(let r=0;r<n;r++){
+    for(let c=0;c<n;c++){
+      const cell = document.createElement('div');
+      cell.className = 'attn-cell';
+      const w = weights[r][c];
+      const alpha = Math.min(w * 2.5, 1);
+      cell.style.background = `rgba(88,166,255,${alpha.toFixed(2)})`;
+      cell.innerHTML = `<span class="tooltip">${sentence[r]} → ${sentence[c]}: ${(w*100).toFixed(0)}%</span>`;
+      cell.dataset.row = r;
+      cell.dataset.col = c;
+      gridDiv.appendChild(cell);
+    }
+  }
+
+  // Highlight row on token hover
+  const tokens = tokensDiv.querySelectorAll('.token');
+  const cells  = gridDiv.querySelectorAll('.attn-cell');
+  tokens.forEach(tok=>{
+    tok.addEventListener('mouseenter',()=>{
+      const idx = +tok.dataset.idx;
+      tokens.forEach(t=>t.classList.remove('active'));
+      tok.classList.add('active');
+      cells.forEach(cell=>{
+        const r = +cell.dataset.row;
+        const c = +cell.dataset.col;
+        const w = weights[r][c];
+        if(r === idx){
+          cell.style.background = `rgba(88,166,255,${Math.min(w*3,1).toFixed(2)})`;
+          cell.style.boxShadow = '0 0 6px rgba(88,166,255,.4)';
+        } else {
+          cell.style.background = `rgba(88,166,255,${(w*.5).toFixed(2)})`;
+          cell.style.boxShadow = 'none';
+        }
+      });
+    });
+    tok.addEventListener('mouseleave',()=>{
+      tokens.forEach(t=>t.classList.remove('active'));
+      cells.forEach(cell=>{
+        const r = +cell.dataset.row;
+        const c = +cell.dataset.col;
+        const w = weights[r][c];
+        cell.style.background = `rgba(88,166,255,${Math.min(w*2.5,1).toFixed(2)})`;
+        cell.style.boxShadow = 'none';
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>

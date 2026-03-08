@@ -1,0 +1,1651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 19: Dependency Parsing | SLP Interactive Explainer</title>
+
+    <!-- MathJax Configuration -->
+    <script>
+    MathJax = {
+      tex: { inlineMath: [['$','$'],['\\(','\\)']], displayMath: [['$$','$$'],['\\[','\\]']] },
+      svg: { fontCache: 'global' }
+    };
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg-full.min.js"></script>
+
+    <!-- Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0f172a;
+            --bg-card: #1e293b;
+            --border: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --accent-cyan: #06b6d4;
+            --accent-pink: #ec4899;
+            --accent-yellow: #eab308;
+            --accent-green: #10b981;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* Navigation */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        nav .logo {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+        }
+
+        nav .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        nav .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.3s;
+        }
+
+        nav .nav-links a:hover {
+            color: var(--accent-cyan);
+        }
+
+        nav .nav-links a.active {
+            color: var(--accent-cyan);
+            border-bottom: 2px solid var(--accent-cyan);
+            padding-bottom: 0.25rem;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        /* Hero */
+        .hero {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-pink));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        /* Section */
+        section {
+            margin-bottom: 5rem;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+
+        section.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        section h2 {
+            font-size: 2rem;
+            margin-bottom: 2rem;
+            color: var(--accent-cyan);
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 1rem;
+        }
+
+        section h3 {
+            font-size: 1.3rem;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--accent-yellow);
+        }
+
+        section p {
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+
+        /* Card */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card.highlight {
+            border-left: 4px solid var(--accent-pink);
+        }
+
+        /* Code Blocks */
+        .code-tabs {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .tab-buttons {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            background: #0f172a;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 1rem;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab-button.active {
+            color: var(--accent-cyan);
+            border-bottom-color: var(--accent-cyan);
+        }
+
+        .tab-button:hover {
+            color: var(--accent-cyan);
+        }
+
+        .tab-content {
+            display: none;
+            padding: 1.5rem;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .code-block {
+            background: #0f172a;
+            border: 1px solid var(--border);
+            border-radius: 0.4rem;
+            padding: 1rem;
+            overflow-x: auto;
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        .code-block code {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            line-height: 1.5;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: var(--accent-cyan);
+            color: var(--bg-primary);
+            border: none;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.3rem;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: opacity 0.3s;
+        }
+
+        .copy-btn:hover {
+            opacity: 0.8;
+        }
+
+        /* Canvas Visualizers */
+        .visualizer {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .visualizer h3 {
+            margin-top: 0;
+        }
+
+        .visualizer canvas {
+            border: 1px solid var(--border);
+            border-radius: 0.3rem;
+            display: block;
+            margin: 1rem 0;
+            background: #0f172a;
+        }
+
+        .controls {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.75rem 1.25rem;
+            border: none;
+            border-radius: 0.3rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.95rem;
+        }
+
+        .btn-primary {
+            background: var(--accent-cyan);
+            color: var(--bg-primary);
+        }
+
+        .btn-primary:hover {
+            background: #06d4d4;
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: var(--accent-pink);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #f472b6;
+        }
+
+        .btn-tertiary {
+            background: var(--bg-primary);
+            color: var(--accent-cyan);
+            border: 1px solid var(--accent-cyan);
+        }
+
+        .btn-tertiary:hover {
+            background: var(--border);
+        }
+
+        /* Info Box */
+        .info-box {
+            background: var(--bg-card);
+            border-left: 4px solid var(--accent-cyan);
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+            border-radius: 0.3rem;
+        }
+
+        .info-box strong {
+            color: var(--accent-cyan);
+        }
+
+        /* Collapsible */
+        .collapsible {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            border-radius: 0.3rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+
+        .collapsible:hover {
+            border-color: var(--accent-cyan);
+        }
+
+        .collapsible.open {
+            border-bottom: none;
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+        }
+
+        .collapsible-content {
+            display: none;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-top: none;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border-bottom-left-radius: 0.3rem;
+            border-bottom-right-radius: 0.3rem;
+        }
+
+        .collapsible-content.open {
+            display: block;
+        }
+
+        .collapsible-icon {
+            color: var(--accent-cyan);
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        /* List Styles */
+        ul, ol {
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+        }
+
+        /* Math */
+        .mjx-chtml {
+            font-size: 1.1em !important;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 2rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-secondary);
+            margin-top: 5rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            nav .nav-links {
+                display: none;
+            }
+
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            section h2 {
+                font-size: 1.5rem;
+            }
+
+            .tab-buttons {
+                flex-direction: column;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                text-align: center;
+            }
+        }
+
+        /* Syntax Highlighting Classes */
+        .keyword { color: var(--accent-pink); }
+        .string { color: var(--accent-green); }
+        .comment { color: #64748b; }
+        .number { color: var(--accent-yellow); }
+        .function { color: var(--accent-cyan); }
+
+        /* Tree Visualization */
+        .tree-node {
+            fill: var(--accent-cyan);
+            stroke: var(--accent-cyan);
+            stroke-width: 2;
+        }
+
+        .tree-arc {
+            stroke: var(--accent-pink);
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .tree-label {
+            fill: var(--text-primary);
+            font-size: 12px;
+            text-anchor: middle;
+        }
+
+        .status-message {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 0.3rem;
+            font-weight: 600;
+        }
+
+        .status-success {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--accent-green);
+            border: 1px solid var(--accent-green);
+        }
+
+        .status-error {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            border: 1px solid #f87171;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="logo">SLP Ch. 19</div>
+        <ul class="nav-links">
+            <li><a href="#feynman" class="nav-link">Feynman Bridge</a></li>
+            <li><a href="#technical" class="nav-link">Technical Ascent</a></li>
+            <li><a href="#code" class="nav-link">Implementation</a></li>
+            <li><a href="#visualizers" class="nav-link">Interactive</a></li>
+            <li><a href="#socratic" class="nav-link">Socratic Challenge</a></li>
+            <li><a href="#modern" class="nav-link">Modern Approaches</a></li>
+            <li><a href="#history" class="nav-link">History</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Hero -->
+        <div class="hero">
+            <h1>Dependency Parsing</h1>
+            <p>From phrase structure trees to syntactic networks: understanding how words depend on each other to form sentences.</p>
+        </div>
+
+        <!-- Section 1: Feynman Bridge -->
+        <section id="feynman">
+            <h2>From Phrase Trees to Word Connections</h2>
+
+            <div class="card highlight">
+                <p><strong>The Core Insight:</strong> Chapter 18 taught us to build phrase structure trees, where words are grouped into nested constituents (noun phrases, verb phrases, etc.). Now we shift perspective entirely. Instead of asking "what groups with what?", we ask <strong>"who depends on whom?"</strong></p>
+            </div>
+
+            <h3>The Org Chart Analogy</h3>
+            <p>Imagine a company:</p>
+            <ul>
+                <li><strong>Constituency parsing</strong> is like an org chart: departments contain teams, teams contain people. The structure is hierarchical and nested.</li>
+                <li><strong>Dependency parsing</strong> is like a reporting network: every person reports to exactly one boss (or no one if they're the CEO). The structure is a directed graph where each word has one head.</li>
+            </ul>
+
+            <p>Consider the sentence: <strong>"The cat sat on the mat"</strong></p>
+            <ul>
+                <li>In constituency parsing, we might build: [S [NP [Det The] [N cat]] [VP [V sat] [PP [P on] [NP [Det the] [N mat]]]]]</li>
+                <li>In dependency parsing, we draw arrows: cat ← sat (subject), on ← sat (modifier), mat ← on (object of preposition)</li>
+            </ul>
+
+            <h3>Key Concepts</h3>
+            <p><strong>Head-Dependent Relationships:</strong> In a dependency relation, the <em>head</em> (or governor) is the central word, and the <em>dependent</em> (or modifier) is the subordinate word. A directed arc from head to dependent represents the relationship.</p>
+
+            <p><strong>The Universal Dependency Framework:</strong> Modern dependency parsing uses a standardized set of 37 relation types (like NSUBJ, OBJ, NMOD) that work consistently across 100+ languages. This enables cross-lingual research and multilingual models.</p>
+
+            <div class="info-box">
+                <strong>Intuition:</strong> Every word except the sentence root depends on exactly one other word. The root word (usually the main verb) has no head. This creates a tree structure where arrows point from heads to dependents.
+            </div>
+        </section>
+
+        <!-- Section 2: Technical Ascent -->
+        <section id="technical">
+            <h2>Technical Ascent: Formalism & Algorithms</h2>
+
+            <h3>19.1: Dependency Relations and Trees</h3>
+
+            <p>A dependency structure is a directed graph $G = (V, A)$ where:</p>
+            <ul>
+                <li>$V$ = set of vertices (words in the sentence, plus a special ROOT token)</li>
+                <li>$A$ = set of arcs (head → dependent relations)</li>
+            </ul>
+
+            <p>Each arc is labeled with a <strong>dependency relation type</strong>. Universal Dependencies defines 37 universal relation types:</p>
+
+            <div class="card">
+                <strong>Clausal Relations:</strong>
+                <ul>
+                    <li><code>nsubj</code> — nominal subject</li>
+                    <li><code>obj</code> — direct object</li>
+                    <li><code>iobj</code> — indirect object</li>
+                    <li><code>ccomp</code> — clausal complement</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <strong>Modifier Relations:</strong>
+                <ul>
+                    <li><code>nmod</code> — nominal modifier (e.g., adjective)</li>
+                    <li><code>amod</code> — adjectival modifier</li>
+                    <li><code>det</code> — determiner</li>
+                    <li><code>case</code> — case marking (prepositions)</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <strong>Other Relations:</strong>
+                <ul>
+                    <li><code>conj</code> — conjunction (coordinate structure)</li>
+                    <li><code>cc</code> — coordinating conjunction</li>
+                    <li><code>compound</code> — compound word</li>
+                </ul>
+            </div>
+
+            <h3>Dependency Tree Constraints</h3>
+
+            <p>A valid dependency tree must satisfy four properties:</p>
+
+            <ol>
+                <li><strong>Single Root:</strong> Exactly one word (usually the main verb) has no head.</li>
+                <li><strong>Connectedness:</strong> Every word has a path to the root.</li>
+                <li><strong>Acyclicity:</strong> No cycles in the graph (no circular dependencies).</li>
+                <li><strong>Single Head:</strong> Each word (except the root) has exactly one head.</li>
+            </ol>
+
+            <p>These constraints mean a valid dependency structure is always a <strong>tree</strong> rooted at the ROOT token.</p>
+
+            <h3>Projectivity</h3>
+
+            <p>A dependency tree is <strong>projective</strong> if all arcs can be drawn above the sentence without crossing. Formally, an arc $(h, d)$ is projective if for all words between $h$ and $d$, there is a path from $h$ to that word.</p>
+
+            <div class="info-box">
+                <strong>Empirical Fact:</strong> English is highly projective (~98% of sentences). However, languages with freer word order (Czech, German, Dutch, Latin) have frequent non-projective structures (~20-30%). This distinction is crucial: some parsing algorithms only handle projective trees.
+            </div>
+
+            <h3>19.2: Transition-Based Dependency Parsing</h3>
+
+            <p>Transition-based parsers build the dependency tree incrementally through a series of <em>local decisions</em>. The parser maintains:</p>
+
+            <ul>
+                <li>A <strong>stack</strong> $\sigma$: partially processed words</li>
+                <li>A <strong>buffer</strong> $\beta$: unprocessed words</li>
+                <li>A <strong>set of arcs</strong> $A$: dependency relations created so far</li>
+            </ul>
+
+            <h3>Arc-Standard System</h3>
+
+            <p>The arc-standard transition system defines three operations:</p>
+
+            <div class="card">
+                <strong>SHIFT:</strong> Move the first word from the buffer to the top of the stack.
+                <br/>Precondition: buffer is non-empty
+            </div>
+
+            <div class="card">
+                <strong>LEFT-ARC(label):</strong> Create a dependency arc from the top of the stack (head) to the second-top element (dependent), then remove the second-top element.
+                <br/>Precondition: stack has at least 2 elements; the second-top element is not the ROOT.
+            </div>
+
+            <div class="card">
+                <strong>RIGHT-ARC(label):</strong> Create a dependency arc from the second-top element of the stack (head) to the top (dependent), then remove the top element.
+                <br/>Precondition: stack has at least 2 elements.
+            </div>
+
+            <h3>Oracle and Classifier</h3>
+
+            <p>To train a transition-based parser, we need an <strong>oracle</strong>: a function that, given the current configuration and the gold-standard parse, tells us which transition to take. The oracle ensures that following its decisions will produce the gold parse.</p>
+
+            <p>A <strong>classifier</strong> (typically a neural network) learns to predict the oracle's decision given features of the current configuration:</p>
+
+            <ul>
+                <li>Top of stack: word, POS tag, dependency label of its head</li>
+                <li>First buffer word: word, POS tag</li>
+                <li>Second buffer word: word, POS tag (lookahead)</li>
+                <li>Embeddings of these words and their relations</li>
+            </ul>
+
+            <p>Modern parsers use <strong>BiLSTM encoders</strong> or <strong>Transformers</strong> to compute contextualized representations of stack and buffer items, then pass these through a softmax classifier to predict the transition.</p>
+
+            <h3>Complexity</h3>
+
+            <p>A sentence with $n$ words requires $2n$ transitions (n SHIFT, n LEFT/RIGHT-ARC operations). With a trained classifier, parsing is linear in time: $O(n)$. However, transition-based parsers cannot produce non-projective parses (by design of the system).</p>
+
+            <h3>19.3: Graph-Based Dependency Parsing</h3>
+
+            <p>Instead of building the tree step-by-step, graph-based parsers view dependency parsing as an optimization problem: find the highest-scoring spanning tree.</p>
+
+            <p><strong>Score Function:</strong> For each potential arc $(h \to d)$ with label $l$, compute a score $s(h, d, l)$. This is typically a learned function.</p>
+
+            <p><strong>Objective:</strong> Find the directed spanning tree (rooted at ROOT) that maximizes the sum of arc scores:</p>
+
+            $$\text{Best Parse} = \arg\max_T \sum_{(h,d,l) \in T} s(h, d, l)$$
+
+            <h3>Maximum Spanning Tree Algorithms</h3>
+
+            <p><strong>Chu-Liu-Edmonds Algorithm:</strong> Finds the maximum spanning tree in a directed graph in $O(n^2)$ time. Key insight: recursively remove cycles and contract them.</p>
+
+            <p><strong>Eisner's Algorithm:</strong> For projective graphs, this dynamic-programming algorithm runs in $O(n^3)$ time and is more efficient for projective languages like English.</p>
+
+            <h3>Neural Arc Scoring</h3>
+
+            <p>Modern systems use <strong>biaffine classifiers</strong> to score arcs. A Transformer or BiLSTM encodes the sentence, producing representations $\mathbf{h}_i$ for each word $i$. Then we compute head and dependent projections:</p>
+
+            $$\mathbf{h}_i^{\text{head}} = \text{Linear}_h(\mathbf{h}_i)$$
+            $$\mathbf{h}_j^{\text{dep}} = \text{Linear}_d(\mathbf{h}_j)$$
+
+            <p>The biaffine score for arc $(i \to j)$ is:</p>
+
+            $$s(i, j) = \mathbf{h}_i^{\text{head}\top} \mathbf{U} \mathbf{h}_j^{\text{dep}} + \mathbf{w}^\top [\mathbf{h}_i^{\text{head}}; \mathbf{h}_j^{\text{dep}}] + b$$
+
+            where $\mathbf{U}$ is a learned matrix, $\mathbf{w}$ is a learned weight vector, and $b$ is a bias term. This bilinear form allows the score to capture multiplicative interactions between head and dependent representations.</p>
+
+            <h3>Advantages and Disadvantages</h3>
+
+            <div class="card">
+                <strong>Transition-Based:</strong>
+                <ul>
+                    <li>✓ Linear time complexity</li>
+                    <li>✓ Easy to implement</li>
+                    <li>✗ Cannot produce non-projective parses</li>
+                    <li>✗ Greedy (commits to decisions early)</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <strong>Graph-Based:</strong>
+                <ul>
+                    <li>✓ Can handle non-projective trees</li>
+                    <li>✓ Global optimization (no greedy mistakes)</li>
+                    <li>✗ Slower ($O(n^2)$ to $O(n^3)$)</li>
+                    <li>✗ More complex inference</li>
+                </ul>
+            </div>
+
+            <h3>19.4: Evaluation Metrics</h3>
+
+            <p>Two standard metrics evaluate dependency parsers:</p>
+
+            <div class="card">
+                <strong>Unlabeled Attachment Score (UAS):</strong> Percentage of words whose head is correctly predicted (ignoring dependency labels).
+                $$\text{UAS} = \frac{\# \text{ correct heads}}{n \text{ words}} \times 100\%$$
+            </div>
+
+            <div class="card">
+                <strong>Labeled Attachment Score (LAS):</strong> Percentage of words whose head AND label are correct.
+                $$\text{LAS} = \frac{\# \text{ correct (head, label) pairs}}{n \text{ words}} \times 100\%$$
+            </div>
+
+            <p><strong>State-of-the-Art:</strong> Modern parsers trained on the Penn Treebank achieve ~95% LAS for English. Cross-lingual models trained on Universal Dependencies reach ~85% LAS averaged across all languages.</p>
+        </section>
+
+        <!-- Section 3: Code Implementation -->
+        <section id="code">
+            <h2>Implementation: Code Walkthrough</h2>
+
+            <p>Below are working implementations of the key parsing algorithms. Click the tabs to explore each approach.</p>
+
+            <!-- Code Tabs -->
+            <div class="code-tabs">
+                <div class="tab-buttons">
+                    <button class="tab-button active" data-tab="tab-transition">Transition-Based Parser</button>
+                    <button class="tab-button" data-tab="tab-graph">Graph-Based MST</button>
+                    <button class="tab-button" data-tab="tab-eval">Evaluation Metrics</button>
+                </div>
+
+                <div class="tab-content active" id="tab-transition">
+                    <h3>Arc-Standard Transition Parser</h3>
+                    <div class="code-block"><code><span class="keyword">class</span> <span class="function">TransitionParser</span>:
+    <span class="string">"""Arc-standard transition-based dependency parser."""</span>
+
+    <span class="keyword">def</span> <span class="function">__init__</span>(<span class="keyword">self</span>):
+        <span class="keyword">self</span>.stack = []
+        <span class="keyword">self</span>.buffer = []
+        <span class="keyword">self</span>.arcs = []
+
+    <span class="keyword">def</span> <span class="function">init_config</span>(<span class="keyword">self</span>, words):
+        <span class="string">"""Initialize configuration: stack=[ROOT], buffer=all words."""</span>
+        <span class="keyword">self</span>.stack = [(<span class="string">'ROOT'</span>, <span class="number">0</span>)]
+        <span class="keyword">self</span>.buffer = [(<span class="string">w</span>, <span class="string">i</span><span class="number">+1</span>) <span class="keyword">for</span> <span class="string">i</span>, <span class="string">w</span> <span class="keyword">in</span> <span class="function">enumerate</span>(words)]
+        <span class="keyword">self</span>.arcs = []
+
+    <span class="keyword">def</span> <span class="function">shift</span>(<span class="keyword">self</span>):
+        <span class="string">"""Move first buffer word to top of stack."""</span>
+        <span class="keyword">self</span>.stack.<span class="function">append</span>(<span class="keyword">self</span>.buffer.<span class="function">pop</span>(<span class="number">0</span>))
+
+    <span class="keyword">def</span> <span class="function">left_arc</span>(<span class="keyword">self</span>, label):
+        <span class="string">"""Create arc: stack[-1] → stack[-2], remove stack[-2]."""</span>
+        dependent = <span class="keyword">self</span>.stack[<span class="number">-2</span>]
+        head = <span class="keyword">self</span>.stack[<span class="number">-1</span>]
+        <span class="keyword">self</span>.arcs.<span class="function">append</span>((head[<span class="number">1</span>], dependent[<span class="number">1</span>], label))
+        <span class="keyword">self</span>.stack.<span class="function">pop</span>(<span class="number">-2</span>)
+
+    <span class="keyword">def</span> <span class="function">right_arc</span>(<span class="keyword">self</span>, label):
+        <span class="string">"""Create arc: stack[-2] → stack[-1], remove stack[-1]."""</span>
+        dependent = <span class="keyword">self</span>.stack[<span class="number">-1</span>]
+        head = <span class="keyword">self</span>.stack[<span class="number">-2</span>]
+        <span class="keyword">self</span>.arcs.<span class="function">append</span>((head[<span class="number">1</span>], dependent[<span class="number">1</span>], label))
+        <span class="keyword">self</span>.stack.<span class="function">pop</span>()
+
+    <span class="keyword">def</span> <span class="function">is_terminal</span>(<span class="keyword">self</span>):
+        <span class="string">"""Check if parsing is complete."""</span>
+        <span class="keyword">return</span> <span class="function">len</span>(<span class="keyword">self</span>.buffer) == <span class="number">0</span> <span class="keyword">and</span> <span class="function">len</span>(<span class="keyword">self</span>.stack) == <span class="number">1</span>
+
+    <span class="keyword">def</span> <span class="function">parse_with_oracle</span>(<span class="keyword">self</span>, words, oracle_actions):
+        <span class="string">"""Parse by following oracle transitions."""</span>
+        <span class="keyword">self</span>.<span class="function">init_config</span>(words)
+        <span class="keyword">for</span> action, label <span class="keyword">in</span> oracle_actions:
+            <span class="keyword">if</span> action == <span class="string">'SHIFT'</span>:
+                <span class="keyword">self</span>.<span class="function">shift</span>()
+            <span class="keyword">elif</span> action == <span class="string">'LEFT-ARC'</span>:
+                <span class="keyword">self</span>.<span class="function">left_arc</span>(label)
+            <span class="keyword">elif</span> action == <span class="string">'RIGHT-ARC'</span>:
+                <span class="keyword">self</span>.<span class="function">right_arc</span>(label)
+        <span class="keyword">return</span> <span class="keyword">self</span>.arcs</code></div>
+                    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+
+                    <p style="margin-top: 1rem; color: var(--text-secondary);">This parser builds a tree step-by-step. At each configuration, the oracle classifier predicts whether to SHIFT (move buffer word to stack), LEFT-ARC (create arc from top-of-stack to second element), or RIGHT-ARC (opposite direction).</p>
+                </div>
+
+                <div class="tab-content" id="tab-graph">
+                    <h3>Eisner's Algorithm for Projective MST Parsing</h3>
+                    <div class="code-block"><code><span class="keyword">import</span> numpy <span class="keyword">as</span> np
+
+<span class="keyword">def</span> <span class="function">eisner_parse</span>(scores):
+    <span class="string">"""Eisner's algorithm for projective MST dependency parsing.</span>
+<span class="string">
+    Args:
+        scores: ndarray of shape (n+1, n+1) where scores[h][d] is the
+                score of the arc from word h to word d.
+                (Word 0 is the ROOT token.)
+
+    Returns:
+        heads: list where heads[i] is the head of word i.
+    """</span>
+    n = scores.shape[<span class="number">0</span>]
+    <span class="comment"># C[s][t][dir][complete]: score of best tree over span [s,t]</span>
+    <span class="comment"># dir: 0 = left-pointing, 1 = right-pointing</span>
+    <span class="comment"># complete: 0 = incomplete, 1 = complete</span>
+    C = np.full((n, n, <span class="number">2</span>, <span class="number">2</span>), <span class="number">-np.inf</span>)
+    backpointers = [[[[<span class="number">-1</span>] <span class="keyword">for</span> _ <span class="keyword">in</span> <span class="function">range</span>(<span class="number">2</span>)] <span class="keyword">for</span> _ <span class="keyword">in</span> <span class="function">range</span>(<span class="number">2</span>)] <span class="keyword">for</span> _ <span class="keyword">in</span> <span class="function">range</span>(n)] <span class="keyword">for</span> _ <span class="keyword">in</span> <span class="function">range</span>(n)]
+
+    <span class="comment"># Base case: single words</span>
+    <span class="keyword">for</span> s <span class="keyword">in</span> <span class="function">range</span>(n):
+        C[s][s][<span class="number">0</span>][<span class="number">1</span>] = <span class="number">0.0</span>
+        C[s][s][<span class="number">1</span>][<span class="number">1</span>] = <span class="number">0.0</span>
+
+    <span class="comment"># Fill DP table by span width</span>
+    <span class="keyword">for</span> width <span class="keyword">in</span> <span class="function">range</span>(<span class="number">1</span>, n):
+        <span class="keyword">for</span> s <span class="keyword">in</span> <span class="function">range</span>(n - width):
+            t = s + width
+            <span class="comment"># Incomplete spans (arc not yet complete)</span>
+            <span class="keyword">for</span> q <span class="keyword">in</span> <span class="function">range</span>(s, t):
+                <span class="comment"># Right arc: s is head, t is dependent</span>
+                score = C[s][q][<span class="number">1</span>][<span class="number">1</span>] + C[q<span class="number">+1</span>][t][<span class="number">0</span>][<span class="number">1</span>] + scores[s][t]
+                <span class="keyword">if</span> score > C[s][t][<span class="number">1</span>][<span class="number">0</span>]:
+                    C[s][t][<span class="number">1</span>][<span class="number">0</span>] = score
+                    backpointers[s][t][<span class="number">1</span>][<span class="number">0</span>] = q
+
+                <span class="comment"># Left arc: t is head, s is dependent</span>
+                score = C[s][q][<span class="number">1</span>][<span class="number">1</span>] + C[q<span class="number">+1</span>][t][<span class="number">0</span>][<span class="number">1</span>] + scores[t][s]
+                <span class="keyword">if</span> score > C[s][t][<span class="number">0</span>][<span class="number">0</span>]:
+                    C[s][t][<span class="number">0</span>][<span class="number">0</span>] = score
+                    backpointers[s][t][<span class="number">0</span>][<span class="number">0</span>] = q
+
+            <span class="comment"># Complete spans</span>
+            <span class="keyword">for</span> q <span class="keyword">in</span> <span class="function">range</span>(s, t):
+                C[s][t][<span class="number">0</span>][<span class="number">1</span>] = <span class="function">max</span>(C[s][t][<span class="number">0</span>][<span class="number">1</span>],
+                    C[s][q][<span class="number">0</span>][<span class="number">1</span>] + C[q][t][<span class="number">0</span>][<span class="number">0</span>])
+            <span class="keyword">for</span> q <span class="keyword">in</span> <span class="function">range</span>(s<span class="number">+1</span>, t<span class="number">+1</span>):
+                C[s][t][<span class="number">1</span>][<span class="number">1</span>] = <span class="function">max</span>(C[s][t][<span class="number">1</span>][<span class="number">1</span>],
+                    C[s][q][<span class="number">1</span>][<span class="number">0</span>] + C[q][t][<span class="number">1</span>][<span class="number">1</span>])
+
+    <span class="keyword">return</span> C[<span class="number">0</span>][n<span class="number">-1</span>][<span class="number">1</span>][<span class="number">1</span>]  <span class="comment"># Score of best tree</span></code></div>
+                    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+
+                    <p style="margin-top: 1rem; color: var(--text-secondary);">Eisner's algorithm uses dynamic programming over spans. For each span [s, t], we track the best incomplete and complete trees. This finds the globally optimal parse in $O(n^3)$ time.</p>
+                </div>
+
+                <div class="tab-content" id="tab-eval">
+                    <h3>Evaluation: UAS and LAS</h3>
+                    <div class="code-block"><code><span class="keyword">def</span> <span class="function">evaluate_dependencies</span>(gold_arcs, pred_arcs, n_words):
+    <span class="string">"""Compute UAS and LAS for dependency parsing.</span>
+<span class="string">
+    Args:
+        gold_arcs: list of tuples (head, dependent, label)
+        pred_arcs: list of tuples (head, dependent, label)
+        n_words: number of words (excluding ROOT)
+
+    Returns:
+        dict with 'UAS' and 'LAS' scores as percentages.
+    """</span>
+    uas_correct = <span class="number">0</span>
+    las_correct = <span class="number">0</span>
+
+    <span class="comment"># Build dictionaries: dependent → (head, label)</span>
+    gold_dict = {dep: (head, label) <span class="keyword">for</span> head, dep, label <span class="keyword">in</span> gold_arcs}
+    pred_dict = {dep: (head, label) <span class="keyword">for</span> head, dep, label <span class="keyword">in</span> pred_arcs}
+
+    <span class="comment"># Check each dependent word</span>
+    <span class="keyword">for</span> word_id <span class="keyword">in</span> <span class="function">range</span>(<span class="number">1</span>, n_words + <span class="number">1</span>):
+        <span class="keyword">if</span> word_id <span class="keyword">in</span> gold_dict <span class="keyword">and</span> word_id <span class="keyword">in</span> pred_dict:
+            g_head, g_label = gold_dict[word_id]
+            p_head, p_label = pred_dict[word_id]
+
+            <span class="comment"># UAS: head is correct</span>
+            <span class="keyword">if</span> g_head == p_head:
+                uas_correct += <span class="number">1</span>
+                <span class="comment"># LAS: both head and label are correct</span>
+                <span class="keyword">if</span> g_label == p_label:
+                    las_correct += <span class="number">1</span>
+
+    uas = uas_correct / n_words * <span class="number">100</span>
+    las = las_correct / n_words * <span class="number">100</span>
+    <span class="keyword">return</span> {<span class="string">'UAS'</span>: <span class="function">f</span><span class="string">'{uas:.1f}%'</span>, <span class="string">'LAS'</span>: <span class="function">f</span><span class="string">'{las:.1f}%'</span>}
+
+
+<span class="comment"># Example usage</span>
+gold = [(<span class="number">0</span>, <span class="number">1</span>, <span class="string">'nsubj'</span>), (<span class="number">0</span>, <span class="number">2</span>, <span class="string">'root'</span>),
+        (<span class="number">4</span>, <span class="number">3</span>, <span class="string">'det'</span>), (<span class="number">2</span>, <span class="number">4</span>, <span class="string">'obj'</span>)]
+pred = [(<span class="number">0</span>, <span class="number">1</span>, <span class="string">'nsubj'</span>), (<span class="number">0</span>, <span class="number">2</span>, <span class="string">'root'</span>),
+        (<span class="number">4</span>, <span class="number">3</span>, <span class="string">'det'</span>), (<span class="number">2</span>, <span class="number">4</span>, <span class="string">'nmod'</span>)]
+<span class="function">print</span>(<span class="function">evaluate_dependencies</span>(gold, pred, <span class="number">4</span>))
+<span class="comment"># Output: {'UAS': '100.0%', 'LAS': '75.0%'}</span></code></div>
+                    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+
+                    <p style="margin-top: 1rem; color: var(--text-secondary);">UAS counts words whose head attachment is correct (ignoring the relation label). LAS requires both the head and the label to match. LAS is stricter and more commonly reported.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Interactive Visualizers -->
+        <section id="visualizers">
+            <h2>Interactive Visualizers</h2>
+
+            <!-- Visualizer 1: Transition Simulator -->
+            <div class="visualizer">
+                <h3>Transition Simulator: Arc-Standard Parsing</h3>
+                <p>Step through the arc-standard parsing of <em>"The cat sat on the mat"</em>. Watch the stack, buffer, and dependency arcs update with each transition.</p>
+
+                <div id="transition-state" style="background: var(--bg-primary); padding: 1rem; border-radius: 0.3rem; margin-bottom: 1rem; font-family: monospace; font-size: 0.9rem;">
+                    <div><strong>Stack:</strong> <span id="stack-display">[ROOT]</span></div>
+                    <div><strong>Buffer:</strong> <span id="buffer-display">[The, cat, sat, on, the, mat]</span></div>
+                    <div><strong>Arcs:</strong> <span id="arcs-display">[]</span></div>
+                    <div style="margin-top: 0.5rem;"><strong>Step:</strong> <span id="step-count">0</span>/12</div>
+                </div>
+
+                <svg id="transition-canvas" width="100%" height="200" style="border: 1px solid var(--border); background: #0f172a; border-radius: 0.3rem; margin-bottom: 1rem;"></svg>
+
+                <div class="controls">
+                    <button class="btn btn-primary" onclick="transitionReset()">Reset</button>
+                    <button class="btn btn-primary" onclick="transitionPrevStep()">← Previous</button>
+                    <button class="btn btn-secondary" id="next-action-btn" onclick="transitionNextStep()">Next Action →</button>
+                </div>
+                <div id="transition-message" style="margin-top: 0.5rem;"></div>
+            </div>
+
+            <!-- Visualizer 2: Dependency Tree Drawer -->
+            <div class="visualizer">
+                <h3>Dependency Tree Visualization</h3>
+                <p>A pre-built dependency tree for <em>"United canceled the morning flights to Houston"</em>. Arcs show head→dependent relationships, with labels indicating relation types.</p>
+
+                <svg id="tree-canvas" width="100%" height="300" style="border: 1px solid var(--border); background: #0f172a; border-radius: 0.3rem;"></svg>
+
+                <div class="controls">
+                    <button class="btn btn-tertiary" onclick="drawDependencyTree()">Redraw</button>
+                </div>
+            </div>
+
+            <!-- Visualizer 3: Projectivity Checker -->
+            <div class="visualizer">
+                <h3>Projectivity Checker: Crossing Arcs</h3>
+                <p>Compare projective (English) and non-projective (Czech/German) dependencies. Toggle between examples to see how crossing arcs indicate non-projectivity.</p>
+
+                <div style="margin-bottom: 1rem;">
+                    <button class="btn btn-tertiary" style="margin-right: 0.5rem;" onclick="showProjectiveExample()">English (Projective)</button>
+                    <button class="btn btn-tertiary" onclick="showNonProjectiveExample()">Czech (Non-Projective)</button>
+                </div>
+
+                <svg id="projectivity-canvas" width="100%" height="250" style="border: 1px solid var(--border); background: #0f172a; border-radius: 0.3rem;"></svg>
+
+                <div id="projectivity-info" style="margin-top: 1rem; padding: 1rem; background: var(--bg-primary); border-radius: 0.3rem;"></div>
+            </div>
+        </section>
+
+        <!-- Section 5: Socratic Challenge -->
+        <section id="socratic">
+            <h2>Socratic Challenge: Projectivity Trade-offs</h2>
+
+            <div class="card highlight">
+                <p><strong>The Challenge:</strong> Transition-based parsers are fast ($O(n)$) but cannot handle non-projective structures. Graph-based parsers are slower ($O(n^2)$ to $O(n^3)$) but can handle any tree. In languages with frequent non-projective constructions (Czech ~23%, German ~20%), should we sacrifice speed for coverage?</p>
+            </div>
+
+            <h3>The Empirical Landscape</h3>
+
+            <div class="card">
+                <strong>English (Penn Treebank):</strong>
+                <ul>
+                    <li>Non-projective sentences: ~2%</li>
+                    <li>Parsing speed: Fast is fine</li>
+                    <li>Best approach: Transition-based (MaltParser, neural variants)</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <strong>Czech (Prague Dependency Treebank):</strong>
+                <ul>
+                    <li>Non-projective sentences: ~23%</li>
+                    <li>Parsing speed: Trade-off needed</li>
+                    <li>Best approach: Graph-based or pseudo-projective transition-based</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <strong>German/Dutch/Latin:</strong>
+                <ul>
+                    <li>Non-projective sentences: ~10-20%</li>
+                    <li>Free word order allows crossing arcs</li>
+                    <li>Best approach: Hybrid systems (fast projective + non-projective recovery)</li>
+                </ul>
+            </div>
+
+            <h3>Three Solutions</h3>
+
+            <h3>1. Pseudo-Projective Transformation</h3>
+            <p>Convert a non-projective tree into a projective approximation by lifting dependents. During decoding, reverse the transformation.</p>
+            <ul>
+                <li>✓ Allows transition-based parsers to handle crossing arcs</li>
+                <li>✗ Information loss; less accurate on truly non-projective structures</li>
+            </ul>
+
+            <h3>2. Hybrid Approach</h3>
+            <p>Use a fast transition-based parser for the common case, and rerank with a graph-based parser for non-projective recovery.</p>
+            <ul>
+                <li>✓ Speed on projective sentences; accuracy on non-projective</li>
+                <li>✗ Complex engineering</li>
+            </ul>
+
+            <h3>3. Pure Graph-Based</h3>
+            <p>Accept the $O(n^2)$ or $O(n^3)$ cost and use an MST parser. Modern hardware and batching make this acceptable.</p>
+            <ul>
+                <li>✓ Simple, elegant, handles all cases</li>
+                <li>✗ Slower for large batches</li>
+            </ul>
+
+            <div class="info-box">
+                <strong>What the field chose:</strong> Modern state-of-the-art systems (Dozat & Manning 2017, BERT-based parsers) predominantly use graph-based approaches. Speed is less critical than accuracy in modern NLP. However, transition-based systems remain popular for real-time or resource-constrained settings.
+            </div>
+        </section>
+
+        <!-- Section 6: Modern Approaches -->
+        <section id="modern">
+            <h2>Modern Approaches & Extensions</h2>
+
+            <h3>Biaffine Neural Parsers (Dozat & Manning 2017)</h3>
+
+            <p>The current state-of-the-art architecture combines:</p>
+            <ol>
+                <li><strong>BiLSTM Encoder:</strong> Contextual word representations</li>
+                <li><strong>Head/Dependent Projections:</strong> Separate embeddings for head and dependent roles</li>
+                <li><strong>Biaffine Classifier:</strong> Score all $(h, d)$ pairs using the biaffine equation</li>
+                <li><strong>MST Decoding:</strong> Chu-Liu-Edmonds or Eisner for global optimization</li>
+            </ol>
+
+            <p>This architecture achieves <strong>~95% LAS on Penn Treebank English</strong>.</p>
+
+            <h3>Transformer-Based Parsers</h3>
+
+            <p>Replacing the BiLSTM with a pre-trained Transformer (BERT, RoBERTa, etc.):</p>
+            <ul>
+                <li>✓ Stronger contextualized representations from deep self-attention</li>
+                <li>✓ Transfer learning from large-scale pre-training</li>
+                <li>✓ Multilingual models enable zero-shot cross-lingual parsing</li>
+                <li>✗ Slower inference; larger memory footprint</li>
+            </ul>
+
+            <h3>Universal Dependencies</h3>
+
+            <p>The <strong>Universal Dependencies (UD) project</strong> provides:</p>
+            <ul>
+                <li>37 universal dependency relation types (designed to be language-independent)</li>
+                <li>Treebanks in 100+ languages, all annotated with the same scheme</li>
+                <li>Shared metrics for cross-lingual evaluation</li>
+                <li>Enables training multilingual parsers that generalize across languages</li>
+            </ul>
+
+            <p>State-of-the-art on UD: ~85% LAS (average across all languages).</p>
+
+            <h3>Joint POS Tagging + Parsing</h3>
+
+            <p>Modern systems often jointly predict POS tags and dependencies in a single model:</p>
+            <ul>
+                <li>Multi-task learning improves both tasks</li>
+                <li>Captures the mutual dependence of POS and syntactic structure</li>
+                <li>More efficient than pipelined approaches</li>
+            </ul>
+
+            <h3>Implicit Dependency Knowledge in LLMs</h3>
+
+            <p>Large language models (GPT, LLaMA, Claude) implicitly learn dependency structures through pre-training. Probing studies show:</p>
+            <ul>
+                <li>Internal representations encode syntactic dependencies</li>
+                <li>Attention heads correlate with dependency relations</li>
+                <li>LLMs can be used as zero-shot dependency parsers (via prompting)</li>
+                <li>Fine-tuned LLMs achieve state-of-the-art results on parsing benchmarks</li>
+            </ul>
+        </section>
+
+        <!-- Section 7: Historical Context -->
+        <section id="history">
+            <h2>Historical Context: The Evolution of Dependency Parsing</h2>
+
+            <p>Dependency parsing has a rich history spanning linguistic theory and computational methods.</p>
+
+            <!-- History Timeline (Collapsible Sections) -->
+            <div class="collapsible" onclick="toggleCollapsible(this)">
+                <strong>1959: Tesnière's "Éléments de syntaxe structurale"</strong>
+                <span class="collapsible-icon">▼</span>
+            </div>
+            <div class="collapsible-content">
+                <p><strong>Lucien Tesnière</strong> published the foundational linguistic work on dependency grammar. He introduced the key insight: syntax is about <em>dependency</em> (which words govern which) rather than <em>constituency</em> (how words group). This was revolutionary, though largely overshadowed by Chomsky's constituency-based generative grammar in the 1960s.</p>
+            </div>
+
+            <div class="collapsible" onclick="toggleCollapsible(this)">
+                <strong>1960s–1990s: The Constituency Dominance</strong>
+                <span class="collapsible-icon">▼</span>
+            </div>
+            <div class="collapsible-content">
+                <p>Chomsky's phrase structure grammar dominated linguistic and computational theory. Dependency parsing remained largely a niche approach used in a few languages (notably, it was standard in Soviet/Russian linguistics). The Penn Treebank (1990s) cemented constituency parsing's dominance in English NLP.</p>
+            </div>
+
+            <div class="collapsible" onclick="toggleCollapsible(this)">
+                <strong>1965: Chu–Liu–Edmonds Algorithm</strong>
+                <span class="collapsible-icon">▼</span>
+            </div>
+            <div class="collapsible-content">
+                <p><strong>Yoeng-jin Chu and Tseng-hong Liu</strong> (and independently, <strong>Jack Edmonds</strong>) developed the algorithm for finding maximum spanning trees in directed graphs. This became the theoretical foundation for graph-based dependency parsing decades later.</p>
+            </div>
+
+            <div class="collapsible" onclick="toggleCollapsible(this)">
+                <strong>1996: Eisner's Algorithm</strong>
+                <span class="collapsible-icon">▼</span>
+            </div>
+            <div class="collapsible-content">
+                <p><strong>Jason Eisner</strong> developed a cubic-time dynamic programming algorithm specifically for projective dependency parsing. This made graph-based parsing practical for English and other projective languages.</p>
+            </div>
+
+            <div class="collapsible" onclick="toggleCollapsible(this)">
+                <strong>2003: Arc-Eager Transition-Based Parsing</strong>
+                <span class="collapsible-icon">▼</span>
+            </div>
+            <div class="collapsible-content">
+                <p><strong>Joakim Nivre</strong> introduced the arc-eager transition system (a variant of arc-standard). This spawned a family of transition-based algorithms that became dominant due to their simplicity and speed.</p>
+            </div>
+
+            <div class="collapsible" onclick="toggleCollapsible(this)">
+                <strong>2004–2006: MaltParser</strong>
+                <span class="collapsible-icon">▼</span>
+            </div>
+            <div class="collapsible-content">
+                <p><strong>Joakim Nivre</strong> and <strong>Johan Hall</strong> released <strong>MaltParser</strong>, an open-source implementation of transition-based dependency parsing using SVMs. It became widely adopted and remained the standard for years. MaltParser's ease of use and speed made dependency parsing accessible to many languages.</p>
+            </div>
+
+            <div class="collapsible" onclick="toggleCollapsible(this)">
+                <strong>2005: McDonald's Graph-Based Parser</strong>
+                <span class="collapsible-icon">▼</span>
+            </div>
+            <div class="collapsible-content">
+                <p><strong>Ryan McDonald</strong> developed the first practical graph-based dependency parser, combining edge-factored scoring with MST inference. This showed that global optimization could compete with greedy transition-based methods.</p>
+            </div>
+
+            <div class="collapsible" onclick="toggleCollapsible(this)">
+                <strong>2014: Neural Transition-Based Parsing</strong>
+                <span class="collapsible-icon">▼</span>
+            </div>
+            <div class="collapsible-content">
+                <p><strong>Danqi Chen and Christopher Manning</strong> applied neural networks (dense embeddings + neural classifier) to transition-based parsing, achieving significant improvements over SVM-based systems. This opened the era of neural dependency parsing.</p>
+            </div>
+
+            <div class="collapsible" onclick="toggleCollapsible(this)">
+                <strong>2017: Biaffine Parsers (Dozat & Manning)</strong>
+                <span class="collapsible-icon">▼</span>
+            </div>
+            <div class="collapsible-content">
+                <p><strong>Timothy Dozat and Christopher Manning</strong> introduced the biaffine classifier architecture for graph-based parsing. Combined with BiLSTM encoders, this became the new state-of-the-art, achieving 95%+ LAS on English and remained the dominant approach for years.</p>
+            </div>
+
+            <div class="collapsible" onclick="toggleCollapsible(this)">
+                <strong>2018: Universal Dependencies</strong>
+                <span class="collapsible-icon">▼</span>
+            </div>
+            <div class="collapsible-content">
+                <p>The <strong>Universal Dependencies project</strong>, initiated by a consortium of linguists, released treebanks in 100+ languages using a unified annotation scheme. This enabled large-scale multilingual parsing research and enabled training parsers that generalize across languages.</p>
+            </div>
+
+            <div class="collapsible" onclick="toggleCollapsible(this)">
+                <strong>2018+: Transformer-Based Parsers</strong>
+                <span class="collapsible-icon">▼</span>
+            </div>
+            <div class="collapsible-content">
+                <p>Following the success of BERT and other pre-trained Transformers, researchers applied fine-tuned Transformers to dependency parsing. Models like mBERT and XLM-RoBERTa enabled zero-shot cross-lingual parsing and achieved state-of-the-art results on nearly all benchmarks.</p>
+            </div>
+
+            <div class="info-box">
+                <strong>Key Insight:</strong> Dependency parsing evolved from a niche linguistic theory to a core NLP task. The shift from constituency to dependency parsing in modern NLP reflects both linguistic intuitions (dependencies are simpler) and practical considerations (faster parsing, easier cross-lingual transfer).
+            </div>
+        </section>
+
+        <!-- Section 8: Summary & Further Reading -->
+        <section id="summary">
+            <h2>Summary & Key Takeaways</h2>
+
+            <div class="card">
+                <h3>Core Concepts</h3>
+                <ul>
+                    <li><strong>Dependency structures</strong> model how words grammatically depend on each other, forming a tree with one root.</li>
+                    <li><strong>37 universal dependency relations</strong> (NSUBJ, OBJ, NMOD, etc.) enable consistent annotation across 100+ languages.</li>
+                    <li><strong>Projectivity</strong> (no crossing arcs) is a common assumption but not universal; some languages require non-projective parses.</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>Two Main Paradigms</h3>
+                <ul>
+                    <li><strong>Transition-Based:</strong> Build the tree incrementally via local decisions. Fast ($O(n)$) but greedy. Cannot handle non-projective trees.</li>
+                    <li><strong>Graph-Based:</strong> Score all possible arcs and find the global maximum spanning tree. Slower ($O(n^2)$ to $O(n^3)$) but optimal. Handles non-projectivity naturally.</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>State-of-the-Art (2026)</h3>
+                <ul>
+                    <li><strong>Architecture:</strong> Pre-trained Transformers (BERT, mBERT, XLM-RoBERTa) + Biaffine classifier + MST decoding.</li>
+                    <li><strong>Performance:</strong> ~95% LAS on English (Penn Treebank); ~85% LAS averaged across all UD languages.</li>
+                    <li><strong>Emerging trend:</strong> LLMs (GPT, LLaMA) implicitly learn syntactic dependencies; zero-shot or few-shot parsing is now possible.</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>Further Exploration</h3>
+                <ul>
+                    <li><strong>SLP Chapter 19:</strong> "Dependency Parsing" (January 2026 draft)</li>
+                    <li><strong>Dozat & Manning (2017):</strong> "Deep Biaffine Attention for Dependency Parsing" — seminal paper on biaffine parsers</li>
+                    <li><strong>Universal Dependencies:</strong> https://universaldependencies.org/ — 100+ treebanks, shared annotation scheme</li>
+                    <li><strong>MaltParser:</strong> https://www.maltparser.org/ — classic transition-based parser</li>
+                </ul>
+            </div>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p>Interactive Explainer for "Speech and Language Processing" (3rd Edition, January 2026 draft)</p>
+        <p>Chapter 19: Dependency Parsing | Built with MathJax, IntersectionObserver, and Canvas</p>
+    </footer>
+
+    <script>
+        // Intersection Observer for scroll-reveal
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('section').forEach(section => {
+            observer.observe(section);
+        });
+
+        // Tab Switching
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const tabName = button.getAttribute('data-tab');
+                const tabSection = button.parentElement.parentElement;
+
+                tabSection.querySelectorAll('.tab-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                tabSection.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+
+                button.classList.add('active');
+                document.getElementById(tabName).classList.add('active');
+            });
+        });
+
+        // Copy Code
+        function copyCode(btn) {
+            const codeBlock = btn.previousElementSibling;
+            const text = codeBlock.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                btn.textContent = 'Copied!';
+                setTimeout(() => {
+                    btn.textContent = 'Copy';
+                }, 2000);
+            });
+        }
+
+        // Collapsible Sections
+        function toggleCollapsible(element) {
+            element.classList.toggle('open');
+            element.nextElementSibling.classList.toggle('open');
+            const icon = element.querySelector('.collapsible-icon');
+            icon.textContent = element.classList.contains('open') ? '▼' : '▶';
+        }
+
+        // ==================== VISUALIZER 1: TRANSITION SIMULATOR ====================
+        const transitionState = {
+            words: ['ROOT', 'The', 'cat', 'sat', 'on', 'the', 'mat'],
+            stack: [0],
+            buffer: [1, 2, 3, 4, 5, 6],
+            arcs: [],
+            step: 0,
+            history: []
+        };
+
+        // Oracle transitions (pre-defined sequence for the example)
+        const oracleSequence = [
+            { action: 'SHIFT', label: null },
+            { action: 'SHIFT', label: null },
+            { action: 'LEFT-ARC', label: 'det' },
+            { action: 'SHIFT', label: null },
+            { action: 'RIGHT-ARC', label: 'nsubj' },
+            { action: 'SHIFT', label: null },
+            { action: 'SHIFT', label: null },
+            { action: 'LEFT-ARC', label: 'det' },
+            { action: 'SHIFT', label: null },
+            { action: 'RIGHT-ARC', label: 'case' },
+            { action: 'RIGHT-ARC', label: 'nmod' },
+            { action: 'RIGHT-ARC', label: 'root' }
+        ];
+
+        function updateTransitionDisplay() {
+            const stackWords = transitionState.stack.map(i => transitionState.words[i]);
+            const bufferWords = transitionState.buffer.map(i => transitionState.words[i]);
+            const arcsText = transitionState.arcs.map(a =>
+                `${transitionState.words[a.head]} → ${transitionState.words[a.dep]} (${a.label})`
+            ).join(', ') || '[]';
+
+            document.getElementById('stack-display').textContent = '[' + stackWords.join(', ') + ']';
+            document.getElementById('buffer-display').textContent = '[' + bufferWords.join(', ') + ']';
+            document.getElementById('arcs-display').textContent = arcsText;
+            document.getElementById('step-count').textContent = `${transitionState.step}/${oracleSequence.length}`;
+
+            drawTransitionCanvas();
+        }
+
+        function transitionReset() {
+            transitionState.stack = [0];
+            transitionState.buffer = [1, 2, 3, 4, 5, 6];
+            transitionState.arcs = [];
+            transitionState.step = 0;
+            transitionState.history = [];
+            document.getElementById('transition-message').textContent = '';
+            updateTransitionDisplay();
+        }
+
+        function transitionNextStep() {
+            if (transitionState.step >= oracleSequence.length) {
+                document.getElementById('transition-message').innerHTML =
+                    '<div class="status-message status-success">Parsing complete!</div>';
+                return;
+            }
+
+            const transition = oracleSequence[transitionState.step];
+            transitionState.history.push(JSON.stringify(transitionState));
+
+            try {
+                if (transition.action === 'SHIFT') {
+                    if (transitionState.buffer.length === 0) {
+                        throw new Error('Cannot SHIFT: buffer is empty.');
+                    }
+                    const word = transitionState.buffer.shift();
+                    transitionState.stack.push(word);
+                    document.getElementById('transition-message').innerHTML =
+                        `<div class="status-message status-success">Shifted: ${transitionState.words[word]}</div>`;
+                } else if (transition.action === 'LEFT-ARC') {
+                    if (transitionState.stack.length < 2) {
+                        throw new Error('Cannot LEFT-ARC: stack has fewer than 2 elements.');
+                    }
+                    const dependent = transitionState.stack[transitionState.stack.length - 2];
+                    const head = transitionState.stack[transitionState.stack.length - 1];
+                    transitionState.arcs.push({ head, dep: dependent, label: transition.label });
+                    transitionState.stack.splice(-2, 1);
+                    document.getElementById('transition-message').innerHTML =
+                        `<div class="status-message status-success">LEFT-ARC: ${transitionState.words[head]} → ${transitionState.words[dependent]} (${transition.label})</div>`;
+                } else if (transition.action === 'RIGHT-ARC') {
+                    if (transitionState.stack.length < 2) {
+                        throw new Error('Cannot RIGHT-ARC: stack has fewer than 2 elements.');
+                    }
+                    const dependent = transitionState.stack[transitionState.stack.length - 1];
+                    const head = transitionState.stack[transitionState.stack.length - 2];
+                    transitionState.arcs.push({ head, dep: dependent, label: transition.label });
+                    transitionState.stack.pop();
+                    document.getElementById('transition-message').innerHTML =
+                        `<div class="status-message status-success">RIGHT-ARC: ${transitionState.words[head]} → ${transitionState.words[dependent]} (${transition.label})</div>`;
+                }
+
+                transitionState.step += 1;
+                updateTransitionDisplay();
+            } catch (e) {
+                document.getElementById('transition-message').innerHTML =
+                    `<div class="status-message status-error">Error: ${e.message}</div>`;
+            }
+        }
+
+        function transitionPrevStep() {
+            if (transitionState.history.length === 0) {
+                document.getElementById('transition-message').innerHTML =
+                    '<div class="status-message status-error">Cannot go back further.</div>';
+                return;
+            }
+
+            const prevState = JSON.parse(transitionState.history.pop());
+            transitionState.stack = prevState.stack;
+            transitionState.buffer = prevState.buffer;
+            transitionState.arcs = prevState.arcs;
+            transitionState.step -= 1;
+            document.getElementById('transition-message').textContent = '';
+            updateTransitionDisplay();
+        }
+
+        function drawTransitionCanvas() {
+            const canvas = document.getElementById('transition-canvas');
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = canvas.offsetWidth * dpr;
+            canvas.height = canvas.offsetHeight * dpr;
+            ctx.scale(dpr, dpr);
+            const rect = canvas.getBoundingClientRect();
+
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, rect.width, rect.height);
+
+            const padding = 20;
+            const wordSpacing = (rect.width - 2 * padding) / transitionState.words.length;
+            const wordY = 50;
+
+            // Draw words
+            ctx.fillStyle = '#f1f5f9';
+            ctx.font = '14px Inter';
+            ctx.textAlign = 'center';
+            transitionState.words.forEach((word, i) => {
+                const x = padding + i * wordSpacing + wordSpacing / 2;
+                ctx.fillText(word, x, wordY);
+            });
+
+            // Draw dependency arcs
+            ctx.strokeStyle = '#ec4899';
+            ctx.lineWidth = 2;
+            transitionState.arcs.forEach(arc => {
+                const headX = padding + arc.head * wordSpacing + wordSpacing / 2;
+                const depX = padding + arc.dep * wordSpacing + wordSpacing / 2;
+                const arcY = wordY - 15;
+
+                // Draw arc
+                const controlY = Math.max(arcY - 30, 15);
+                ctx.beginPath();
+                ctx.moveTo(headX, arcY);
+                ctx.quadraticCurveTo((headX + depX) / 2, controlY, depX, arcY);
+                ctx.stroke();
+
+                // Draw arrowhead
+                const dx = depX - headX;
+                const angle = Math.atan2(-5, Math.abs(dx));
+                const arrowSize = 8;
+                ctx.fillStyle = '#ec4899';
+                ctx.beginPath();
+                if (dx < 0) {
+                    ctx.moveTo(depX, arcY);
+                    ctx.lineTo(depX + arrowSize * Math.cos(angle), arcY - arrowSize * Math.sin(angle));
+                    ctx.lineTo(depX + arrowSize * Math.cos(-angle), arcY - arrowSize * Math.sin(-angle));
+                } else {
+                    ctx.moveTo(depX, arcY);
+                    ctx.lineTo(depX - arrowSize * Math.cos(angle), arcY - arrowSize * Math.sin(angle));
+                    ctx.lineTo(depX - arrowSize * Math.cos(-angle), arcY - arrowSize * Math.sin(-angle));
+                }
+                ctx.closePath();
+                ctx.fill();
+
+                // Draw label
+                const midX = (headX + depX) / 2;
+                ctx.fillStyle = '#eab308';
+                ctx.font = 'bold 12px Inter';
+                ctx.textAlign = 'center';
+                ctx.fillText(arc.label, midX, controlY - 10);
+            });
+        }
+
+        // ==================== VISUALIZER 2: DEPENDENCY TREE ====================
+        function drawDependencyTree() {
+            const canvas = document.getElementById('tree-canvas');
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = canvas.offsetWidth * dpr;
+            canvas.height = canvas.offsetHeight * dpr;
+            ctx.scale(dpr, dpr);
+            const rect = canvas.getBoundingClientRect();
+
+            const sentence = ['ROOT', 'United', 'canceled', 'the', 'morning', 'flights', 'to', 'Houston'];
+            const arcs = [
+                { head: 1, dep: 0, label: 'root' },     // United root
+                { head: 2, dep: 1, label: 'nsubj' },    // canceled <- United
+                { head: 2, dep: 3, label: 'det' },      // canceled <- the
+                { head: 5, dep: 4, label: 'amod' },     // flights <- morning
+                { head: 2, dep: 5, label: 'obj' },      // canceled <- flights
+                { head: 5, dep: 6, label: 'case' },     // flights <- to
+                { head: 5, dep: 7, label: 'nmod' }      // flights <- Houston
+            ];
+
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, rect.width, rect.height);
+
+            const padding = 30;
+            const wordSpacing = (rect.width - 2 * padding) / sentence.length;
+            const wordY = 80;
+
+            // Draw words
+            ctx.fillStyle = '#f1f5f9';
+            ctx.font = '14px Inter';
+            ctx.textAlign = 'center';
+            sentence.forEach((word, i) => {
+                const x = padding + i * wordSpacing + wordSpacing / 2;
+                ctx.fillRect(x - 25, wordY - 15, 50, 25);
+                ctx.fillStyle = '#0f172a';
+                ctx.fillText(word, x, wordY + 3);
+                ctx.fillStyle = '#f1f5f9';
+            });
+
+            // Draw arcs
+            ctx.strokeStyle = '#ec4899';
+            ctx.lineWidth = 2;
+            arcs.forEach(arc => {
+                const headX = padding + arc.head * wordSpacing + wordSpacing / 2;
+                const depX = padding + arc.dep * wordSpacing + wordSpacing / 2;
+                const arcY = wordY - 40;
+
+                const controlY = Math.max(arcY - Math.abs(headX - depX) / 2, 15);
+                ctx.beginPath();
+                ctx.moveTo(headX, wordY - 15);
+                ctx.quadraticCurveTo((headX + depX) / 2, controlY, depX, wordY - 15);
+                ctx.stroke();
+
+                // Label
+                const midX = (headX + depX) / 2;
+                ctx.fillStyle = '#eab308';
+                ctx.font = 'bold 11px Inter';
+                ctx.textAlign = 'center';
+                ctx.fillText(arc.label, midX, controlY - 5);
+            });
+        }
+
+        // ==================== VISUALIZER 3: PROJECTIVITY CHECKER ====================
+        function showProjectiveExample() {
+            const canvas = document.getElementById('projectivity-canvas');
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = canvas.offsetWidth * dpr;
+            canvas.height = canvas.offsetHeight * dpr;
+            ctx.scale(dpr, dpr);
+            const rect = canvas.getBoundingClientRect();
+
+            const sentence = ['ROOT', 'I', 'saw', 'the', 'dog', 'yesterday'];
+            const arcs = [
+                { head: 1, dep: 0, label: 'root' },
+                { head: 2, dep: 1, label: 'nsubj' },
+                { head: 4, dep: 3, label: 'det' },
+                { head: 2, dep: 4, label: 'obj' },
+                { head: 2, dep: 5, label: 'advmod' }
+            ];
+
+            drawProjectivityVisualization(ctx, rect, sentence, arcs, true);
+
+            document.getElementById('projectivity-info').innerHTML = `
+                <strong>English: Projective Structure</strong><br/>
+                Sentence: "I saw the dog yesterday"<br/>
+                Observation: All arcs can be drawn above the words without crossing. This is typical for English SVO (Subject-Verb-Object) word order.
+            `;
+        }
+
+        function showNonProjectiveExample() {
+            const canvas = document.getElementById('projectivity-canvas');
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = canvas.offsetWidth * dpr;
+            canvas.height = canvas.offsetHeight * dpr;
+            ctx.scale(dpr, dpr);
+            const rect = canvas.getBoundingClientRect();
+
+            // Czech example with non-projective arc
+            const sentence = ['ROOT', 'Byli', 'jsme', 'překvapeni', 'rozhodnutím'];
+            // Simplified: "We were surprised by the decision"
+            // In Czech, modifiers can cross create crossing arcs
+            const arcs = [
+                { head: 1, dep: 0, label: 'root' },
+                { head: 1, dep: 2, label: 'aux' },
+                { head: 1, dep: 3, label: 'amod' },
+                { head: 1, dep: 4, label: 'obl' }
+            ];
+
+            drawProjectivityVisualization(ctx, rect, sentence, arcs, false);
+
+            document.getElementById('projectivity-info').innerHTML = `
+                <strong>Czech: Non-Projective Structure</strong><br/>
+                Czech has freer word order, allowing dependent modifiers to create crossing arcs. This occurs in ~23% of Czech sentences. Graph-based parsers (using MST algorithms) handle non-projectivity naturally, while transition-based parsers cannot.
+            `;
+        }
+
+        function drawProjectivityVisualization(ctx, rect, sentence, arcs, isProjective) {
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, rect.width, rect.height);
+
+            const padding = 30;
+            const wordSpacing = (rect.width - 2 * padding) / sentence.length;
+            const wordY = 100;
+
+            // Draw words
+            ctx.fillStyle = '#f1f5f9';
+            ctx.font = '14px Inter';
+            ctx.textAlign = 'center';
+            sentence.forEach((word, i) => {
+                const x = padding + i * wordSpacing + wordSpacing / 2;
+                ctx.fillRect(x - 25, wordY - 15, 50, 25);
+                ctx.fillStyle = '#0f172a';
+                ctx.fillText(word, x, wordY + 3);
+                ctx.fillStyle = '#f1f5f9';
+            });
+
+            // Draw arcs (highlight any crossing in red)
+            arcs.forEach((arc, index) => {
+                const headX = padding + arc.head * wordSpacing + wordSpacing / 2;
+                const depX = padding + arc.dep * wordSpacing + wordSpacing / 2;
+
+                // Check for crossing (simplified)
+                let hasCrossing = false;
+                arcs.forEach((other, otherIndex) => {
+                    if (otherIndex < index) {
+                        const otherHeadX = padding + other.head * wordSpacing + wordSpacing / 2;
+                        const otherDepX = padding + other.dep * wordSpacing + wordSpacing / 2;
+                        if ((headX < otherHeadX && depX > otherDepX) || (headX > otherHeadX && depX < otherDepX)) {
+                            hasCrossing = true;
+                        }
+                    }
+                });
+
+                ctx.strokeStyle = hasCrossing ? '#ef4444' : '#ec4899';
+                ctx.lineWidth = hasCrossing ? 3 : 2;
+
+                const controlY = Math.max(wordY - 60 - index * 30, 15);
+                ctx.beginPath();
+                ctx.moveTo(headX, wordY - 15);
+                ctx.quadraticCurveTo((headX + depX) / 2, controlY, depX, wordY - 15);
+                ctx.stroke();
+
+                // Label
+                const midX = (headX + depX) / 2;
+                ctx.fillStyle = hasCrossing ? '#ef4444' : '#eab308';
+                ctx.font = 'bold 11px Inter';
+                ctx.textAlign = 'center';
+                ctx.fillText(arc.label, midX, controlY - 10);
+            });
+        }
+
+        // Initialize visualizers
+        updateTransitionDisplay();
+        drawDependencyTree();
+        showProjectiveExample();
+
+        // Navigation active state
+        window.addEventListener('scroll', () => {
+            const sections = document.querySelectorAll('section');
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (pageYOffset >= sectionTop - 200) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            document.querySelectorAll('.nav-links a').forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href').slice(1) === current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 9: Masked Language Models | Speech and Language Processing</title>
+    <script>
+MathJax = {
+  tex: { inlineMath: [['$','$'],['\\(','\\)']], displayMath: [['$$','$$'],['\\[','\\]']] },
+  svg: { fontCache: 'global' }
+};
+</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg-full.min.js" async></script>
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-card: #1c2333;
+            --bg-secondary: #161b22;
+            --accent: #58a6ff;
+            --text: #e6edf3;
+            --text-dim: #8b949e;
+            --green: #3fb950;
+            --blue: #79c0ff;
+            --orange: #fb8500;
+            --purple: #d2a8ff;
+            --pink: #f97583;
+            --yellow: #ffd33d;
+            --red: #ff6b6b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            background-color: var(--bg-primary);
+            color: var(--text);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .sticky-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background-color: var(--bg-secondary);
+            border-bottom: 1px solid var(--text-dim);
+            padding: 0.5rem 1rem;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+            flex: 1;
+        }
+
+        .nav-links a {
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: var(--blue);
+        }
+
+        .progress-bar {
+            flex: 1;
+            height: 4px;
+            background-color: var(--bg-card);
+            border-radius: 2px;
+            overflow: hidden;
+            max-width: 300px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--green), var(--accent), var(--blue));
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        main {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 80px 2rem 2rem;
+        }
+
+        .hero {
+            text-align: center;
+            margin-bottom: 4rem;
+            padding: 3rem 0;
+            border-bottom: 1px solid var(--text-dim);
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+
+        .epigraph {
+            font-style: italic;
+            color: var(--text-dim);
+            margin: 2rem 0;
+            font-size: 1.1rem;
+        }
+
+        .overview {
+            color: var(--text);
+            font-size: 1.1rem;
+            margin-top: 1.5rem;
+            line-height: 1.8;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .badge-feynman { background-color: var(--green); color: var(--bg-primary); }
+        .badge-technical { background-color: var(--blue); color: var(--bg-primary); }
+        .badge-code { background-color: var(--orange); color: var(--bg-primary); }
+        .badge-socratic { background-color: var(--purple); color: var(--bg-primary); }
+        .badge-modern { background-color: var(--pink); color: var(--bg-primary); }
+        .badge-history { background-color: var(--yellow); color: var(--bg-primary); }
+        .badge-viz { background-color: var(--red); color: var(--bg-primary); }
+
+        .progress-tracker {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin: 3rem 0;
+            flex-wrap: wrap;
+        }
+
+        .progress-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: var(--bg-card);
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .progress-dot:hover {
+            background-color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .progress-dot.active {
+            background-color: var(--green);
+            border-color: var(--green);
+            transform: scale(1.3);
+        }
+
+        section {
+            margin-bottom: 4rem;
+            padding: 2rem;
+            background-color: var(--bg-card);
+            border-radius: 8px;
+            border-left: 4px solid var(--accent);
+        }
+
+        section h2 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+
+        section h3 {
+            font-size: 1.5rem;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--blue);
+        }
+
+        section h4 {
+            font-size: 1.2rem;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            color: var(--accent);
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: var(--text);
+        }
+
+        code {
+            background-color: var(--bg-secondary);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--blue);
+            font-size: 0.9em;
+        }
+
+        pre {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--text-dim);
+            border-radius: 6px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: var(--text);
+        }
+
+        .kw { color: var(--pink); }
+        .fn { color: var(--blue); }
+        .str { color: var(--green); }
+        .num { color: var(--yellow); }
+        .cm { color: var(--text-dim); }
+
+        .reveal-button {
+            background-color: var(--accent);
+            color: var(--bg-primary);
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            margin: 1rem 0;
+            transition: all 0.3s;
+        }
+
+        .reveal-button:hover {
+            background-color: var(--blue);
+            transform: translateY(-2px);
+        }
+
+        .hidden-content {
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+            background-color: var(--bg-secondary);
+            border-left: 3px solid var(--accent);
+            padding-left: 0;
+            margin-top: 0;
+        }
+
+        .hidden-content.show {
+            max-height: 2000px;
+            opacity: 1;
+            padding-left: 1rem;
+            margin-top: 1rem;
+        }
+
+        .visualizer-container {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--text-dim);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .visualizer-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .visualizer-controls {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .visualizer-input {
+            flex: 1;
+            min-width: 200px;
+            background-color: var(--bg-primary);
+            border: 1px solid var(--text-dim);
+            padding: 0.75rem;
+            border-radius: 4px;
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .visualizer-button {
+            background-color: var(--green);
+            color: var(--bg-primary);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .visualizer-button:hover {
+            background-color: var(--blue);
+            transform: translateY(-2px);
+        }
+
+        .visualizer-canvas {
+            width: 100%;
+            border: 1px solid var(--text-dim);
+            border-radius: 4px;
+            background-color: var(--bg-primary);
+            margin: 1rem 0;
+        }
+
+        .word-tag-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin: 1rem 0;
+            padding: 1rem;
+            background-color: var(--bg-primary);
+            border-radius: 4px;
+        }
+
+        .word-tag-item {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            background-color: var(--bg-card);
+            padding: 0.5rem;
+            border-radius: 4px;
+        }
+
+        .word-text {
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .tag-select {
+            background-color: var(--bg-primary);
+            color: var(--text);
+            border: 1px solid var(--text-dim);
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .entity-PER { color: var(--blue); font-weight: bold; }
+        .entity-ORG { color: var(--green); font-weight: bold; }
+        .entity-LOC { color: var(--orange); font-weight: bold; }
+        .entity-GPE { color: var(--purple); font-weight: bold; }
+
+        .timeline {
+            border-left: 3px solid var(--accent);
+            padding-left: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .timeline-item {
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -1.85rem;
+            top: 0.3rem;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: var(--accent);
+            border: 2px solid var(--bg-card);
+        }
+
+        .timeline-year {
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .timeline-desc {
+            color: var(--text);
+            margin-top: 0.3rem;
+        }
+
+        .collapsible-header {
+            background-color: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.3s;
+        }
+
+        .collapsible-header:hover {
+            background-color: var(--bg-primary);
+        }
+
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+            padding: 0;
+        }
+
+        .collapsible-content.show {
+            max-height: 2000px;
+            opacity: 1;
+            padding: 1rem;
+        }
+
+        .heatmap-container {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+            margin: 1.5rem 0;
+        }
+
+        .heatmap-item {
+            text-align: center;
+        }
+
+        .heatmap-title {
+            color: var(--accent);
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 4rem;
+            gap: 2rem;
+        }
+
+        .nav-button {
+            flex: 1;
+            padding: 1rem;
+            background-color: var(--bg-card);
+            border: 1px solid var(--text-dim);
+            color: var(--text);
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .nav-button:hover {
+            background-color: var(--accent);
+            color: var(--bg-primary);
+            border-color: var(--accent);
+        }
+
+        .probability-chart {
+            margin: 1.5rem 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .prob-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .prob-label {
+            min-width: 80px;
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        .prob-visual {
+            flex: 1;
+            height: 24px;
+            background-color: var(--bg-primary);
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .prob-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--green), var(--blue));
+            width: 0%;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 0.5rem;
+        }
+
+        .prob-value {
+            color: var(--bg-primary);
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+
+        .question-item {
+            background-color: var(--bg-primary);
+            border-left: 3px solid var(--purple);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+
+        .question-text {
+            color: var(--accent);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .answer-text {
+            color: var(--text);
+            line-height: 1.8;
+        }
+
+        .equation {
+            display: flex;
+            justify-content: center;
+            margin: 1.5rem 0;
+            padding: 1rem;
+            background-color: var(--bg-secondary);
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        ul, ol {
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        table {
+            width: 100%;
+            margin: 1rem 0;
+            border-collapse: collapse;
+        }
+
+        td, th {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--text-dim);
+        }
+
+        th {
+            color: var(--accent);
+        }
+
+        @media (max-width: 768px) {
+            main {
+                padding: 80px 1rem 1rem;
+            }
+
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .sticky-nav {
+                flex-direction: column;
+                gap: 0.5rem;
+                padding: 0.5rem;
+            }
+
+            .nav-links {
+                font-size: 0.8rem;
+                gap: 1rem;
+            }
+
+            .visualizer-controls {
+                flex-direction: column;
+            }
+
+            .visualizer-input {
+                min-width: 100%;
+            }
+
+            section {
+                padding: 1rem;
+            }
+
+            section h2 {
+                font-size: 1.5rem;
+            }
+
+            .heatmap-container {
+                flex-direction: column;
+            }
+
+            .nav-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sticky-nav">
+        <div class="nav-links">
+            <a href="index.html">← Dashboard</a>
+            <a href="chapter8.html">← Ch 8: Transformers</a>
+            <a href="chapter10.html">Ch 10: Post-training →</a>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill"></div>
+        </div>
+    </div>
+
+    <main>
+        <section class="hero">
+            <h1>Chapter 9: Masked Language Models</h1>
+            <div class="epigraph">"Larvatus prodeo [Masked, I go forward]" — René Descartes</div>
+            <div class="overview">
+                This chapter explores bidirectional transformer encoders and the paradigm shift introduced by BERT (Bidirectional Encoder Representations from Transformers). Unlike autoregressive models that predict left-to-right, masked language models learn by predicting randomly masked tokens using context from both directions. We'll examine the training objectives (masked language modeling and next sentence prediction), the resulting contextual embeddings, and practical applications in classification and sequence labeling tasks like Named Entity Recognition. BERT and its variants (RoBERTa, XLM-RoBERTa) have become foundational models for understanding and leveraging bidirectional context in NLP.
+            </div>
+        </section>
+
+        <div class="progress-tracker">
+            <div class="progress-dot" data-section="0"></div>
+            <div class="progress-dot" data-section="1"></div>
+            <div class="progress-dot" data-section="2"></div>
+            <div class="progress-dot" data-section="3"></div>
+            <div class="progress-dot" data-section="4"></div>
+            <div class="progress-dot" data-section="5"></div>
+            <div class="progress-dot" data-section="6"></div>
+            <div class="progress-dot" data-section="7"></div>
+            <div class="progress-dot" data-section="8"></div>
+        </div>
+
+        <section id="section-0">
+            <span class="badge badge-feynman">Feynman</span>
+            <h2>The Detective's Method: Understanding Masked Language Models</h2>
+
+            <p>
+                Imagine you're reading a mystery novel where someone has covered a few words with thick black ink. As a detective, you can't just read forward like a fortune teller predicting the future—instead, you look at <strong>all the surrounding clues</strong>. The words before AND after the covered word are equally important. You use context from both directions to deduce what might be hidden underneath.
+            </p>
+
+            <p>
+                This is fundamentally different from a "fortune teller" approach (autoregressive language models), who can only glance at what came before and must predict the next word with blinders on. They're missing half the clues!
+            </p>
+
+            <p>
+                <strong>BERT is the detective.</strong> It looks in both directions—backward and forward—at the entire sentence. During training, it's given millions of practice cases: sentences with randomly hidden words scattered throughout. The model becomes expert at deducing missing words from their complete context. This bidirectional reading is powerful because language is inherently bidirectional. In the sentence "The bank approved the application," you can't fully understand "bank" without reading ahead to "application."
+            </p>
+
+            <p>
+                <strong>Fine-tuning is like specialization.</strong> After years of general detective work (general pretraining on Wikipedia and books), the detective decides to specialize. They might focus exclusively on financial crimes (sentiment analysis), or become an expert at identifying suspects (named entity recognition). To do this, they add a small, specialized toolkit on top of their general detective skills—a tiny "classification head" that learns to apply their vast knowledge to a specific task.
+            </p>
+
+            <p>
+                The key insight: by forcing the model to predict masked words using full context, BERT learns rich, bidirectional representations that capture nuanced meaning. These representations then transfer beautifully to downstream tasks.
+            </p>
+        </section>
+
+        <section id="section-1">
+            <span class="badge badge-technical">Technical</span>
+            <h2>9.1 Bidirectional Transformer Encoders</h2>
+
+            <p>
+                Bidirectional encoders depart from the causal masking of autoregressive decoders. In standard transformer decoders, attention is masked so that position <em>i</em> can only attend to positions ≤ <em>i</em> (no "looking ahead"). Encoders remove this restriction entirely.
+            </p>
+
+            <h3>Attention Without Masking</h3>
+            <p>
+                Recall the attention mechanism:
+            </p>
+            <div class="equation">
+                $$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right) V$$
+            </div>
+            <p>
+                In an encoder, there is <strong>no mask</strong>. The softmax operates over the entire key dimension. Each token can attend to every other token, including those that come later in the sequence. This allows attention heads to gather information from both directions.
+            </p>
+
+            <h3>BERT Architecture</h3>
+            <p>
+                The original BERT model (Devlin et al., 2018) uses these specifications:
+            </p>
+            <ul>
+                <li><strong>Vocabulary:</strong> 30,522 tokens (WordPiece vocabulary)</li>
+                <li><strong>Sequence length:</strong> N = 512 tokens</li>
+                <li><strong>Hidden dimension:</strong> d = 768</li>
+                <li><strong>Layers:</strong> L = 12 transformer blocks</li>
+                <li><strong>Attention heads:</strong> A = 12 heads (d_k = 768/12 = 64)</li>
+                <li><strong>Parameters:</strong> ~100 million (BERT-base); ~340 million (BERT-large)</li>
+            </ul>
+
+            <h3>Multilingual and Scaled Variants</h3>
+            <p>
+                <strong>XLM-RoBERTa</strong> (Conneau et al., 2019) scales up for 100+ languages:
+            </p>
+            <ul>
+                <li><strong>Vocabulary:</strong> 250,000 tokens (SentencePiece)</li>
+                <li><strong>Sequence length:</strong> N = 512</li>
+                <li><strong>Hidden dimension:</strong> d = 1,024</li>
+                <li><strong>Layers:</strong> L = 24</li>
+                <li><strong>Attention heads:</strong> A = 16</li>
+                <li><strong>Parameters:</strong> ~550 million</li>
+            </ul>
+
+            <h3>Encoder vs. Decoder Architecture</h3>
+            <p>
+                Encoders are fundamentally different from decoders:
+            </p>
+            <table>
+                <tr>
+                    <th>Property</th>
+                    <th>Encoder</th>
+                    <th>Decoder</th>
+                </tr>
+                <tr>
+                    <td>Attention Mask</td>
+                    <td>None (full bidirectional)</td>
+                    <td>Causal (lower triangular)</td>
+                </tr>
+                <tr>
+                    <td>Generation</td>
+                    <td>Not designed for generation</td>
+                    <td>Generates left-to-right</td>
+                </tr>
+                <tr>
+                    <td>Use Case</td>
+                    <td>Classification, NER, QA</td>
+                    <td>Machine translation, summarization</td>
+                </tr>
+                <tr>
+                    <td>Context Type</td>
+                    <td>Bidirectional</td>
+                    <td>Unidirectional (autoregressive)</td>
+                </tr>
+            </table>
+
+            <h2>9.2 Training Bidirectional Encoders</h2>
+
+            <h3>Masked Language Modeling (MLM)</h3>
+            <p>
+                BERT's primary training objective is <strong>masked language modeling</strong>, which builds on the <strong>cloze task</strong> (Taylor, 1953). The cloze task asks: given a sentence with a word removed, fill it in. BERT applies this at scale.
+            </p>
+
+            <p>
+                <strong>Masking procedure:</strong>
+            </p>
+            <ol>
+                <li>Randomly select 15% of tokens in a sequence.</li>
+                <li>For each selected token:
+                    <ul>
+                        <li>80% of the time: replace it with the special token <code>[MASK]</code></li>
+                        <li>10% of the time: replace it with a random token from the vocabulary</li>
+                        <li>10% of the time: keep it unchanged</li>
+                    </ul>
+                </li>
+            </ol>
+
+            <p>
+                The 80/10/10 split (Devlin et al., 2018) encourages the model not to "rely on" the presence of [MASK] tokens at test time. A real-world sentence won't have masked tokens, so the model must learn to work without them.
+            </p>
+
+            <h3>MLM Loss</h3>
+            <p>
+                Let M be the set of masked positions and <strong>h<sub>i</sub><sup>L</sup></strong> be the hidden representation at layer L for position i:
+            </p>
+            <div class="equation">
+                $$u_i = h_i^L E^T \quad \text{and} \quad y_i = \text{softmax}(u_i)$$
+            </div>
+            <p>
+                where E is the embedding matrix (shared with input embeddings). The logits u_i score each vocabulary token. The loss for a single masked token is:
+            </p>
+            <div class="equation">
+                $$L_{\text{MLM}}(x_i) = -\log P(x_i | h_i^L)$$
+            </div>
+            <p>
+                The batch loss is:
+            </p>
+            <div class="equation">
+                $$L_{\text{MLM}} = -\frac{1}{|M|} \sum_{i \in M} \log P(x_i | h_i^L)$$
+            </div>
+
+            <h3>Next Sentence Prediction (NSP)</h3>
+            <p>
+                A secondary objective helps the model learn relationships between sentences:
+            </p>
+            <div class="equation">
+                $$y_{\text{NSP}} = \text{softmax}\left(h_{\text{[CLS]}}^L W_{\text{NSP}}\right)$$
+            </div>
+            <p>
+                BERT concatenates two sentences with special tokens: <code>[CLS] sentence1 [SEP] sentence2 [SEP]</code>. Half the time, sentence2 follows sentence1 in the original corpus (label: IsNext). Half the time, it's a random sentence (label: NotNext). The model predicts which case it is, using the [CLS] token's representation.
+            </p>
+
+            <h3>Special Tokens and Segment Embeddings</h3>
+            <p>
+                BERT uses special tokens and segment embeddings:
+            </p>
+            <ul>
+                <li><code>[CLS]</code>: Classification token prepended to every sequence. Its final representation is used for sequence-level predictions.</li>
+                <li><code>[SEP]</code>: Separator token placed between sentences (and at the end).</li>
+                <li><code>[UNK]</code>: Unknown token for out-of-vocabulary words (rare with WordPiece).</li>
+                <li><code>[MASK]</code>: Masking token during pretraining.</li>
+                <li><strong>Segment embeddings:</strong> Token-level embeddings indicating whether a token belongs to the first or second sentence (e_A or e_B).</li>
+            </ul>
+
+            <h3>Training Regimes</h3>
+            <p>
+                <strong>BERT:</strong> Trained on English Wikipedia (2.5B tokens) and BookCorpus (0.8B tokens) for 1M steps with batch size 256. NSP included.
+            </p>
+
+            <p>
+                <strong>RoBERTa:</strong> Improved BERT by removing NSP, training longer (500K steps), and using more data (160GB). Found that larger batch sizes and more careful masking strategies helped.
+            </p>
+
+            <h3>Multilingual Masking Strategy</h3>
+            <p>
+                For multilingual models, vocabulary sampling is crucial. High-resource languages would dominate if sampled uniformly. Instead, use smoothed probability:
+            </p>
+            <div class="equation">
+                $$q_i = \frac{p_i^\alpha}{\sum_j p_j^\alpha}$$
+            </div>
+            <p>
+                where p_i is the fraction of training examples in language i, and α = 0.7 (hyperparameter). This reduces the exponent, giving low-resource languages more frequent masking and thus more training signal.
+            </p>
+
+            <h2>9.3 Contextual Embeddings</h2>
+
+            <p>
+                The hidden state <strong>h<sub>i</sub><sup>L</sup></strong> at layer L for token position i is a <strong>contextual embedding</strong>. It differs fundamentally from static embeddings (like word2vec):
+            </p>
+
+            <ul>
+                <li><strong>Static embeddings:</strong> Each word type has one fixed vector (e.g., "bank" always has the same embedding).</li>
+                <li><strong>Contextual embeddings:</strong> Each word instance has a different vector depending on context (e.g., "bank" in "river bank" vs. "bank account" have different h_i).</li>
+            </ul>
+
+            <h3>Word Sense Disambiguation with Contextual Embeddings</h3>
+            <p>
+                Contextual embeddings naturally support word sense disambiguation (WSD). For a polysemous word like "bank," collect its contextual embeddings across many sentences:
+            </p>
+            <div class="equation">
+                $$v_s = \frac{1}{n} \sum_{i=1}^{n} h_i^L$$
+            </div>
+            <p>
+                This computes an average embedding for sense s. For each new instance, compute cosine similarity:
+            </p>
+            <div class="equation">
+                $$\text{sense}(t) = \arg\max_s \cos(h_t^L, v_s)$$
+            </div>
+            <p>
+                The highest-scoring sense is selected. This simple approach works surprisingly well compared to more complex WSD systems.
+            </p>
+
+            <h3>The Anisotropy Problem</h3>
+            <p>
+                A technical issue: contextual embeddings from BERT tend to be <strong>anisotropic</strong>. The vectors concentrate in a narrow cone in high-dimensional space (Ethayarajh, 2019). This means they're less effective for simple distance-based comparisons (e.g., nearest neighbors).
+            </p>
+
+            <p>
+                <strong>Fix via standardization:</strong> Normalize embeddings layer-by-layer:
+            </p>
+            <div class="equation">
+                $$\mu = \frac{1}{N} \sum_{i=1}^{N} h_i^L$$
+            </div>
+            <div class="equation">
+                $$\sigma^2 = \frac{1}{N} \sum_{i=1}^{N} (h_i^L - \mu)^2$$
+            </div>
+            <div class="equation">
+                $$z_i = \frac{h_i^L - \mu}{\sigma}$$
+            </div>
+            <p>
+                Standardization improves downstream performance on similarity-based tasks.
+            </p>
+
+            <h2>9.4 Fine-Tuning for Classification</h2>
+
+            <h3>Sequence Classification</h3>
+            <p>
+                For sentiment analysis or text classification, fine-tune BERT by adding a simple classifier head:
+            </p>
+            <div class="equation">
+                $$\hat{y} = \text{softmax}(h_{\text{[CLS]}}^L W_c + b_c)$$
+            </div>
+            <p>
+                The [CLS] token's representation is projected through a learned weight matrix W_c to produce logits for each class. Cross-entropy loss is applied over the labels. Typically, fine-tuning runs for 3-5 epochs on the labeled dataset.
+            </p>
+
+            <h3>Sentence-Pair Classification</h3>
+            <p>
+                For tasks like Natural Language Inference (NLI), classify relationships between two sentences:
+            </p>
+            <div class="equation">
+                $$\hat{y} = \text{softmax}(h_{\text{[CLS]}}^L W_c + b_c)$$
+            </div>
+            <p>
+                Input format: <code>[CLS] premise [SEP] hypothesis [SEP]</code>. Classes: entailment, contradiction, neutral. Segment embeddings help distinguish the two sentences.
+            </p>
+
+            <h2>9.5 Sequence Labeling: Named Entity Recognition (NER)</h2>
+
+            <p>
+                NER assigns entity tags to each token. Common tags:
+            </p>
+            <ul>
+                <li><strong>PER:</strong> Person (names)</li>
+                <li><strong>ORG:</strong> Organization (company, agency)</li>
+                <li><strong>LOC:</strong> Location (country, city)</li>
+                <li><strong>GPE:</strong> Geopolitical entity (nation-state)</li>
+                <li><strong>O:</strong> Other (non-entity)</li>
+            </ul>
+
+            <h3>BIO Tagging</h3>
+            <p>
+                <strong>BIO tagging</strong> (and variants) represents entity spans:
+            </p>
+            <ul>
+                <li><strong>B-X:</strong> Beginning of entity type X</li>
+                <li><strong>I-X:</strong> Inside (continuation) of entity type X</li>
+                <li><strong>O:</strong> Outside (not part of any entity)</li>
+            </ul>
+
+            <p>
+                <strong>Example:</strong> "Jane Villanueva works at Ximena Corp" →
+                <br/><code>Jane (B-PER), Villanueva (I-PER), works (O), at (O), Ximena (B-ORG), Corp (I-ORG)</code>
+            </p>
+
+            <p>
+                Variants include IO (no B tags) and BIOES (adds End and Single tags).
+            </p>
+
+            <h3>NER Fine-Tuning</h3>
+            <p>
+                For NER, add a classifier at each token position:
+            </p>
+            <div class="equation">
+                $$y_i = \text{softmax}(h_i^L W_K + b_K)$$
+            </div>
+            <p>
+                where W_K projects to |K| tag classes. Compute cross-entropy loss for each token and backpropagate:
+            </p>
+            <div class="equation">
+                $$t_i = \arg\max_k y_i$$
+            </div>
+
+            <h3>Tokenization Challenges</h3>
+            <p>
+                WordPiece tokenization can split words into subwords. For NER, you must align subword tokens back to the original tokens. Common approaches:
+            </p>
+            <ul>
+                <li><strong>Assign to first subword:</strong> Only use the tag from the first subword token of a word.</li>
+                <li><strong>Assign to all subwords:</strong> Apply the same tag to all subwords of a word.</li>
+                <li><strong>Use a subword model:</strong> Train a separate CRF or tagging model on subword tokens.</li>
+            </ul>
+        </section>
+
+        <section id="section-2">
+            <span class="badge badge-viz">Viz</span>
+            <h2>Interactive Visualizations</h2>
+
+            <h3>Visualizer 1: Masked Language Model Simulator</h3>
+            <p>
+                Click on any word below to mask it (replace with [MASK]). The simulator will show predicted word probabilities using simulated bidirectional context.
+            </p>
+            <div class="visualizer-container">
+                <div class="visualizer-title">MLM Simulator</div>
+                <div class="visualizer-controls">
+                    <input type="text" class="visualizer-input" id="mlm-input" value="The cat sat on the comfortable mat" placeholder="Enter a sentence">
+                    <button class="visualizer-button" onclick="initializeMLM()">Analyze</button>
+                </div>
+                <div id="mlm-words" style="display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 1rem; background-color: var(--bg-primary); border-radius: 4px;"></div>
+                <div id="mlm-predictions" style="margin-top: 1.5rem;">
+                    <div style="color: var(--text-dim); font-size: 0.9rem; margin-bottom: 1rem;">Click a word to mask it →</div>
+                </div>
+            </div>
+
+            <h3>Visualizer 2: Causal vs. Bidirectional Attention</h3>
+            <p>
+                Side-by-side comparison of attention patterns. Left shows causal masking (autoregressive), right shows bidirectional (encoder). Click tokens to highlight which positions they attend to.
+            </p>
+            <div class="visualizer-container">
+                <div class="visualizer-title">Attention Mechanism Comparison</div>
+                <div class="visualizer-controls">
+                    <input type="text" class="visualizer-input" id="attention-input" value="BERT is powerful" placeholder="Enter a sentence">
+                    <button class="visualizer-button" onclick="initializeAttention()">Visualize</button>
+                </div>
+                <div class="heatmap-container" id="attention-container"></div>
+            </div>
+
+            <h3>Visualizer 3: Named Entity Recognition (NER) BIO Tagger</h3>
+            <p>
+                Interactively tag words as entities using BIO notation. Color-coded by entity type (PER=blue, ORG=green, LOC=orange, GPE=purple).
+            </p>
+            <div class="visualizer-container">
+                <div class="visualizer-title">NER BIO Tagger</div>
+                <div class="visualizer-controls">
+                    <input type="text" class="visualizer-input" id="ner-input" value="John Smith works at Apple in California" placeholder="Enter a sentence">
+                    <button class="visualizer-button" onclick="initializeNER()">Tokenize</button>
+                </div>
+                <div style="margin: 1rem 0;">
+                    <div style="color: var(--text-dim); font-size: 0.9rem; margin-bottom: 0.5rem;">Tagging Scheme:</div>
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                        <label style="color: var(--text); cursor: pointer;">
+                            <input type="radio" name="tagging-scheme" value="BIO" checked onchange="updateTaggerDisplay()"> BIO
+                        </label>
+                        <label style="color: var(--text); cursor: pointer;">
+                            <input type="radio" name="tagging-scheme" value="IO" onchange="updateTaggerDisplay()"> IO
+                        </label>
+                        <label style="color: var(--text); cursor: pointer;">
+                            <input type="radio" name="tagging-scheme" value="BIOES" onchange="updateTaggerDisplay()"> BIOES
+                        </label>
+                    </div>
+                </div>
+                <div id="ner-tags" style="background-color: var(--bg-primary); padding: 1rem; border-radius: 4px;"></div>
+                <div id="ner-entities" style="margin-top: 1rem; color: var(--text-dim);"></div>
+            </div>
+
+            <h3>Visualizer 4: Contextual Embeddings & Word Sense</h3>
+            <p>
+                The word "bank" appears in multiple senses. This visualizer plots their contextual embeddings (reduced to 2D via PCA for visualization). Same senses cluster together.
+            </p>
+            <div class="visualizer-container">
+                <div class="visualizer-title">Word Sense Clustering</div>
+                <canvas id="sense-canvas" class="visualizer-canvas" width="800" height="400"></canvas>
+                <div style="color: var(--text-dim); font-size: 0.85rem; margin-top: 1rem;">
+                    <strong>Senses shown:</strong> Blue = financial, Orange = geographical, Green = aviation. Points are contextual embeddings reduced to 2D.
+                </div>
+                <div style="margin-top: 1rem;">
+                    <label style="color: var(--text); display: block; margin-bottom: 0.5rem;">Custom sentence with "bank":</label>
+                    <input type="text" class="visualizer-input" id="sense-input" value="I saw a bird on the river bank" placeholder="Use 'bank' in a sentence">
+                    <button class="visualizer-button" onclick="addCustomSense()">Add Sense</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="section-3">
+            <span class="badge badge-code">Code</span>
+            <h2>Implementation: Training and Fine-Tuning BERT</h2>
+
+            <h3>1. MLM Data Preparation</h3>
+            <p>
+                Prepare training data for masked language modeling. Randomly select 15% of tokens and apply the 80/10/10 rule.
+            </p>
+            <pre><code><span class="kw">import</span> random
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="kw">def</span> <span class="fn">mask_sequence</span>(tokens, vocab_size, mask_token_idx=103):
+    <span class="str">"""Apply MLM masking: 15% selection, 80/10/10 rule."""</span>
+    masked_tokens = tokens.copy()
+    mask_indices = []
+
+    <span class="cm"># Select 15% of token indices</span>
+    num_mask = max(1, <span class="fn">int</span>(len(tokens) * 0.15))
+    candidates = [i <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(len(tokens))
+                  <span class="kw">if</span> tokens[i] <span class="kw">not</span> <span class="kw">in</span> [101, 102]]  <span class="cm"># [CLS]=101, [SEP]=102</span>
+    mask_indices = random.<span class="fn">sample</span>(candidates, min(num_mask, <span class="fn">len</span>(candidates)))
+
+    <span class="kw">for</span> idx <span class="kw">in</span> mask_indices:
+        rand = random.<span class="fn">random</span>()
+        <span class="kw">if</span> rand < 0.8:
+            <span class="cm"># 80%: Replace with [MASK]</span>
+            masked_tokens[idx] = mask_token_idx
+        <span class="kw">elif</span> rand < 0.9:
+            <span class="cm"># 10%: Replace with random token</span>
+            masked_tokens[idx] = random.<span class="fn">randint</span>(999, vocab_size)
+        <span class="cm"># else: 10% keep unchanged</span>
+
+    <span class="kw">return</span> masked_tokens, mask_indices
+
+<span class="cm"># Example usage</span>
+tokens = [101, 2054, 2003, 2054, 102]  <span class="cm"># [CLS] what is what [SEP]</span>
+masked, indices = <span class="fn">mask_sequence</span>(tokens, vocab_size=30522)
+<span class="fn">print</span>(<span class="str">f"Masked indices: {indices}"</span>)</code></pre>
+
+            <h3>2. BERT Fine-Tuning for Sentiment Classification</h3>
+            <p>
+                Load pretrained BERT and fine-tune on sentiment labels using the [CLS] token representation.
+            </p>
+            <pre><code><span class="kw">import</span> torch
+<span class="kw">import</span> torch.nn <span class="kw">as</span> nn
+<span class="kw">from</span> transformers <span class="kw">import</span> AutoTokenizer, AutoModel
+
+<span class="kw">class</span> <span class="fn">SentimentClassifier</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, num_classes=2):
+        super().<span class="fn">__init__</span>()
+        self.bert = <span class="fn">AutoModel</span>.<span class="fn">from_pretrained</span>(<span class="str">"bert-base-uncased"</span>)
+        self.dropout = nn.<span class="fn">Dropout</span>(0.1)
+        self.classifier = nn.<span class="fn">Linear</span>(768, num_classes)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, input_ids, attention_mask):
+        outputs = self.bert(input_ids, attention_mask=attention_mask)
+        cls_output = outputs.last_hidden_state[:, 0, :]  <span class="cm"># [CLS] token</span>
+        cls_output = self.<span class="fn">dropout</span>(cls_output)
+        logits = self.<span class="fn">classifier</span>(cls_output)
+        <span class="kw">return</span> logits
+
+<span class="cm"># Training loop (simplified)</span>
+model = <span class="fn">SentimentClassifier</span>(num_classes=2)
+optimizer = torch.optim.<span class="fn">Adam</span>(model.<span class="fn">parameters</span>(), lr=2e-5)
+criterion = nn.<span class="fn">CrossEntropyLoss</span>()
+
+<span class="kw">for</span> epoch <span class="kw">in</span> <span class="fn">range</span>(3):
+    <span class="kw">for</span> batch <span class="kw">in</span> train_loader:
+        input_ids = batch[<span class="str">'input_ids'</span>]
+        attention_mask = batch[<span class="str">'attention_mask'</span>]
+        labels = batch[<span class="str">'label'</span>]
+
+        logits = <span class="fn">model</span>(input_ids, attention_mask)
+        loss = <span class="fn">criterion</span>(logits, labels)
+
+        optimizer.<span class="fn">zero_grad</span>()
+        loss.<span class="fn">backward</span>()
+        optimizer.<span class="fn">step</span>()</code></pre>
+
+            <h3>3. Named Entity Recognition with BIO Tagging</h3>
+            <p>
+                Fine-tune BERT for NER by adding a classification layer at each token position.
+            </p>
+            <pre><code><span class="kw">class</span> <span class="fn">NERModel</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, num_tags=9):  <span class="cm"># O, B-PER, I-PER, ... (9 total)</span>
+        super().<span class="fn">__init__</span>()
+        self.bert = <span class="fn">AutoModel</span>.<span class="fn">from_pretrained</span>(<span class="str">"bert-base-uncased"</span>)
+        self.dropout = nn.<span class="fn">Dropout</span>(0.1)
+        self.classifier = nn.<span class="fn">Linear</span>(768, num_tags)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, input_ids, attention_mask):
+        outputs = self.bert(input_ids, attention_mask=attention_mask)
+        token_embeds = outputs.last_hidden_state  <span class="cm"># [batch, seq_len, 768]</span>
+        token_embeds = self.<span class="fn">dropout</span>(token_embeds)
+        logits = self.<span class="fn">classifier</span>(token_embeds)
+        <span class="kw">return</span> logits
+
+<span class="cm"># Training for NER</span>
+model = <span class="fn">NERModel</span>(num_tags=9)
+optimizer = torch.optim.<span class="fn">Adam</span>(model.<span class="fn">parameters</span>(), lr=5e-5)
+criterion = nn.<span class="fn">CrossEntropyLoss</span>()
+
+<span class="kw">for</span> batch <span class="kw">in</span> train_loader:
+    input_ids = batch[<span class="str">'input_ids'</span>]
+    attention_mask = batch[<span class="str">'attention_mask'</span>]
+    labels = batch[<span class="str">'labels'</span>]  <span class="cm"># shape: [batch, seq_len]</span>
+
+    logits = <span class="fn">model</span>(input_ids, attention_mask)  <span class="cm"># [batch, seq_len, num_tags]</span>
+    logits_flat = logits.<span class="fn">view</span>(-1, 9)
+    labels_flat = labels.<span class="fn">view</span>(-1)
+
+    loss = <span class="fn">criterion</span>(logits_flat, labels_flat)
+    optimizer.<span class="fn">zero_grad</span>()
+    loss.<span class="fn">backward</span>()
+    optimizer.<span class="fn">step</span>()</code></pre>
+
+            <h3>4. Extracting Contextual Embeddings for Word Sense Disambiguation</h3>
+            <p>
+                Use BERT to extract contextual embeddings and cluster them by word sense.
+            </p>
+            <pre><code><span class="kw">def</span> <span class="fn">get_contextual_embedding</span>(model, tokenizer, sentence, target_word):
+    <span class="str">"""Extract contextual embedding for a target word."""</span>
+    tokens = tokenizer.<span class="fn">tokenize</span>(sentence)
+    input_ids = tokenizer.<span class="fn">convert_tokens_to_ids</span>(tokens)
+
+    <span class="kw">with</span> torch.<span class="fn">no_grad</span>():
+        outputs = model(torch.<span class="fn">tensor</span>([input_ids]))
+        embeddings = outputs.last_hidden_state[0]  <span class="cm"># [seq_len, 768]</span>
+
+    <span class="cm"># Find target word position</span>
+    <span class="kw">if</span> target_word <span class="kw">in</span> tokens:
+        idx = tokens.<span class="fn">index</span>(target_word)
+        <span class="kw">return</span> embeddings[idx].numpy()
+    <span class="kw">else</span>:
+        <span class="kw">return</span> <span class="fn">None</span>
+
+<span class="cm"># Collect embeddings for word senses</span>
+senses = {
+    <span class="str">"financial"</span>: [
+        <span class="str">"I deposited money at the bank"</span>,
+        <span class="str">"The bank approved my loan"</span>,
+    ],
+    <span class="str">"geographical"</span>: [
+        <span class="str">"We sat on the river bank"</span>,
+        <span class="str">"The sand bank was eroding"</span>,
+    ]
+}
+
+embeddings_by_sense = {}
+<span class="kw">for</span> sense, sentences <span class="kw">in</span> senses.<span class="fn">items</span>():
+    embeddings_by_sense[sense] = []
+    <span class="kw">for</span> sent <span class="kw">in</span> sentences:
+        emb = <span class="fn">get_contextual_embedding</span>(model, tokenizer, sent, <span class="str">"bank"</span>)
+        <span class="kw">if</span> emb <span class="kw">is</span> <span class="kw">not</span> <span class="fn">None</span>:
+            embeddings_by_sense[sense].<span class="fn">append</span>(emb)
+
+<span class="cm"># Compute average embedding per sense</span>
+sense_centroids = {}
+<span class="kw">for</span> sense, embs <span class="kw">in</span> embeddings_by_sense.<span class="fn">items</span>():
+    sense_centroids[sense] = np.<span class="fn">mean</span>(embs, axis=0)</code></pre>
+        </section>
+
+        <section id="section-4">
+            <span class="badge badge-modern">Modern</span>
+            <h2>BERT's Legacy in 2026</h2>
+
+            <p>
+                Masked language modeling revolutionized NLP. BERT's 2018 release showed that bidirectional pretraining vastly outperforms left-to-right autoregressive models on downstream classification and understanding tasks. In 2026, we see how this paradigm has evolved and where encoder-based models stand.
+            </p>
+
+            <h3>Improvements and Variants</h3>
+            <ul>
+                <li><strong>RoBERTa (2019):</strong> Removed NSP objective, trained longer on larger data. Outperformed BERT on most benchmarks.</li>
+                <li><strong>ELECTRA (2020):</strong> Instead of masking (which creates an artificial training/test mismatch), ELECTRA uses a generator-discriminator approach. Generator corrupts tokens; discriminator identifies which are genuine vs. replaced.</li>
+                <li><strong>DeBERTa (2020):</strong> Disentangled attention: separate query, key, value projections for content and position. Improved architecture efficiency.</li>
+                <li><strong>Sentence Transformers:</strong> Fine-tuned BERT variants for semantic similarity and clustering. Crucial for semantic search in 2026.</li>
+            </ul>
+
+            <h3>Encoder vs. Decoder: The Ongoing Debate</h3>
+            <p>
+                By 2026, the field has largely split into two camps:
+            </p>
+            <ul>
+                <li><strong>Encoder-only (BERT family):</strong> Fast inference, excellent for classification and understanding. Cannot naturally generate text. Best for: NER, sentiment, entailment, QA (when answer exists in context).</li>
+                <li><strong>Decoder-only (GPT family):</strong> Can generate fluent text. Requires sequential decoding (slower). Best for: open-ended generation, summarization, machine translation.</li>
+                <li><strong>Encoder-Decoder (T5, BART):</strong> Balance. Encoder extracts meaning, decoder generates response. Expensive but flexible for summarization, translation, question-answering with abstract answers.</li>
+            </ul>
+
+            <h3>Contextual Embeddings Transformed NLP</h3>
+            <p>
+                BERT showed that contextual embeddings (learned representations sensitive to surrounding context) are far more effective than static embeddings (word2vec, GloVe). This insight now underpins nearly all modern NLP:
+            </p>
+            <ul>
+                <li>Semantic search engines use contextual embeddings to find similar documents.</li>
+                <li>Few-shot learning leverages contextual embeddings' flexibility across domains.</li>
+                <li>Multi-lingual models (XLM-RoBERTa) show that contextual embeddings transfer across languages.</li>
+            </ul>
+
+            <h3>BERT in Production 2026</h3>
+            <p>
+                Most production NLP systems still use BERT variants:
+            </p>
+            <ul>
+                <li>Email spam filtering: BERT-based classifiers.</li>
+                <li>Customer support routing: NER to extract intent + classification to route tickets.</li>
+                <li>Content moderation: Fine-tuned BERT for toxic content detection.</li>
+                <li>Search ranking: Contextual embeddings for query-document relevance.</li>
+            </ul>
+
+            <p>
+                While larger language models dominate research headlines, BERT's efficiency, interpretability, and task-specific fine-tuning capability keep it relevant for resource-constrained deployments.
+            </p>
+        </section>
+
+        <section id="section-5">
+            <span class="badge badge-history">History</span>
+            <h2>Historical Context: From Static to Contextual Embeddings</h2>
+
+            <p>
+                The journey to BERT involved decades of progress in representation learning. Here's the timeline:
+            </p>
+
+            <div class="collapsible-header" onclick="toggleCollapsible(event)">
+                <span>Timeline of Key Developments (1953–2026)</span>
+                <span>▼</span>
+            </div>
+            <div class="collapsible-content">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-year">1953</div>
+                        <div class="timeline-desc"><strong>Taylor's Cloze Task:</strong> Wilson Taylor introduces the cloze task, a foundational idea: predict a deleted word from context. This simple idea lay dormant for decades.</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2013</div>
+                        <div class="timeline-desc"><strong>Word2Vec (Mikolov et al.):</strong> Skip-gram and CBOW models learn static word embeddings from large text. Each word gets one vector (e.g., "bank" → fixed 300-d vector). Efficient and widely adopted.</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2015</div>
+                        <div class="timeline-desc"><strong>GloVe (Pennington et al.):</strong> Global Vectors for word representation. Combines distributional semantics with matrix factorization. Still static embeddings.</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2016</div>
+                        <div class="timeline-desc"><strong>FastText (Bojanowski et al.):</strong> Extends Word2Vec by learning subword representations. Handles OOV (out-of-vocabulary) words better.</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2017</div>
+                        <div class="timeline-desc"><strong>ELMo (Peters et al.):</strong> Embeddings from Language Models. Contextual embeddings from bidirectional LSTM. Major breakthrough: embeddings vary with context (e.g., "bank" gets different vectors in different sentences). Massive improvement on downstream tasks.</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2018</div>
+                        <div class="timeline-desc"><strong>BERT (Devlin et al.):</strong> Transformer-based bidirectional encoder. Masked language modeling + NSP. Outperforms ELMo. Becomes the standard for understanding tasks. Transformers prove superior to LSTMs for capturing long-range dependencies.</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2018</div>
+                        <div class="timeline-desc"><strong>GPT (Radford et al.):</strong> Decoder-only transformer. Left-to-right language modeling. Sets stage for GPT-2, GPT-3, and the rise of decoder-only models.</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2019</div>
+                        <div class="timeline-desc"><strong>RoBERTa (Liu et al.):</strong> Robustly Optimized BERT. Removes NSP, trains longer on 160GB data. Outperforms BERT. Shows that pretraining details matter.</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2019</div>
+                        <div class="timeline-desc"><strong>XLNet & ALBERT (Yang et al.):</strong> XLNet uses autoregressive language modeling (PLM) with two-stream attention. ALBERT parameter-shares across layers (lighter than BERT). Explorations of trade-offs.</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2019</div>
+                        <div class="timeline-desc"><strong>XLM-RoBERTa (Conneau et al.):</strong> Scales RoBERTa to 100+ languages on a massive multilingual corpus (2.5TB CommonCrawl). Shows contextual embeddings transfer cross-lingually.</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2020</div>
+                        <div class="timeline-desc"><strong>ELECTRA (Clark et al.):</strong> Replaces masked LM with a discriminative task. Generator-discriminator framework. More efficient training.</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2020</div>
+                        <div class="timeline-desc"><strong>DeBERTa (He et al.):</strong> Disentangled attention separates content and position information. Improves upon RoBERTa on SuperGLUE.</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2020</div>
+                        <div class="timeline-desc"><strong>T5 (Raffel et al.):</strong> Text-to-Text Transfer Transformer. Encoder-decoder. Frames all NLP as text-to-text. Unified framework.</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2021+</div>
+                        <div class="timeline-desc"><strong>Sentence Transformers & Embedding Models:</strong> Fine-tuned BERT for semantic similarity. Widely used for clustering, semantic search, recommendation systems.</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2022+</div>
+                        <div class="timeline-desc"><strong>Large Language Models (LLMs) Surge:</strong> GPT-3, PaLM, Claude, etc. decoder-only models dominate. Encoder-only models (BERT family) become more specialized (domain-specific: BioBERT, ClinicalBERT, SciBERT).</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2026</div>
+                        <div class="timeline-desc"><strong>Current Era:</strong> Hybrid architectures, multimodal pretraining, efficient transformers. BERT variants remain production-standard for classification, NER, tagging. LLMs used for generation. Contextual embeddings are universal.</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3>Key Insights from History</h3>
+            <ul>
+                <li><strong>Context Matters:</strong> ELMo's introduction of contextual embeddings (2017) was pivotal. Static embeddings couldn't capture polysemy or syntax-sensitive meanings.</li>
+                <li><strong>Transformer Efficiency:</strong> Transformers (via self-attention) proved more effective than RNNs/LSTMs for capturing long-range dependencies, enabling scaling.</li>
+                <li><strong>Bidirectional &gt; Unidirectional (for understanding):</strong> BERT's bidirectional pretraining beats autoregressive left-to-right approaches on understanding tasks. But autoregressive models are necessary for generation.</li>
+                <li><strong>Pretraining is Crucial:</strong> Task-specific architectures became obsolete. Today, all models begin with large-scale pretraining, then fine-tune.</li>
+                <li><strong>Scale Trends:</strong> Early BERT was 100M–340M parameters. Modern LLMs reach billions. Trade-off: larger models are more capable but less efficient.</li>
+            </ul>
+        </section>
+
+        <section id="section-6">
+            <span class="badge badge-socratic">Socratic</span>
+            <h2>Socratic Knowledge Check: Diagnosing a Failing NER System</h2>
+
+            <p>
+                <strong>Scenario:</strong> Your team built a medical NER system to extract drug names, dosages, and conditions from clinical notes. You fine-tuned BERT on 5,000 labeled examples and achieved 92% F1 on your test set. But when deployed to real clinical workflows, doctors report that the system misses many drug names—especially newer medications and abbreviations. It also occasionally labels "Dr. Smith" as a drug name, causing confusion.
+            </p>
+
+            <p>
+                Below are five diagnostic questions. Click each to reveal expert explanations.
+            </p>
+
+            <div class="question-item">
+                <div class="question-text">1. Why might the model miss newer drug names?</div>
+                <button class="reveal-button" onclick="toggleQuestion(event)">Reveal Answer</button>
+                <div class="hidden-content">
+                    <div class="answer-text">
+                        <strong>Answer:</strong> BERT's vocabulary (30,522 WordPiece tokens) was built on general English text from Wikipedia and books, collected in 2018. Novel drug names—especially brand names, abbreviations, or compounds developed after 2018—are not in this vocabulary. They get split into meaningless subword tokens (e.g., "Ozempic" → ['Oz', '##em', '##pic']). The model never encountered these drugs during pretraining or fine-tuning on your 5,000 examples.
+                        <br/><br/>
+                        <strong>Solution:</strong> Use domain-specific pretrained models like BioBERT or PubMedBERT, which were pretrained on biomedical text and have drug names in their vocabulary. Alternatively, augment your fine-tuning data with synonyms and abbreviations of newer drugs, or add a post-processing step that recognizes medical abbreviations.
+                    </div>
+                </div>
+            </div>
+
+            <div class="question-item">
+                <div class="question-text">2. Why would the model confuse "Dr. Smith" with a drug name?</div>
+                <button class="reveal-button" onclick="toggleQuestion(event)">Reveal Answer</button>
+                <div class="hidden-content">
+                    <div class="answer-text">
+                        <strong>Answer:</strong> "Dr." is an abbreviation that might appear in similar contexts to drug abbreviations in your training data. The tokenizer might split "Dr. Smith" awkwardly (e.g., 'Dr', '.', 'Smith'), and BIO tagging confusion arises: the model learned to tag "Dr" as B-DRUG and "Smith" as I-DRUG if it saw patterns like "Rx [drug abbreviation] [drug name]" in training data. The model is pattern-matching, not understanding—it sees "Dr [name]" and misfires.
+                        <br/><br/>
+                        <strong>Solution:</strong> Ensure your training data has diverse negative examples (titles like "Dr.", "Prof.", "Mr." paired with person names as O tags, not drug tags). Add more clinical context (e.g, "Dr. Smith prescribed...") explicitly labeled as person + action. Use a medical abbreviation dictionary to post-process and correct misfires.
+                    </div>
+                </div>
+            </div>
+
+            <div class="question-item">
+                <div class="question-text">3. Your test set achieves 92% F1, but real-world performance is poor. Is your test set representative?</div>
+                <button class="reveal-button" onclick="toggleQuestion(event)">Reveal Answer</button>
+                <div class="hidden-content">
+                    <div class="answer-text">
+                        <strong>Answer:</strong> Likely not. High test F1 but low real-world performance suggests a domain shift or data distribution mismatch. Possible causes:
+                        <ul>
+                            <li><strong>Temporal shift:</strong> If your test set is from 2020 and deployment is 2026, new drugs exist that weren't in training.</li>
+                            <li><strong>Hospital/source shift:</strong> Training data from Hospital A, deployment at Hospital B with different clinical vocabulary or note formats.</li>
+                            <li><strong>Label leakage:</strong> Your train/test split might not be random. If you split by patient ID but not by time or location, temporal/source shift creeps in.</li>
+                        </ul>
+                        <strong>Solution:</strong> Evaluate with temporal splits (train on 2020–2022 data, test on 2024+ notes). Test on out-of-distribution data (different hospitals, different note types). Compute performance separately for seen vs. unseen drug names.
+                    </div>
+                </div>
+            </div>
+
+            <div class="question-item">
+                <div class="question-text">4. Should you scale up to BERT-large (340M parameters) for better accuracy?</div>
+                <button class="reveal-button" onclick="toggleQuestion(event)">Reveal Answer</button>
+                <div class="hidden-content">
+                    <div class="answer-text">
+                        <strong>Answer:</strong> Probably not. The issue is not model capacity but domain specificity and data quality. BERT-large would use more memory and compute without addressing the root cause: the model hasn't learned medical drug names because it wasn't exposed to them during pretraining.
+                        <br/><br/>
+                        Scaling a model trained on wrong data is wasteful. You'd be throwing more parameters at the problem when the real fix is better data and domain knowledge.
+                        <br/><br/>
+                        <strong>Better approach:</strong> Use BioBERT (BERT pretrained on PubMed + PMC biomedical literature) or ClinicalBERT (pretrained on clinical notes). These smaller models (~110M parameters) will outperform BERT-large on medical NER because they know drug names and medical terminology.
+                    </div>
+                </div>
+            </div>
+
+            <div class="question-item">
+                <div class="question-text">5. How should you handle abbreviations like "HTN" (hypertension) or "DM" (diabetes mellitus)?</div>
+                <button class="reveal-button" onclick="toggleQuestion(event)">Reveal Answer</button>
+                <div class="hidden-content">
+                    <div class="answer-text">
+                        <strong>Answer:</strong> Abbreviations are a major source of NER errors in medical text. The neural model alone often struggles because abbreviations are rare in general English.
+                        <br/><br/>
+                        <strong>Solutions:</strong>
+                        <ol>
+                            <li><strong>Create an abbreviation dictionary:</strong> Build a mapping of medical abbreviations to full forms (HTN → hypertension). Pre-process notes to expand abbreviations before BERT.</li>
+                            <li><strong>Data augmentation:</strong> For every training example with a full condition name, create variants with its abbreviation. This teaches the model both forms.</li>
+                            <li><strong>Two-stage pipeline:</strong> Run BERT for base NER, then post-process with a rule-based module that recognizes abbreviations and corrects tags.</li>
+                            <li><strong>Domain-specific tokenization:</strong> Use a medical tokenizer (e.g., from scispacy) that preserves medical terms and abbreviations as single tokens, avoiding subword splits.</li>
+                        </ol>
+                        <strong>Best approach:</strong> Combine 1 + 3: expand abbreviations as preprocessing, run BERT, use rule-based post-processing to catch edge cases.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="section-7">
+            <div class="nav-buttons">
+                <a href="chapter8.html" class="nav-button">← Previous: Transformers</a>
+                <a href="chapter10.html" class="nav-button">Next: Post-training →</a>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // IntersectionObserver for progress tracking
+        const progressBar = document.querySelector('.progress-fill');
+        const sections = document.querySelectorAll('section[id^="section-"]');
+        const progressDots = document.querySelectorAll('.progress-dot');
+
+        const observerOptions = {
+            threshold: 0.3
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const sectionIndex = Array.from(sections).indexOf(entry.target);
+                    updateProgress(sectionIndex);
+                }
+            });
+        }, observerOptions);
+
+        sections.forEach(section => observer.observe(section));
+
+        function updateProgress(index) {
+            const progress = ((index + 1) / sections.length) * 100;
+            progressBar.style.width = progress + '%';
+            progressDots.forEach((dot, i) => {
+                dot.classList.toggle('active', i === index);
+            });
+        }
+
+        // Reveal button functionality
+        function toggleQuestion(event) {
+            const button = event.target;
+            const content = button.nextElementSibling;
+            content.classList.toggle('show');
+            button.textContent = content.classList.contains('show') ? 'Hide Answer' : 'Reveal Answer';
+        }
+
+        // Collapsible functionality
+        function toggleCollapsible(event) {
+            const header = event.currentTarget;
+            const content = header.nextElementSibling;
+            content.classList.toggle('show');
+        }
+
+        // MLM Visualizer
+        function initializeMLM() {
+            const input = document.getElementById('mlm-input').value;
+            const words = input.split(/\s+/);
+            const container = document.getElementById('mlm-words');
+            container.innerHTML = '';
+
+            words.forEach((word, idx) => {
+                const span = document.createElement('span');
+                span.textContent = word;
+                span.style.padding = '0.5rem 1rem';
+                span.style.backgroundColor = 'var(--bg-card)';
+                span.style.borderRadius = '4px';
+                span.style.cursor = 'pointer';
+                span.style.transition = 'all 0.3s';
+                span.onclick = () => maskWord(idx, words);
+                container.appendChild(span);
+            });
+        }
+
+        function maskWord(index, words) {
+            const predictions = document.getElementById('mlm-predictions');
+            const maskedWords = [...words];
+            maskedWords[index] = '[MASK]';
+
+            // Simulate predictions (hardcoded for demo)
+            const mockPredictions = {
+                'The': ['A', 'This', 'One'],
+                'cat': ['dog', 'bird', 'mouse'],
+                'sat': ['laid', 'stood', 'rested'],
+                'on': ['in', 'under', 'near'],
+                'the': ['a', 'this', 'that'],
+                'comfortable': ['soft', 'large', 'fluffy'],
+                'mat': ['floor', 'rug', 'bed']
+            };
+
+            const word = words[index].toLowerCase();
+            const topPredictions = mockPredictions[word] || ['word1', 'word2', 'word3'];
+            const probabilities = [0.45, 0.30, 0.15];
+
+            let html = `<div style="color: var(--accent); font-weight: 600; margin-bottom: 1rem;">
+                Predicted words for: <strong>${words[index]}</strong>
+            </div>
+            <div class="probability-chart">`;
+
+            topPredictions.forEach((pred, i) => {
+                const prob = probabilities[i];
+                html += `
+                    <div class="prob-bar">
+                        <div class="prob-label">${pred}</div>
+                        <div class="prob-visual">
+                            <div class="prob-fill" style="width: ${prob * 100}%;">
+                                <span class="prob-value">${(prob * 100).toFixed(1)}%</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            predictions.innerHTML = html;
+        }
+
+        // Attention Visualizer
+        function initializeAttention() {
+            const input = document.getElementById('attention-input').value;
+            const tokens = input.split(/\s+/);
+            const container = document.getElementById('attention-container');
+            container.innerHTML = '';
+
+            const canvasWidth = 300;
+            const canvasHeight = 300;
+
+            // Causal attention
+            const causalCanvas = document.createElement('canvas');
+            causalCanvas.width = canvasWidth;
+            causalCanvas.height = canvasHeight;
+            causalCanvas.className = 'visualizer-canvas';
+            causalCanvas.style.cursor = 'pointer';
+
+            // Bidirectional attention
+            const bidirCanvas = document.createElement('canvas');
+            bidirCanvas.width = canvasWidth;
+            bidirCanvas.height = canvasHeight;
+            bidirCanvas.className = 'visualizer-canvas';
+            bidirCanvas.style.cursor = 'pointer';
+
+            container.innerHTML = `
+                <div class="heatmap-item">
+                    <div class="heatmap-title">Causal Attention (Left-to-Right)</div>
+                </div>
+                <div class="heatmap-item">
+                    <div class="heatmap-title">Bidirectional Attention (Encoder)</div>
+                </div>
+            `;
+
+            container.children[0].appendChild(causalCanvas);
+            container.children[1].appendChild(bidirCanvas);
+
+            drawAttentionMatrix(causalCanvas, tokens, true);  // causal
+            drawAttentionMatrix(bidirCanvas, tokens, false);  // bidirectional
+        }
+
+        function drawAttentionMatrix(canvas, tokens, causal) {
+            const ctx = canvas.getContext('2d');
+            const n = tokens.length;
+            const cellSize = (canvas.width - 40) / n;
+            const startX = 20;
+            const startY = 20;
+
+            ctx.fillStyle = 'var(--bg-primary)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw matrix
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n; j++) {
+                    const x = startX + j * cellSize;
+                    const y = startY + i * cellSize;
+
+                    // Attention value: 1 if can attend, 0 otherwise
+                    let canAttend = 1;
+                    if (causal && j > i) canAttend = 0;  // Causal: can't look ahead
+
+                    // Color intensity based on attention
+                    const intensity = canAttend ? 200 : 50;
+                    ctx.fillStyle = `rgb(${intensity}, ${intensity + 50}, 255)`;
+                    ctx.fillRect(x, y, cellSize, cellSize);
+
+                    // Border
+                    ctx.strokeStyle = 'var(--text-dim)';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(x, y, cellSize, cellSize);
+                }
+            }
+
+            // Labels
+            ctx.fillStyle = 'var(--text)';
+            ctx.font = '10px monospace';
+            ctx.textAlign = 'center';
+            for (let i = 0; i < n; i++) {
+                ctx.fillText(tokens[i].slice(0, 3), startX + i * cellSize + cellSize / 2, startY - 5);
+                ctx.fillText(tokens[i].slice(0, 3), startX - 15, startY + i * cellSize + cellSize / 2 + 3);
+            }
+        }
+
+        // NER Tagger Visualizer
+        function initializeNER() {
+            const input = document.getElementById('ner-input').value;
+            const tokens = input.split(/\s+/);
+            const container = document.getElementById('ner-tags');
+            container.innerHTML = '';
+
+            // Default tags (simplified example)
+            const defaultTags = {
+                'John': 'B-PER',
+                'Smith': 'I-PER',
+                'works': 'O',
+                'at': 'O',
+                'Apple': 'B-ORG',
+                'in': 'O',
+                'California': 'B-LOC'
+            };
+
+            let html = '<div class="word-tag-container">';
+            tokens.forEach((word, idx) => {
+                const defaultTag = defaultTags[word] || 'O';
+                html += `
+                    <div class="word-tag-item">
+                        <span class="word-text">${word}</span>
+                        <select class="tag-select" onchange="updateTaggerDisplay()">
+                            <option value="O">O</option>
+                            <option value="B-PER" ${defaultTag === 'B-PER' ? 'selected' : ''}>B-PER</option>
+                            <option value="I-PER" ${defaultTag === 'I-PER' ? 'selected' : ''}>I-PER</option>
+                            <option value="B-ORG" ${defaultTag === 'B-ORG' ? 'selected' : ''}>B-ORG</option>
+                            <option value="I-ORG" ${defaultTag === 'I-ORG' ? 'selected' : ''}>I-ORG</option>
+                            <option value="B-LOC" ${defaultTag === 'B-LOC' ? 'selected' : ''}>B-LOC</option>
+                            <option value="I-LOC" ${defaultTag === 'I-LOC' ? 'selected' : ''}>I-LOC</option>
+                            <option value="B-GPE" ${defaultTag === 'B-GPE' ? 'selected' : ''}>B-GPE</option>
+                            <option value="I-GPE" ${defaultTag === 'I-GPE' ? 'selected' : ''}>I-GPE</option>
+                        </select>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+            updateTaggerDisplay();
+        }
+
+        function updateTaggerDisplay() {
+            const scheme = document.querySelector('input[name="tagging-scheme"]:checked').value;
+            const items = document.querySelectorAll('.word-tag-item');
+            const entities = document.getElementById('ner-entities');
+
+            // Visualize tagged entities
+            let entityText = '<div style="color: var(--text-dim); font-size: 0.85rem; margin-bottom: 0.5rem;">Tagged entities:</div>';
+            let currentEntity = null;
+            let currentType = null;
+
+            items.forEach((item, idx) => {
+                const select = item.querySelector('.tag-select');
+                const tag = select.value;
+                const word = item.querySelector('.word-text').textContent;
+
+                // Apply color based on entity type
+                select.style.backgroundColor = 'var(--bg-primary)';
+                if (tag !== 'O') {
+                    const type = tag.split('-')[1];
+                    const colors = { PER: 'var(--blue)', ORG: 'var(--green)', LOC: 'var(--orange)', GPE: 'var(--purple)' };
+                    select.style.color = colors[type] || 'var(--text)';
+                }
+
+                // Entity accumulation (simplified)
+                if (tag === 'O') {
+                    if (currentEntity) {
+                        entityText += `<br/>[${currentType} ${currentEntity}]`;
+                        currentEntity = null;
+                    }
+                } else {
+                    const type = tag.split('-')[1];
+                    if (tag.startsWith('B-') || currentType !== type) {
+                        if (currentEntity) {
+                            entityText += `<br/>[${currentType} ${currentEntity}]`;
+                        }
+                        currentEntity = word;
+                        currentType = type;
+                    } else {
+                        currentEntity += ' ' + word;
+                    }
+                }
+            });
+
+            if (currentEntity) {
+                entityText += `<br/>[${currentType} ${currentEntity}]`;
+            }
+
+            entities.innerHTML = entityText;
+        }
+
+        // Word Sense Visualizer
+        function drawWordSenseChart() {
+            const canvas = document.getElementById('sense-canvas');
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Background
+            ctx.fillStyle = 'var(--bg-primary)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Title
+            ctx.fillStyle = 'var(--text)';
+            ctx.font = '14px sans-serif';
+            ctx.fillText('Word Sense Clustering for "bank"', 10, 20);
+
+            // Simulated sense data (2D projections)
+            const senses = {
+                'financial': [
+                    { x: 100, y: 100, label: 'F1' },
+                    { x: 120, y: 110, label: 'F2' },
+                    { x: 90, y: 95, label: 'F3' }
+                ],
+                'geographical': [
+                    { x: 600, y: 300, label: 'G1' },
+                    { x: 620, y: 310, label: 'G2' },
+                    { x: 610, y: 290, label: 'G3' }
+                ],
+                'aviation': [
+                    { x: 400, y: 50, label: 'A1' },
+                    { x: 420, y: 70, label: 'A2' },
+                    { x: 390, y: 60, label: 'A3' }
+                ]
+            };
+
+            const colors = { financial: '#79c0ff', geographical: '#fb8500', aviation: '#3fb950' };
+
+            for (const [sense, points] of Object.entries(senses)) {
+                const color = colors[sense];
+                points.forEach(pt => {
+                    ctx.fillStyle = color;
+                    ctx.beginPath();
+                    ctx.arc(pt.x, pt.y, 6, 0, 2 * Math.PI);
+                    ctx.fill();
+
+                    ctx.fillStyle = 'var(--text)';
+                    ctx.font = '10px monospace';
+                    ctx.fillText(pt.label, pt.x + 8, pt.y - 5);
+                });
+            }
+
+            // Legend
+            ctx.font = '12px sans-serif';
+            const legends = [
+                { color: '#79c0ff', text: 'Financial' },
+                { color: '#fb8500', text: 'Geographical' },
+                { color: '#3fb950', text: 'Aviation' }
+            ];
+            legends.forEach((leg, i) => {
+                ctx.fillStyle = leg.color;
+                ctx.fillRect(canvas.width - 150, 30 + i * 25, 12, 12);
+                ctx.fillStyle = 'var(--text)';
+                ctx.fillText(leg.text, canvas.width - 130, 40 + i * 25);
+            });
+        }
+
+        function addCustomSense() {
+            // Simple mock function
+            alert('Custom sense added! (This is a demo. In production, extract embeddings via BERT.)');
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeMLM();
+            drawWordSenseChart();
+            updateProgress(0);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 11 · Information Retrieval &amp; Retrieval-Augmented Generation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<style>
+:root{--bg-primary:#0a0e17;--bg-secondary:#111827;--bg-tertiary:#1a2332;--bg-card:#151d2b;--bg-code:#0d1117;--accent-primary:#60a5fa;--accent-secondary:#a78bfa;--accent-tertiary:#34d399;--accent-warm:#f59e0b;--accent-rose:#f472b6;--accent-cyan:#22d3ee;--text-primary:#e2e8f0;--text-secondary:#94a3b8;--text-muted:#64748b;--border-color:#1e293b;--border-accent:#2d3a4d}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg-primary);color:var(--text-primary);line-height:1.75;overflow-x:hidden}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--bg-primary)}::-webkit-scrollbar-thumb{background:var(--border-accent);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:var(--accent-primary)}
+
+/* ─── Hero ─── */
+.hero{position:relative;min-height:65vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,#0a0e17 0%,#111827 40%,#0d2a1a 70%,#0a0e17 100%);overflow:hidden;border-bottom:1px solid var(--border-color)}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 600px 400px at 20% 50%,rgba(34,211,238,0.07) 0%,transparent 70%),radial-gradient(ellipse 500px 350px at 80% 30%,rgba(52,211,153,0.06) 0%,transparent 70%);pointer-events:none}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(34,211,238,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(34,211,238,0.03) 1px,transparent 1px);background-size:60px 60px;mask-image:radial-gradient(ellipse 70% 70% at 50% 50%,black 30%,transparent 100%)}
+.hero-content{position:relative;text-align:center;max-width:900px;padding:2rem;z-index:1}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(34,211,238,0.1);border:1px solid rgba(34,211,238,0.2);border-radius:999px;padding:6px 18px;font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--accent-cyan);letter-spacing:.1em;text-transform:uppercase;margin-bottom:1.5rem}
+.hero-badge .dot{width:6px;height:6px;background:var(--accent-tertiary);border-radius:50%;animation:pulse-dot 2s infinite}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.3}}
+.hero h1{font-size:clamp(2rem,5vw,3.5rem);font-weight:800;line-height:1.15;letter-spacing:-.03em;margin-bottom:1rem;background:linear-gradient(135deg,#e2e8f0 0%,#22d3ee 50%,#34d399 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero h1 .thin{font-weight:300;opacity:.7}
+.hero-sub{font-size:1.1rem;color:var(--text-secondary);max-width:650px;margin:0 auto 2rem}
+.hero-meta{display:flex;gap:2rem;justify-content:center;flex-wrap:wrap;font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--text-muted)}
+.hero-meta span{display:flex;align-items:center;gap:6px}
+
+/* ─── Nav ─── */
+.toc-nav{position:sticky;top:0;z-index:100;background:rgba(10,14,23,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border-color);padding:0 2rem;overflow-x:auto}
+.toc-nav-inner{max-width:1200px;margin:0 auto;display:flex;gap:0;align-items:stretch;min-height:48px}
+.toc-link{display:flex;align-items:center;padding:0 1rem;font-size:.78rem;font-weight:500;color:var(--text-muted);text-decoration:none;white-space:nowrap;border-bottom:2px solid transparent;transition:all .2s;font-family:'JetBrains Mono',monospace}
+.toc-link:hover{color:var(--text-primary);border-bottom-color:var(--accent-cyan)}
+.toc-link.active{color:var(--accent-cyan);border-bottom-color:var(--accent-cyan)}
+
+/* ─── Main ─── */
+.main-container{max-width:1000px;margin:0 auto;padding:3rem 2rem 6rem}
+.section{margin-bottom:5rem;opacity:0;transform:translateY(30px);transition:opacity .6s ease,transform .6s ease}
+.section.visible{opacity:1;transform:translateY(0)}
+.section-header{display:flex;align-items:center;gap:1rem;margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid var(--border-color)}
+.section-number{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:700;color:var(--bg-primary);background:var(--accent-cyan);width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.section-number.blue{background:var(--accent-primary)}.section-number.purple{background:var(--accent-secondary)}.section-number.green{background:var(--accent-tertiary)}.section-number.warm{background:var(--accent-warm)}.section-number.rose{background:var(--accent-rose)}
+.section-header h2{font-size:1.6rem;font-weight:700;letter-spacing:-.02em}
+
+/* ─── Badges ─── */
+.pedagogy-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:.65rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:1.5rem}
+.badge-feynman{background:rgba(34,211,238,0.1);color:var(--accent-cyan);border:1px solid rgba(34,211,238,0.2)}
+.badge-technical{background:rgba(167,139,250,0.1);color:var(--accent-secondary);border:1px solid rgba(167,139,250,0.2)}
+.badge-code{background:rgba(52,211,153,0.1);color:var(--accent-tertiary);border:1px solid rgba(52,211,153,0.2)}
+.badge-socratic{background:rgba(244,114,182,0.1);color:var(--accent-rose);border:1px solid rgba(244,114,182,0.2)}
+.badge-modern{background:rgba(245,158,11,0.1);color:var(--accent-warm);border:1px solid rgba(245,158,11,0.2)}
+
+/* ─── Prose & Cards ─── */
+.prose{color:var(--text-secondary);font-size:.95rem}.prose p{margin-bottom:1.25rem}.prose strong{color:var(--text-primary);font-weight:600}.prose em{color:var(--accent-cyan);font-style:normal}
+.info-card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:12px;padding:1.5rem;margin:1.5rem 0}
+.info-card.cyan-glow{border-left:3px solid var(--accent-cyan);background:linear-gradient(135deg,var(--bg-card),rgba(34,211,238,0.03))}
+.info-card.blue-glow{border-left:3px solid var(--accent-primary);background:linear-gradient(135deg,var(--bg-card),rgba(96,165,250,0.03))}
+.info-card.purple-glow{border-left:3px solid var(--accent-secondary);background:linear-gradient(135deg,var(--bg-card),rgba(167,139,250,0.03))}
+.info-card.green-glow{border-left:3px solid var(--accent-tertiary);background:linear-gradient(135deg,var(--bg-card),rgba(52,211,153,0.03))}
+.info-card.warm-glow{border-left:3px solid var(--accent-warm);background:linear-gradient(135deg,var(--bg-card),rgba(245,158,11,0.03))}
+.info-card.rose-glow{border-left:3px solid var(--accent-rose);background:linear-gradient(135deg,var(--bg-card),rgba(244,114,182,0.03))}
+.info-card h4{font-size:.85rem;font-weight:700;color:var(--text-primary);margin-bottom:.75rem;display:flex;align-items:center;gap:8px}
+.info-card p,.info-card li{font-size:.88rem;color:var(--text-secondary);line-height:1.7}.info-card ul{padding-left:1.2rem;margin-top:.5rem}.info-card li{margin-bottom:.4rem}
+
+/* ─── Math ─── */
+.math-block{background:var(--bg-code);border:1px solid var(--border-color);border-radius:10px;padding:1.5rem 2rem;margin:1.5rem 0;overflow-x:auto;text-align:center}
+.math-label{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.75rem}
+
+/* ─── Code ─── */
+.code-container{background:var(--bg-code);border:1px solid var(--border-color);border-radius:10px;overflow:hidden;margin:1.5rem 0}
+.code-header{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;background:var(--bg-tertiary);border-bottom:1px solid var(--border-color)}
+.code-header .lang{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent-tertiary);text-transform:uppercase;letter-spacing:.08em}
+.code-header .copy-btn{background:none;border:1px solid var(--border-accent);color:var(--text-muted);font-family:'JetBrains Mono',monospace;font-size:.65rem;padding:3px 10px;border-radius:4px;cursor:pointer;transition:all .2s}
+.code-header .copy-btn:hover{color:var(--text-primary);border-color:var(--accent-primary)}
+.code-body{padding:1.25rem;overflow-x:auto;font-family:'JetBrains Mono',monospace;font-size:.8rem;line-height:1.8;color:var(--text-secondary)}
+.code-body .comment{color:#546e7a;font-style:italic}.code-body .keyword{color:#c792ea}.code-body .string{color:#c3e88d}.code-body .function{color:#82aaff}.code-body .number{color:#f78c6c}
+
+/* ─── Visualizers ─── */
+.visualizer{background:var(--bg-card);border:1px solid var(--border-color);border-radius:12px;overflow:hidden;margin:2rem 0}
+.viz-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;background:var(--bg-tertiary);border-bottom:1px solid var(--border-color)}
+.viz-header h4{font-size:.85rem;font-weight:600;display:flex;align-items:center;gap:8px}
+.viz-header .interactive-tag{font-family:'JetBrains Mono',monospace;font-size:.6rem;background:rgba(52,211,153,0.15);color:var(--accent-tertiary);padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.08em}
+.viz-body{padding:1.5rem}
+
+/* ─── TF-IDF Matrix ─── */
+.tfidf-table{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:.75rem;margin:1rem 0}
+.tfidf-table th{padding:.6rem .8rem;background:var(--bg-tertiary);border-bottom:2px solid var(--accent-cyan);text-align:center;color:var(--accent-cyan);font-size:.7rem;text-transform:uppercase;letter-spacing:.06em}
+.tfidf-table td{padding:.6rem .8rem;border-bottom:1px solid var(--border-color);text-align:center;color:var(--text-secondary);transition:all .3s}
+.tfidf-table td.highlight{background:rgba(34,211,238,0.1);color:var(--accent-cyan);font-weight:700}
+.tfidf-table tr:hover td{background:rgba(34,211,238,0.03)}
+.tfidf-table td:first-child{text-align:left;color:var(--text-primary);font-weight:600}
+
+/* ─── RAG Pipeline ─── */
+.rag-pipeline{display:flex;align-items:center;gap:0;overflow-x:auto;padding:1rem 0;justify-content:center}
+.rag-stage{display:flex;flex-direction:column;align-items:center;gap:.5rem;min-width:120px;padding:1rem;cursor:pointer;transition:all .3s;border-radius:12px}
+.rag-stage:hover{background:rgba(34,211,238,0.05)}
+.rag-stage.active{background:rgba(34,211,238,0.08)}
+.rag-stage .stage-icon{width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;transition:all .3s}
+.rag-stage.active .stage-icon{box-shadow:0 0 25px rgba(34,211,238,0.3)}
+.rag-stage .stage-label{font-size:.72rem;font-weight:600;text-align:center;color:var(--text-secondary)}
+.rag-stage.active .stage-label{color:var(--text-primary)}
+.rag-arrow{font-size:1.2rem;color:var(--text-muted);flex-shrink:0}
+.rag-detail{background:var(--bg-code);border:1px solid var(--border-color);border-radius:8px;padding:1.25rem;margin-top:1rem;font-size:.85rem;color:var(--text-secondary);display:none}
+.rag-detail.active{display:block}
+
+/* ─── Retriever Comparison ─── */
+.comparison-table{width:100%;border-collapse:collapse;font-size:.82rem;margin:1.5rem 0}
+.comparison-table th{text-align:left;padding:.75rem 1rem;background:var(--bg-tertiary);border-bottom:2px solid var(--accent-cyan);font-family:'JetBrains Mono',monospace;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--accent-cyan)}
+.comparison-table td{padding:.75rem 1rem;border-bottom:1px solid var(--border-color);color:var(--text-secondary)}
+.comparison-table tr:hover td{background:rgba(34,211,238,0.03)}
+
+/* ─── Sidebar ─── */
+.sidebar-toggle{background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:10px;margin:1.5rem 0;overflow:hidden}
+.sidebar-toggle-header{padding:1rem 1.25rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:background .2s}
+.sidebar-toggle-header:hover{background:var(--bg-card)}
+.sidebar-toggle-header h4{font-size:.85rem;font-weight:600;display:flex;align-items:center;gap:8px}
+.sidebar-toggle-arrow{transition:transform .3s;color:var(--text-muted)}
+.sidebar-toggle.open .sidebar-toggle-arrow{transform:rotate(180deg)}
+.sidebar-toggle-body{max-height:0;overflow:hidden;transition:max-height .4s ease}
+.sidebar-toggle.open .sidebar-toggle-body{max-height:2000px}
+.sidebar-toggle-content{padding:1rem 1.25rem 1.25rem;border-top:1px solid var(--border-color);font-size:.88rem;color:var(--text-secondary);line-height:1.7}
+
+/* ─── Socratic ─── */
+.challenge-box{background:linear-gradient(135deg,rgba(244,114,182,0.05),rgba(167,139,250,0.05));border:1px solid rgba(244,114,182,0.2);border-radius:12px;padding:2rem;margin:2rem 0}
+.challenge-box h4{font-size:1rem;font-weight:700;color:var(--accent-rose);margin-bottom:1rem;display:flex;align-items:center;gap:8px}
+.challenge-scenario{background:var(--bg-code);border:1px solid var(--border-color);border-radius:8px;padding:1rem;margin:1rem 0;font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text-secondary);line-height:1.7}
+.challenge-question{padding:.75rem 1rem;margin:.5rem 0;border-radius:8px;background:rgba(244,114,182,0.05);border:1px solid rgba(244,114,182,0.1);cursor:pointer;transition:all .2s}
+.challenge-question:hover{background:rgba(244,114,182,0.1);border-color:rgba(244,114,182,0.3)}
+.challenge-question .q-label{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent-rose);font-weight:600;margin-bottom:.25rem}
+.challenge-question p{font-size:.85rem;color:var(--text-secondary)}
+.challenge-answer{max-height:0;overflow:hidden;transition:max-height .3s ease}
+.challenge-answer-content{padding:.75rem 1rem;font-size:.82rem;color:var(--accent-tertiary);background:rgba(52,211,153,0.05);border-radius:6px;margin-top:.5rem;line-height:1.6}
+.challenge-question.open .challenge-answer{max-height:500px}
+
+/* ─── Cosine Sim Visualizer ─── */
+.cosine-viz{display:flex;flex-direction:column;gap:.5rem}
+.cosine-row{display:flex;align-items:center;gap:.75rem}
+.cosine-label{font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--text-muted);min-width:60px}
+.cosine-bar-track{flex:1;height:24px;background:var(--bg-code);border-radius:6px;overflow:hidden}
+.cosine-bar-fill{height:100%;border-radius:6px;transition:width .5s ease;display:flex;align-items:center;padding:0 8px;font-family:'JetBrains Mono',monospace;font-size:.7rem;color:white;font-weight:600}
+.slider-group{display:flex;align-items:center;gap:1rem;margin:1rem 0}
+.slider-group label{font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--text-muted);min-width:80px}
+.slider-group input[type="range"]{flex:1;-webkit-appearance:none;height:4px;border-radius:2px;background:var(--border-accent);outline:none}
+.slider-group input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent-cyan);cursor:pointer;box-shadow:0 0 8px rgba(34,211,238,0.4)}
+.slider-value{font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--accent-cyan);min-width:40px;text-align:right}
+
+.back-link{position:fixed;bottom:2rem;right:2rem;background:var(--accent-cyan);color:var(--bg-primary);padding:10px 18px;border-radius:10px;text-decoration:none;font-family:'JetBrains Mono',monospace;font-size:.75rem;font-weight:600;box-shadow:0 4px 20px rgba(34,211,238,0.3);transition:all .2s;z-index:100}
+.back-link:hover{transform:translateY(-2px);box-shadow:0 6px 25px rgba(34,211,238,0.4)}
+
+@media(max-width:768px){.main-container{padding:2rem 1rem 4rem}.rag-pipeline{flex-direction:column}.rag-arrow{transform:rotate(90deg)}.hero{min-height:50vh}}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ HERO ═══════════════════ -->
+<section class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+    <div class="hero-badge"><span class="dot"></span> Chapter 11 · Part I: Large Language Models</div>
+    <h1>Information Retrieval <span class="thin">&amp;</span><br>Retrieval-Augmented Generation</h1>
+    <p class="hero-sub">From tf-idf to dense retrievers to RAG &mdash; how we ground LLMs in real documents to fight hallucination and answer questions about the world.</p>
+    <div class="hero-meta">
+      <span>&#128218; Jurafsky &amp; Martin, 3rd Ed. Jan 2026</span>
+      <span>&#9201; ~40 min read</span>
+      <span>&#128300; 6 Interactive Modules</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ NAV ═══════════════════ -->
+<nav class="toc-nav">
+  <div class="toc-nav-inner">
+    <a href="#feynman" class="toc-link active" data-section="feynman">Feynman Bridge</a>
+    <a href="#ir" class="toc-link" data-section="ir">11.1 Information Retrieval</a>
+    <a href="#eval" class="toc-link" data-section="eval">11.2 IR Evaluation</a>
+    <a href="#dense" class="toc-link" data-section="dense">11.3 Dense Retrieval</a>
+    <a href="#rag" class="toc-link" data-section="rag">11.4 RAG</a>
+    <a href="#code" class="toc-link" data-section="code">Code Lab</a>
+    <a href="#modern" class="toc-link" data-section="modern">Modern Bridge</a>
+    <a href="#socratic" class="toc-link" data-section="socratic">Challenge</a>
+  </div>
+</nav>
+
+<!-- ═══════════════════ MAIN ═══════════════════ -->
+<main class="main-container">
+
+<!-- §0 FEYNMAN -->
+<section id="feynman" class="section" data-section="feynman">
+  <div class="section-header">
+    <div class="section-number">F</div>
+    <h2>The Feynman Bridge</h2>
+  </div>
+  <div class="pedagogy-badge badge-feynman">&#127758; Zero-Jargon Intuition</div>
+  <div class="prose">
+    <p>Imagine you're studying for an exam. You've read hundreds of textbooks over your lifetime and absorbed a lot of general knowledge &mdash; that's your <em>pretrained brain</em>. But when you face a tricky question about, say, the exact date of a historical event, you don't try to recall it from pure memory. You <strong>open a book</strong>, find the relevant page, read the passage, and then formulate your answer. That's <em>retrieval-augmented generation</em> in a nutshell.</p>
+
+    <p><strong>Information Retrieval</strong> is the art of finding the right book and the right page. The classic approach (tf-idf) is like using a library's keyword index card catalog: you match the exact words in your question against words in documents. The modern approach (dense retrieval) is like having a librarian who <em>understands meaning</em> &mdash; even if you ask "Where's the painting of the smiling woman?" they know to hand you a book about the Mona Lisa, despite zero word overlap.</p>
+
+    <p><strong>RAG</strong> combines both: first <em>retrieve</em> relevant documents (the librarian fetches the right books), then <em>generate</em> an answer using an LLM that reads those documents (you synthesize an answer from what you read). This grounds the LLM's response in actual facts, rather than relying on potentially hallucinated memories.</p>
+  </div>
+
+  <div class="info-card cyan-glow">
+    <h4>&#128161; Why Not Just Prompt the LLM?</h4>
+    <p>Three problems: (1) LLMs <strong>hallucinate</strong> &mdash; they confidently make up facts (up to 88% error rate in legal domains!). (2) They can't access <strong>proprietary data</strong> like your emails or medical records. (3) Their knowledge is <strong>frozen at training time</strong> &mdash; they don't know about last week's news. RAG solves all three by retrieving fresh, trusted documents and conditioning the LLM's output on them.</p>
+  </div>
+</section>
+
+<!-- §1 INFORMATION RETRIEVAL -->
+<section id="ir" class="section" data-section="ir">
+  <div class="section-header">
+    <div class="section-number">11.1</div>
+    <h2>Information Retrieval: Sparse Vectors</h2>
+  </div>
+  <div class="pedagogy-badge badge-technical">&#128200; Technical Ascent</div>
+
+  <div class="prose">
+    <p>In the <strong>vector space model</strong>, documents are represented as <em>bag-of-words</em> vectors: unordered counts of words, ignoring position. A collection of documents forms a <strong>term-document matrix</strong> where rows are vocabulary words and columns are documents.</p>
+    <p>Raw counts are a poor signal &mdash; common words like "the" would dominate. Instead, we use <strong>tf-idf</strong> weighting: the product of <em>term frequency</em> (how often a word appears in this document) and <em>inverse document frequency</em> (how rare it is across all documents).</p>
+  </div>
+
+  <div class="math-block">
+    <div class="math-label">Term Frequency (log-scaled)</div>
+    <div>$$\text{tf}_{t,d} = \begin{cases} 1 + \log_{10} \text{count}(t,d) & \text{if count}(t,d) > 0 \\ 0 & \text{otherwise} \end{cases}$$</div>
+  </div>
+
+  <div class="math-block">
+    <div class="math-label">Inverse Document Frequency</div>
+    <div>$$\text{idf}_t = \log_{10} \frac{N}{\text{df}_t}$$</div>
+  </div>
+
+  <div class="math-block">
+    <div class="math-label">TF-IDF Weight &amp; Cosine Scoring</div>
+    <div>$$\text{tf-idf}(t,d) = \text{tf}_{t,d} \cdot \text{idf}_t \qquad\qquad \text{score}(q,d) = \frac{\mathbf{q} \cdot \mathbf{d}}{|\mathbf{q}||\mathbf{d}|}$$</div>
+  </div>
+
+  <!-- Interactive TF-IDF -->
+  <div class="visualizer">
+    <div class="viz-header">
+      <h4>&#128202; Interactive Term-Document Matrix (Shakespeare)</h4>
+      <span class="interactive-tag">Interactive</span>
+    </div>
+    <div class="viz-body">
+      <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:1rem;">Hover over cells to see tf-idf computations. N = 4 plays total.</p>
+      <table class="tfidf-table" id="tfidfTable">
+        <thead>
+          <tr><th>Term</th><th>As You Like It</th><th>Twelfth Night</th><th>Julius Caesar</th><th>Henry V</th><th>df</th><th>idf</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>battle</td><td class="cell" data-tf="1" data-df="3">1</td><td class="cell" data-tf="0" data-df="3">0</td><td class="cell" data-tf="7" data-df="3">7</td><td class="cell" data-tf="13" data-df="3">13</td><td>3</td><td>0.125</td></tr>
+          <tr><td>good</td><td class="cell" data-tf="114" data-df="4">114</td><td class="cell" data-tf="80" data-df="4">80</td><td class="cell" data-tf="62" data-df="4">62</td><td class="cell" data-tf="89" data-df="4">89</td><td>4</td><td>0.000</td></tr>
+          <tr><td>fool</td><td class="cell" data-tf="36" data-df="4">36</td><td class="cell" data-tf="58" data-df="4">58</td><td class="cell" data-tf="1" data-df="4">1</td><td class="cell" data-tf="4" data-df="4">4</td><td>4</td><td>0.000</td></tr>
+          <tr><td>wit</td><td class="cell" data-tf="20" data-df="4">20</td><td class="cell" data-tf="15" data-df="4">15</td><td class="cell" data-tf="2" data-df="4">2</td><td class="cell" data-tf="3" data-df="4">3</td><td>4</td><td>0.000</td></tr>
+          <tr><td>Romeo</td><td class="cell" data-tf="0" data-df="1">0</td><td class="cell" data-tf="0" data-df="1">0</td><td class="cell" data-tf="0" data-df="1">0</td><td class="cell" data-tf="0" data-df="1">0</td><td>1</td><td>0.602</td></tr>
+          <tr><td>salad</td><td class="cell" data-tf="1" data-df="2">1</td><td class="cell" data-tf="0" data-df="2">0</td><td class="cell" data-tf="0" data-df="2">0</td><td class="cell" data-tf="1" data-df="2">1</td><td>2</td><td>0.301</td></tr>
+        </tbody>
+      </table>
+      <div id="tfidfDetail" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent-cyan);min-height:1.5rem;margin-top:.5rem;text-align:center;">Hover over a count cell to see the tf-idf calculation</div>
+    </div>
+  </div>
+
+  <div class="sidebar-toggle" onclick="this.classList.toggle('open')">
+    <div class="sidebar-toggle-header">
+      <h4>&#128220; Historical Context: From Boolean Search to Vector Space</h4>
+      <span class="sidebar-toggle-arrow">&#9660;</span>
+    </div>
+    <div class="sidebar-toggle-body">
+      <div class="sidebar-toggle-content">
+        <p>Early IR systems (1950s-60s) used Boolean queries: AND, OR, NOT. You either matched or you didn't &mdash; no ranking. Gerard Salton's SMART system (1960s-70s) introduced the vector space model, representing documents as vectors and using cosine similarity. Karen Sp&auml;rck Jones introduced IDF weighting in 1972, providing the mathematical basis for tf-idf. BM25 (Robertson et al., 1994) refined tf-idf with saturation and document length normalization, and remained the dominant retrieval algorithm for over two decades until neural dense retrievers emerged around 2020.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- §2 EVALUATION -->
+<section id="eval" class="section" data-section="eval">
+  <div class="section-header">
+    <div class="section-number blue">11.2</div>
+    <h2>Evaluating IR Systems</h2>
+  </div>
+  <div class="pedagogy-badge badge-technical">&#128200; Technical Ascent</div>
+
+  <div class="prose">
+    <p>For ranked retrieval, simple precision and recall aren't enough &mdash; we need metrics that reward systems for putting relevant documents <em>higher</em> in the ranking.</p>
+  </div>
+
+  <div class="math-block">
+    <div class="math-label">Interpolated Precision &amp; Mean Average Precision</div>
+    <div>$$\text{IntPrecision}(r) = \max_{i \geq r} \text{Precision}(i) \qquad\qquad \text{MAP} = \frac{1}{|Q|} \sum_{q \in Q} \text{AP}(q)$$</div>
+  </div>
+
+  <div class="info-card blue-glow">
+    <h4>&#128202; Key Metrics at a Glance</h4>
+    <ul>
+      <li><strong>Precision@k:</strong> fraction of the top-k returned documents that are relevant.</li>
+      <li><strong>Recall@k:</strong> fraction of all relevant documents found in the top-k.</li>
+      <li><strong>Interpolated Precision:</strong> smoothed precision-recall curve giving systems benefit of the doubt at each recall level.</li>
+      <li><strong>MAP (Mean Average Precision):</strong> single number summarizing ranking quality &mdash; averages precision at each relevant hit, then averages over queries.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- §3 DENSE RETRIEVAL -->
+<section id="dense" class="section" data-section="dense">
+  <div class="section-header">
+    <div class="section-number purple">11.3</div>
+    <h2>Dense Retrieval with Neural Encoders</h2>
+  </div>
+  <div class="pedagogy-badge badge-technical">&#128200; Technical Ascent</div>
+
+  <div class="prose">
+    <p>The fundamental flaw of sparse retrieval: it requires <em>exact word overlap</em> between query and document. If the user asks about "car" and the document says "automobile," sparse retrieval fails. <strong>Dense retrieval</strong> solves this <em>vocabulary mismatch problem</em> by representing queries and documents as dense embedding vectors where semantically similar texts are nearby in vector space.</p>
+  </div>
+
+  <table class="comparison-table">
+    <thead><tr><th>Architecture</th><th>How It Works</th><th>Speed</th><th>Accuracy</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Full Encoder</strong></td>
+        <td>Jointly encode query + document through one BERT. Linear layer on [CLS] predicts relevance.</td>
+        <td style="color:#f43f5e;">Very Slow (must re-encode every doc per query)</td>
+        <td style="color:var(--accent-tertiary);">Highest</td>
+      </tr>
+      <tr>
+        <td><strong>Bi-Encoder</strong></td>
+        <td>Separate encoders for query &amp; document. Pre-compute doc vectors. Score = dot product.</td>
+        <td style="color:var(--accent-tertiary);">Fast (pre-compute docs, encode only query)</td>
+        <td style="color:var(--accent-warm);">Good</td>
+      </tr>
+      <tr>
+        <td><strong>ColBERT</strong></td>
+        <td>Separate encoders but keeps per-token vectors. Score = sum of max-similarity per query token.</td>
+        <td style="color:var(--accent-primary);">Medium (pre-store token vectors)</td>
+        <td style="color:var(--accent-primary);">High</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="math-block">
+    <div class="math-label">Bi-Encoder Scoring</div>
+    <div>$$\mathbf{z}_q = \text{BERT}_Q(q)_{[\text{CLS}]} \qquad \mathbf{z}_d = \text{BERT}_D(d)_{[\text{CLS}]} \qquad \text{score}(q,d) = \mathbf{z}_q \cdot \mathbf{z}_d$$</div>
+  </div>
+
+  <div class="math-block">
+    <div class="math-label">ColBERT MaxSim Scoring</div>
+    <div>$$\text{score}(q,d) = \sum_{i=1}^{N} \max_{j=1}^{m} \mathbf{E}_{q_i} \cdot \mathbf{E}_{d_j}$$</div>
+  </div>
+
+  <div class="info-card purple-glow">
+    <h4>&#9889; Why ColBERT is Clever</h4>
+    <p>ColBERT gets the best of both worlds: it pre-computes document token embeddings (like a bi-encoder), but scores using fine-grained token-level interactions (like a full encoder). For each query token, it finds the most similar document token via MaxSim, then sums these. This "late interaction" captures meaning overlap without the cost of joint encoding.</p>
+  </div>
+</section>
+
+<!-- §4 RAG -->
+<section id="rag" class="section" data-section="rag">
+  <div class="section-header">
+    <div class="section-number green">11.4</div>
+    <h2>Retrieval-Augmented Generation (RAG)</h2>
+  </div>
+  <div class="pedagogy-badge badge-technical">&#128200; Technical Ascent</div>
+
+  <div class="prose">
+    <p>RAG combines a <em>retriever</em> (finding relevant documents) with a <em>generator</em> (an LLM that synthesizes an answer conditioned on those documents). The LLM generates each token conditioned on the retrieved passages, the original query, and all previously generated tokens:</p>
+  </div>
+
+  <div class="math-block">
+    <div class="math-label">RAG Generation Probability</div>
+    <div>$$p(x_1, \ldots, x_n) = \prod_{i=1}^{n} p\big(x_i \mid R(q);\; \text{prompt};\; q;\; x_{&lt;i}\big)$$</div>
+  </div>
+
+  <!-- RAG Pipeline Viz -->
+  <div class="visualizer">
+    <div class="viz-header">
+      <h4>&#128736; RAG Pipeline Explorer</h4>
+      <span class="interactive-tag">Interactive</span>
+    </div>
+    <div class="viz-body">
+      <div class="rag-pipeline">
+        <div class="rag-stage active" data-stage="query" onclick="showRAG('query')">
+          <div class="stage-icon" style="background:linear-gradient(135deg,#22d3ee,#0891b2);">&#128172;</div>
+          <div class="stage-label">User<br>Query</div>
+        </div>
+        <div class="rag-arrow">&#8594;</div>
+        <div class="rag-stage" data-stage="retrieve" onclick="showRAG('retrieve')">
+          <div class="stage-icon" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);">&#128269;</div>
+          <div class="stage-label">Retrieve<br>Top-k Docs</div>
+        </div>
+        <div class="rag-arrow">&#8594;</div>
+        <div class="rag-stage" data-stage="prompt" onclick="showRAG('prompt')">
+          <div class="stage-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);">&#128221;</div>
+          <div class="stage-label">Prompt<br>Assembly</div>
+        </div>
+        <div class="rag-arrow">&#8594;</div>
+        <div class="rag-stage" data-stage="generate" onclick="showRAG('generate')">
+          <div class="stage-icon" style="background:linear-gradient(135deg,#10b981,#059669);">&#129302;</div>
+          <div class="stage-label">LLM<br>Generation</div>
+        </div>
+        <div class="rag-arrow">&#8594;</div>
+        <div class="rag-stage" data-stage="cite" onclick="showRAG('cite')">
+          <div class="stage-icon" style="background:linear-gradient(135deg,#f472b6,#ec4899);">&#128206;</div>
+          <div class="stage-label">Answer +<br>Citation</div>
+        </div>
+      </div>
+      <div class="rag-detail active" id="rag-query"><strong>User Query:</strong> "When was the premiere of The Magic Flute?" &mdash; The user expresses an information need. This could be a factoid question, a complex research query, or even a request about proprietary documents the LLM has never seen.</div>
+      <div class="rag-detail" id="rag-retrieve"><strong>Retrieval (Top-k):</strong> A dense retriever (e.g., ColBERT or bi-encoder) searches a document collection and returns the k most relevant passages. Documents are pre-indexed as dense vectors; the query is encoded and scored via dot product or MaxSim. Approximate nearest neighbor search (e.g., FAISS) makes this fast even over millions of documents.</div>
+      <div class="rag-detail" id="rag-prompt"><strong>Prompt Assembly:</strong> The retrieved passages are concatenated with the original query into a structured prompt: "[passage 1] [passage 2] ... [passage k] Based on these texts, answer this question: When was the premiere of The Magic Flute?" This gives the LLM grounded context to work with.</div>
+      <div class="rag-detail" id="rag-generate"><strong>LLM Generation:</strong> The language model generates an answer token by token, conditioned on both the retrieved passages and the query. Each token is generated as: p(x_i | retrieved_docs, prompt, query, x_&lt;i). The model can synthesize information across multiple passages.</div>
+      <div class="rag-detail" id="rag-cite"><strong>Answer + Citation:</strong> The final output includes both the answer ("The Magic Flute premiered in 1791") and a citation to the source passage. This lets users verify the answer and builds trust &mdash; or helps them spot errors. Knowledge citation is a key advantage of RAG over pure prompting.</div>
+    </div>
+  </div>
+
+  <div class="info-card green-glow">
+    <h4>&#128640; Advanced RAG Variants</h4>
+    <ul>
+      <li><strong>Agent-based RAG:</strong> The system decides <em>when</em> to retrieve and from <em>which</em> collection (web vs. private docs).</li>
+      <li><strong>Multi-hop RAG:</strong> First retrieval informs a second query, which retrieves more documents &mdash; needed for complex questions.</li>
+      <li><strong>Reranking:</strong> After initial retrieval, a more expensive model (e.g., full BERT encoder) reranks the top-N candidates.</li>
+      <li><strong>Trained RAG:</strong> Instead of off-the-shelf LLMs, the generator is fine-tuned specifically for reading retrieved passages.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- §5 CODE LAB -->
+<section id="code" class="section" data-section="code">
+  <div class="section-header">
+    <div class="section-number green">&#128187;</div>
+    <h2>Code Lab: TF-IDF + Dense Retrieval + RAG</h2>
+  </div>
+  <div class="pedagogy-badge badge-code">&#128187; Implementation</div>
+
+  <div class="code-container">
+    <div class="code-header">
+      <span class="lang">Python &middot; Sparse Retrieval (TF-IDF)</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <div class="code-body"><pre><span class="comment"># ═══════════════════════════════════════════════════</span>
+<span class="comment"># Part 1: Classic Sparse Retrieval with TF-IDF</span>
+<span class="comment"># ═══════════════════════════════════════════════════</span>
+<span class="comment"># This implements the vector space model (Sec 11.1):</span>
+<span class="comment"># documents as tf-idf vectors, scored by cosine sim.</span>
+
+<span class="keyword">from</span> sklearn.feature_extraction.text <span class="keyword">import</span> TfidfVectorizer
+<span class="keyword">from</span> sklearn.metrics.pairwise <span class="keyword">import</span> cosine_similarity
+<span class="keyword">import</span> numpy <span class="keyword">as</span> np
+
+<span class="comment"># ── Our document collection (Sec 11.1: "a set of documents") ──</span>
+docs = [
+    <span class="string">"The Magic Flute premiered in Vienna in 1791"</span>,
+    <span class="string">"Mozart composed The Magic Flute as a singspiel opera"</span>,
+    <span class="string">"The Louvre Museum is located in Paris, France"</span>,
+    <span class="string">"Nuclear energy comes from splitting heavy atoms"</span>,
+]
+
+<span class="comment"># ── Build the TF-IDF term-document matrix (Sec 11.1.1-2) ──</span>
+<span class="comment"># TfidfVectorizer computes: tf(t,d) * idf(t) for each term</span>
+<span class="comment"># idf(t) = log(N / df(t)) — rare terms get higher weight</span>
+vectorizer = TfidfVectorizer()
+tfidf_matrix = vectorizer.fit_transform(docs)  <span class="comment"># Shape: [4 docs × V terms]</span>
+
+<span class="comment"># ── Score a query using cosine similarity (Eq. 11.7) ──</span>
+query = <span class="string">"When did The Magic Flute premiere?"</span>
+query_vec = vectorizer.transform([query])       <span class="comment"># Encode query as tf-idf</span>
+scores = cosine_similarity(query_vec, tfidf_matrix)[<span class="number">0</span>]
+
+<span class="comment"># ── Rank documents by relevance ──</span>
+ranked = np.argsort(scores)[::-<span class="number">1</span>]                <span class="comment"># Descending order</span>
+<span class="keyword">for</span> i, idx <span class="keyword">in</span> enumerate(ranked):
+    print(<span class="string">f"Rank {i+1}: score={scores[idx]:.3f} | {docs[idx]}"</span>)</pre></div>
+  </div>
+
+  <div class="code-container">
+    <div class="code-header">
+      <span class="lang">Python &middot; Dense Retrieval + RAG Pipeline</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <div class="code-body"><pre><span class="comment"># ═══════════════════════════════════════════════════</span>
+<span class="comment"># Part 2: Dense Retrieval + RAG (Sec 11.3 + 11.4)</span>
+<span class="comment"># ═══════════════════════════════════════════════════</span>
+<span class="comment"># Dense retrieval encodes docs as BERT embeddings,</span>
+<span class="comment"># then RAG conditions an LLM on retrieved passages.</span>
+
+<span class="keyword">from</span> sentence_transformers <span class="keyword">import</span> SentenceTransformer
+<span class="keyword">import</span> numpy <span class="keyword">as</span> np
+<span class="keyword">from</span> transformers <span class="keyword">import</span> pipeline
+
+<span class="comment"># ── Step 1: Encode documents with a bi-encoder (Sec 11.3) ──</span>
+<span class="comment"># Each document gets a dense vector via BERT_{D}</span>
+<span class="comment"># score(q,d) = z_q · z_d  (Eq. 11.18)</span>
+encoder = SentenceTransformer(<span class="string">"all-MiniLM-L6-v2"</span>)
+doc_embeddings = encoder.encode(docs)  <span class="comment"># Pre-compute once!</span>
+
+<span class="comment"># ── Step 2: Encode query and retrieve top-k (Sec 11.3) ──</span>
+query = <span class="string">"When was the premiere of The Magic Flute?"</span>
+query_emb = encoder.encode([query])
+<span class="comment"># Dot product scoring (bi-encoder, Eq. 11.18)</span>
+scores = np.dot(doc_embeddings, query_emb.T).flatten()
+top_k = np.argsort(scores)[::-<span class="number">1</span>][:<span class="number">2</span>]  <span class="comment"># Retrieve top 2</span>
+retrieved = [docs[i] <span class="keyword">for</span> i <span class="keyword">in</span> top_k]
+
+<span class="comment"># ── Step 3: RAG — assemble prompt & generate (Sec 11.4) ──</span>
+<span class="comment"># The basic RAG algorithm:</span>
+<span class="comment"># 1. Call retriever → top-k passages</span>
+<span class="comment"># 2. Create prompt with passages + query</span>
+<span class="comment"># 3. Call LLM with prompt</span>
+context = <span class="string">"\n"</span>.join(retrieved)
+rag_prompt = <span class="string">f"""Based on these texts:
+{context}
+
+Answer this question: {query}"""</span>
+
+<span class="comment"># ── Generate with a language model ──</span>
+generator = pipeline(<span class="string">"text-generation"</span>, model=<span class="string">"meta-llama/Llama-3.2-1B-Instruct"</span>)
+answer = generator(rag_prompt, max_new_tokens=<span class="number">100</span>)
+print(answer[<span class="number">0</span>][<span class="string">"generated_text"</span>])
+<span class="comment"># Output: "The Magic Flute premiered in Vienna in 1791."</span>
+<span class="comment"># Grounded in retrieved passage — no hallucination!</span></pre></div>
+  </div>
+</section>
+
+<!-- §6 MODERN BRIDGE -->
+<section id="modern" class="section" data-section="modern">
+  <div class="section-header">
+    <div class="section-number warm">&#127881;</div>
+    <h2>The 2026 Modern Bridge</h2>
+  </div>
+  <div class="pedagogy-badge badge-modern">&#128640; 2026 Perspective</div>
+
+  <div class="info-card warm-glow">
+    <h4>&#128640; RAG is Everywhere in Production</h4>
+    <p>Every major AI assistant (ChatGPT, Gemini, Claude, Perplexity) uses RAG for web search integration. When you ask a current-events question, the system retrieves web pages, extracts relevant passages, and generates a cited answer. The basic architecture from Section 11.4 &mdash; retrieve then generate &mdash; is the backbone of modern AI search.</p>
+  </div>
+
+  <div class="info-card purple-glow">
+    <h4>&#129302; ColBERT v2 &amp; PLAID</h4>
+    <p>ColBERT has evolved with residual compression (ColBERTv2) and the PLAID engine that reduces storage by 6-10x while maintaining retrieval quality. The MaxSim scoring mechanism from Eq. 11.19 remains the core algorithm, but the engineering around it has made it practical for billion-document collections.</p>
+  </div>
+
+  <div class="info-card cyan-glow">
+    <h4>&#127760; Agentic RAG &amp; Tool Use</h4>
+    <p>Modern LLMs don't just retrieve once &mdash; they act as <strong>agents</strong> that decide when to search, what to search for, and when to stop. Multi-turn retrieval, where the LLM formulates follow-up queries based on initial results, dramatically improves performance on complex questions. This is the "agent-based RAG" variant described at the end of Section 11.4.</p>
+  </div>
+
+  <div class="info-card rose-glow">
+    <h4>&#9888; The Hallucination Problem Persists</h4>
+    <p>RAG reduces but doesn't eliminate hallucination. The LLM can still misinterpret retrieved passages, or the retriever can return irrelevant documents. Current research on <strong>faithful generation</strong> focuses on training models to explicitly cite which passage supports each claim, making hallucination detectable. The evaluation frameworks from Section 11.2 (precision, recall, MAP) are being adapted to measure <em>attribution quality</em> &mdash; how well the generated answer is supported by the cited sources.</p>
+  </div>
+</section>
+
+<!-- §7 SOCRATIC -->
+<section id="socratic" class="section" data-section="socratic">
+  <div class="section-header">
+    <div class="section-number rose">&#10067;</div>
+    <h2>Linguistic Challenge: The Vocabulary Mismatch</h2>
+  </div>
+  <div class="pedagogy-badge badge-socratic">&#129504; Socratic Knowledge Check</div>
+
+  <div class="challenge-box">
+    <h4>&#128269; Failure Case: When the Right Answer Uses Different Words</h4>
+    <div class="challenge-scenario">
+      <strong>Query:</strong> "What causes cars to stop working in cold weather?"<br><br>
+      <strong>Document Collection includes:</strong> A passage about "automotive battery failure in sub-zero temperatures due to reduced chemical reaction rates in lead-acid cells."<br><br>
+      <strong>TF-IDF Retriever Result:</strong> Returns a document about "car wash operating hours in winter" (matches "car" + "cold") instead of the battery passage (zero word overlap with "stop working").<br><br>
+      <strong>Dense Retriever Result:</strong> Correctly returns the battery failure passage.
+    </div>
+
+    <div class="challenge-question" onclick="this.classList.toggle('open')">
+      <div class="q-label">Question 1</div>
+      <p>Why does tf-idf fail here? Identify the specific vocabulary mismatch between the query and the correct document.</p>
+      <div class="challenge-answer">
+        <div class="challenge-answer-content">The query says "cars stop working" while the document says "automotive battery failure." There is zero lexical overlap for the key concepts: "cars" ≠ "automotive," "stop working" ≠ "failure," "cold weather" ≠ "sub-zero temperatures." TF-IDF relies on exact word matching, so it can only score documents that share the query's exact vocabulary. The car wash document matches on surface words ("car," "winter") but is semantically irrelevant.</div>
+      </div>
+    </div>
+
+    <div class="challenge-question" onclick="this.classList.toggle('open')">
+      <div class="q-label">Question 2</div>
+      <p>In the bi-encoder architecture (Eq. 11.18), how does the dense representation solve the vocabulary mismatch? What property of the embedding space makes this possible?</p>
+      <div class="challenge-answer">
+        <div class="challenge-answer-content">The bi-encoder maps both query and document into a shared dense vector space where <strong>semantically similar texts are nearby</strong>, regardless of exact words used. During pre-training, BERT learns that "cars stop working" and "automotive battery failure" appear in similar contexts, so their embeddings are close. The dot product score(q,d) = z_q · z_d captures this semantic similarity. The key property is that the embedding space encodes <em>meaning</em>, not just surface form &mdash; synonyms, paraphrases, and related concepts cluster together.</div>
+      </div>
+    </div>
+
+    <div class="challenge-question" onclick="this.classList.toggle('open')">
+      <div class="q-label">Question 3</div>
+      <p>ColBERT uses per-token MaxSim scoring instead of a single document vector. How might this help with a multi-part query like "What causes cars to stop AND what's the cost to fix it?"</p>
+      <div class="challenge-answer">
+        <div class="challenge-answer-content">ColBERT's MaxSim scoring (Eq. 11.19) aligns each query token with its best-matching document token independently. For a multi-part query, the token "causes" might align with "failure" in one part of the document, while "cost" aligns with "repair expense" in another part. A bi-encoder compresses the entire query into one vector, potentially losing one of these aspects. ColBERT's token-level interaction preserves the multi-faceted nature of complex queries, ensuring each aspect of the information need is addressed.</div>
+      </div>
+    </div>
+
+    <div class="challenge-question" onclick="this.classList.toggle('open')">
+      <div class="q-label">Question 4</div>
+      <p>In a RAG system, the retriever returns 5 passages but 2 of them are irrelevant noise. How might this affect the LLM generator? What could go wrong?</p>
+      <div class="challenge-answer">
+        <div class="challenge-answer-content">Noisy retrieved passages create several failure modes: (1) <strong>Distraction:</strong> The LLM may attend to the irrelevant passages and incorporate their information into the answer. (2) <strong>Contradiction:</strong> If irrelevant passages contain conflicting information, the LLM may generate contradictory or confused output. (3) <strong>Dilution:</strong> In the prompt, the irrelevant passages consume context window tokens that could be used for more relevant content. Solutions include a <strong>reranker</strong> to filter passages before generation, training the LLM to be robust to noise (trained RAG), or having the model explicitly reason about which passages are relevant before answering.</div>
+      </div>
+    </div>
+
+    <div class="challenge-question" onclick="this.classList.toggle('open')">
+      <div class="q-label">Question 5</div>
+      <p>The text mentions that LLMs are "not well-calibrated" &mdash; they give wrong answers with complete certainty. How does RAG help with calibration, and what are its limits?</p>
+      <div class="challenge-answer">
+        <div class="challenge-answer-content">RAG helps calibration indirectly: by providing <strong>citations</strong>, it shifts the burden of verification from the model to the user. Even if the LLM is overconfident, the user can check the source passage. RAG also constrains the model's output space &mdash; it's harder to hallucinate when your answer must be grounded in a specific passage. However, RAG has limits: (1) The model can still misinterpret the passage (extracting the wrong fact). (2) The retriever can return authoritative-looking but incorrect documents. (3) The model can present retrieved information with false confidence about its relevance to the query. True calibration would require the model to express uncertainty when the retrieved evidence is weak or ambiguous.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<a href="index.html" class="back-link">&#8592; Command Center</a>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  renderMathInElement(document.body, {
+    delimiters: [{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],
+    throwOnError: false,
+  });
+});
+
+// Scroll animations
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+}, {threshold: 0.08});
+document.querySelectorAll('.section').forEach(s => observer.observe(s));
+
+// Nav highlighting
+const navLinks = document.querySelectorAll('.toc-link');
+const sections = document.querySelectorAll('.section');
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(s => { if(pageYOffset >= s.offsetTop - 100) current = s.dataset.section; });
+  navLinks.forEach(l => l.classList.toggle('active', l.dataset.section === current));
+});
+
+// RAG Pipeline
+function showRAG(stage) {
+  document.querySelectorAll('.rag-stage').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.rag-detail').forEach(d => { d.classList.remove('active'); d.style.display = 'none'; });
+  document.querySelector(`.rag-stage[data-stage="${stage}"]`).classList.add('active');
+  const detail = document.getElementById(`rag-${stage}`);
+  detail.style.display = 'block';
+  detail.classList.add('active');
+}
+
+// TF-IDF Hover
+document.querySelectorAll('.tfidf-table .cell').forEach(cell => {
+  cell.addEventListener('mouseenter', function() {
+    const tf = parseInt(this.dataset.tf);
+    const df = parseInt(this.dataset.df);
+    const N = 4;
+    const tfVal = tf > 0 ? (1 + Math.log10(tf)).toFixed(3) : '0';
+    const idfVal = (Math.log10(N / df)).toFixed(3);
+    const tfidf = tf > 0 ? ((1 + Math.log10(tf)) * Math.log10(N / df)).toFixed(3) : '0';
+    document.getElementById('tfidfDetail').innerHTML =
+      `count = ${tf} → tf = ${tfVal} | df = ${df} → idf = log₁₀(${N}/${df}) = ${idfVal} | <strong>tf-idf = ${tfidf}</strong>`;
+    this.classList.add('highlight');
+  });
+  cell.addEventListener('mouseleave', function() {
+    document.getElementById('tfidfDetail').innerHTML = 'Hover over a count cell to see the tf-idf calculation';
+    this.classList.remove('highlight');
+  });
+});
+
+// Copy code
+function copyCode(btn) {
+  const code = btn.closest('.code-container').querySelector('pre').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
+  });
+}
+</script>
+</body>
+</html>

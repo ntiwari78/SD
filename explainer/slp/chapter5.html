@@ -1,0 +1,1944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 5: Embeddings — Speech and Language Processing</title>
+    <script>
+MathJax = {
+  tex: { inlineMath: [['$','$'],['\\(','\\)']], displayMath: [['$$','$$'],['\\[','\\]']] },
+  svg: { fontCache: 'global' }
+};
+</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg-full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0d1117;
+            --bg-card: #1c2333;
+            --bg-secondary: #161b22;
+            --accent: #58a6ff;
+            --text: #e6edf3;
+            --text-dim: #8b949e;
+            --green: #3fb950;
+            --blue: #79c0ff;
+            --orange: #fb8500;
+            --purple: #d2a8ff;
+            --pink: #f97583;
+            --yellow: #ffd33d;
+            --red: #ff6b6b;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Navigation Bar */
+        nav {
+            position: sticky;
+            top: 0;
+            background-color: var(--bg-secondary);
+            border-bottom: 1px solid var(--accent);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        nav .nav-left {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+
+        nav a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        nav a:hover {
+            color: var(--text);
+        }
+
+        nav .nav-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .progress-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--green), var(--blue), var(--purple), var(--pink));
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-card) 100%);
+            padding: 4rem 2rem;
+            text-align: center;
+            border-bottom: 2px solid var(--accent);
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+
+        .hero .epigraph {
+            font-style: italic;
+            color: var(--text-dim);
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero .overview {
+            max-width: 800px;
+            margin: 0 auto;
+            font-size: 1.05rem;
+            line-height: 1.8;
+            color: var(--text);
+        }
+
+        /* Main Content */
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        section {
+            margin-bottom: 4rem;
+            padding: 2rem;
+            background-color: var(--bg-card);
+            border-radius: 8px;
+            border-left: 4px solid var(--accent);
+        }
+
+        section.feynman {
+            border-left-color: var(--green);
+        }
+
+        section.technical {
+            border-left-color: var(--blue);
+        }
+
+        section.code {
+            border-left-color: var(--orange);
+        }
+
+        section.modern {
+            border-left-color: var(--pink);
+        }
+
+        section.historical {
+            border-left-color: var(--yellow);
+        }
+
+        section.visualizers {
+            border-left-color: var(--red);
+        }
+
+        section.socratic {
+            border-left-color: var(--purple);
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.3rem 0.7rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge.green { background-color: var(--green); color: #000; }
+        .badge.blue { background-color: var(--blue); color: #000; }
+        .badge.orange { background-color: var(--orange); color: #000; }
+        .badge.purple { background-color: var(--purple); color: #000; }
+        .badge.pink { background-color: var(--pink); color: #000; }
+        .badge.yellow { background-color: var(--yellow); color: #000; }
+        .badge.red { background-color: var(--red); color: #fff; }
+
+        .subsection {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--text-dim);
+        }
+
+        .subsection h3 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+
+        h2 { font-size: 1.6rem; margin-bottom: 1rem; }
+        h3 { font-size: 1.3rem; margin-bottom: 0.8rem; }
+        h4 { font-size: 1.1rem; margin-bottom: 0.6rem; }
+
+        p {
+            margin-bottom: 1rem;
+            text-align: justify;
+        }
+
+        .analogy {
+            background-color: var(--bg-secondary);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-left: 3px solid var(--green);
+            border-radius: 4px;
+        }
+
+        .analogy strong {
+            color: var(--green);
+        }
+
+        .formula {
+            background-color: var(--bg-secondary);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            background-color: var(--bg-secondary);
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            color: var(--orange);
+            font-size: 0.9em;
+        }
+
+        pre {
+            background-color: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            border-left: 3px solid var(--orange);
+        }
+
+        pre code {
+            color: var(--text);
+            background: none;
+            padding: 0;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+
+        /* Visualizers */
+        .visualizer {
+            background-color: var(--bg-secondary);
+            padding: 2rem;
+            border-radius: 8px;
+            margin: 2rem 0;
+            border: 1px solid var(--text-dim);
+        }
+
+        .visualizer h4 {
+            margin-bottom: 1.5rem;
+            color: var(--accent);
+        }
+
+        canvas {
+            display: block;
+            margin: 1rem auto;
+            border: 1px solid var(--text-dim);
+            border-radius: 4px;
+            background-color: rgba(0, 0, 0, 0.2);
+        }
+
+        input[type="text"],
+        input[type="number"],
+        textarea,
+        select {
+            background-color: var(--bg-secondary);
+            color: var(--text);
+            border: 1px solid var(--text-dim);
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.95rem;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        button {
+            background-color: var(--accent);
+            color: var(--bg-primary);
+            border: none;
+            padding: 0.7rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s, transform 0.2s;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        button:hover {
+            background-color: var(--blue);
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .slider-container {
+            margin: 1rem 0;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: linear-gradient(90deg, var(--green), var(--blue));
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(88, 166, 255, 0.4);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: none;
+        }
+
+        .result-box {
+            background-color: var(--bg-primary);
+            padding: 1rem;
+            border-radius: 4px;
+            margin-top: 1rem;
+            border-left: 3px solid var(--accent);
+        }
+
+        /* Reveal Button */
+        .reveal-btn {
+            background-color: var(--purple);
+            color: #000;
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+        }
+
+        .revealed {
+            background-color: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 4px;
+            margin-top: 0.5rem;
+            border-left: 3px solid var(--purple);
+            display: none;
+        }
+
+        .revealed.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Historical Timeline */
+        .timeline {
+            margin: 2rem 0;
+        }
+
+        .timeline-item {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+            padding-left: 1rem;
+            border-left: 2px solid var(--yellow);
+            padding-bottom: 1rem;
+        }
+
+        .timeline-year {
+            font-weight: 700;
+            color: var(--yellow);
+            min-width: 100px;
+        }
+
+        .timeline-content {
+            flex: 1;
+        }
+
+        /* Navigation Buttons */
+        .chapter-nav {
+            display: flex;
+            justify-content: space-between;
+            gap: 2rem;
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 2px solid var(--text-dim);
+        }
+
+        .nav-button {
+            flex: 1;
+            padding: 1rem;
+            text-align: center;
+            background-color: var(--bg-secondary);
+            border: 2px solid var(--accent);
+            border-radius: 4px;
+            color: var(--text);
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .nav-button:hover {
+            background-color: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        .nav-button.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .section-title {
+                font-size: 1.4rem;
+            }
+
+            nav {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            canvas {
+                max-width: 100%;
+                height: auto;
+            }
+
+            .chapter-nav {
+                flex-direction: column;
+            }
+        }
+
+        /* Utility Classes */
+        .highlight {
+            background-color: rgba(88, 166, 255, 0.1);
+            padding: 0.2rem 0.4rem;
+            border-radius: 2px;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .mt-2 { margin-top: 2rem; }
+        .mb-2 { margin-bottom: 2rem; }
+
+        /* Smooth Scroll */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Question Item */
+        .question-item {
+            margin: 1.5rem 0;
+            padding: 1rem;
+            background-color: var(--bg-secondary);
+            border-radius: 4px;
+            border-left: 3px solid var(--purple);
+        }
+
+        .question-text {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav>
+        <div class="progress-bar"></div>
+        <div class="nav-left">
+            <a href="index.html">← Dashboard</a>
+            <span class="nav-title">Chapter 5: Embeddings</span>
+        </div>
+        <div id="progress-percent">0%</div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <h1>Chapter 5: Embeddings</h1>
+        <p class="epigraph">"Words are for meaning; once you get the meaning, you can forget the words."</p>
+        <p class="epigraph">— Zhuangzi (translated)</p>
+        <div class="overview">
+            <p>This chapter introduces <span class="highlight">embeddings</span> — vector representations of word meaning learned from distributional patterns in text. From sparse co-occurrence matrices to dense word2vec, we explore how machines capture semantic similarity. Embeddings are the foundation of modern NLP: they encode meaning as geometry, allowing us to compute similarity, perform analogy reasoning, and transfer semantic knowledge across tasks.</p>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Feynman Bridge Section -->
+        <section class="feynman">
+            <h2 class="section-title">
+                <span class="badge green">Feynman</span>
+                Words as Addresses in Meaning-Space
+            </h2>
+
+            <div class="analogy">
+                <strong>Analogy 1: City Neighborhoods</strong>
+                <p>Imagine every word lives at a specific address in a vast city. Words with similar meanings live in the same neighborhood: "cat," "dog," and "puppy" are on the same block; "laptop," "keyboard," and "mouse" (the device) live across town. An embedding is just the GPS coordinates of a word in this meaning-city. Words in similar neighborhoods (close coordinates) have similar meanings. The farther apart two words live, the less semantically related they are.</p>
+            </div>
+
+            <div class="analogy">
+                <strong>Analogy 2: You Are Known by the Company You Keep</strong>
+                <p>The distributional hypothesis says we can figure out what a word means by looking at which words appear near it. If you see "ongchoi" always near "sauteed," "garlic," "rice," and "delicious," you'd guess it's a food — even if you've never heard of it. This is exactly how computers learn word meaning: by counting neighbors. Context reveals character. A word surrounded by cooking terms belongs to the kitchen; a word surrounded by mathematical symbols belongs to mathematics.</p>
+            </div>
+
+            <div class="analogy">
+                <strong>Analogy 3: The Perfume Wheel (Cosine Similarity)</strong>
+                <p>Imagine describing perfumes by their ingredients: floral, citrus, woody, musky. Each perfume is a point in "ingredient space." To compare two perfumes, you don't care about the total amount of ingredients (one might be a sample, the other a full bottle), only the <em>direction</em> of their profiles. Cosine similarity measures this directional similarity — ignoring magnitude, focusing on the mix. A concentrated extract and a diluted spray can have identical "flavor profiles" if their ingredient ratios match.</p>
+            </div>
+
+            <div class="analogy">
+                <strong>Analogy 4: Word Arithmetic</strong>
+                <p>The most magical property of embeddings: <code>king - man + woman ≈ queen</code>. It's as if the vector from "man" to "king" encodes the concept of "royalty," and you can apply that same transformation to "woman" to get "queen." The embedding space has learned abstract relationships as geometric directions. These directions are like hidden features of meaning that the network discovered through exposure to text.</p>
+            </div>
+        </section>
+
+        <!-- Technical Ascent Section -->
+        <section class="technical">
+            <h2 class="section-title">
+                <span class="badge blue">Technical</span>
+                The Mathematics of Meaning
+            </h2>
+
+            <div class="subsection">
+                <h3>4.1 Lexical Semantics Foundations</h3>
+                <p>Before diving into embeddings, we establish key concepts:</p>
+                <ul style="margin-left: 2rem; margin-bottom: 1rem;">
+                    <li><strong>Lemma vs wordform:</strong> "walk," "walks," "walking" are wordforms of the lemma "walk"</li>
+                    <li><strong>Polysemy:</strong> One word, multiple meanings. "Bank" can mean financial institution or river bank</li>
+                    <li><strong>Word senses:</strong> The individual meanings of a polysemous word</li>
+                    <li><strong>Synonymy:</strong> Different words, same meaning ("couch" ≈ "sofa")</li>
+                    <li><strong>Similarity:</strong> Graded semantic closeness (not binary)</li>
+                    <li><strong>Relatedness:</strong> Words can be related without being synonymous ("doctor" and "hospital")</li>
+                    <li><strong>Connotation:</strong> Emotional associations. Osgood (1957) proposed three dimensions: valence (pleasant–unpleasant), arousal (calm–excited), dominance (weak–strong)</li>
+                </ul>
+            </div>
+
+            <div class="subsection">
+                <h3>4.2 The Distributional Hypothesis</h3>
+                <p><strong>"Words that occur in similar contexts have similar meanings."</strong> (Firth 1957, Harris 1954)</p>
+                <p>This foundational principle drives all distributional semantics. The core mechanism:</p>
+                <ul style="margin-left: 2rem; margin-bottom: 1rem;">
+                    <li>Count word co-occurrences in a large corpus</li>
+                    <li>Build a <strong>co-occurrence matrix</strong> M of shape |V| × |V|, where V is vocabulary size</li>
+                    <li>M[i,j] = count of times word i appears within ±k words of word j</li>
+                    <li>Row i is the <strong>context vector</strong> for word i</li>
+                    <li>Words with similar row patterns have similar meaning</li>
+                </ul>
+                <p><strong>Context window:</strong> The range of neighboring words considered. A window of ±4 means we look 4 words left and 4 words right. Smaller windows capture syntactic information; larger windows capture topical similarity.</p>
+            </div>
+
+            <div class="subsection">
+                <h3>4.3 Cosine Similarity</h3>
+                <p>The standard metric for comparing vectors in high-dimensional spaces.</p>
+                <div class="formula">
+                    $$\text{cosine}(v, w) = \frac{v \cdot w}{|v| |w|} = \frac{\sum_i v_i w_i}{\sqrt{\sum_i v_i^2} \cdot \sqrt{\sum_i w_i^2}}$$
+                </div>
+                <p><strong>Intuition:</strong> Cosine similarity measures the angle between two vectors. It equals 1 when vectors point in the same direction, 0 when perpendicular, and -1 when opposite. It's scale-invariant: <code>[1, 1]</code> and <code>[10, 10]</code> have cosine similarity 1.</p>
+                <p><strong>Worked Example:</strong> From the text, cosine(cherry, information) = 0.018 (nearly orthogonal, low semantic similarity), while cosine(digital, information) = 0.996 (nearly parallel, high similarity).</p>
+            </div>
+
+            <div class="subsection">
+                <h3>4.4 Word2vec (Skip-gram with Negative Sampling)</h3>
+                <p>Mikolov et al. (2013) revolutionized embeddings with a clever training approach. Instead of computing dense SVD, word2vec uses <strong>self-supervised learning</strong>: the training signal comes free from running text.</p>
+
+                <p><strong>Core Idea:</strong> Train a classifier to answer "Is word c likely to appear near word w?" Use the learned classifier weights as embeddings.</p>
+
+                <p><strong>Model Structure:</strong></p>
+                <ul style="margin-left: 2rem; margin-bottom: 1rem;">
+                    <li>Two embedding matrices: W (target words, shape |V| × d) and C (context words, |V| × d)</li>
+                    <li>d is embedding dimension (typically 50–300)</li>
+                    <li>For word w and context word c, predict: P(+|w,c) = σ(c·w)</li>
+                    <li>σ is the sigmoid function: σ(x) = 1/(1+e^(-x))</li>
+                </ul>
+
+                <div class="formula">
+                    $$P(+|w,c) = \sigma(c \cdot w) = \frac{1}{1 + e^{-c \cdot w}}$$
+                </div>
+
+                <p><strong>Negative Sampling:</strong> For computational efficiency, instead of updating all |V| words, sample k noise words from a noise distribution.</p>
+                <div class="formula">
+                    $$L = -[\log \sigma(c_{\text{pos}} \cdot w) + \sum_{i=1}^k \log \sigma(-c_{\text{neg}_i} \cdot w)]$$
+                </div>
+
+                <p>This loss has two parts: (1) make the true context word look similar to w, (2) make noise words look dissimilar.</p>
+
+                <p><strong>Noise Distribution:</strong> Sample negative words with probability proportional to count(word)^0.75. This exponent prevents common words from dominating negative samples.</p>
+
+                <p><strong>Gradient Updates:</strong> Backprop through the loss updates both w and c vectors. After training:</p>
+                <ul style="margin-left: 2rem; margin-bottom: 1rem;">
+                    <li>Some systems use w (target embeddings)</li>
+                    <li>Some use c (context embeddings)</li>
+                    <li>Some concatenate w + c</li>
+                </ul>
+            </div>
+
+            <div class="subsection">
+                <h3>4.5 Other Static Embeddings</h3>
+                <p><strong>FastText (Bojanowski et al. 2017):</strong> Instead of one embedding per word, embed subword n-grams. The embedding of "jumping" is the sum of bigram embeddings: <jump, um, mp, pi, in, ng, ing>. This handles unknown words gracefully by composing from subword pieces.</p>
+
+                <p><strong>GloVe (Pennington et al. 2014):</strong> Global Vectors. Explicitly incorporate global co-occurrence statistics. Objective combines corpus statistics (how often words co-occur) with semantic properties (similar words should have similar embeddings). GloVe embeddings often achieve comparable or better performance than word2vec.</p>
+            </div>
+
+            <div class="subsection">
+                <h3>4.6 Semantic Properties: The Geometry of Meaning</h3>
+                <p><strong>Parallelogram Model for Analogies:</strong> Given "a is to b as c is to ?" solve for the closest word d*:</p>
+                <div class="formula">
+                    $$d^* = \arg\min_d \text{distance}(d, b - a + c)$$
+                </div>
+
+                <p><strong>Classic Examples:</strong></p>
+                <ul style="margin-left: 2rem; margin-bottom: 1rem;">
+                    <li>king - man + woman ≈ queen (gender analogy)</li>
+                    <li>Paris - France + Italy ≈ Rome (capital analogy)</li>
+                    <li>good - bad + dark ≈ light (semantic opposition)</li>
+                </ul>
+
+                <p><strong>Co-occurrence Types:</strong></p>
+                <ul style="margin-left: 2rem; margin-bottom: 1rem;">
+                    <li><strong>Syntagmatic (first-order):</strong> Words that appear together. "coffee" co-occurs with "cup," "hot," "drink." Larger context windows capture syntagmatic relations.</li>
+                    <li><strong>Paradigmatic (second-order):</strong> Words that appear in similar contexts. "coffee," "tea," and "juice" appear in similar contexts. Smaller context windows capture paradigmatic relations.</li>
+                </ul>
+            </div>
+
+            <div class="subsection">
+                <h3>4.7 Bias in Embeddings</h3>
+                <p>Embeddings trained on text corpora absorb and amplify societal biases present in that text.</p>
+                <p><strong>Allocational Harm:</strong> The system denies resources or opportunities to protected groups. Example: A hiring algorithm using biased embeddings might downrank female candidates.</p>
+                <p><strong>Representational Harm:</strong> The system perpetuates negative stereotypes. Example: Man:Computer_Programmer :: Woman:Homemaker, embedding and reinforcing occupational stereotypes.</p>
+                <p><strong>Debiasing Attempts:</strong> Researchers have tried post-hoc correction (hard debiasing, soft debiasing), regularization during training, and different training data. However, debiasing embeddings is incomplete—it's better to address bias at the data collection stage.</p>
+            </div>
+
+            <div class="subsection">
+                <h3>4.8 Evaluation</h3>
+                <p><strong>Intrinsic Evaluation:</strong> Evaluate embeddings directly.</p>
+                <ul style="margin-left: 2rem; margin-bottom: 1rem;">
+                    <li><strong>Word similarity tasks:</strong> WordSim-353, SimLex-999. Correlate model cosine similarity with human judgments.</li>
+                    <li><strong>Analogy tasks:</strong> Evaluate how well the parallelogram method works on structured analogy datasets.</li>
+                </ul>
+                <p><strong>Extrinsic Evaluation:</strong> Evaluate embeddings by their utility in downstream tasks (POS tagging, sentiment analysis, semantic role labeling). Extrinsic evaluation is more meaningful but slower.</p>
+            </div>
+        </section>
+
+        <!-- Visualizers Section -->
+        <section class="visualizers">
+            <h2 class="section-title">
+                <span class="badge red">Interactive</span>
+                Four Interactive Visualizers
+            </h2>
+
+            <!-- Visualizer 1: Embedding Space Explorer -->
+            <div class="visualizer">
+                <h4>Visualizer 1: 2D Embedding Space Explorer</h4>
+                <p>Explore a 2D projection of embedding space. Click any word to see its nearest neighbors. Drag to pan, scroll to zoom.</p>
+                <canvas id="spaceCanvas" width="700" height="500"></canvas>
+                <p id="spaceInfo" style="margin-top: 1rem; color: var(--text-dim);">Click a word to explore | Scroll to zoom | Drag to pan</p>
+            </div>
+
+            <!-- Visualizer 2: Cosine Similarity Calculator -->
+            <div class="visualizer">
+                <h4>Visualizer 2: Cosine Similarity Calculator</h4>
+                <p>Enter two vectors or select a preset word pair to compute cosine similarity step by step.</p>
+
+                <div style="margin-bottom: 1rem;">
+                    <label for="presetPairs" style="display: block; margin-bottom: 0.5rem;">Preset Pairs:</label>
+                    <select id="presetPairs" onchange="loadPreset()">
+                        <option value="">-- Custom vectors --</option>
+                        <option value="digital-information">digital, information</option>
+                        <option value="cherry-information">cherry, information</option>
+                        <option value="cat-dog">cat, dog</option>
+                        <option value="computer-phone">computer, phone</option>
+                    </select>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label for="vector1">Vector 1 (comma-separated):</label>
+                        <input type="text" id="vector1" value="1, 1, 0, 0, 1" placeholder="e.g., 1, 1, 0, 0, 1">
+                    </div>
+                    <div>
+                        <label for="vector2">Vector 2 (comma-separated):</label>
+                        <input type="text" id="vector2" value="1, 0, 1, 0, 1" placeholder="e.g., 1, 0, 1, 0, 1">
+                    </div>
+                </div>
+
+                <button onclick="calculateCosine()">Calculate Cosine Similarity</button>
+
+                <div id="cosineResult" class="result-box" style="display: none;">
+                    <p><strong>Step 1: Dot Product</strong></p>
+                    <p id="dotProduct"></p>
+                    <p><strong>Step 2: Magnitudes</strong></p>
+                    <p id="magnitudes"></p>
+                    <p><strong>Step 3: Cosine Similarity</strong></p>
+                    <p id="cosineSimilarity" style="font-size: 1.2rem; color: var(--accent); font-weight: 700;"></p>
+                    <canvas id="angleCanvas" width="400" height="300"></canvas>
+                </div>
+            </div>
+
+            <!-- Visualizer 3: Word Analogy Solver -->
+            <div class="visualizer">
+                <h4>Visualizer 3: Word Analogy Solver</h4>
+                <p>Solve analogies in the form "A is to B as C is to __". The system finds the nearest word to (B - A + C).</p>
+
+                <div style="margin-bottom: 1rem;">
+                    <label for="analogyPreset">Preset Examples:</label>
+                    <select id="analogyPreset" onchange="loadAnalogyExample()">
+                        <option value="">-- Custom --</option>
+                        <option value="king-man-woman">king:queen::man:woman</option>
+                        <option value="paris-france-tokyo">Paris:France::Tokyo:Japan</option>
+                        <option value="good-bad-hot">good:bad::hot:cold</option>
+                    </select>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.5rem; margin-bottom: 1rem;">
+                    <div>
+                        <label for="analogyA">A:</label>
+                        <input type="text" id="analogyA" value="king" placeholder="king">
+                    </div>
+                    <div>
+                        <label for="analogyB">B:</label>
+                        <input type="text" id="analogyB" value="queen" placeholder="queen">
+                    </div>
+                    <div>
+                        <label for="analogyC">C:</label>
+                        <input type="text" id="analogyC" value="man" placeholder="man">
+                    </div>
+                    <div>
+                        <label for="analogyD">D (answer):</label>
+                        <input type="text" id="analogyD" placeholder="woman" readonly style="background-color: var(--bg-primary);">
+                    </div>
+                </div>
+
+                <button onclick="solveAnalogy()">Solve Analogy</button>
+
+                <div id="analogyResult" class="result-box" style="display: none;">
+                    <p><strong>Vector Operation:</strong> <code id="analogyOp"></code></p>
+                    <p><strong>Answer:</strong> <code id="analogyAnswer" style="font-size: 1.1rem; color: var(--accent);"></code></p>
+                    <canvas id="analogyCanvas" width="500" height="400"></canvas>
+                </div>
+            </div>
+
+            <!-- Visualizer 4: Co-occurrence Matrix Builder -->
+            <div class="visualizer">
+                <h4>Visualizer 4: Co-occurrence Matrix Builder</h4>
+                <p>Build a co-occurrence matrix from a corpus. Adjust the context window and see the heatmap update.</p>
+
+                <div style="margin-bottom: 1rem;">
+                    <label for="corpus">Corpus Text:</label>
+                    <textarea id="corpus" rows="4" style="width: 100%; margin-top: 0.5rem;">The cat sat on the mat. The dog ran in the park. The cat and dog are friends. They play in the park together.</textarea>
+                </div>
+
+                <div class="slider-container">
+                    <label for="windowSize">Context Window: <span id="windowDisplay">2</span></label>
+                    <input type="range" id="windowSize" min="1" max="5" value="2" onchange="updateWindowDisplay()">
+                </div>
+
+                <button onclick="buildCooccurrenceMatrix()">Build Matrix</button>
+
+                <div id="matrixResult" class="result-box" style="display: none;">
+                    <p><strong>Co-occurrence Heatmap:</strong></p>
+                    <canvas id="matrixCanvas" width="600" height="500"></canvas>
+                    <p id="matrixInfo" style="margin-top: 1rem; color: var(--text-dim);"></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Code Implementation Section -->
+        <section class="code">
+            <h2 class="section-title">
+                <span class="badge orange">Code</span>
+                Implementation Walkthrough
+            </h2>
+
+            <div class="subsection">
+                <h3>6.1 Building Co-occurrence Vectors in Python</h3>
+                <p>This function builds a sparse word-context co-occurrence matrix from a corpus:</p>
+                <pre><code>import numpy as np
+from collections import Counter, defaultdict
+
+def build_cooccurrence_matrix(corpus, vocab, window=4):
+    """Build a word-context co-occurrence matrix from corpus.
+
+    Args:
+        corpus: List of sentences (strings)
+        vocab: List of vocabulary words
+        window: Context window size (±window words)
+
+    Returns:
+        M: Co-occurrence matrix of shape (len(vocab), len(vocab))
+    """
+    # Create word-to-index mapping
+    word2idx = {w: i for i, w in enumerate(vocab)}
+    V = len(vocab)
+
+    # Initialize sparse matrix
+    matrix = np.zeros((V, V))
+
+    # Process each sentence
+    for sentence in corpus:
+        tokens = sentence.lower().split()
+
+        # For each target word
+        for i, target in enumerate(tokens):
+            if target not in word2idx:
+                continue
+
+            # Count words within ±window
+            for j in range(max(0, i-window), min(len(tokens), i+window+1)):
+                if i == j:  # Skip the target itself
+                    continue
+
+                context = tokens[j]
+                if context in word2idx:
+                    # Increment co-occurrence count
+                    matrix[word2idx[target]][word2idx[context]] += 1
+
+    return matrix
+
+def cosine_similarity(v, w):
+    """Compute cosine similarity between two vectors.
+
+    Args:
+        v, w: numpy arrays or lists
+
+    Returns:
+        similarity: float in [-1, 1]
+    """
+    v = np.array(v, dtype=float)
+    w = np.array(w, dtype=float)
+
+    # Compute dot product
+    dot = np.dot(v, w)
+
+    # Compute magnitudes
+    norm_v = np.linalg.norm(v)
+    norm_w = np.linalg.norm(w)
+
+    # Handle zero vectors
+    if norm_v == 0 or norm_w == 0:
+        return 0.0
+
+    # Return cosine similarity
+    return dot / (norm_v * norm_w)
+
+# Example usage
+corpus = [
+    "the cat sat on the mat",
+    "the dog ran in the park",
+    "a cat and dog are friends"
+]
+vocab = ["the", "cat", "dog", "sat", "ran", "on", "in"]
+M = build_cooccurrence_matrix(corpus, vocab, window=2)
+print(cosine_similarity(M[vocab.index("cat")], M[vocab.index("dog")]))</code></pre>
+            </div>
+
+            <div class="subsection">
+                <h3>6.2 Simplified Word2vec (Skip-gram) from Scratch</h3>
+                <p>A minimal implementation of skip-gram with negative sampling:</p>
+                <pre><code>import numpy as np
+
+class Word2Vec:
+    """Simplified Word2Vec (Skip-gram) implementation."""
+
+    def __init__(self, vocab_size, embedding_dim=100):
+        """Initialize embeddings.
+
+        Args:
+            vocab_size: Size of vocabulary
+            embedding_dim: Dimension of embeddings (d)
+        """
+        self.embedding_dim = embedding_dim
+
+        # Two embedding matrices
+        self.W = np.random.randn(vocab_size, embedding_dim) * 0.01  # Target word embeddings
+        self.C = np.random.randn(vocab_size, embedding_dim) * 0.01  # Context word embeddings
+
+    def sigmoid(self, x):
+        """Sigmoid activation function."""
+        return 1 / (1 + np.exp(-np.clip(x, -500, 500)))
+
+    def train_pair(self, target_idx, context_idx, negative_idxs, learning_rate=0.1):
+        """Train on one (target, context) pair with negative sampling.
+
+        Args:
+            target_idx: Index of target word w
+            context_idx: Index of positive context word c_pos
+            negative_idxs: Indices of k negative context words
+            learning_rate: Learning rate for gradient descent
+        """
+        # Positive example: maximize log σ(c·w)
+        c_pos = self.C[context_idx]
+        pred = self.sigmoid(np.dot(self.W[target_idx], c_pos))
+
+        # Gradient for positive
+        grad = (pred - 1) * learning_rate
+        self.W[target_idx] -= grad * c_pos
+        self.C[context_idx] -= grad * self.W[target_idx]
+
+        # Negative examples: maximize log σ(-c_neg·w)
+        for neg_idx in negative_idxs:
+            c_neg = self.C[neg_idx]
+            pred = self.sigmoid(np.dot(self.W[target_idx], c_neg))
+
+            # Gradient for negative
+            grad = pred * learning_rate  # Note: no -1 since we want to minimize
+            self.W[target_idx] -= grad * c_neg
+            self.C[neg_idx] -= grad * self.W[target_idx]
+
+    def get_embedding(self, word_idx):
+        """Get the embedding for a word."""
+        return self.W[word_idx]
+
+# Example usage
+model = Word2Vec(vocab_size=10000, embedding_dim=100)
+
+# Simulate training on a sequence
+# (In practice, you'd iterate over a corpus and sample context windows)
+target, context, negatives = 42, 137, [8, 9, 13]
+model.train_pair(target, context, negatives, learning_rate=0.01)</code></pre>
+            </div>
+
+            <div class="subsection">
+                <h3>6.3 Using Gensim Word2vec in Practice</h3>
+                <p>In production, use the <code>gensim</code> library for efficiency and robustness:</p>
+                <pre><code>from gensim.models import Word2Vec
+
+# Prepare corpus: list of tokenized sentences
+corpus = [
+    "the quick brown fox jumps over the lazy dog".split(),
+    "the dog sat on the mat".split(),
+    "a quick brown fox and a lazy dog met in the forest".split(),
+]
+
+# Train Word2Vec model
+# - size: embedding dimension (typically 100-300)
+# - window: context window size
+# - min_count: ignore words appearing < min_count times
+# - workers: number of CPU threads
+# - sg: 1 = skip-gram, 0 = CBOW
+# - negative: number of negative samples
+model = Word2Vec(
+    sentences=corpus,
+    vector_size=100,
+    window=5,
+    min_count=1,
+    workers=4,
+    sg=1,  # Skip-gram
+    negative=5
+)
+
+# Use embeddings
+embedding_fox = model.wv["fox"]  # Get embedding vector
+print(embedding_fox.shape)  # (100,)
+
+# Find similar words
+similar = model.wv.most_similar("fox", topn=5)
+print(similar)  # [('dog', 0.87), ('brown', 0.76), ...]
+
+# Analogy: "king - man + woman = ?"
+# most_similar with positive and negative parameters
+king_analogy = model.wv.most_similar(
+    positive=["king", "woman"],
+    negative=["man"],
+    topn=1
+)
+print(king_analogy)  # Should output something like [('queen', 0.92)]
+
+# Compute similarity
+sim = model.wv.similarity("dog", "cat")
+print(sim)  # e.g., 0.78
+
+# Save and load
+model.save("word2vec.model")
+model = Word2Vec.load("word2vec.model")</code></pre>
+            </div>
+        </section>
+
+        <!-- Modern Bridge Section -->
+        <section class="modern">
+            <h2 class="section-title">
+                <span class="badge pink">Modern Bridge</span>
+                From Word2vec to GPT: The Embedding Revolution
+            </h2>
+
+            <p><strong>Static vs. Contextualized Embeddings:</strong> Word2vec and GloVe assign one embedding vector per word type. This is a fundamental limitation: the word "bank" has the same embedding whether it appears in "bank account" or "river bank," even though these are different senses.</p>
+
+            <p><strong>Contextualized Embeddings:</strong> Modern models (BERT, GPT, etc.) generate embeddings dynamically based on context. The embedding of "bank" in "river bank" differs from "bank account." This allows the model to disambiguate word senses and capture nuanced meaning.</p>
+
+            <p><strong>The Embedding Layer in Transformers:</strong> Every large language model starts with an embedding layer. Input tokens are mapped to dense vectors. For GPT-3, this is a learned 12288-dimensional vector for each token. The embedding layer is often parameter-heavy in smaller models but becomes a tiny fraction of a multi-billion parameter model.</p>
+
+            <p><strong>Sentence and Document Embeddings:</strong> We can average word embeddings to create sentence representations. These are used in retrieval-augmented generation (RAG): encode documents as embeddings, store them in a vector database, and at query time, find similar documents using cosine similarity. This retrieval step augments the LLM's context window.</p>
+
+            <p><strong>Scaling Embedding Dimensions:</strong> Different models use different embedding dimensions:</p>
+            <ul style="margin-left: 2rem; margin-bottom: 1rem;">
+                <li>word2vec: 100–300 (lightweight)</li>
+                <li>BERT-base: 768 (standard)</li>
+                <li>GPT-2: 1600</li>
+                <li>GPT-3 (175B): 12288 (very large)</li>
+            </ul>
+
+            <p><strong>Practical Applications:</strong></p>
+            <ul style="margin-left: 2rem; margin-bottom: 1rem;">
+                <li><strong>Semantic search:</strong> Embed queries and documents, rank by similarity</li>
+                <li><strong>Clustering:</strong> Group documents by embedding similarity</li>
+                <li><strong>Recommendation systems:</strong> Find similar users/items in embedding space</li>
+                <li><strong>Zero-shot learning:</strong> Classify into unseen categories by embedding similarity</li>
+                <li><strong>Few-shot learning:</strong> Learn from a small number of examples via embedding-space adaptation</li>
+            </ul>
+        </section>
+
+        <!-- Code Examples Continued Section -->
+        <section class="code">
+            <h2 class="section-title">
+                <span class="badge orange">Code</span>
+                Advanced Embedding Techniques
+            </h2>
+
+            <div class="subsection">
+                <h3>6.4 Handling Unknown Words with FastText</h3>
+                <p>FastText embeddings are robust to misspellings and OOV (out-of-vocabulary) words by using subword n-grams:</p>
+                <pre><code>from gensim.models import FastText
+
+# Train FastText model
+model = FastText(
+    sentences=corpus,
+    vector_size=100,
+    window=5,
+    min_count=1,
+    sg=1,  # Skip-gram
+)
+
+# Get embedding for an unknown word
+# FastText reconstructs it from subword pieces
+embedding_misspelled = model.wv["doog"]  # Typo for "dog"
+# Even though "doog" wasn't in training, we get a reasonable vector
+
+# Compare to Word2Vec, which would fail on unknown words
+# model_w2v.wv["doog"]  # Would raise KeyError
+
+# FastText is especially useful for morphologically rich languages
+# and for handling rare or misspelled words in production systems
+</code></pre>
+            </div>
+
+            <div class="subsection">
+                <h3>6.5 Embedding-Based Similarity Search (RAG)</h3>
+                <p>Using embeddings for retrieval-augmented generation:</p>
+                <pre><code>import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
+
+# Simulate a document collection
+documents = [
+    "The cat sat on the mat",
+    "Dogs are loyal pets",
+    "Cats and dogs can be friends",
+    "Machine learning uses embeddings",
+    "Natural language processing is fascinating",
+]
+
+# Encode documents (in practice, use BERT or sentence-transformers)
+from sentence_transformers import SentenceTransformer
+model = SentenceTransformer('all-MiniLM-L6-v2')
+document_embeddings = model.encode(documents)
+
+# Query embedding
+query = "Are cats and dogs similar?"
+query_embedding = model.encode([query])[0]
+
+# Find most similar documents
+similarities = cosine_similarity([query_embedding], document_embeddings)[0]
+top_indices = np.argsort(similarities)[::-1][:3]
+
+print("Top 3 relevant documents:")
+for idx in top_indices:
+    print(f"  {documents[idx]} (similarity: {similarities[idx]:.3f})")</code></pre>
+            </div>
+
+            <div class="subsection">
+                <h3>6.6 Debiasing Embeddings</h3>
+                <p>One approach to reduce gender bias in embeddings (Bolukbasi et al. 2016):</p>
+                <pre><code>import numpy as np
+
+def hard_debias(W, gender_subspace):
+    """Remove gender bias from embedding matrix W.
+
+    Args:
+        W: Embedding matrix (vocab_size, dim)
+        gender_subspace: Principal gender direction (1D array)
+
+    Returns:
+        W_debiased: Embedding matrix with gender bias removed
+    """
+    # Normalize gender direction
+    g = gender_subspace / np.linalg.norm(gender_subspace)
+
+    # Project each embedding onto gender subspace
+    projections = np.dot(W, g[:, np.newaxis]) * g
+
+    # Remove projection
+    W_debiased = W - projections
+
+    return W_debiased
+
+# Identify gender direction from word pairs
+# e.g., man - woman, he - she, etc.
+gender_words = [("man", "woman"), ("he", "she"), ("king", "queen")]
+
+# Compute average direction (simplified)
+gender_vecs = []
+for w1, w2 in gender_words:
+    if w1 in model.wv and w2 in model.wv:
+        v = model.wv[w1] - model.wv[w2]
+        gender_vecs.append(v)
+
+gender_direction = np.mean(gender_vecs, axis=0)
+
+# Debias the embedding matrix
+W_debiased = hard_debias(model.wv.vectors, gender_direction)
+
+# Note: This is a simplification. Full debiasing is more nuanced
+# and researchers debate its effectiveness and fairness implications.</code></pre>
+            </div>
+        </section>
+
+        <!-- Historical Context Section -->
+        <section class="historical">
+            <h2 class="section-title">
+                <span class="badge yellow">Historical</span>
+                The Evolution of Embeddings
+            </h2>
+
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-year">1954</div>
+                    <div class="timeline-content">
+                        <strong>Zellig Harris — Distributional Hypothesis</strong>
+                        <p>Harris formalized the principle that words occurring in similar contexts have similar meanings, laying the theoretical foundation for all distributional semantics.</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-year">1957</div>
+                    <div class="timeline-content">
+                        <strong>J.R. Firth — "You shall know a word by the company it keeps"</strong>
+                        <p>Firth's famous phrase crystallized the distributional hypothesis in linguistics. This became the mantra of modern NLP.</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-year">1957</div>
+                    <div class="timeline-content">
+                        <strong>Charles Osgood — Semantic Differential</strong>
+                        <p>Osgood proposed that meaning could be quantified using multiple dimensions (valence, arousal, dominance), placing words as points in multidimensional semantic space — an early intuition for embeddings.</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-year">1971</div>
+                    <div class="timeline-content">
+                        <strong>Gerard Salton — Vector Space Model</strong>
+                        <p>Salton formalized the vector space model for information retrieval, representing documents as bag-of-words vectors. This influenced later work on distributional semantics.</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-year">1990</div>
+                    <div class="timeline-content">
+                        <strong>Deerwester et al. — Latent Semantic Analysis (LSA)</strong>
+                        <p>LSA applied singular value decomposition (SVD) to term-document matrices, reducing dimensionality and creating dense low-rank approximations. It was the first successful dense embedding method but computationally expensive.</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-year">2003</div>
+                    <div class="timeline-content">
+                        <strong>Bengio et al. — Neural Language Models</strong>
+                        <p>Bengio's neural language model learned embeddings as a byproduct of predicting the next word, showing that neural networks could learn meaningful dense vectors.</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-year">2013</div>
+                    <div class="timeline-content">
+                        <strong>Mikolov et al. — Word2Vec</strong>
+                        <p>Word2vec made embeddings practical and efficient with skip-gram and negative sampling. Suddenly, training embeddings on billions of words was feasible. Word2vec's efficiency and effectiveness triggered the embedding era in NLP.</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-year">2014</div>
+                    <div class="timeline-content">
+                        <strong>Pennington et al. — GloVe</strong>
+                        <p>Global Vectors combined global matrix factorization with local context windows, achieving competitive or superior performance compared to word2vec while incorporating corpus-level statistics.</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-year">2016</div>
+                    <div class="timeline-content">
+                        <strong>Bolukbasi et al. — Gender Bias in Embeddings</strong>
+                        <p>Bolukbasi revealed that embeddings amplify gender stereotypes from training data. This sparked research into bias in embeddings and fairness in NLP more broadly.</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-year">2018</div>
+                    <div class="timeline-content">
+                        <strong>Devlin et al. — BERT</strong>
+                        <p>BERT introduced contextualized embeddings using bidirectional transformers. Unlike static embeddings, BERT embeddings vary per context, capturing polysemy and nuanced meaning. BERT catalyzed a shift toward pre-trained transformer models.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Socratic Knowledge Check Section -->
+        <section class="socratic">
+            <h2 class="section-title">
+                <span class="badge purple">Socratic</span>
+                Knowledge Check: A Case Study in Bias
+            </h2>
+
+            <h3>Failure Scenario</h3>
+            <div style="background-color: var(--bg-secondary); padding: 1.5rem; border-left: 3px solid var(--red); border-radius: 4px; margin-bottom: 2rem;">
+                <p><strong>A job recommendation system uses word2vec embeddings to match resumes to job postings by computing cosine similarity between the average word vectors of each document.</strong></p>
+                <p>A qualified female software engineer's resume contains words like "collaborated," "communicated," and "organized." The system consistently ranks her lower than less qualified male candidates whose resumes use words like "executed," "engineered," and "dominated."</p>
+                <p><strong>Root cause:</strong> The embedding space associates the first set of words more closely with administrative and support roles; the second set with technical leadership. These associations reflect biases in the training corpus.</p>
+            </div>
+
+            <h3>Guiding Questions</h3>
+
+            <div class="question-item">
+                <div class="question-text">1. How does the distributional hypothesis explain why these word vectors carry gender bias? What kind of training data would produce these associations?</div>
+                <button class="reveal-btn" onclick="toggleReveal(this)">Reveal Answer</button>
+                <div class="revealed">
+                    <p><strong>Explanation:</strong> The distributional hypothesis says words are defined by their contexts. If the training corpus contains more instances of women in administrative roles and men in engineering roles, the contexts of "collaborated" will more frequently include administrative keywords (schedule, organize, support, facilitate), while "engineered" will co-occur more with technical keywords (architecture, algorithm, optimize, debug).</p>
+                    <p>The embedding captures this statistical reality from the corpus. The embeddings are a faithful, compressed representation of bias present in the training data. The problem is not the embeddings themselves but the biased patterns in language that embeddings faithfully reflect.</p>
+                </div>
+            </div>
+
+            <div class="question-item">
+                <div class="question-text">2. If we compute cos("collaborated", "engineering") and cos("executed", "engineering"), which would likely be higher in a biased embedding space, and why?</div>
+                <button class="reveal-btn" onclick="toggleReveal(this)">Reveal Answer</button>
+                <div class="revealed">
+                    <p><strong>Answer:</strong> cos("executed", "engineering") would be higher.</p>
+                    <p><strong>Why:</strong> If the corpus associates "executed" with engineering leadership (e.g., "She executed the algorithm efficiently"), its embedding will be closer to the "engineering" embedding. Conversely, "collaborated" might be more associated with support and coordination, making it more distant from "engineering" in the embedding space.</p>
+                    <p>This geometric difference in the embedding space is invisible to the resume-screening algorithm but has real consequences: it biases the system against candidates using collaborative language.</p>
+                </div>
+            </div>
+
+            <div class="question-item">
+                <div class="question-text">3. Would averaging word vectors be a good document representation for this task? What information is lost?</div>
+                <button class="reveal-btn" onclick="toggleReveal(this)">Reveal Answer</button>
+                <div class="revealed">
+                    <p><strong>Information Loss:</strong> Averaging word embeddings destroys word order and contextual information. It treats "The engineer managed the team" and "The team managed the engineer" identically, even though these have opposite meanings.</p>
+                    <p>Additionally, averaging obscures the relative importance of words. In a resume, "software engineer" (the job title) should probably matter more than common words like "the" or "and," but averaging treats all words equally.</p>
+                    <p><strong>Better approaches:</strong> Weighted averaging (emphasize important words), pooling operations that preserve more information, or using sentence-level embeddings from models like BERT or sentence-transformers that are trained to produce meaningful document-level vectors.</p>
+                </div>
+            </div>
+
+            <div class="question-item">
+                <div class="question-text">4. The parallelogram method shows man:computer_programmer :: woman:homemaker. What does this tell us about the geometry of bias in embedding spaces?</div>
+                <button class="reveal-btn" onclick="toggleReveal(this)">Reveal Answer</button>
+                <div class="revealed">
+                    <p><strong>Geometric Insight:</strong> The analogy reveals that the embedding space has learned an "occupational gender vector" — the direction from man to woman encodes associations with different occupational roles.</p>
+                    <p>Formally, the vector (woman - man) is similar to the vector (homemaker - computer_programmer). This means:</p>
+                    <p>computer_programmer + (woman - man) ≈ homemaker</p>
+                    <p>This is not a bug in the embedding algorithm — it reflects the actual statistical patterns in text. Women are mentioned less frequently in programming contexts and more frequently in homemaking contexts. The embeddings faithfully encode this bias.</p>
+                    <p>The alarming part is that simple vector arithmetic exposes these biases. The geometry of the embedding space encodes hidden stereotypes that become actionable through these operations.</p>
+                </div>
+            </div>
+
+            <div class="question-item">
+                <div class="question-text">5. Compare three approaches to fix this: (a) debiasing the embeddings, (b) using contextualized embeddings like BERT, (c) not using embeddings at all. What are the tradeoffs?</div>
+                <button class="reveal-btn" onclick="toggleReveal(this)">Reveal Answer</button>
+                <div class="revealed">
+                    <p><strong>(a) Debiasing Embeddings:</strong></p>
+                    <ul style="margin-left: 2rem; margin-bottom: 1rem;">
+                        <li>Pro: Preserves the efficiency and utility of embeddings; fixes the bias directly</li>
+                        <li>Con: Post-hoc debiasing is incomplete; hard debiasing can reduce downstream task performance; it doesn't address the root cause (biased training data)</li>
+                    </ul>
+
+                    <p><strong>(b) Contextualized Embeddings (BERT):</strong></p>
+                    <ul style="margin-left: 2rem; margin-bottom: 1rem;">
+                        <li>Pro: Embeddings adapt to context; "engineer" has different embeddings in different sentences; can be more semantically robust</li>
+                        <li>Con: BERT is also trained on biased text (Wikipedia, BookCorpus) so it inherits similar biases; requires significantly more computation; doesn't fully solve the bias problem</li>
+                    </ul>
+
+                    <p><strong>(c) Not Using Embeddings:</strong></p>
+                    <ul style="margin-left: 2rem; margin-bottom: 1rem;">
+                        <li>Pro: Explainability; you can inspect exactly what features the system uses; avoids embedding-specific biases</li>
+                        <li>Con: Requires hand-engineering features; often achieves worse performance; still vulnerable to bias if features are biased; impractical for large-scale systems</li>
+                    </ul>
+
+                    <p><strong>Best Practice:</strong> Combine multiple approaches: (1) audit and diversify training data, (2) use contextualized models, (3) apply algorithmic debiasing as a safeguard, (4) continuously monitor for bias in deployment, and (5) use explainable methods alongside embeddings for high-stakes applications.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Chapter Navigation -->
+        <div class="chapter-nav">
+            <a href="chapter4.html" class="nav-button">← Chapter 4: Semantics</a>
+            <a href="chapter6.html" class="nav-button disabled">Chapter 6: Sequence Models →</a>
+        </div>
+    </div>
+
+    <!-- JavaScript for Interactivity -->
+    <script>
+        // ==================== UTILITY FUNCTIONS ====================
+
+        function toggleReveal(btn) {
+            const revealed = btn.nextElementSibling;
+            revealed.classList.toggle('show');
+            btn.textContent = revealed.classList.contains('show') ? 'Hide Answer' : 'Reveal Answer';
+        }
+
+        function updateWindowDisplay() {
+            document.getElementById('windowDisplay').textContent = document.getElementById('windowSize').value;
+        }
+
+        // Progress bar tracking
+        window.addEventListener('scroll', () => {
+            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrolled = (window.scrollY / height) * 100;
+            document.querySelector('.progress-bar').style.width = scrolled + '%';
+            document.getElementById('progress-percent').textContent = Math.round(scrolled) + '%';
+        });
+
+        // ==================== VISUALIZER 1: 2D EMBEDDING SPACE EXPLORER ====================
+
+        const embeddingData = {
+            animals: [
+                { word: 'cat', x: 100, y: 150, color: '#3fb950' },
+                { word: 'dog', x: 150, y: 200, color: '#3fb950' },
+                { word: 'fish', x: 80, y: 100, color: '#3fb950' },
+                { word: 'bird', x: 120, y: 80, color: '#3fb950' },
+                { word: 'lion', x: 200, y: 250, color: '#3fb950' },
+            ],
+            food: [
+                { word: 'pizza', x: 400, y: 150, color: '#79c0ff' },
+                { word: 'pasta', x: 420, y: 200, color: '#79c0ff' },
+                { word: 'rice', x: 380, y: 100, color: '#79c0ff' },
+                { word: 'bread', x: 450, y: 120, color: '#79c0ff' },
+                { word: 'cake', x: 410, y: 250, color: '#79c0ff' },
+            ],
+            tech: [
+                { word: 'computer', x: 100, y: 400, color: '#f97583' },
+                { word: 'phone', x: 150, y: 420, color: '#f97583' },
+                { word: 'laptop', x: 80, y: 380, color: '#f97583' },
+                { word: 'code', x: 120, y: 450, color: '#f97583' },
+                { word: 'data', x: 200, y: 400, color: '#f97583' },
+            ],
+            emotions: [
+                { word: 'happy', x: 500, y: 100, color: '#d2a8ff' },
+                { word: 'sad', x: 520, y: 300, color: '#d2a8ff' },
+                { word: 'angry', x: 550, y: 250, color: '#d2a8ff' },
+                { word: 'love', x: 480, y: 120, color: '#d2a8ff' },
+                { word: 'fear', x: 530, y: 280, color: '#d2a8ff' },
+            ],
+            countries: [
+                { word: 'France', x: 300, y: 50, color: '#ffd33d' },
+                { word: 'Italy', x: 350, y: 80, color: '#ffd33d' },
+                { word: 'Japan', x: 450, y: 40, color: '#ffd33d' },
+                { word: 'Brazil', x: 380, y: 150, color: '#ffd33d' },
+                { word: 'China', x: 500, y: 60, color: '#ffd33d' },
+            ]
+        };
+
+        function getAllEmbeddings() {
+            let all = [];
+            for (let category in embeddingData) {
+                all = all.concat(embeddingData[category]);
+            }
+            return all;
+        }
+
+        let selectedWord = null;
+        let zoomLevel = 1;
+        let panX = 0, panY = 0;
+
+        function euclideanDistance(p1, p2) {
+            return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
+        }
+
+        function drawEmbeddingSpace() {
+            const canvas = document.getElementById('spaceCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#161b22';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const allWords = getAllEmbeddings();
+
+            // Draw grid
+            ctx.strokeStyle = '#8b949e';
+            ctx.lineWidth = 0.5;
+            ctx.globalAlpha = 0.2;
+            for (let i = 0; i < 700; i += 50) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, 500);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(700, i);
+                ctx.stroke();
+            }
+            ctx.globalAlpha = 1;
+
+            // Draw words
+            allWords.forEach(item => {
+                const x = item.x * zoomLevel + panX;
+                const y = item.y * zoomLevel + panY;
+
+                // Highlight selected word
+                if (item.word === selectedWord) {
+                    ctx.fillStyle = '#58a6ff';
+                    ctx.fillRect(x - 45, y - 20, 90, 40);
+                }
+
+                // Word circle
+                ctx.fillStyle = item.color;
+                ctx.beginPath();
+                ctx.arc(x, y, 8, 0, 2 * Math.PI);
+                ctx.fill();
+
+                // Word label
+                ctx.fillStyle = '#e6edf3';
+                ctx.font = 'bold 12px Inter, system-ui';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(item.word, x, y + 15);
+            });
+
+            // Draw nearest neighbors if selected
+            if (selectedWord) {
+                const selected = allWords.find(w => w.word === selectedWord);
+                const distances = allWords
+                    .filter(w => w.word !== selectedWord)
+                    .map(w => ({ word: w, dist: euclideanDistance(selected, w) }))
+                    .sort((a, b) => a.dist - b.dist)
+                    .slice(0, 5);
+
+                ctx.strokeStyle = '#79c0ff';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                distances.forEach(d => {
+                    const x1 = selected.x * zoomLevel + panX;
+                    const y1 = selected.y * zoomLevel + panY;
+                    const x2 = d.word.x * zoomLevel + panX;
+                    const y2 = d.word.y * zoomLevel + panY;
+                    ctx.beginPath();
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.stroke();
+                });
+                ctx.setLineDash([]);
+            }
+        }
+
+        function initEmbeddingSpace() {
+            const canvas = document.getElementById('spaceCanvas');
+
+            canvas.addEventListener('click', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const clickY = e.clientY - rect.top;
+
+                const allWords = getAllEmbeddings();
+                for (let item of allWords) {
+                    const x = item.x * zoomLevel + panX;
+                    const y = item.y * zoomLevel + panY;
+                    if (Math.hypot(clickX - x, clickY - y) < 20) {
+                        selectedWord = item.word;
+                        document.getElementById('spaceInfo').textContent = `Selected: ${selectedWord} | Click another word to compare | Scroll to zoom | Drag to pan`;
+                        drawEmbeddingSpace();
+                        return;
+                    }
+                }
+                selectedWord = null;
+                document.getElementById('spaceInfo').textContent = `Click a word to explore | Scroll to zoom | Drag to pan`;
+                drawEmbeddingSpace();
+            });
+
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                zoomLevel += e.deltaY > 0 ? -0.05 : 0.05;
+                zoomLevel = Math.max(0.5, Math.min(3, zoomLevel));
+                drawEmbeddingSpace();
+            });
+
+            let dragging = false;
+            let dragStart = { x: 0, y: 0 };
+
+            canvas.addEventListener('mousedown', (e) => {
+                dragging = true;
+                dragStart = { x: e.clientX, y: e.clientY };
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                if (!dragging) return;
+                panX += e.clientX - dragStart.x;
+                panY += e.clientY - dragStart.y;
+                dragStart = { x: e.clientX, y: e.clientY };
+                drawEmbeddingSpace();
+            });
+
+            canvas.addEventListener('mouseup', () => {
+                dragging = false;
+            });
+
+            drawEmbeddingSpace();
+        }
+
+        // ==================== VISUALIZER 2: COSINE SIMILARITY CALCULATOR ====================
+
+        function loadPreset() {
+            const preset = document.getElementById('presetPairs').value;
+            const presets = {
+                'digital-information': ['1, 1, 1, 1, 0', '1, 1, 0.8, 1, 0.9'],
+                'cherry-information': ['0, 1, 1, 0, 1', '1, 1, 0, 0, 0'],
+                'cat-dog': ['1, 1, 0, 1, 0', '1, 0.9, 0, 1, 0'],
+                'computer-phone': ['1, 1, 1, 0, 0', '1, 1, 0.8, 0, 1'],
+            };
+            if (preset && presets[preset]) {
+                document.getElementById('vector1').value = presets[preset][0];
+                document.getElementById('vector2').value = presets[preset][1];
+            }
+        }
+
+        function calculateCosine() {
+            try {
+                const v1 = document.getElementById('vector1').value
+                    .split(',')
+                    .map(x => parseFloat(x.trim()));
+                const v2 = document.getElementById('vector2').value
+                    .split(',')
+                    .map(x => parseFloat(x.trim()));
+
+                if (v1.length !== v2.length || v1.some(isNaN) || v2.some(isNaN)) {
+                    alert('Vectors must have same dimension and contain only numbers');
+                    return;
+                }
+
+                // Dot product
+                const dotProduct = v1.reduce((sum, x, i) => sum + x * v2[i], 0);
+
+                // Magnitudes
+                const mag1 = Math.sqrt(v1.reduce((sum, x) => sum + x * x, 0));
+                const mag2 = Math.sqrt(v2.reduce((sum, x) => sum + x * x, 0));
+
+                // Cosine similarity
+                const cosine = mag1 === 0 || mag2 === 0 ? 0 : dotProduct / (mag1 * mag2);
+
+                // Display results
+                const result = document.getElementById('cosineResult');
+                document.getElementById('dotProduct').innerHTML =
+                    `<code>${v1.map((x, i) => `${x.toFixed(2)} × ${v2[i].toFixed(2)}`).join(' + ')}</code> = <strong>${dotProduct.toFixed(3)}</strong>`;
+                document.getElementById('magnitudes').innerHTML =
+                    `|v| = √${v1.reduce((s, x) => s + x*x, 0).toFixed(3)} = <strong>${mag1.toFixed(3)}</strong> | |w| = √${v2.reduce((s, x) => s + x*x, 0).toFixed(3)} = <strong>${mag2.toFixed(3)}</strong>`;
+                document.getElementById('cosineSimilarity').innerHTML =
+                    `${dotProduct.toFixed(3)} / (${mag1.toFixed(3)} × ${mag2.toFixed(3)}) = <strong>${cosine.toFixed(4)}</strong>`;
+
+                result.style.display = 'block';
+
+                // Draw angle visualization
+                drawAngleVisualization(v1, v2, cosine);
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        function drawAngleVisualization(v1, v2, cosine) {
+            const canvas = document.getElementById('angleCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#161b22';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const centerX = 100, centerY = 150;
+            const scale = 40;
+
+            // Normalize to 2D for visualization
+            const normalize = (v) => {
+                const mag = Math.sqrt(v[0] * v[0] + v[1] * v[1]);
+                return [v[0] / mag, v[1] / mag];
+            };
+
+            const v1Norm = normalize([v1[0], v1[1] || 0]);
+            const v2Norm = normalize([v2[0], v2[1] || 0]);
+
+            // Draw vectors
+            ctx.strokeStyle = '#79c0ff';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(centerX + v1Norm[0] * scale, centerY - v1Norm[1] * scale);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#3fb950';
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(centerX + v2Norm[0] * scale, centerY - v2Norm[1] * scale);
+            ctx.stroke();
+
+            // Draw angle
+            const angle = Math.acos(Math.max(-1, Math.min(1, cosine)));
+            ctx.strokeStyle = '#f97583';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            const arcRadius = 20;
+            const startAngle = Math.atan2(-v1Norm[1], v1Norm[0]);
+            ctx.arc(centerX, centerY, arcRadius, startAngle, startAngle + angle, true);
+            ctx.stroke();
+
+            // Labels
+            ctx.fillStyle = '#e6edf3';
+            ctx.font = '12px monospace';
+            ctx.fillText('v', centerX + v1Norm[0] * scale + 10, centerY - v1Norm[1] * scale);
+            ctx.fillText('w', centerX + v2Norm[0] * scale + 10, centerY - v2Norm[1] * scale);
+            ctx.fillText(`θ = ${(angle * 180 / Math.PI).toFixed(1)}°`, centerX + 30, centerY - 30);
+        }
+
+        // ==================== VISUALIZER 3: WORD ANALOGY SOLVER ====================
+
+        const analogyEmbeddings = {
+            'king': [0.9, 0.1, 0.2, 0.8],
+            'queen': [0.7, 0.2, 0.2, 0.9],
+            'man': [0.8, 0.3, 0.1, 0.2],
+            'woman': [0.6, 0.4, 0.1, 0.3],
+            'prince': [0.85, 0.15, 0.2, 0.7],
+            'princess': [0.65, 0.25, 0.2, 0.8],
+            'Paris': [0.3, 0.9, 0.1, 0.2],
+            'France': [0.2, 0.85, 0.3, 0.1],
+            'Tokyo': [0.2, 0.95, 0.4, 0.3],
+            'Japan': [0.15, 0.9, 0.5, 0.2],
+            'Rome': [0.35, 0.88, 0.2, 0.3],
+            'Italy': [0.25, 0.87, 0.4, 0.2],
+            'good': [0.8, 0.1, 0.2, 0.9],
+            'bad': [0.1, 0.2, 0.8, 0.1],
+            'hot': [0.9, 0.2, 0.1, 0.3],
+            'cold': [0.1, 0.8, 0.3, 0.2],
+            'fast': [0.7, 0.3, 0.2, 0.8],
+            'slow': [0.2, 0.7, 0.4, 0.1],
+        };
+
+        function loadAnalogyExample() {
+            const preset = document.getElementById('analogyPreset').value;
+            const examples = {
+                'king-man-woman': { a: 'king', b: 'queen', c: 'man' },
+                'paris-france-tokyo': { a: 'Paris', b: 'France', c: 'Tokyo' },
+                'good-bad-hot': { a: 'good', b: 'bad', c: 'hot' },
+            };
+            if (preset && examples[preset]) {
+                const ex = examples[preset];
+                document.getElementById('analogyA').value = ex.a;
+                document.getElementById('analogyB').value = ex.b;
+                document.getElementById('analogyC').value = ex.c;
+            }
+        }
+
+        function getAnalogyEmbedding(word) {
+            word = word.toLowerCase();
+            if (word in analogyEmbeddings) {
+                return analogyEmbeddings[word];
+            }
+            // Return zero vector if not found
+            return [0, 0, 0, 0];
+        }
+
+        function cosineSimilarity(v1, v2) {
+            const dot = v1.reduce((sum, x, i) => sum + x * v2[i], 0);
+            const mag1 = Math.sqrt(v1.reduce((sum, x) => sum + x * x, 0));
+            const mag2 = Math.sqrt(v2.reduce((sum, x) => sum + x * x, 0));
+            return mag1 === 0 || mag2 === 0 ? 0 : dot / (mag1 * mag2);
+        }
+
+        function solveAnalogy() {
+            const a = document.getElementById('analogyA').value;
+            const b = document.getElementById('analogyB').value;
+            const c = document.getElementById('analogyC').value;
+
+            const embA = getAnalogyEmbedding(a);
+            const embB = getAnalogyEmbedding(b);
+            const embC = getAnalogyEmbedding(c);
+
+            // d* = b - a + c
+            const target = embB.map((x, i) => x - embA[i] + embC[i]);
+
+            // Find nearest word
+            let bestWord = '';
+            let bestSim = -1;
+
+            for (let word in analogyEmbeddings) {
+                if (word !== a && word !== b && word !== c) {
+                    const sim = cosineSimilarity(target, analogyEmbeddings[word]);
+                    if (sim > bestSim) {
+                        bestSim = sim;
+                        bestWord = word;
+                    }
+                }
+            }
+
+            document.getElementById('analogyD').value = bestWord;
+
+            const result = document.getElementById('analogyResult');
+            document.getElementById('analogyOp').textContent =
+                `${b} - ${a} + ${c} = ${bestWord}`;
+            document.getElementById('analogyAnswer').textContent = bestWord;
+            result.style.display = 'block';
+
+            // Draw parallelogram
+            drawAnalogyParallelogram(embA, embB, embC, analogyEmbeddings[bestWord] || target);
+        }
+
+        function drawAnalogyParallelogram(a, b, c, d) {
+            const canvas = document.getElementById('analogyCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#161b22';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Simple 2D projection
+            const project = (v) => ({
+                x: v[0] * 100 + 50,
+                y: v[1] * 100 + 50,
+            });
+
+            const pa = project(a);
+            const pb = project(b);
+            const pc = project(c);
+            const pd = project(d);
+
+            // Draw parallelogram
+            ctx.strokeStyle = '#79c0ff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(pa.x, pa.y);
+            ctx.lineTo(pb.x, pb.y);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#3fb950';
+            ctx.beginPath();
+            ctx.moveTo(pa.x, pa.y);
+            ctx.lineTo(pc.x, pc.y);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#f97583';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(pb.x, pb.y);
+            ctx.lineTo(pd.x, pd.y);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(pc.x, pc.y);
+            ctx.lineTo(pd.x, pd.y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Labels
+            ctx.fillStyle = '#e6edf3';
+            ctx.font = 'bold 14px monospace';
+            ctx.fillText('A', pa.x - 15, pa.y - 10);
+            ctx.fillText('B', pb.x + 10, pb.y - 10);
+            ctx.fillText('C', pc.x - 15, pc.y + 15);
+            ctx.fillText('D', pd.x + 10, pd.y + 15);
+        }
+
+        // ==================== VISUALIZER 4: CO-OCCURRENCE MATRIX BUILDER ====================
+
+        function updateWindowDisplay() {
+            document.getElementById('windowDisplay').textContent = document.getElementById('windowSize').value;
+        }
+
+        function buildCooccurrenceMatrix() {
+            const corpus = document.getElementById('corpus').value;
+            const windowSize = parseInt(document.getElementById('windowSize').value);
+
+            // Tokenize
+            const tokens = corpus.toLowerCase().match(/\b\w+\b/g) || [];
+            if (tokens.length === 0) {
+                alert('No valid tokens in corpus');
+                return;
+            }
+
+            // Get unique vocabulary
+            const vocab = [...new Set(tokens)].sort().slice(0, 20); // Limit to 20 for visualization
+
+            // Build matrix
+            const matrix = Array(vocab.length).fill(0).map(() => Array(vocab.length).fill(0));
+
+            for (let i = 0; i < tokens.length; i++) {
+                const targetIdx = vocab.indexOf(tokens[i]);
+                if (targetIdx === -1) continue;
+
+                for (let j = Math.max(0, i - windowSize); j < Math.min(tokens.length, i + windowSize + 1); j++) {
+                    if (i === j) continue;
+                    const contextIdx = vocab.indexOf(tokens[j]);
+                    if (contextIdx !== -1) {
+                        matrix[targetIdx][contextIdx]++;
+                    }
+                }
+            }
+
+            // Display matrix
+            const result = document.getElementById('matrixResult');
+            result.style.display = 'block';
+
+            document.getElementById('matrixInfo').textContent =
+                `Vocabulary size: ${vocab.length}, Window size: ±${windowSize}, Total tokens: ${tokens.length}`;
+
+            // Draw heatmap
+            drawCooccurrenceHeatmap(vocab, matrix);
+        }
+
+        function drawCooccurrenceHeatmap(vocab, matrix) {
+            const canvas = document.getElementById('matrixCanvas');
+            const ctx = canvas.getContext('2d');
+            const cellSize = Math.min(canvas.width / vocab.length, canvas.height / vocab.length);
+
+            ctx.fillStyle = '#161b22';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Find max value for normalization
+            let maxVal = 0;
+            for (let i = 0; i < matrix.length; i++) {
+                for (let j = 0; j < matrix[i].length; j++) {
+                    maxVal = Math.max(maxVal, matrix[i][j]);
+                }
+            }
+            maxVal = Math.max(maxVal, 1);
+
+            // Draw cells
+            for (let i = 0; i < matrix.length; i++) {
+                for (let j = 0; j < matrix[i].length; j++) {
+                    const intensity = matrix[i][j] / maxVal;
+                    const hue = 258; // Blue hue
+                    const lightness = 100 - intensity * 50; // 100% white to 50% darker
+                    ctx.fillStyle = `hsl(${hue}, 100%, ${lightness}%)`;
+                    ctx.fillRect(j * cellSize, i * cellSize, cellSize, cellSize);
+
+                    // Draw value
+                    if (matrix[i][j] > 0) {
+                        ctx.fillStyle = intensity > 0.5 ? '#e6edf3' : '#8b949e';
+                        ctx.font = '10px monospace';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(matrix[i][j], j * cellSize + cellSize / 2, i * cellSize + cellSize / 2);
+                    }
+                }
+            }
+
+            // Draw grid
+            ctx.strokeStyle = '#8b949e';
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i <= vocab.length; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * cellSize, 0);
+                ctx.lineTo(i * cellSize, matrix.length * cellSize);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(0, i * cellSize);
+                ctx.lineTo(matrix.length * cellSize, i * cellSize);
+                ctx.stroke();
+            }
+
+            // Draw labels
+            ctx.fillStyle = '#e6edf3';
+            ctx.font = '10px monospace';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            for (let i = 0; i < vocab.length; i++) {
+                ctx.fillText(vocab[i], -5, i * cellSize + cellSize / 2);
+            }
+
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            for (let j = 0; j < vocab.length; j++) {
+                ctx.save();
+                ctx.translate(j * cellSize + cellSize / 2, -15);
+                ctx.rotate(-Math.PI / 4);
+                ctx.fillText(vocab[j], 0, 0);
+                ctx.restore();
+            }
+        }
+
+        // ==================== INITIALIZATION ====================
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initEmbeddingSpace();
+            MathJax.contentDocument = document;
+            MathJax.typesetPromise().catch(err => console.log('MathJax error:', err));
+        });
+    </script>
+</body>
+</html>

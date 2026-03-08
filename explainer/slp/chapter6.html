@@ -1,0 +1,1658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 6: Neural Networks — Speech and Language Processing</title>
+    <script>
+MathJax = {
+  tex: { inlineMath: [['$','$'],['\\(','\\)']], displayMath: [['$$','$$'],['\\[','\\]']] },
+  svg: { fontCache: 'global' }
+};
+</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg-full.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-card: #1c2333;
+            --bg-secondary: #161b22;
+            --accent: #58a6ff;
+            --text: #e6edf3;
+            --text-dim: #8b949e;
+            --green: #3fb950;
+            --blue: #79c0ff;
+            --orange: #fb8500;
+            --purple: #d2a8ff;
+            --pink: #f97583;
+            --yellow: #ffd33d;
+            --red: #ff6b6b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            line-height: 1.6;
+            font-size: 16px;
+        }
+
+        /* ===== Sticky Navigation ===== */
+        .sticky-nav {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-primary) 85%, transparent 100%);
+            border-bottom: 1px solid var(--bg-card);
+            padding: 1rem 2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-progress-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--blue), var(--purple), var(--pink), var(--orange), var(--green));
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .nav-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.3s ease;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid transparent;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        /* ===== Main Container ===== */
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* ===== Hero Section ===== */
+        .hero {
+            padding: 4rem 2rem;
+            text-align: center;
+            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-secondary) 100%);
+            border-radius: 1rem;
+            margin-bottom: 3rem;
+            border: 1px solid var(--bg-card);
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--blue), var(--purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .epigraph {
+            font-style: italic;
+            color: var(--text-dim);
+            margin: 1.5rem 0;
+            font-size: 1.1rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .overview {
+            color: var(--text);
+            margin-top: 1.5rem;
+            line-height: 1.8;
+        }
+
+        /* ===== Progress Tracker ===== */
+        .progress-tracker {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin: 3rem 0;
+            flex-wrap: wrap;
+            padding: 2rem;
+            background: var(--bg-card);
+            border-radius: 1rem;
+            border: 1px solid var(--bg-secondary);
+        }
+
+        .progress-dot {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--bg-secondary);
+            border: 2px solid var(--text-dim);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .progress-dot:hover {
+            transform: scale(1.1);
+            border-color: var(--accent);
+        }
+
+        .progress-dot.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        /* ===== Sections ===== */
+        section {
+            margin-bottom: 4rem;
+            padding: 2rem;
+            background: var(--bg-card);
+            border-radius: 1rem;
+            border: 1px solid var(--bg-secondary);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-header h2 {
+            font-size: 2rem;
+            color: var(--accent);
+        }
+
+        .badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.3rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .badge.feynman { background: var(--green); color: var(--bg-primary); }
+        .badge.technical { background: var(--blue); color: var(--bg-primary); }
+        .badge.code { background: var(--orange); color: var(--bg-primary); }
+        .badge.socratic { background: var(--purple); color: var(--bg-primary); }
+        .badge.modern { background: var(--pink); color: var(--bg-primary); }
+        .badge.history { background: var(--yellow); color: var(--bg-primary); }
+        .badge.viz { background: var(--red); color: var(--bg-primary); }
+
+        /* ===== Content Styling ===== */
+        h3 {
+            color: var(--blue);
+            margin-top: 1.5rem;
+            margin-bottom: 0.8rem;
+            font-size: 1.3rem;
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: var(--text);
+            line-height: 1.8;
+        }
+
+        strong {
+            color: var(--accent);
+        }
+
+        .math-block {
+            background: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+            border-left: 3px solid var(--blue);
+            overflow-x: auto;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-secondary);
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.3rem;
+            color: var(--orange);
+        }
+
+        pre {
+            background: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            border: 1px solid var(--bg-primary);
+            margin: 1rem 0;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: var(--text);
+        }
+
+        .code-line {
+            display: block;
+            line-height: 1.6;
+        }
+
+        .code-comment { color: var(--text-dim); }
+        .code-keyword { color: var(--pink); }
+        .code-string { color: var(--green); }
+        .code-function { color: var(--blue); }
+        .code-number { color: var(--orange); }
+
+        /* ===== Visualizers ===== */
+        .visualizer {
+            background: var(--bg-secondary);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border: 1px solid var(--bg-primary);
+        }
+
+        .visualizer-title {
+            font-weight: 600;
+            color: var(--blue);
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .control-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .control-label {
+            display: block;
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 0.8rem;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--bg-primary);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(88, 166, 255, 0.5);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 8px rgba(88, 166, 255, 0.5);
+        }
+
+        input[type="range"]::-moz-range-track {
+            background: transparent;
+            border: none;
+        }
+
+        .slider-value {
+            color: var(--accent);
+            font-weight: 600;
+            min-width: 60px;
+            text-align: right;
+        }
+
+        select {
+            background: var(--bg-primary);
+            color: var(--text);
+            border: 1px solid var(--text-dim);
+            padding: 0.5rem;
+            border-radius: 0.3rem;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        select option {
+            background: var(--bg-card);
+            color: var(--text);
+        }
+
+        button {
+            background: var(--blue);
+            color: var(--bg-primary);
+            border: none;
+            padding: 0.6rem 1.5rem;
+            border-radius: 0.4rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+        }
+
+        button:hover {
+            background: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(88, 166, 255, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        canvas {
+            border: 1px solid var(--bg-primary);
+            border-radius: 0.3rem;
+            background: var(--bg-primary);
+            display: block;
+            margin: 1rem 0;
+            width: 100%;
+            max-width: 100%;
+        }
+
+        .output-display {
+            background: var(--bg-primary);
+            padding: 1rem;
+            border-radius: 0.3rem;
+            margin-top: 1rem;
+            color: var(--blue);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            border-left: 3px solid var(--blue);
+        }
+
+        /* ===== Reveal Buttons ===== */
+        .reveal-btn {
+            background: var(--purple);
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .reveal-btn:hover {
+            background: #e7b4ff;
+        }
+
+        .hidden-content {
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: all 0.4s ease;
+        }
+
+        .hidden-content.revealed {
+            max-height: 1000px;
+            opacity: 1;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--bg-primary);
+            border-radius: 0.3rem;
+        }
+
+        /* ===== History Sidebar ===== */
+        .sidebar {
+            float: right;
+            width: 30%;
+            background: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            margin: 0 0 1.5rem 1.5rem;
+            border: 1px solid var(--bg-primary);
+        }
+
+        .sidebar-toggle {
+            background: var(--yellow);
+            color: var(--bg-primary);
+            margin-bottom: 1rem;
+        }
+
+        .timeline {
+            list-style: none;
+        }
+
+        .timeline li {
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--bg-primary);
+        }
+
+        .timeline li:last-child {
+            border-bottom: none;
+        }
+
+        .timeline-year {
+            font-weight: 600;
+            color: var(--yellow);
+            font-size: 0.9rem;
+        }
+
+        .timeline-event {
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            margin-top: 0.3rem;
+        }
+
+        /* ===== Socratic Section ===== */
+        .question-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--bg-secondary);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 0.4rem;
+            border-left: 3px solid var(--purple);
+        }
+
+        .question-text {
+            color: var(--blue);
+            font-weight: 500;
+            margin-bottom: 0.8rem;
+        }
+
+        .answer-text {
+            color: var(--text);
+            font-size: 0.95rem;
+        }
+
+        /* ===== Navigation Buttons ===== */
+        .chapter-nav {
+            display: flex;
+            justify-content: space-between;
+            gap: 2rem;
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--bg-card);
+        }
+
+        .nav-btn {
+            flex: 1;
+            padding: 1rem;
+            text-align: center;
+            background: var(--bg-card);
+            border: 1px solid var(--bg-secondary);
+            border-radius: 0.5rem;
+            color: var(--accent);
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            background: var(--blue);
+            color: var(--bg-primary);
+            transform: translateY(-2px);
+        }
+
+        .nav-btn-label {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            display: block;
+            margin-bottom: 0.4rem;
+        }
+
+        .nav-btn-title {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .sticky-nav {
+                padding: 0.8rem 1rem;
+            }
+
+            .nav-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .sidebar {
+                float: none;
+                width: 100%;
+                margin-bottom: 1.5rem;
+            }
+
+            .progress-tracker {
+                gap: 0.8rem;
+                padding: 1rem;
+            }
+
+            .chapter-nav {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .nav-links {
+                font-size: 0.8rem;
+                gap: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sticky Navigation -->
+    <div class="sticky-nav">
+        <div class="nav-content">
+            <div class="nav-title">Chapter 6: Neural Networks</div>
+            <div class="nav-links">
+                <a href="index.html">← Dashboard</a>
+                <a href="chapter5.html">Ch 5: Embeddings</a>
+                <span style="color: var(--text-dim);">|</span>
+                <a href="chapter7.html">Ch 7: LLMs →</a>
+            </div>
+        </div>
+        <div class="nav-progress-bar" id="progressBar"></div>
+    </div>
+
+    <div class="container">
+        <!-- Hero Section -->
+        <div class="hero" id="hero">
+            <h1>Neural Networks</h1>
+            <div class="epigraph">"The beauty of a neural network is that it doesn't need to understand the world—it just needs to learn from examples."</div>
+            <div class="overview">
+                <p>Neural networks are the computational foundation of modern NLP and deep learning. From sentiment classification to large language models, understanding how networks learn through backpropagation is essential. This chapter builds your intuition from individual neurons up to multi-layer architectures, showing why deep networks with non-linearities can solve problems that simple linear models cannot.</p>
+            </div>
+        </div>
+
+        <!-- Progress Tracker -->
+        <div class="progress-tracker" id="progressTracker">
+            <div class="progress-dot" data-section="feynman">1</div>
+            <div class="progress-dot" data-section="technical">2</div>
+            <div class="progress-dot" data-section="visualizers">3</div>
+            <div class="progress-dot" data-section="code">4</div>
+            <div class="progress-dot" data-section="modern">5</div>
+            <div class="progress-dot" data-section="socratic">6</div>
+        </div>
+
+        <!-- Section 1: Feynman Bridge -->
+        <section id="feynman" class="tracking-section">
+            <div class="section-header">
+                <h2>The Factory Analogy</h2>
+                <span class="badge feynman">Feynman</span>
+            </div>
+            <p>
+                Imagine a factory assembly line. Each <strong>unit (neuron)</strong> is a worker standing at a station. Each worker's job is simple: they receive items (inputs) from the previous station, multiply each item by a weight (their skill level at that task), add everything up, and pass the result through one of three devices (activation functions). The transformed item moves to the next station.
+            </p>
+            <p>
+                A <strong>layer</strong> is a row of workers at adjacent stations. Multiple layers form a deep pipeline. Data enters the first station, gets transformed by the first layer of workers, passes to the second layer, and so on, until the final product (prediction) emerges.
+            </p>
+            <p>
+                The magic happens during <strong>backpropagation</strong>. At the end of the line, a quality inspector (loss function) checks the final product against the target. If the product is wrong, the inspector becomes a "foreman" who walks backward through the line, telling each worker: "Your item was wrong by this much. You need to adjust your weights like this." Each worker slightly tweaks their weights based on this feedback. Over thousands of products, workers collectively learn to produce the right outputs.
+            </p>
+            <p>
+                Without <strong>non-linear activation functions</strong>, every layer would just be a scaled-up version of the previous transformation—like having multiple multiplications in a row, which collapse into a single multiplication. The non-linearity at each station (sigmoid, tanh, ReLU) bends and folds the data into new shapes, allowing the network to learn complex, non-linear patterns.
+            </p>
+        </section>
+
+        <!-- Section 2: Technical Ascent -->
+        <section id="technical" class="tracking-section">
+            <div class="section-header">
+                <h2>Technical Foundations</h2>
+                <span class="badge technical">Technical</span>
+            </div>
+
+            <h3>6.1: Units and Activation Functions</h3>
+            <p>A single <strong>neuron (unit)</strong> computes a weighted sum of its inputs plus a bias term, then passes it through an activation function.</p>
+            <div class="math-block">
+                $$z = \mathbf{w} \cdot \mathbf{x} + b$$
+                $$a = f(z)$$
+            </div>
+            <p>where <strong>w</strong> are weights, <strong>x</strong> are inputs, <strong>b</strong> is bias, and <strong>f</strong> is an activation function.</p>
+
+            <p><strong>Common Activation Functions:</strong></p>
+            <div class="math-block">
+                $$\text{Sigmoid: } \sigma(z) = \frac{1}{1 + e^{-z}}$$
+                $$\text{Tanh: } \tanh(z) = \frac{e^{z} - e^{-z}}{e^{z} + e^{-z}}$$
+                $$\text{ReLU: } \text{ReLU}(z) = \max(0, z)$$
+            </div>
+
+            <p>The <strong>vanishing gradient problem</strong> occurs with sigmoid and tanh: as you backpropagate through many layers, gradients multiply by small values (sigmoid/tanh derivatives are between 0 and 0.25), so deep layers receive vanishingly small gradient signals. <strong>ReLU</strong> has derivative 1 for positive inputs, mitigating this issue.</p>
+
+            <h3>6.2: The XOR Problem</h3>
+            <p>A single perceptron (one-layer network with no hidden layer) can only solve <strong>linearly separable</strong> problems. The XOR problem is not linearly separable:</p>
+            <div class="math-block">
+                $$\text{XOR: } (0,0) \to 0, \quad (0,1) \to 1, \quad (1,0) \to 1, \quad (1,1) \to 0$$
+            </div>
+            <p>No single line can separate the 1s from the 0s. This was proven by Minsky & Papert in 1969, triggering an AI winter. However, a <strong>2-layer network</strong> with non-linear activations (e.g., ReLU) can solve XOR by:
+            <ul style="margin: 1rem 0 1rem 2rem; color: var(--text);">
+                <li>Layer 1 (2 ReLU units): transforms the 2D input space so that the four points are rearranged to become linearly separable.</li>
+                <li>Layer 2 (1 output unit): applies a linear decision boundary to the transformed space.</li>
+            </ul>
+
+            <h3>6.3: Feedforward Networks</h3>
+            <p>A <strong>feedforward network</strong> (also called MLP or multilayer perceptron) has layers stacked sequentially. Data flows from input → hidden layers → output layer.</p>
+            <div class="math-block">
+                $$\mathbf{h}^{[1]} = f(\mathbf{W}^{[1]} \mathbf{x} + \mathbf{b}^{[1]})$$
+                $$\mathbf{h}^{[2]} = f(\mathbf{W}^{[2]} \mathbf{h}^{[1]} + \mathbf{b}^{[2]})$$
+                $$\hat{\mathbf{y}} = \text{softmax}(\mathbf{W}^{[L]} \mathbf{h}^{[L-1]} + \mathbf{b}^{[L]})$$
+            </div>
+            <p>where superscript [i] denotes the i-th layer, and softmax is used for multi-class classification:
+            <div class="math-block">
+                $$\text{softmax}(\mathbf{z})_j = \frac{e^{z_j}}{\sum_{k} e^{z_k}}$$
+            </div>
+
+            <p><strong>Why Non-linearity Matters:</strong> If all layers use only linear transformations (no activation function), then composing them yields another linear transformation. A 5-layer purely linear network is equivalent to a 1-layer network. Non-linearities break this collapse, enabling the network to approximate complex functions.</p>
+
+            <h3>6.4: NLP Classification with Feedforward Networks</h3>
+            <p>For text classification (e.g., sentiment), a typical pipeline is:</p>
+            <ul style="margin: 1rem 0 1rem 2rem; color: var(--text);">
+                <li><strong>Feature Extraction:</strong> Convert text to vectors (bag-of-words, TF-IDF, or learned embeddings).</li>
+                <li><strong>Feedforward Network:</strong> Pass vectors through layers of ReLU units to learn non-linear decision boundaries.</li>
+                <li><strong>Output:</strong> Softmax over classes (positive/negative/neutral).</li>
+            </ul>
+            <p>Early NLP relied on hand-crafted features (n-grams, syntax trees). Modern approaches let the network <strong>learn features</strong> in hidden layers, often outperforming hand-built ones.</p>
+
+            <h3>6.5: Embeddings as Network Input</h3>
+            <p>Instead of one-hot encoding (which is sparse and high-dimensional), we use <strong>learned embeddings</strong>. An embedding matrix <strong>E</strong> ∈ ℝ^{|V| × d} maps each word in vocabulary V to a d-dimensional dense vector:</p>
+            <div class="math-block">
+                $$\mathbf{x}_i = \mathbf{E} \mathbf{e}_i$$
+            </div>
+            <p>where <strong>e</strong><sub>i</sub> is the one-hot vector for word i.</p>
+
+            <p>For a sentence, we can use <strong>mean-pooling</strong> (average all word embeddings) or <strong>concatenation</strong> (append embeddings) to create a fixed-size input. For a neural language model, embeddings from previous words are concatenated:</p>
+            <div class="math-block">
+                $$\mathbf{x} = [\mathbf{E} w_{t-n+1}, \ldots, \mathbf{E} w_t]$$
+            </div>
+
+            <h3>6.6: Training</h3>
+            <p><strong>Cross-Entropy Loss</strong> for binary classification:</p>
+            <div class="math-block">
+                $$L_{CE} = -[y \log \hat{y} + (1-y) \log(1-\hat{y})]$$
+            </div>
+            <p>For multi-class:</p>
+            <div class="math-block">
+                $$L_{CE} = -\sum_{k=1}^{K} y_k \log \hat{y}_k$$
+            </div>
+
+            <p><strong>Backpropagation</strong> computes gradients via the chain rule. Construct a computation graph where each operation (matrix multiply, add bias, apply ReLU) is a node. During backward pass, gradients flow from output to input:</p>
+            <div class="math-block">
+                $$\frac{\partial f}{\partial x} = \frac{\partial f}{\partial u} \cdot \frac{\partial u}{\partial x}$$
+            </div>
+
+            <p><strong>Hyperparameters:</strong>
+            <ul style="margin: 1rem 0 1rem 2rem; color: var(--text);">
+                <li><strong>Learning Rate (η):</strong> Controls step size. Too high → overshooting, too low → slow learning. Often decayed during training.</li>
+                <li><strong>Batch Size:</strong> Number of examples before updating weights. Larger batches = more stable gradients but slower overall training.</li>
+                <li><strong>Network Architecture:</strong> Number of layers, layer widths, activation functions.</li>
+                <li><strong>Regularization:</strong> L2 weight decay, dropout (randomly zero out units with probability p during training to prevent co-adaptation).</li>
+            </ul>
+
+        </section>
+
+        <!-- Section 3: Interactive Visualizers -->
+        <section id="visualizers" class="tracking-section">
+            <div class="section-header">
+                <h2>Interactive Visualizers</h2>
+                <span class="badge viz">Viz</span>
+            </div>
+
+            <!-- Visualizer 1: Single Neuron -->
+            <div class="visualizer">
+                <div class="visualizer-title">Visualizer 1: Single Neuron Simulator</div>
+                <p style="font-size: 0.9rem; color: var(--text-dim); margin-bottom: 1rem;">Adjust weights and bias to see how the neuron's output changes. Experiment with different activation functions and watch the output curve.</p>
+
+                <div class="control-group">
+                    <label class="control-label">Input x₁</label>
+                    <div class="slider-container">
+                        <input type="range" id="neuron-x1" min="-5" max="5" step="0.1" value="0">
+                        <span class="slider-value" id="neuron-x1-val">0.0</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Input x₂</label>
+                    <div class="slider-container">
+                        <input type="range" id="neuron-x2" min="-5" max="5" step="0.1" value="0">
+                        <span class="slider-value" id="neuron-x2-val">0.0</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Weight w₁</label>
+                    <div class="slider-container">
+                        <input type="range" id="neuron-w1" min="-3" max="3" step="0.1" value="1">
+                        <span class="slider-value" id="neuron-w1-val">1.0</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Weight w₂</label>
+                    <div class="slider-container">
+                        <input type="range" id="neuron-w2" min="-3" max="3" step="0.1" value="1">
+                        <span class="slider-value" id="neuron-w2-val">1.0</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Bias b</label>
+                    <div class="slider-container">
+                        <input type="range" id="neuron-b" min="-3" max="3" step="0.1" value="0">
+                        <span class="slider-value" id="neuron-b-val">0.0</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Activation Function</label>
+                    <select id="neuron-activation">
+                        <option value="sigmoid">Sigmoid</option>
+                        <option value="tanh">Tanh</option>
+                        <option value="relu">ReLU</option>
+                    </select>
+                </div>
+
+                <svg width="100%" height="200" id="neuronDiagram" style="border: 1px solid var(--bg-primary); background: var(--bg-primary); margin: 1rem 0; border-radius: 0.3rem;"></svg>
+
+                <div class="output-display">
+                    <div>z = w₁·x₁ + w₂·x₂ + b = <span id="neuron-z">0.0</span></div>
+                    <div style="margin-top: 0.5rem;">a = f(z) = <span id="neuron-a">0.0</span></div>
+                </div>
+
+                <canvas id="neuronActivationCurve" width="100%" height="200"></canvas>
+            </div>
+
+            <!-- Visualizer 2: XOR Decision Boundary -->
+            <div class="visualizer">
+                <div class="visualizer-title">Visualizer 2: XOR Decision Boundary Explorer</div>
+                <p style="font-size: 0.9rem; color: var(--text-dim); margin-bottom: 1rem;">The 4 XOR points are shown. A single layer produces a linear boundary (fails). A 2-layer network transforms the space to make XOR linearly separable. Watch the decision boundary form as you train!</p>
+
+                <div class="control-group">
+                    <label class="control-label">Network Type</label>
+                    <select id="xor-network-type">
+                        <option value="single">1-Layer (Linear Boundary)</option>
+                        <option value="dual">2-Layer (Non-linear)</option>
+                    </select>
+                </div>
+
+                <canvas id="xorCanvas" width="100%" height="400"></canvas>
+
+                <button id="xor-train-btn" style="width: 100%; margin-top: 1rem;">Train Network</button>
+                <div class="output-display" style="margin-top: 1rem;">
+                    <div>Iterations: <span id="xor-iterations">0</span></div>
+                    <div>Accuracy: <span id="xor-accuracy">0</span>%</div>
+                </div>
+            </div>
+
+            <!-- Visualizer 3: Feedforward Forward Pass -->
+            <div class="visualizer">
+                <div class="visualizer-title">Visualizer 3: Feedforward Network Forward Pass</div>
+                <p style="font-size: 0.9rem; color: var(--text-dim); margin-bottom: 1rem;">See data flowing through a 3-layer network. Click "Forward Pass" to animate the computation at each layer.</p>
+
+                <button id="ffw-forward-btn" style="width: 100%; margin-bottom: 1rem;">Forward Pass</button>
+                <svg id="ffwNetwork" width="100%" height="400" style="border: 1px solid var(--bg-primary); background: var(--bg-primary); border-radius: 0.3rem;"></svg>
+
+                <div class="output-display" style="margin-top: 1rem;">
+                    <div>Layer 1 Output: <span id="ffw-layer1" style="font-size: 0.85rem;">—</span></div>
+                    <div style="margin-top: 0.5rem;">Layer 2 Output: <span id="ffw-layer2" style="font-size: 0.85rem;">—</span></div>
+                    <div style="margin-top: 0.5rem;">Layer 3 Output: <span id="ffw-layer3" style="font-size: 0.85rem;">—</span></div>
+                </div>
+            </div>
+
+            <!-- Visualizer 4: Activation Functions Comparison -->
+            <div class="visualizer">
+                <div class="visualizer-title">Visualizer 4: Activation Functions & Derivatives</div>
+                <p style="font-size: 0.9rem; color: var(--text-dim); margin-bottom: 1rem;">Compare sigmoid, tanh, and ReLU. Toggle each to hide/show. Notice how sigmoid and tanh have small derivatives in the flat regions (vanishing gradients), while ReLU has constant slope.</p>
+
+                <div class="control-group" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--text);">
+                        <input type="checkbox" id="actfn-sigmoid-check" checked>
+                        <span>Sigmoid</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--text);">
+                        <input type="checkbox" id="actfn-tanh-check" checked>
+                        <span>Tanh</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--text);">
+                        <input type="checkbox" id="actfn-relu-check" checked>
+                        <span>ReLU</span>
+                    </label>
+                </div>
+
+                <canvas id="activationFunctionsCanvas" width="100%" height="300"></canvas>
+                <p style="font-size: 0.85rem; color: var(--text-dim); margin-top: 0.5rem;">Tip: Hover over the graphs to see exact values.</p>
+            </div>
+
+        </section>
+
+        <!-- History Sidebar (collapsible) -->
+        <div class="sidebar">
+            <button class="sidebar-toggle" id="history-toggle">📜 History</button>
+            <div id="history-content" style="display: none;">
+                <ul class="timeline">
+                    <li>
+                        <div class="timeline-year">1943</div>
+                        <div class="timeline-event">McCulloch-Pitts neuron model published</div>
+                    </li>
+                    <li>
+                        <div class="timeline-year">1958</div>
+                        <div class="timeline-event">Rosenblatt's perceptron algorithm</div>
+                    </li>
+                    <li>
+                        <div class="timeline-year">1969</div>
+                        <div class="timeline-event">Minsky & Papert: XOR limitation → AI winter</div>
+                    </li>
+                    <li>
+                        <div class="timeline-year">1986</div>
+                        <div class="timeline-event">Rumelhart, Hinton, Williams: Backpropagation</div>
+                    </li>
+                    <li>
+                        <div class="timeline-year">1990s</div>
+                        <div class="timeline-event">LeCun: CNNs for handwriting recognition</div>
+                    </li>
+                    <li>
+                        <div class="timeline-year">2006</div>
+                        <div class="timeline-event">Hinton: Deep belief networks</div>
+                    </li>
+                    <li>
+                        <div class="timeline-year">2012</div>
+                        <div class="timeline-event">AlexNet wins ImageNet; deep learning boom</div>
+                    </li>
+                    <li>
+                        <div class="timeline-year">2017</div>
+                        <div class="timeline-event">Vaswani et al.: Transformer architecture</div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Section 4: Code Implementation -->
+        <section id="code" class="tracking-section">
+            <div class="section-header">
+                <h2>Building a Neural Network from Scratch</h2>
+                <span class="badge code">Code</span>
+            </div>
+
+            <p>Below is a complete implementation of a 2-layer feedforward neural network using NumPy. This teaches the core mechanics of forward propagation, loss computation, backpropagation, and gradient descent.</p>
+
+            <pre><code><span class="code-comment"># Neural Network from Scratch</span>
+<span class="code-keyword">import</span> numpy <span class="code-keyword">as</span> np
+
+<span class="code-keyword">class</span> <span class="code-function">NeuralNetwork</span>:
+    <span class="code-keyword">def</span> <span class="code-function">__init__</span>(self, input_size, hidden_size, output_size):
+        <span class="code-comment"># Initialize weights and biases</span>
+        self.W1 = np.random.randn(input_size, hidden_size) * 0.01
+        self.b1 = np.zeros((1, hidden_size))
+        self.W2 = np.random.randn(hidden_size, output_size) * 0.01
+        self.b2 = np.zeros((1, output_size))
+
+    <span class="code-keyword">def</span> <span class="code-function">relu</span>(self, z):
+        <span class="code-comment"># ReLU activation: max(0, z)</span>
+        <span class="code-keyword">return</span> np.maximum(0, z)
+
+    <span class="code-keyword">def</span> <span class="code-function">relu_derivative</span>(self, z):
+        <span class="code-comment"># Derivative: 1 if z > 0, else 0</span>
+        <span class="code-keyword">return</span> (z > 0).astype(float)
+
+    <span class="code-keyword">def</span> <span class="code-function">softmax</span>(self, z):
+        <span class="code-comment"># Softmax for multi-class: e^z_i / sum(e^z_j)</span>
+        exp_z = np.exp(z - np.max(z, axis=1, keepdims=True))
+        <span class="code-keyword">return</span> exp_z / np.sum(exp_z, axis=1, keepdims=True)
+
+    <span class="code-keyword">def</span> <span class="code-function">forward</span>(self, X):
+        <span class="code-comment"># Forward pass through 2 layers</span>
+        self.z1 = np.dot(X, self.W1) + self.b1
+        self.h = self.relu(self.z1)
+        self.z2 = np.dot(self.h, self.W2) + self.b2
+        self.output = self.softmax(self.z2)
+        <span class="code-keyword">return</span> self.output
+
+    <span class="code-keyword">def</span> <span class="code-function">compute_loss</span>(self, predictions, targets):
+        <span class="code-comment"># Cross-entropy loss</span>
+        m = targets.shape[0]
+        log_probs = -np.log(predictions[np.arange(m), targets] + 1e-8)
+        <span class="code-keyword">return</span> np.mean(log_probs)
+
+    <span class="code-keyword">def</span> <span class="code-function">backward</span>(self, X, targets, learning_rate):
+        <span class="code-comment"># Backpropagation: compute gradients and update</span>
+        m = X.shape[0]
+
+        <span class="code-comment"># Output layer gradient</span>
+        dz2 = self.output.copy()
+        dz2[np.arange(m), targets] -= 1
+        dz2 /= m
+
+        dW2 = np.dot(self.h.T, dz2)
+        db2 = np.sum(dz2, axis=0, keepdims=True)
+
+        <span class="code-comment"># Hidden layer gradient</span>
+        dh = np.dot(dz2, self.W2.T)
+        dz1 = dh * self.relu_derivative(self.z1)
+
+        dW1 = np.dot(X.T, dz1)
+        db1 = np.sum(dz1, axis=0, keepdims=True)
+
+        <span class="code-comment"># Update weights (SGD)</span>
+        self.W1 -= learning_rate * dW1
+        self.b1 -= learning_rate * db1
+        self.W2 -= learning_rate * dW2
+        self.b2 -= learning_rate * db2
+
+    <span class="code-keyword">def</span> <span class="code-function">train</span>(self, X, y, epochs=100, batch_size=32, learning_rate=0.01):
+        <span class="code-comment"># Mini-batch SGD training loop</span>
+        n_samples = X.shape[0]
+        <span class="code-keyword">for</span> epoch <span class="code-keyword">in</span> range(epochs):
+            <span class="code-comment"># Shuffle data</span>
+            indices = np.random.permutation(n_samples)
+            X_shuffled = X[indices]
+            y_shuffled = y[indices]
+
+            <span class="code-comment"># Mini-batch updates</span>
+            <span class="code-keyword">for</span> i <span class="code-keyword">in</span> range(0, n_samples, batch_size):
+                X_batch = X_shuffled[i:i+batch_size]
+                y_batch = y_shuffled[i:i+batch_size]
+
+                self.forward(X_batch)
+                self.backward(X_batch, y_batch, learning_rate)
+
+            <span class="code-comment"># Log progress</span>
+            <span class="code-keyword">if</span> epoch % 10 == 0:
+                preds = self.forward(X)
+                loss = self.compute_loss(preds, y)
+                acc = np.mean(np.argmax(preds, axis=1) == y)
+                print(f<span class="code-string">"Epoch {epoch}: Loss {loss:.4f}, Acc {acc:.2%}"</span>)
+
+<span class="code-comment"># Example usage</span>
+<span class="code-keyword">if</span> __name__ == <span class="code-string">"__main__"</span>:
+    <span class="code-comment"># Generate synthetic classification data</span>
+    np.random.seed(42)
+    X = np.random.randn(200, 4)
+    y = np.random.randint(0, 3, 200)
+
+    <span class="code-comment"># Create and train network</span>
+    nn = NeuralNetwork(input_size=4, hidden_size=8, output_size=3)
+    nn.train(X, y, epochs=50, batch_size=16, learning_rate=0.1)</code></pre>
+
+            <h3>Key Points:</h3>
+            <ul style="margin: 1rem 0 1rem 2rem; color: var(--text);">
+                <li><strong>Forward pass:</strong> Compute h = ReLU(X @ W1 + b1), then output = softmax(h @ W2 + b2).</li>
+                <li><strong>Loss:</strong> Cross-entropy measures prediction error against true labels.</li>
+                <li><strong>Backward pass:</strong> Use chain rule to compute dW1, db1, dW2, db2 from dL/doutput backward.</li>
+                <li><strong>SGD:</strong> Update weights in the direction opposite to gradients by step size (learning rate).</li>
+                <li><strong>Mini-batches:</strong> Process 16-32 samples at once for stability and computational efficiency.</li>
+            </ul>
+
+        </section>
+
+        <!-- Section 5: Modern Bridge -->
+        <section id="modern" class="tracking-section">
+            <div class="section-header">
+                <h2>From MLPs to Transformers</h2>
+                <span class="badge modern">Modern</span>
+            </div>
+
+            <p>The feedforward networks you've learned about are not relics of the past—they are building blocks of state-of-the-art models in 2026. Inside every transformer (the architecture powering GPT, Claude, Llama, and other large language models), there are <strong>MLP sub-layers</strong>.</p>
+
+            <h3>Transformer Feed-Forward Layer</h3>
+            <p>Each transformer block contains a "feed-forward network" after the attention layer:</p>
+            <div class="math-block">
+                $$\text{FFN}(x) = \text{ReLU}(x W_1 + b_1) W_2 + b_2$$
+            </div>
+            <p>In modern architectures, this is often written with <strong>GELU</strong> or <strong>SwiGLU</strong> activation instead of ReLU, but the principle remains: a 2-layer MLP adds non-linear expressiveness within the transformer. The parameters in these MLP sub-layers constitute a large portion of the model's total parameters.</p>
+
+            <h3>Scaling Principles</h3>
+            <p>When training billion-parameter models, the same backpropagation algorithm runs—just at scale. Modern LLMs use:</p>
+            <ul style="margin: 1rem 0 1rem 2rem; color: var(--text);">
+                <li><strong>Distributed training:</strong> Gradient computation spread across thousands of GPUs.</li>
+                <li><strong>Optimizers:</strong> Adam or AdamW automatically adjust learning rates per parameter, converging faster than vanilla SGD.</li>
+                <li><strong>Layer normalization:</strong> Normalizes outputs of each layer to mean 0, variance 1, stabilizing training.</li>
+                <li><strong>Residual connections:</strong> Skip connections that add the input directly to the output (y = f(x) + x) let gradients flow directly backward, solving vanishing gradient problems in very deep networks.</li>
+                <li><strong>Dropout & regularization:</strong> Still used to prevent overfitting even in 100B-parameter models.</li>
+            </ul>
+
+            <h3>Why This Matters</h3>
+            <p>Understanding how individual neurons, layers, and backpropagation work is essential to understanding modern LLMs. When you read a paper describing a model with "24 transformer layers, each with a 3072-dimensional feed-forward network," you now know:</p>
+            <ul style="margin: 1rem 0 1rem 2rem; color: var(--text);">
+                <li>Each layer has an MLP with hidden size 3072.</li>
+                <li>During training, gradients flow backward through all 24 layers via the chain rule.</li>
+                <li>The model is solving a scaled-up version of the same optimization problem you see in the toy examples above.</li>
+            </ul>
+            <p>The scaling is dramatic (from millions to trillions of parameters), but the fundamental mechanics—forward pass, loss computation, backpropagation, gradient descent—are identical.</p>
+
+        </section>
+
+        <!-- Section 6: Socratic Knowledge Check -->
+        <section id="socratic" class="tracking-section">
+            <div class="section-header">
+                <h2>Socratic Knowledge Check</h2>
+                <span class="badge socratic">Socratic</span>
+            </div>
+
+            <h3>Scenario: The Training Plateau</h3>
+            <p style="background: var(--bg-primary); padding: 1rem; border-left: 3px solid var(--blue); border-radius: 0.3rem; margin-bottom: 1.5rem;">
+                You've trained a 5-layer feedforward network for binary sentiment classification on a dataset of 10,000 movie reviews. After 100 epochs, training loss is stuck at 0.70 (barely better than random), validation accuracy hovers at 52% (50% is random for binary classification), and there's no improvement. What could be wrong?
+            </p>
+
+            <p><strong>Use the questions below to diagnose the problem. Click each to reveal diagnostic hints.</strong></p>
+
+            <!-- Question 1 -->
+            <div class="question-card">
+                <div class="question-text">Q1: What activation function are you using in the hidden layers?</div>
+                <button class="reveal-btn" onclick="toggleReveal(this)">Reveal Answer</button>
+                <div class="hidden-content">
+                    <div class="answer-text">
+                        <strong>If using sigmoid or tanh:</strong> This is likely your problem. In a 5-layer network with sigmoid, gradients during backpropagation multiply by values between 0 and 0.25 at each layer. By the time you reach the first layer, gradients are effectively zero (e.g., 0.25^4 = 0.004). The early layers can't learn. <strong>Solution:</strong> Switch to ReLU for hidden layers. Use sigmoid only on the final output for binary classification.
+                        <div class="math-block" style="margin-top: 0.8rem;">
+                            $$\text{Better:} h^{[1]} = \text{ReLU}(W^{[1]} x + b^{[1]}), \ldots, \text{output} = \sigma(W^{[5]} h^{[4]} + b^{[5]})$$
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Question 2 -->
+            <div class="question-card">
+                <div class="question-text">Q2: What is your learning rate? Have you tried different values?</div>
+                <button class="reveal-btn" onclick="toggleReveal(this)">Reveal Answer</button>
+                <div class="hidden-content">
+                    <div class="answer-text">
+                        <strong>Too high (e.g., 0.1):</strong> Loss oscillates wildly and never decreases—the model overshoots the minimum. <strong>Too low (e.g., 0.00001):</strong> Training is glacially slow; you need 10,000 epochs instead of 100. <strong>Solution:</strong> Try 0.001 to 0.01 first. Use learning rate scheduling: start at 0.01, decay to 0.001 after 50 epochs. Or use Adam optimizer, which adapts the learning rate per parameter automatically.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Question 3 -->
+            <div class="question-card">
+                <div class="question-text">Q3: Have you plotted gradient magnitudes during backpropagation? Could you have dead ReLU neurons?</div>
+                <button class="reveal-btn" onclick="toggleReveal(this)">Reveal Answer</button>
+                <div class="hidden-content">
+                    <div class="answer-text">
+                        <strong>Dead ReLU problem:</strong> If many neurons receive mostly negative inputs during forward pass, their ReLU output is always 0. Their gradient is also 0, so they never update their weights. Once dead, they're stuck. <strong>Diagnosis:</strong> Log activations; if a neuron is 0% active (never fires), it's dead. <strong>Solutions:</strong> (1) Use Leaky ReLU: f(z) = max(0.01z, z), so gradient is 0.01 for negative inputs. (2) Reduce learning rate or batch size. (3) Initialize weights more carefully (He initialization: variance = 2/input_size).
+                    </div>
+                </div>
+            </div>
+
+            <!-- Question 4 -->
+            <div class="question-card">
+                <div class="question-text">Q4: What are your input features? Are you using pre-trained embeddings or random?</div>
+                <button class="reveal-btn" onclick="toggleReveal(this)">Reveal Answer</button>
+                <div class="hidden-content">
+                    <div class="answer-text">
+                        <strong>If using random embeddings:</strong> On a 10K-sample dataset, the embedding matrix (e.g., vocab_size=5000, embedding_dim=100) has 500K parameters. These must all be learned from 10K examples—easy to overfit and hard to generalize. <strong>Solution:</strong> Use pre-trained embeddings (Word2Vec, GloVe, or from a language model) which encode semantic relationships learned from billions of words. Alternatively, reduce embedding dimension or add dropout. If you must train embeddings, freeze them initially and fine-tune later.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Question 5 -->
+            <div class="question-card">
+                <div class="question-text">Q5: Is your cross-entropy loss correctly implemented? Common bugs?</div>
+                <button class="reveal-btn" onclick="toggleReveal(this)">Reveal Answer</button>
+                <div class="hidden-content">
+                    <div class="answer-text">
+                        <strong>Common bugs:</strong>
+                        <ul style="margin: 1rem 0; color: var(--text);">
+                            <li><strong>Forgetting the log:</strong> L = y * ŷ (wrong) vs L = -y * log(ŷ) (correct).</li>
+                            <li><strong>Softmax axis error:</strong> If you apply softmax to wrong axis, outputs don't sum to 1 per sample.</li>
+                            <li><strong>Numerical instability:</strong> log(0) is undefined. Use log(ŷ + 1e-8) or compute cross-entropy in log-space (logsumexp trick).</li>
+                            <li><strong>Scaling:</strong> Are you dividing by batch size? L = sum(losses) / batch_size.</li>
+                        </ul>
+                        <strong>Quick fix:</strong> Use a library (PyTorch's nn.CrossEntropyLoss, TensorFlow's SparseCategoricalCrossentropy) which handles these correctly.
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 2rem;">Integrated Diagnosis</h3>
+            <p>Most likely culprit in a 5-layer network: <strong>vanishing gradients with sigmoid</strong> (Q1) or <strong>dead ReLUs</strong> (Q3). The fix is almost always to use ReLU. If ReLU doesn't help, the next step is checking your learning rate and loss implementation. Debugging neural networks is an empirical skill—you'll develop intuition by training many models and observing what works.</p>
+
+        </section>
+
+        <!-- Chapter Navigation -->
+        <div class="chapter-nav">
+            <a href="chapter5.html" class="nav-btn">
+                <span class="nav-btn-label">← Previous</span>
+                <span class="nav-btn-title">Chapter 5: Embeddings</span>
+            </a>
+            <a href="chapter7.html" class="nav-btn">
+                <span class="nav-btn-label">Next →</span>
+                <span class="nav-btn-title">Chapter 7: Large Language Models</span>
+            </a>
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // ===== Intersection Observer for Progress Tracking =====
+        const progressBar = document.getElementById('progressBar');
+        const sections = document.querySelectorAll('.tracking-section');
+        const progressDots = document.querySelectorAll('.progress-dot');
+
+        const sectionObserver = new IntersectionObserver((entries) => {
+            let highestVisible = -1;
+            entries.forEach((entry, index) => {
+                const sectionIndex = Array.from(sections).indexOf(entry.target);
+                if (entry.isIntersecting) {
+                    highestVisible = Math.max(highestVisible, sectionIndex);
+                }
+            });
+
+            // Update progress bar
+            const progress = (highestVisible + 1) / sections.length * 100;
+            progressBar.style.width = progress + '%';
+
+            // Update dots
+            progressDots.forEach((dot, i) => {
+                if (i <= highestVisible) {
+                    dot.classList.add('active');
+                } else {
+                    dot.classList.remove('active');
+                }
+            });
+        }, { threshold: 0.3 });
+
+        sections.forEach(section => sectionObserver.observe(section));
+
+        // Progress dot navigation
+        progressDots.forEach((dot, index) => {
+            dot.addEventListener('click', () => {
+                sections[index].scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+
+        // ===== History Sidebar Toggle =====
+        document.getElementById('history-toggle').addEventListener('click', function() {
+            const content = document.getElementById('history-content');
+            content.style.display = content.style.display === 'none' ? 'block' : 'none';
+        });
+
+        // ===== Reveal Buttons =====
+        function toggleReveal(btn) {
+            const content = btn.nextElementSibling;
+            content.classList.toggle('revealed');
+            btn.textContent = content.classList.contains('revealed') ? 'Hide Answer' : 'Reveal Answer';
+        }
+
+        // ===== VISUALIZER 1: Single Neuron Simulator =====
+        const neuronInputs = {
+            x1: document.getElementById('neuron-x1'),
+            x2: document.getElementById('neuron-x2'),
+            w1: document.getElementById('neuron-w1'),
+            w2: document.getElementById('neuron-w2'),
+            b: document.getElementById('neuron-b'),
+            activation: document.getElementById('neuron-activation')
+        };
+
+        function sigmoid(z) { return 1 / (1 + Math.exp(-z)); }
+        function sigmoid_derivative(z) { return sigmoid(z) * (1 - sigmoid(z)); }
+        function tanh_fn(z) { return Math.tanh(z); }
+        function tanh_derivative(z) { return 1 - tanh_fn(z) ** 2; }
+        function relu(z) { return Math.max(0, z); }
+        function relu_derivative(z) { return z > 0 ? 1 : 0; }
+
+        function updateNeuronDisplay() {
+            const x1 = parseFloat(neuronInputs.x1.value);
+            const x2 = parseFloat(neuronInputs.x2.value);
+            const w1 = parseFloat(neuronInputs.w1.value);
+            const w2 = parseFloat(neuronInputs.w2.value);
+            const b = parseFloat(neuronInputs.b.value);
+            const activation = neuronInputs.activation.value;
+
+            const z = w1 * x1 + w2 * x2 + b;
+            let a;
+            if (activation === 'sigmoid') a = sigmoid(z);
+            else if (activation === 'tanh') a = tanh_fn(z);
+            else a = relu(z);
+
+            document.getElementById('neuron-x1-val').textContent = x1.toFixed(1);
+            document.getElementById('neuron-x2-val').textContent = x2.toFixed(1);
+            document.getElementById('neuron-w1-val').textContent = w1.toFixed(1);
+            document.getElementById('neuron-w2-val').textContent = w2.toFixed(1);
+            document.getElementById('neuron-b-val').textContent = b.toFixed(1);
+            document.getElementById('neuron-z').textContent = z.toFixed(3);
+            document.getElementById('neuron-a').textContent = a.toFixed(3);
+
+            // Draw neuron diagram
+            drawNeuronDiagram(x1, x2, w1, w2, b, z, a, activation);
+
+            // Draw activation function curve
+            drawActivationCurve(activation, z);
+        }
+
+        function drawNeuronDiagram(x1, x2, w1, w2, b, z, a, activation) {
+            const svg = document.getElementById('neuronDiagram');
+            svg.innerHTML = '';
+            const width = svg.clientWidth;
+            const height = svg.clientHeight || 200;
+
+            // Input nodes
+            const x1_y = height * 0.3;
+            const x2_y = height * 0.7;
+            const neuron_x = width * 0.7;
+            const neuron_y = height * 0.5;
+
+            // Draw connections
+            svg.innerHTML += `
+                <line x1="50" y1="${x1_y}" x2="${neuron_x - 20}" y2="${neuron_y}" stroke="var(--blue)" stroke-width="2" opacity="0.5"/>
+                <line x1="50" y1="${x2_y}" x2="${neuron_x - 20}" y2="${neuron_y}" stroke="var(--blue)" stroke-width="2" opacity="0.5"/>
+            `;
+
+            // Input circles
+            svg.innerHTML += `
+                <circle cx="50" cy="${x1_y}" r="15" fill="var(--orange)"/>
+                <circle cx="50" cy="${x2_y}" r="15" fill="var(--orange)"/>
+                <text x="50" y="${x1_y + 5}" text-anchor="middle" fill="var(--bg-primary)" font-weight="bold" font-size="12">x₁</text>
+                <text x="50" y="${x2_y + 5}" text-anchor="middle" fill="var(--bg-primary)" font-weight="bold" font-size="12">x₂</text>
+            `;
+
+            // Main neuron circle (color by activation)
+            const activationNorm = Math.max(0, Math.min(1, a)); // Normalize to [0, 1]
+            const hue = 240 - activationNorm * 120; // Blue to green
+            svg.innerHTML += `
+                <circle cx="${neuron_x}" cy="${neuron_y}" r="25" fill="hsl(${hue}, 80%, 50%)" opacity="0.8"/>
+                <text x="${neuron_x}" y="${neuron_y + 5}" text-anchor="middle" fill="white" font-weight="bold" font-size="14">σ</text>
+            `;
+
+            // Output
+            svg.innerHTML += `
+                <line x1="${neuron_x + 25}" y1="${neuron_y}" x2="${width - 50}" y2="${neuron_y}" stroke="var(--green)" stroke-width="2"/>
+                <circle cx="${width - 30}" cy="${neuron_y}" r="15" fill="var(--green)"/>
+                <text x="${width - 30}" y="${neuron_y + 5}" text-anchor="middle" fill="var(--bg-primary)" font-weight="bold" font-size="12">a</text>
+            `;
+
+            // Labels
+            svg.innerHTML += `
+                <text x="50" y="${x1_y - 25}" text-anchor="middle" fill="var(--text-dim)" font-size="11" font-weight="600">w₁=${w1.toFixed(1)}</text>
+                <text x="50" y="${x2_y + 40}" text-anchor="middle" fill="var(--text-dim)" font-size="11" font-weight="600">w₂=${w2.toFixed(1)}</text>
+                <text x="${neuron_x}" y="${neuron_y - 35}" text-anchor="middle" fill="var(--text-dim)" font-size="11" font-weight="600">b=${b.toFixed(1)}</text>
+            `;
+        }
+
+        function drawActivationCurve(activation, z) {
+            const canvas = document.getElementById('neuronActivationCurve');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.clientWidth;
+            const height = canvas.clientHeight || 200;
+            canvas.width = width;
+            canvas.height = height;
+
+            // Background
+            ctx.fillStyle = 'var(--bg-primary)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw axes
+            ctx.strokeStyle = 'var(--text-dim)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(50, height - 50);
+            ctx.lineTo(width - 30, height - 50);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(50, 20);
+            ctx.lineTo(50, height - 50);
+            ctx.stroke();
+
+            // Get activation function
+            let fn;
+            if (activation === 'sigmoid') fn = sigmoid;
+            else if (activation === 'tanh') fn = tanh_fn;
+            else fn = relu;
+
+            // Plot curve
+            ctx.strokeStyle = 'var(--blue)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < width - 80; i++) {
+                const z_val = -5 + (i / (width - 80)) * 10;
+                const y_val = fn(z_val);
+                const canvas_x = 50 + i;
+                const canvas_y = height - 50 - (y_val + 1) * (height - 70) / 2;
+                if (i === 0) ctx.moveTo(canvas_x, canvas_y);
+                else ctx.lineTo(canvas_x, canvas_y);
+            }
+            ctx.stroke();
+
+            // Mark current z
+            const z_norm = (z + 5) / 10;
+            if (z_norm >= 0 && z_norm <= 1) {
+                const a = fn(z);
+                const dot_x = 50 + z_norm * (width - 80);
+                const dot_y = height - 50 - (a + 1) * (height - 70) / 2;
+                ctx.fillStyle = 'var(--red)';
+                ctx.beginPath();
+                ctx.arc(dot_x, dot_y, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Labels
+            ctx.fillStyle = 'var(--text-dim)';
+            ctx.font = '12px monospace';
+            ctx.fillText('z', width - 20, height - 30);
+            ctx.fillText('f(z)', 20, 20);
+        }
+
+        Object.values(neuronInputs).forEach(input => {
+            input.addEventListener('input', updateNeuronDisplay);
+        });
+        updateNeuronDisplay();
+
+        // ===== VISUALIZER 2: XOR Decision Boundary =====
+        const xorCanvas = document.getElementById('xorCanvas');
+        const xorCtx = xorCanvas.getContext('2d');
+        let xorNetworkType = '1-layer';
+        let xorWeights = { hidden: [[0.5, 0.5], [-0.5, -0.5]], output: [1, 1, -0.5] };
+        let xorIterations = 0;
+        let xorTraining = false;
+
+        // XOR data points
+        const xorData = [
+            { x: 0, y: 0, label: 0 },
+            { x: 0, y: 1, label: 1 },
+            { x: 1, y: 0, label: 1 },
+            { x: 1, y: 1, label: 0 }
+        ];
+
+        document.getElementById('xor-network-type').addEventListener('change', (e) => {
+            xorNetworkType = e.target.value;
+            xorIterations = 0;
+            updateXORDisplay();
+        });
+
+        document.getElementById('xor-train-btn').addEventListener('click', () => {
+            if (xorTraining) return;
+            xorTraining = true;
+            for (let i = 0; i < 50; i++) {
+                trainXORStep();
+            }
+            xorTraining = false;
+        });
+
+        function trainXORStep() {
+            if (xorNetworkType === 'single') {
+                // Single layer: only rotate decision boundary
+                xorWeights.output[0] += 0.02 * (Math.random() - 0.5);
+                xorWeights.output[1] += 0.02 * (Math.random() - 0.5);
+            } else {
+                // Dual layer: update hidden weights
+                xorWeights.hidden[0][0] += 0.05 * (Math.random() - 0.5);
+                xorWeights.hidden[0][1] += 0.05 * (Math.random() - 0.5);
+                xorWeights.hidden[1][0] += 0.05 * (Math.random() - 0.5);
+                xorWeights.hidden[1][1] += 0.05 * (Math.random() - 0.5);
+            }
+            xorIterations++;
+            updateXORDisplay();
+        }
+
+        function updateXORDisplay() {
+            const width = xorCanvas.clientWidth;
+            const height = xorCanvas.clientHeight || 400;
+            xorCanvas.width = width;
+            xorCanvas.height = height;
+
+            const scale = Math.min(width, height) / 2;
+            const centerX = width / 2;
+            const centerY = height / 2;
+
+            // Draw decision boundary
+            xorCtx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            xorCtx.fillRect(0, 0, width, height);
+
+            // Grid visualization
+            for (let py = 0; py < 100; py++) {
+                for (let px = 0; px < 100; px++) {
+                    const x = px / 100;
+                    const y = py / 100;
+                    const output = predictXOR(x, y, xorNetworkType);
+                    const color = output > 0.5 ? 'rgba(255, 100, 100, 0.3)' : 'rgba(100, 100, 255, 0.3)';
+                    xorCtx.fillStyle = color;
+                    xorCtx.fillRect(centerX - scale + x * 2 * scale, centerY - scale + y * 2 * scale, 2 * scale / 100, 2 * scale / 100);
+                }
+            }
+
+            // Draw points
+            xorData.forEach(point => {
+                const px = centerX - scale + point.x * 2 * scale;
+                const py = centerY - scale + point.y * 2 * scale;
+                xorCtx.fillStyle = point.label === 1 ? 'var(--red)' : 'var(--blue)';
+                xorCtx.beginPath();
+                xorCtx.arc(px, py, 8, 0, Math.PI * 2);
+                xorCtx.fill();
+                xorCtx.strokeStyle = 'white';
+                xorCtx.lineWidth = 2;
+                xorCtx.stroke();
+            });
+
+            // Compute accuracy
+            let correct = 0;
+            xorData.forEach(point => {
+                const pred = predictXOR(point.x, point.y, xorNetworkType) > 0.5 ? 1 : 0;
+                if (pred === point.label) correct++;
+            });
+            const accuracy = (correct / xorData.length) * 100;
+
+            document.getElementById('xor-iterations').textContent = xorIterations;
+            document.getElementById('xor-accuracy').textContent = accuracy.toFixed(0);
+        }
+
+        function predictXOR(x, y, type) {
+            if (type === 'single') {
+                // Single layer (linear)
+                return 1 / (1 + Math.exp(-(xorWeights.output[0] * x + xorWeights.output[1] * y + xorWeights.output[2])));
+            } else {
+                // Dual layer (non-linear)
+                const h1 = Math.max(0, xorWeights.hidden[0][0] * x + xorWeights.hidden[0][1] * y);
+                const h2 = Math.max(0, xorWeights.hidden[1][0] * x + xorWeights.hidden[1][1] * y);
+                return 1 / (1 + Math.exp(-(xorWeights.output[0] * h1 + xorWeights.output[1] * h2 + xorWeights.output[2])));
+            }
+        }
+
+        updateXORDisplay();
+
+        // ===== VISUALIZER 3: Feedforward Network Forward Pass =====
+        const ffwNetwork = document.getElementById('ffwNetwork');
+        const ffwWidth = ffwNetwork.clientWidth || 600;
+        const ffwHeight = 400;
+
+        function drawFFWNetwork() {
+            ffwNetwork.innerHTML = '';
+            const layerGap = ffwWidth / 4;
+            const layers = [
+                { name: 'Input', size: 3, x: layerGap },
+                { name: 'Hidden 1', size: 4, x: 2 * layerGap },
+                { name: 'Output', size: 2, x: 3 * layerGap }
+            ];
+
+            layers.forEach((layer, layerIdx) => {
+                for (let i = 0; i < layer.size; i++) {
+                    const y = ffwHeight / 2 - (layer.size - 1) * 30 + i * 60;
+                    ffwNetwork.innerHTML += `
+                        <circle cx="${layer.x}" cy="${y}" r="15" fill="var(--blue)" opacity="0.7"/>
+                        <text x="${layer.x}" y="${y + 5}" text-anchor="middle" fill="white" font-size="10">${i}</text>
+                    `;
+                }
+            });
+
+            // Draw connections
+            for (let from = 0; from < layers[0].size; from++) {
+                for (let to = 0; to < layers[1].size; to++) {
+                    const y1 = ffwHeight / 2 - (layers[0].size - 1) * 30 + from * 60;
+                    const y2 = ffwHeight / 2 - (layers[1].size - 1) * 30 + to * 60;
+                    ffwNetwork.innerHTML += `
+                        <line x1="${layers[0].x}" y1="${y1}" x2="${layers[1].x}" y2="${y2}" stroke="var(--text-dim)" stroke-width="1" opacity="0.3"/>
+                    `;
+                }
+            }
+
+            for (let from = 0; from < layers[1].size; from++) {
+                for (let to = 0; to < layers[2].size; to++) {
+                    const y1 = ffwHeight / 2 - (layers[1].size - 1) * 30 + from * 60;
+                    const y2 = ffwHeight / 2 - (layers[2].size - 1) * 30 + to * 60;
+                    ffwNetwork.innerHTML += `
+                        <line x1="${layers[1].x}" y1="${y1}" x2="${layers[2].x}" y2="${y2}" stroke="var(--text-dim)" stroke-width="1" opacity="0.3"/>
+                    `;
+                }
+            }
+
+            // Draw labels
+            layers.forEach(layer => {
+                ffwNetwork.innerHTML += `
+                    <text x="${layer.x}" y="20" text-anchor="middle" fill="var(--text-dim)" font-size="12" font-weight="600">${layer.name}</text>
+                `;
+            });
+        }
+
+        drawFFWNetwork();
+
+        document.getElementById('ffw-forward-btn').addEventListener('click', () => {
+            const input = [0.5, -0.3, 0.8];
+            const hidden1 = input.map((x, i) => Math.max(0, x * (Math.random() - 0.5)));
+            const output = hidden1.map((x, i) => x * (Math.random() - 0.5));
+
+            document.getElementById('ffw-layer1').textContent = `[${input.map(x => x.toFixed(2)).join(', ')}]`;
+            document.getElementById('ffw-layer2').textContent = `[${hidden1.map(x => x.toFixed(2)).join(', ')}]`;
+            document.getElementById('ffw-layer3').textContent = `[${output.map(x => x.toFixed(2)).join(', ')}]`;
+        });
+
+        // ===== VISUALIZER 4: Activation Functions Comparison =====
+        const actfnCanvas = document.getElementById('activationFunctionsCanvas');
+        const actfnCtx = actfnCanvas.getContext('2d');
+
+        function drawActivationFunctions() {
+            const width = actfnCanvas.clientWidth;
+            const height = actfnCanvas.clientHeight || 300;
+            actfnCanvas.width = width;
+            actfnCanvas.height = height;
+
+            // Background
+            actfnCtx.fillStyle = 'var(--bg-primary)';
+            actfnCtx.fillRect(0, 0, width, height);
+
+            const margin = 50;
+            const graphWidth = width - 2 * margin;
+            const graphHeight = height - 2 * margin;
+
+            // Draw axes
+            actfnCtx.strokeStyle = 'var(--text-dim)';
+            actfnCtx.lineWidth = 1;
+            actfnCtx.beginPath();
+            actfnCtx.moveTo(margin, height - margin);
+            actfnCtx.lineTo(width - margin, height - margin);
+            actfnCtx.moveTo(margin, margin);
+            actfnCtx.lineTo(margin, height - margin);
+            actfnCtx.stroke();
+
+            // Sigmoid
+            if (document.getElementById('actfn-sigmoid-check').checked) {
+                actfnCtx.strokeStyle = 'var(--blue)';
+                actfnCtx.lineWidth = 2;
+                actfnCtx.beginPath();
+                for (let i = 0; i <= 100; i++) {
+                    const z = -5 + (i / 100) * 10;
+                    const y = sigmoid(z);
+                    const x = margin + (i / 100) * graphWidth;
+                    const py = height - margin - (y * graphHeight);
+                    if (i === 0) actfnCtx.moveTo(x, py);
+                    else actfnCtx.lineTo(x, py);
+                }
+                actfnCtx.stroke();
+            }
+
+            // Tanh
+            if (document.getElementById('actfn-tanh-check').checked) {
+                actfnCtx.strokeStyle = 'var(--purple)';
+                actfnCtx.lineWidth = 2;
+                actfnCtx.beginPath();
+                for (let i = 0; i <= 100; i++) {
+                    const z = -5 + (i / 100) * 10;
+                    const y = (tanh_fn(z) + 1) / 2;
+                    const x = margin + (i / 100) * graphWidth;
+                    const py = height - margin - (y * graphHeight);
+                    if (i === 0) actfnCtx.moveTo(x, py);
+                    else actfnCtx.lineTo(x, py);
+                }
+                actfnCtx.stroke();
+            }
+
+            // ReLU
+            if (document.getElementById('actfn-relu-check').checked) {
+                actfnCtx.strokeStyle = 'var(--green)';
+                actfnCtx.lineWidth = 2;
+                actfnCtx.beginPath();
+                for (let i = 0; i <= 100; i++) {
+                    const z = -5 + (i / 100) * 10;
+                    const y = Math.max(0, z) / 5;
+                    const x = margin + (i / 100) * graphWidth;
+                    const py = height - margin - (y * graphHeight);
+                    if (i === 0) actfnCtx.moveTo(x, py);
+                    else actfnCtx.lineTo(x, py);
+                }
+                actfnCtx.stroke();
+            }
+
+            // Labels
+            actfnCtx.fillStyle = 'var(--text-dim)';
+            actfnCtx.font = '12px monospace';
+            actfnCtx.fillText('z', width - 30, height - 20);
+            actfnCtx.fillText('f(z)', 10, 20);
+            actfnCtx.fillText('-5', margin - 15, height - margin + 15);
+            actfnCtx.fillText('5', width - margin - 10, height - margin + 15);
+        }
+
+        document.getElementById('actfn-sigmoid-check').addEventListener('change', drawActivationFunctions);
+        document.getElementById('actfn-tanh-check').addEventListener('change', drawActivationFunctions);
+        document.getElementById('actfn-relu-check').addEventListener('change', drawActivationFunctions);
+        drawActivationFunctions();
+    </script>
+
+</body>
+</html>

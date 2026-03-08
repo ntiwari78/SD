@@ -1,0 +1,1477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 10 · Post-training: Instruction Tuning, Alignment & Test-Time Compute</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<style>
+:root {
+  --bg-primary: #0a0e17;
+  --bg-secondary: #111827;
+  --bg-tertiary: #1a2332;
+  --bg-card: #151d2b;
+  --bg-code: #0d1117;
+  --accent-primary: #60a5fa;
+  --accent-secondary: #a78bfa;
+  --accent-tertiary: #34d399;
+  --accent-warm: #f59e0b;
+  --accent-rose: #f472b6;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --border-color: #1e293b;
+  --border-accent: #2d3a4d;
+  --glow-blue: rgba(96,165,250,0.12);
+  --glow-purple: rgba(167,139,250,0.12);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.75;
+  overflow-x: hidden;
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--border-accent); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent-primary); }
+
+/* ─── Hero Banner ─── */
+.hero {
+  position: relative;
+  min-height: 65vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, #0a0e17 0%, #111827 40%, #1a1040 70%, #0a0e17 100%);
+  overflow: hidden;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 600px 400px at 20% 50%, rgba(96,165,250,0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 500px 350px at 80% 30%, rgba(167,139,250,0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(96,165,250,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(96,165,250,0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 30%, transparent 100%);
+}
+
+.hero-content {
+  position: relative;
+  text-align: center;
+  max-width: 900px;
+  padding: 2rem;
+  z-index: 1;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(96,165,250,0.1);
+  border: 1px solid rgba(96,165,250,0.2);
+  border-radius: 999px;
+  padding: 6px 18px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--accent-primary);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 1.5rem;
+}
+
+.hero-badge .dot {
+  width: 6px; height: 6px;
+  background: var(--accent-tertiary);
+  border-radius: 50%;
+  animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.hero h1 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, #e2e8f0 0%, #60a5fa 50%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero h1 .thin { font-weight: 300; opacity: 0.7; }
+
+.hero-sub {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  max-width: 650px;
+  margin: 0 auto 2rem;
+}
+
+.hero-meta {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.hero-meta span { display: flex; align-items: center; gap: 6px; }
+.hero-meta .icon { font-size: 1rem; }
+
+/* ─── Navigation ─── */
+.toc-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10,14,23,0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0 2rem;
+  overflow-x: auto;
+}
+
+.toc-nav-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  gap: 0;
+  align-items: stretch;
+  min-height: 48px;
+}
+
+.toc-link {
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-decoration: none;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.toc-link:hover { color: var(--text-primary); border-bottom-color: var(--accent-primary); }
+.toc-link.active { color: var(--accent-primary); border-bottom-color: var(--accent-primary); }
+
+/* ─── Main Layout ─── */
+.main-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 3rem 2rem 6rem;
+}
+
+/* ─── Sections ─── */
+.section {
+  margin-bottom: 5rem;
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.section.visible { opacity: 1; transform: translateY(0); }
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.section-number {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--bg-primary);
+  background: var(--accent-primary);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.section-number.purple { background: var(--accent-secondary); }
+.section-number.green { background: var(--accent-tertiary); }
+.section-number.warm { background: var(--accent-warm); }
+.section-number.rose { background: var(--accent-rose); }
+
+.section-header h2 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* ─── Pedagogy Badges ─── */
+.pedagogy-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 1.5rem;
+}
+
+.badge-feynman { background: rgba(96,165,250,0.1); color: var(--accent-primary); border: 1px solid rgba(96,165,250,0.2); }
+.badge-technical { background: rgba(167,139,250,0.1); color: var(--accent-secondary); border: 1px solid rgba(167,139,250,0.2); }
+.badge-code { background: rgba(52,211,153,0.1); color: var(--accent-tertiary); border: 1px solid rgba(52,211,153,0.2); }
+.badge-socratic { background: rgba(244,114,182,0.1); color: var(--accent-rose); border: 1px solid rgba(244,114,182,0.2); }
+.badge-modern { background: rgba(245,158,11,0.1); color: var(--accent-warm); border: 1px solid rgba(245,158,11,0.2); }
+
+/* ─── Content Prose ─── */
+.prose { color: var(--text-secondary); font-size: 0.95rem; }
+.prose p { margin-bottom: 1.25rem; }
+.prose strong { color: var(--text-primary); font-weight: 600; }
+.prose em { color: var(--accent-primary); font-style: normal; }
+
+/* ─── Info Cards ─── */
+.info-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+}
+
+.info-card.blue-glow { border-left: 3px solid var(--accent-primary); background: linear-gradient(135deg, var(--bg-card), rgba(96,165,250,0.03)); }
+.info-card.purple-glow { border-left: 3px solid var(--accent-secondary); background: linear-gradient(135deg, var(--bg-card), rgba(167,139,250,0.03)); }
+.info-card.green-glow { border-left: 3px solid var(--accent-tertiary); background: linear-gradient(135deg, var(--bg-card), rgba(52,211,153,0.03)); }
+.info-card.warm-glow { border-left: 3px solid var(--accent-warm); background: linear-gradient(135deg, var(--bg-card), rgba(245,158,11,0.03)); }
+.info-card.rose-glow { border-left: 3px solid var(--accent-rose); background: linear-gradient(135deg, var(--bg-card), rgba(244,114,182,0.03)); }
+
+.info-card h4 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.info-card p, .info-card li {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.info-card ul { padding-left: 1.2rem; margin-top: 0.5rem; }
+.info-card li { margin-bottom: 0.4rem; }
+
+/* ─── Math Blocks ─── */
+.math-block {
+  background: var(--bg-code);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 1.5rem 2rem;
+  margin: 1.5rem 0;
+  overflow-x: auto;
+  text-align: center;
+}
+
+.math-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.75rem;
+}
+
+/* ─── Code Blocks ─── */
+.code-container {
+  background: var(--bg-code);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 1.5rem 0;
+}
+
+.code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.code-header .lang {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--accent-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.code-header .copy-btn {
+  background: none;
+  border: 1px solid var(--border-accent);
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  padding: 3px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.code-header .copy-btn:hover { color: var(--text-primary); border-color: var(--accent-primary); }
+
+.code-body {
+  padding: 1.25rem;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  line-height: 1.8;
+  color: var(--text-secondary);
+}
+
+.code-body .comment { color: #546e7a; font-style: italic; }
+.code-body .keyword { color: #c792ea; }
+.code-body .string { color: #c3e88d; }
+.code-body .function { color: #82aaff; }
+.code-body .number { color: #f78c6c; }
+.code-body .decorator { color: #ffcb6b; }
+.code-body .class-name { color: #ffcb6b; }
+.code-body .param { color: #f78c6c; }
+.code-body .operator { color: #89ddff; }
+.code-body .builtin { color: #82aaff; }
+
+/* ─── Interactive Visualizers ─── */
+.visualizer {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 2rem 0;
+}
+
+.viz-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.viz-header h4 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.viz-header .interactive-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  background: rgba(52,211,153,0.15);
+  color: var(--accent-tertiary);
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.viz-body { padding: 1.5rem; }
+
+/* ─── Pipeline Visualizer ─── */
+.pipeline {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  overflow-x: auto;
+  padding: 1rem 0;
+}
+
+.pipeline-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 140px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.pipeline-stage:hover { transform: translateY(-4px); }
+
+.pipeline-stage .stage-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  transition: all 0.3s;
+}
+
+.pipeline-stage.active .stage-icon { box-shadow: 0 0 25px rgba(96,165,250,0.3); }
+
+.pipeline-stage .stage-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.pipeline-stage.active .stage-label { color: var(--text-primary); }
+
+.pipeline-arrow {
+  font-size: 1.2rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.stage-detail {
+  background: var(--bg-code);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  display: none;
+}
+
+.stage-detail.active { display: block; }
+
+/* ─── Preference Pair Visualizer ─── */
+.pref-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+@media (max-width: 640px) { .pref-pair { grid-template-columns: 1fr; } }
+
+.pref-card {
+  border-radius: 10px;
+  padding: 1.25rem;
+  border: 1px solid var(--border-color);
+}
+
+.pref-card.chosen {
+  background: rgba(52,211,153,0.05);
+  border-color: var(--accent-tertiary);
+}
+
+.pref-card.rejected {
+  background: rgba(244,63,94,0.05);
+  border-color: #f43f5e;
+}
+
+.pref-card-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.75rem;
+}
+
+.pref-card.chosen .pref-card-label { color: var(--accent-tertiary); }
+.pref-card.rejected .pref-card-label { color: #f43f5e; }
+
+.pref-card p { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; }
+
+/* ─── Sliders ─── */
+.slider-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.slider-group label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  min-width: 50px;
+}
+
+.slider-group input[type="range"] {
+  flex: 1;
+  -webkit-appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-accent);
+  outline: none;
+}
+
+.slider-group input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(96,165,250,0.4);
+}
+
+.slider-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  color: var(--accent-primary);
+  min-width: 40px;
+  text-align: right;
+}
+
+/* ─── Bradley-Terry Visualizer ─── */
+.bt-viz {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.bt-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.bt-bar-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  min-width: 80px;
+}
+
+.bt-bar-track {
+  flex: 1;
+  height: 24px;
+  background: var(--bg-code);
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+}
+
+.bt-bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.5s ease;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: white;
+  font-weight: 600;
+}
+
+.bt-bar-fill.win { background: linear-gradient(90deg, var(--accent-tertiary), #2dd4bf); }
+.bt-bar-fill.lose { background: linear-gradient(90deg, #f43f5e, #e11d48); }
+
+/* ─── Sidebar Toggles ─── */
+.sidebar-toggle {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  margin: 1.5rem 0;
+  overflow: hidden;
+}
+
+.sidebar-toggle-header {
+  padding: 1rem 1.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background 0.2s;
+}
+
+.sidebar-toggle-header:hover { background: var(--bg-card); }
+
+.sidebar-toggle-header h4 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebar-toggle-arrow {
+  transition: transform 0.3s;
+  color: var(--text-muted);
+}
+
+.sidebar-toggle.open .sidebar-toggle-arrow { transform: rotate(180deg); }
+
+.sidebar-toggle-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease;
+}
+
+.sidebar-toggle.open .sidebar-toggle-body { max-height: 2000px; }
+
+.sidebar-toggle-content {
+  padding: 1rem 1.25rem 1.25rem;
+  border-top: 1px solid var(--border-color);
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+/* ─── Socratic Challenge ─── */
+.challenge-box {
+  background: linear-gradient(135deg, rgba(244,114,182,0.05), rgba(167,139,250,0.05));
+  border: 1px solid rgba(244,114,182,0.2);
+  border-radius: 12px;
+  padding: 2rem;
+  margin: 2rem 0;
+}
+
+.challenge-box h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent-rose);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.challenge-scenario {
+  background: var(--bg-code);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1rem 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.challenge-question {
+  padding: 0.75rem 1rem;
+  margin: 0.5rem 0;
+  border-radius: 8px;
+  background: rgba(244,114,182,0.05);
+  border: 1px solid rgba(244,114,182,0.1);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.challenge-question:hover {
+  background: rgba(244,114,182,0.1);
+  border-color: rgba(244,114,182,0.3);
+}
+
+.challenge-question .q-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--accent-rose);
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.challenge-question p { font-size: 0.85rem; color: var(--text-secondary); }
+
+.challenge-answer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.challenge-answer-content {
+  padding: 0.75rem 1rem;
+  font-size: 0.82rem;
+  color: var(--accent-tertiary);
+  background: rgba(52,211,153,0.05);
+  border-radius: 6px;
+  margin-top: 0.5rem;
+  line-height: 1.6;
+}
+
+.challenge-question.open .challenge-answer { max-height: 500px; }
+
+/* ─── Finetuning Comparison Table ─── */
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  margin: 1.5rem 0;
+}
+
+.comparison-table th {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  background: var(--bg-tertiary);
+  border-bottom: 2px solid var(--accent-primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent-primary);
+}
+
+.comparison-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.comparison-table tr:hover td { background: rgba(96,165,250,0.03); }
+
+/* ─── Back to Dashboard ─── */
+.back-link {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background: var(--accent-primary);
+  color: var(--bg-primary);
+  padding: 10px 18px;
+  border-radius: 10px;
+  text-decoration: none;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  box-shadow: 0 4px 20px rgba(96,165,250,0.3);
+  transition: all 0.2s;
+  z-index: 100;
+}
+
+.back-link:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(96,165,250,0.4); }
+
+/* ─── Responsive ─── */
+@media (max-width: 768px) {
+  .main-container { padding: 2rem 1rem 4rem; }
+  .pipeline { flex-direction: column; }
+  .pipeline-arrow { transform: rotate(90deg); }
+  .hero { min-height: 50vh; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════ HERO ═══════════════════════════════════════ -->
+<section class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+    <div class="hero-badge"><span class="dot"></span> Chapter 10 · Part IV: NLP Applications</div>
+    <h1>Post-training: <span class="thin">Instruction Tuning,</span><br>Alignment &amp; Test-Time Compute</h1>
+    <p class="hero-sub">From raw pretrained models to helpful, harmless AI assistants &mdash; the three-stage rocket of SFT, RLHF/DPO, and chain-of-thought reasoning.</p>
+    <div class="hero-meta">
+      <span><span class="icon">&#128218;</span> Jurafsky &amp; Martin, 3rd Ed. Jan 2026</span>
+      <span><span class="icon">&#9201;</span> ~35 min read</span>
+      <span><span class="icon">&#128300;</span> 5 Interactive Modules</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════ NAV ═══════════════════════════════════════ -->
+<nav class="toc-nav">
+  <div class="toc-nav-inner">
+    <a href="#feynman" class="toc-link active" data-section="feynman">Feynman Bridge</a>
+    <a href="#sft" class="toc-link" data-section="sft">10.1 Instruction Tuning</a>
+    <a href="#preferences" class="toc-link" data-section="preferences">10.2 Preference Learning</a>
+    <a href="#alignment" class="toc-link" data-section="alignment">10.3 RLHF &amp; DPO</a>
+    <a href="#ttc" class="toc-link" data-section="ttc">10.4 Test-Time Compute</a>
+    <a href="#code" class="toc-link" data-section="code">Code Lab</a>
+    <a href="#modern" class="toc-link" data-section="modern">Modern Bridge</a>
+    <a href="#socratic" class="toc-link" data-section="socratic">Challenge</a>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════ MAIN ═══════════════════════════════════════ -->
+<main class="main-container">
+
+<!-- ─────────────── §0  FEYNMAN BRIDGE ─────────────── -->
+<section id="feynman" class="section" data-section="feynman">
+  <div class="section-header">
+    <div class="section-number">F</div>
+    <h2>The Feynman Bridge</h2>
+  </div>
+  <div class="pedagogy-badge badge-feynman">&#127758; Zero-Jargon Intuition</div>
+
+  <div class="prose">
+    <p>Imagine you've just bought a brand-new puppy. It already knows how to breathe, walk, and sniff around &mdash; those are its <em>pretrained</em> abilities, learned from simply growing up in the world. But it doesn't yet sit on command or come when you call. That's the gap between <strong>raw capability</strong> and <strong>useful behavior</strong>.</p>
+
+    <p><strong>Instruction Tuning (SFT)</strong> is obedience school. You give the puppy hundreds of examples: "Sit" &#8594; sits, "Fetch" &#8594; fetches. After enough examples, the puppy generalizes &mdash; it starts following <em>new</em> commands it has never heard before, because it learned the <em>meta-skill</em> of obeying instructions.</p>
+
+    <p><strong>Preference Alignment (RLHF/DPO)</strong> is the next step: a human judge watches two versions of the puppy's behavior and picks the better one. "When asked to shake, extending the left paw gently is better than knocking over the coffee table." The puppy learns not just <em>what</em> to do, but <em>how</em> to do it in a way humans actually prefer &mdash; being helpful, honest, and harmless.</p>
+
+    <p><strong>Test-Time Compute (Chain-of-Thought)</strong> is teaching the puppy to pause and think before acting. Instead of immediately fetching the first object it sees, it learns to break down the problem: "The ball is behind the couch &#8594; I need to go around &#8594; then grab it &#8594; then bring it back." Step-by-step reasoning at <em>inference time</em> dramatically improves performance on hard tasks.</p>
+  </div>
+
+  <div class="info-card blue-glow">
+    <h4>&#128161; The Three-Stage Rocket</h4>
+    <p>Think of a modern LLM as a <strong>three-stage rocket</strong>: Stage 1 (Pretraining) builds the engine with trillions of words. Stage 2 (Instruction Tuning + Preference Alignment) steers it toward the right destination. Stage 3 (Test-Time Compute) lets it course-correct mid-flight on hard problems.</p>
+  </div>
+</section>
+
+<!-- ─────────────── §1  INSTRUCTION TUNING ─────────────── -->
+<section id="sft" class="section" data-section="sft">
+  <div class="section-header">
+    <div class="section-number">10.1</div>
+    <h2>Instruction Tuning (SFT)</h2>
+  </div>
+  <div class="pedagogy-badge badge-technical">&#128200; Technical Ascent</div>
+
+  <div class="prose">
+    <p><strong>Instruction tuning</strong> (also called <em>Supervised Fine Tuning</em> or SFT) takes a base pretrained LLM and trains it on a corpus of (instruction, response) pairs using the <em>same</em> next-token prediction objective. Although the loss is identical to pretraining, the data now has explicit supervised structure: each instruction has a correct answer.</p>
+
+    <p>The key insight is that the model doesn't just learn the specific tasks in the data &mdash; it engages in a form of <strong>meta-learning</strong>, improving its ability to follow instructions <em>generally</em>, even on novel tasks it has never seen.</p>
+  </div>
+
+  <!-- Finetuning Pipeline Viz -->
+  <div class="visualizer">
+    <div class="viz-header">
+      <h4>&#128736; Finetuning Methods Compared</h4>
+      <span class="interactive-tag">Interactive</span>
+    </div>
+    <div class="viz-body">
+      <div class="pipeline" id="finetunePipeline">
+        <div class="pipeline-stage active" data-stage="cont" onclick="showStage('cont')">
+          <div class="stage-icon" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">&#128218;</div>
+          <div class="stage-label">Continued<br>Pretraining</div>
+        </div>
+        <div class="pipeline-arrow">&#8594;</div>
+        <div class="pipeline-stage" data-stage="peft" onclick="showStage('peft')">
+          <div class="stage-icon" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">&#9881;</div>
+          <div class="stage-label">Parameter-Efficient<br>(LoRA)</div>
+        </div>
+        <div class="pipeline-arrow">&#8594;</div>
+        <div class="pipeline-stage" data-stage="mlm" onclick="showStage('mlm')">
+          <div class="stage-icon" style="background: linear-gradient(135deg, #10b981, #059669);">&#128373;</div>
+          <div class="stage-label">MLM<br>Finetuning</div>
+        </div>
+        <div class="pipeline-arrow">&#8594;</div>
+        <div class="pipeline-stage" data-stage="sft" onclick="showStage('sft')">
+          <div class="stage-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706);">&#127919;</div>
+          <div class="stage-label">Instruction<br>Tuning (SFT)</div>
+        </div>
+      </div>
+      <div class="stage-detail active" id="detail-cont">
+        <strong>Continued Pretraining:</strong> All parameters updated on domain-specific data (e.g., medical text). Uses the same next-word prediction objective. Adapts to a new domain but does NOT teach the model to follow instructions. Inference works well on the finetuning domain.
+      </div>
+      <div class="stage-detail" id="detail-peft">
+        <strong>Parameter-Efficient Finetuning (LoRA):</strong> Freezes the pretrained weights and trains small adapter matrices (A &amp; B). Dramatically reduces training cost. Good for domain adaptation with limited compute. The pretrained model parameters remain frozen.
+      </div>
+      <div class="stage-detail" id="detail-mlm">
+        <strong>MLM Finetuning (Ch. 9):</strong> Adds a task-specific classification head on top of the encoder. Trains only the head (and sometimes final layers) using a task-specific loss. Works for classification and sequence labeling (e.g., NER). Cannot generalize to unseen tasks.
+      </div>
+      <div class="stage-detail" id="detail-sft">
+        <strong>Instruction Tuning (SFT):</strong> Trains on diverse (instruction, response) pairs using the standard LM loss. The model learns meta-skills: how to follow instructions generally. Works on <em>unseen tasks</em> at inference time. Training cost is a small fraction of pretraining (thousands of examples, a few epochs).
+      </div>
+    </div>
+  </div>
+
+  <div class="math-block">
+    <div class="math-label">SFT Loss &mdash; Standard Cross-Entropy over instruction tokens</div>
+    <div id="math-sft">$$\mathcal{L}_{\text{SFT}} = -\sum_{t=1}^{T} \log P_\theta(w_t \mid w_1, \dots, w_{t-1})$$</div>
+  </div>
+
+  <div class="prose">
+    <p>The training data consists of instructions templated from supervised NLP datasets (e.g., SQuAD for Q&A, SST for sentiment) or directly authored by humans and LLMs. Major datasets include <strong>Aya</strong> (503M instructions, 114 languages), <strong>SuperNatural Instructions</strong> (12M examples, 1600 tasks), <strong>Flan 2022</strong> (15M examples, 1836 tasks), and <strong>OPT-IML</strong> (18M examples, 2000 tasks).</p>
+  </div>
+
+  <div class="info-card green-glow">
+    <h4>&#128202; Evaluation Strategy</h4>
+    <p>Since the goal is learning to follow instructions <em>in general</em>, evaluation uses a <strong>leave-one-cluster-out</strong> approach: tasks are grouped by similarity, and entire clusters are held out for testing. This ensures we measure generalization to genuinely novel task types, not just unseen instances of trained tasks.</p>
+  </div>
+
+  <!-- Historical sidebar -->
+  <div class="sidebar-toggle" onclick="this.classList.toggle('open')">
+    <div class="sidebar-toggle-header">
+      <h4>&#128220; Historical Context: From Task-Specific to General Instruction Followers</h4>
+      <span class="sidebar-toggle-arrow">&#9660;</span>
+    </div>
+    <div class="sidebar-toggle-body">
+      <div class="sidebar-toggle-content">
+        <p>Before instruction tuning, each NLP application required its own model, trained on its own dataset with its own classification head. The breakthrough insight (circa 2021-2022) was that by reformulating all tasks as text-to-text instruction-following, a single model could handle them all. Early examples like InstructGPT (Ouyang et al., 2022) showed that even 500 safety-focused instructions mixed into a large dataset could substantially reduce harmful outputs. This paradigm shift moved NLP from "one model per task" to "one model, infinite tasks."</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────── §2  PREFERENCE LEARNING ─────────────── -->
+<section id="preferences" class="section" data-section="preferences">
+  <div class="section-header">
+    <div class="section-number purple">10.2</div>
+    <h2>Learning from Preferences</h2>
+  </div>
+  <div class="pedagogy-badge badge-technical">&#128200; Technical Ascent</div>
+
+  <div class="prose">
+    <p>Instruction tuning teaches a model <em>what</em> to do, but not necessarily <em>how well</em> to do it. <strong>Preference-based learning</strong> uses human (or AI) judgments to further refine outputs &mdash; reducing hallucinations, unsafe content, and unhelpful responses.</p>
+
+    <p>The data takes the form of prompt/output pairs where one response is <em>preferred</em> over another: \((o_i \succ o_j \mid x)\). These preferences come from three sources: direct human annotation, implicit signals from online platforms (e.g., upvotes on StackExchange), and synthetic judgments from LLMs themselves.</p>
+  </div>
+
+  <!-- Preference Pair Demo -->
+  <div class="visualizer">
+    <div class="viz-header">
+      <h4>&#128200; Preference Data Example (HH-RLHF)</h4>
+      <span class="interactive-tag">Interactive</span>
+    </div>
+    <div class="viz-body">
+      <div class="info-card" style="background: var(--bg-code); border-color: var(--border-color); margin-bottom: 1rem;">
+        <h4 style="color: var(--accent-primary);">&#128172; Prompt</h4>
+        <p style="font-family: 'JetBrains Mono', monospace; font-size: 0.82rem;">"What is malaria?"</p>
+      </div>
+      <div class="pref-pair">
+        <div class="pref-card chosen">
+          <div class="pref-card-label">&#10004; Chosen</div>
+          <p>"Here's an answer from a CDC page: 'Malaria is a serious disease caused by a parasite that is spread through the bite of the mosquito.'"</p>
+        </div>
+        <div class="pref-card rejected">
+          <div class="pref-card-label">&#10008; Rejected</div>
+          <p>"I don't know what malaria is."</p>
+        </div>
+      </div>
+
+      <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 1rem;">The chosen response is factual, cites a source, and directly answers the question. The rejected response is unhelpful despite being technically "honest."</p>
+    </div>
+  </div>
+
+  <!-- Bradley-Terry Model -->
+  <div class="prose" style="margin-top: 1.5rem;">
+    <p>To model preferences probabilistically, we use the <strong>Bradley-Terry Model</strong> (1952): each output gets a latent reward score \(z\), and the probability that output \(o_i\) is preferred over \(o_j\) is the logistic sigmoid of the score difference:</p>
+  </div>
+
+  <div class="math-block">
+    <div class="math-label">Bradley-Terry Preference Model</div>
+    <div id="math-bt">$$P(o_i \succ o_j \mid x) = \frac{1}{1 + e^{-(z_i - z_j)}} = \sigma(z_i - z_j)$$</div>
+  </div>
+
+  <!-- Interactive BT Visualizer -->
+  <div class="visualizer">
+    <div class="viz-header">
+      <h4>&#128200; Bradley-Terry Score Explorer</h4>
+      <span class="interactive-tag">Interactive</span>
+    </div>
+    <div class="viz-body">
+      <div class="slider-group">
+        <label>z_win</label>
+        <input type="range" id="btZwin" min="-5" max="5" step="0.1" value="2.5" oninput="updateBT()">
+        <span class="slider-value" id="btZwinVal">2.5</span>
+      </div>
+      <div class="slider-group">
+        <label>z_lose</label>
+        <input type="range" id="btZlose" min="-5" max="5" step="0.1" value="-1.0" oninput="updateBT()">
+        <span class="slider-value" id="btZloseVal">-1.0</span>
+      </div>
+      <div class="bt-viz" style="margin-top: 1rem;">
+        <div class="bt-bar-container">
+          <div class="bt-bar-label">P(win)</div>
+          <div class="bt-bar-track">
+            <div class="bt-bar-fill win" id="btWinBar" style="width: 97%;">97.1%</div>
+          </div>
+        </div>
+        <div class="bt-bar-container">
+          <div class="bt-bar-label">P(lose)</div>
+          <div class="bt-bar-track">
+            <div class="bt-bar-fill lose" id="btLoseBar" style="width: 3%;">2.9%</div>
+          </div>
+        </div>
+      </div>
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--text-muted); margin-top: 1rem; text-align: center;">
+        &#948; = z_win - z_lose = <span id="btDelta">3.5</span> &nbsp;&nbsp;|&nbsp;&nbsp; &#963;(&#948;) = <span id="btSigma">0.971</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="prose">
+    <p>A <strong>reward model</strong> is trained by replacing the language model head of a pretrained LLM with a linear layer that outputs a scalar score. This model is trained on the preference data using the Bradley-Terry framework and cross-entropy loss.</p>
+  </div>
+
+  <div class="math-block">
+    <div class="math-label">Reward Model Loss (Binary CE over Preference Pairs)</div>
+    <div id="math-rm">$$\mathcal{L}_{\text{RM}} = -\log \sigma\big(r_\phi(x, o_w) - r_\phi(x, o_l)\big)$$</div>
+  </div>
+</section>
+
+<!-- ─────────────── §3  RLHF & DPO ─────────────── -->
+<section id="alignment" class="section" data-section="alignment">
+  <div class="section-header">
+    <div class="section-number green">10.3</div>
+    <h2>LLM Alignment via Preference-Based Learning</h2>
+  </div>
+  <div class="pedagogy-badge badge-technical">&#128200; Technical Ascent</div>
+
+  <div class="prose">
+    <p>The alignment process uses a <strong>Reinforcement Learning</strong> framework: tokens are <em>actions</em>, context is <em>state</em>, the LLM is a <em>policy</em> \(\pi_\theta\), and the reward model provides <em>rewards</em>. The objective is to maximize expected reward while not straying too far from the original model:</p>
+  </div>
+
+  <div class="math-block">
+    <div class="math-label">KL-Constrained RL Objective</div>
+    <div id="math-rl">$$\pi^* = \arg\max_{\pi_\theta} \mathbb{E}_{x \sim \mathcal{D},\, o \sim \pi_\theta(\cdot|x)} \Big[ r(x,o) - \beta \, D_{\text{KL}}\big[\pi_\theta(o|x) \,\|\, \pi_{\text{ref}}(o|x)\big] \Big]$$</div>
+  </div>
+
+  <div class="prose">
+    <p>The KL-divergence penalty prevents the model from "reward hacking" &mdash; collapsing onto a narrow set of outputs that game the reward model. The \(\beta\) hyperparameter controls the strength of this constraint.</p>
+  </div>
+
+  <div class="info-card purple-glow">
+    <h4>&#128273; Direct Preference Optimization (DPO)</h4>
+    <p>DPO's key insight: you can algebraically rearrange the closed-form solution to the RL objective so the reward function cancels out, letting you train <em>directly</em> on preference pairs without ever learning an explicit reward model or doing online sampling.</p>
+  </div>
+
+  <div class="math-block">
+    <div class="math-label">DPO Loss Function</div>
+    <div id="math-dpo">$$\mathcal{L}_{\text{DPO}}(\pi_\theta) = -\mathbb{E}_{(x, o_w, o_l) \sim \mathcal{D}} \left[ \log \sigma \left( \beta \log \frac{\pi_\theta(o_w|x)}{\pi_{\text{ref}}(o_w|x)} - \beta \log \frac{\pi_\theta(o_l|x)}{\pi_{\text{ref}}(o_l|x)} \right) \right]$$</div>
+  </div>
+
+  <!-- DPO vs PPO comparison -->
+  <table class="comparison-table">
+    <thead>
+      <tr>
+        <th>Property</th>
+        <th>PPO (RL-based)</th>
+        <th>DPO (Supervised)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Reward Model</strong></td>
+        <td>Requires explicit training</td>
+        <td>No reward model needed</td>
+      </tr>
+      <tr>
+        <td><strong>Online Sampling</strong></td>
+        <td>Yes &mdash; expensive generation from &#960;&#952;</td>
+        <td>No &mdash; uses static preference data</td>
+      </tr>
+      <tr>
+        <td><strong>Models in Memory</strong></td>
+        <td>4 (policy, ref, reward, value)</td>
+        <td>2 (policy, ref)</td>
+      </tr>
+      <tr>
+        <td><strong>Training Stability</strong></td>
+        <td>Sensitive to hyperparams</td>
+        <td>More stable gradient signal</td>
+      </tr>
+      <tr>
+        <td><strong>&#946; typical range</strong></td>
+        <td>N/A (uses KL penalty directly)</td>
+        <td>0.01 &ndash; 0.1</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="sidebar-toggle" onclick="this.classList.toggle('open')">
+    <div class="sidebar-toggle-header">
+      <h4>&#128220; Historical Context: From RLHF to DPO</h4>
+      <span class="sidebar-toggle-arrow">&#9660;</span>
+    </div>
+    <div class="sidebar-toggle-body">
+      <div class="sidebar-toggle-content">
+        <p>The idea of using human feedback to align language models gained prominence with InstructGPT (Ouyang et al., 2022), which used PPO-based RLHF. The process was powerful but notoriously unstable and compute-heavy, requiring 4 models in memory simultaneously. DPO (Rafailov et al., 2023) showed that the same objective could be optimized directly from preference data via a clever algebraic rearrangement, reducing both complexity and cost. This simplification accelerated the adoption of alignment techniques across the field and made preference-based training accessible to smaller labs.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────── §4  TEST-TIME COMPUTE ─────────────── -->
+<section id="ttc" class="section" data-section="ttc">
+  <div class="section-header">
+    <div class="section-number warm">10.4</div>
+    <h2>Test-Time Compute &amp; Chain-of-Thought</h2>
+  </div>
+  <div class="pedagogy-badge badge-technical">&#128200; Technical Ascent</div>
+
+  <div class="prose">
+    <p>Even after pretraining, instruction tuning, and preference alignment, we can improve performance further at <em>inference time</em> by spending extra compute. <strong>Chain-of-thought (CoT) prompting</strong> encourages the model to output intermediate reasoning steps before arriving at a final answer.</p>
+
+    <p>The technique is simple: augment few-shot demonstrations with explicit reasoning traces. This causes the model to generate similar reasoning for new problems, dramatically improving performance on tasks requiring multi-step logic (math, temporal reasoning, logical deduction).</p>
+  </div>
+
+  <!-- CoT Demo -->
+  <div class="visualizer">
+    <div class="viz-header">
+      <h4>&#9889; Chain-of-Thought vs. Standard Prompting</h4>
+      <span class="interactive-tag">Interactive</span>
+    </div>
+    <div class="viz-body">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="info-card" style="border-color: #f43f5e; margin: 0;">
+          <h4 style="color: #f43f5e; font-size: 0.78rem;">&#10060; Standard Prompting</h4>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; line-height: 1.7;">
+            <p style="color: var(--text-muted); margin-bottom: 0.5rem;"><strong>Q:</strong> Roger has 5 tennis balls. He buys 2 more cans of 3. How many does he have now?</p>
+            <p><strong>A:</strong> The answer is <span style="color: #f43f5e;">11</span>. <span style="color: #f43f5e;">&#10008;</span></p>
+          </div>
+        </div>
+        <div class="info-card" style="border-color: var(--accent-tertiary); margin: 0;">
+          <h4 style="color: var(--accent-tertiary); font-size: 0.78rem;">&#10004; Chain-of-Thought Prompting</h4>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; line-height: 1.7;">
+            <p style="color: var(--text-muted); margin-bottom: 0.5rem;"><strong>Q:</strong> Roger has 5 tennis balls. He buys 2 more cans of 3. How many does he have now?</p>
+            <p><em style="color: var(--accent-secondary);">Roger started with 5 balls. 2 cans of 3 = 6 balls. 5 + 6 = 11.</em></p>
+            <p><strong>A:</strong> The answer is <span style="color: var(--accent-tertiary);">11</span>. <span style="color: var(--accent-tertiary);">&#10004;</span></p>
+          </div>
+        </div>
+      </div>
+      <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 1rem; text-align: center;">The key difference: CoT prompts include <strong>reasoning steps</strong> in the demonstrations, causing the model to generate similar reasoning for new problems.</p>
+    </div>
+  </div>
+
+  <div class="info-card warm-glow">
+    <h4>&#128161; Why Does CoT Work?</h4>
+    <p>Chain-of-thought effectively decomposes a hard problem into a sequence of easier problems. Each step is within the model's capability &mdash; it's the composition that's hard. By making the reasoning explicit in the output, each intermediate step conditions the next, creating a "reasoning scaffold" that guides the model to the correct answer.</p>
+  </div>
+</section>
+
+<!-- ─────────────── §5  CODE LAB ─────────────── -->
+<section id="code" class="section" data-section="code">
+  <div class="section-header">
+    <div class="section-number green">&#128187;</div>
+    <h2>Code Lab: Full SFT + DPO Pipeline</h2>
+  </div>
+  <div class="pedagogy-badge badge-code">&#128187; Implementation</div>
+
+  <!-- Code: SFT -->
+  <div class="code-container">
+    <div class="code-header">
+      <span class="lang">Python &middot; PyTorch + HuggingFace</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <div class="code-body"><pre><span class="comment"># ═══════════════════════════════════════════════════════════</span>
+<span class="comment"># Part 1: Supervised Fine-Tuning (SFT) with Instruction Data</span>
+<span class="comment"># ═══════════════════════════════════════════════════════════</span>
+<span class="comment"># This mirrors Section 10.1: we take a pretrained LLM and</span>
+<span class="comment"># continue training it on (instruction, response) pairs</span>
+<span class="comment"># using the SAME next-token prediction objective.</span>
+
+<span class="keyword">import</span> torch
+<span class="keyword">from</span> transformers <span class="keyword">import</span> (
+    AutoModelForCausalLM,     <span class="comment"># The causal LM — our policy π</span>
+    AutoTokenizer,            <span class="comment"># Converts text → token IDs</span>
+    TrainingArguments,        <span class="comment"># Hyperparameters for training</span>
+)
+<span class="keyword">from</span> trl <span class="keyword">import</span> SFTTrainer   <span class="comment"># HuggingFace TRL: streamlined SFT</span>
+<span class="keyword">from</span> datasets <span class="keyword">import</span> load_dataset
+
+<span class="comment"># ── Step 1: Load the base pretrained model ──</span>
+<span class="comment"># This is the "base model" from Sec 10.1: pretrained but</span>
+<span class="comment"># NOT yet aligned (not helpful, potentially harmful).</span>
+model_name = <span class="string">"meta-llama/Llama-3.2-1B"</span>
+model = AutoModelForCausalLM.from_pretrained(
+    model_name,
+    torch_dtype=torch.bfloat16,   <span class="comment"># Memory-efficient dtype</span>
+    device_map=<span class="string">"auto"</span>,             <span class="comment"># Auto-place on GPU(s)</span>
+)
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+tokenizer.pad_token = tokenizer.eos_token
+
+<span class="comment"># ── Step 2: Load instruction-tuning data ──</span>
+<span class="comment"># These are the (instruction, response) pairs described</span>
+<span class="comment"># in Sec 10.1.1. Each example has a supervised objective.</span>
+dataset = load_dataset(<span class="string">"HuggingFaceH4/ultrachat_200k"</span>, split=<span class="string">"train_sft"</span>)
+
+<span class="comment"># ── Step 3: Configure SFT training ──</span>
+<span class="comment"># Key point from the text: SFT is "much more modest" than</span>
+<span class="comment"># pretraining — just a few epochs over thousands of examples.</span>
+training_args = TrainingArguments(
+    output_dir=<span class="string">"./sft-output"</span>,
+    num_train_epochs=<span class="number">2</span>,          <span class="comment"># "Several epochs" (Sec 10.1)</span>
+    per_device_train_batch_size=<span class="number">4</span>,
+    learning_rate=<span class="number">2e-5</span>,           <span class="comment"># Small LR: we nudge, not retrain</span>
+    bf16=<span class="number">True</span>,
+    logging_steps=<span class="number">50</span>,
+)
+
+<span class="comment"># ── Step 4: Train with SFTTrainer ──</span>
+<span class="comment"># Under the hood, this applies the standard LM cross-entropy</span>
+<span class="comment"># loss: L_SFT = -Σ log P(w_t | w_1,...,w_{t-1})</span>
+trainer = SFTTrainer(
+    model=model,
+    args=training_args,
+    train_dataset=dataset,
+    tokenizer=tokenizer,
+    max_seq_length=<span class="number">2048</span>,
+)
+trainer.train()  <span class="comment"># The model now follows instructions!</span></pre></div>
+  </div>
+
+  <!-- Code: DPO -->
+  <div class="code-container">
+    <div class="code-header">
+      <span class="lang">Python &middot; DPO Alignment (Section 10.3.2)</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <div class="code-body"><pre><span class="comment"># ═══════════════════════════════════════════════════════════</span>
+<span class="comment"># Part 2: Direct Preference Optimization (DPO)</span>
+<span class="comment"># ═══════════════════════════════════════════════════════════</span>
+<span class="comment"># After SFT, we further align the model using preference</span>
+<span class="comment"># data (Sec 10.2-10.3). DPO skips the reward model entirely</span>
+<span class="comment"># and optimizes directly on (chosen, rejected) pairs.</span>
+
+<span class="keyword">from</span> trl <span class="keyword">import</span> DPOTrainer, DPOConfig
+<span class="keyword">from</span> transformers <span class="keyword">import</span> AutoModelForCausalLM
+<span class="keyword">from</span> datasets <span class="keyword">import</span> load_dataset
+
+<span class="comment"># ── Load the SFT-trained model as both policy and reference ──</span>
+<span class="comment"># π_ref is frozen; π_θ will be updated by the DPO loss.</span>
+<span class="comment"># (Sec 10.3.2: "DPO uses 2 LLMs during training")</span>
+sft_model_path = <span class="string">"./sft-output"</span>
+policy = AutoModelForCausalLM.from_pretrained(
+    sft_model_path, torch_dtype=torch.bfloat16, device_map=<span class="string">"auto"</span>
+)
+ref_model = AutoModelForCausalLM.from_pretrained(
+    sft_model_path, torch_dtype=torch.bfloat16, device_map=<span class="string">"auto"</span>
+)
+
+<span class="comment"># ── Load preference data: (prompt, chosen, rejected) triples ──</span>
+<span class="comment"># These are the preference pairs from Sec 10.2.1</span>
+pref_data = load_dataset(
+    <span class="string">"HuggingFaceH4/ultrafeedback_binarized"</span>,
+    split=<span class="string">"train_prefs"</span>
+)
+
+<span class="comment"># ── Configure DPO training ──</span>
+dpo_config = DPOConfig(
+    output_dir=<span class="string">"./dpo-output"</span>,
+    beta=<span class="number">0.1</span>,                    <span class="comment"># β: KL penalty strength (Sec 10.3.2)</span>
+                                  <span class="comment"># "β values typically range from 0.1 to 0.01"</span>
+    per_device_train_batch_size=<span class="number">2</span>,
+    learning_rate=<span class="number">5e-7</span>,           <span class="comment"># Even smaller LR: we NUDGE the model</span>
+    num_train_epochs=<span class="number">1</span>,
+    bf16=<span class="number">True</span>,
+)
+
+<span class="comment"># ── Train with DPO ──</span>
+<span class="comment"># The DPO loss (Eq. 10.12) increases P(chosen) and</span>
+<span class="comment"># decreases P(rejected), constrained by KL from π_ref.</span>
+<span class="comment"># L_DPO = -E[log σ(β log(π_θ(o_w|x)/π_ref(o_w|x))</span>
+<span class="comment">#                    - β log(π_θ(o_l|x)/π_ref(o_l|x)))]</span>
+dpo_trainer = DPOTrainer(
+    model=policy,
+    ref_model=ref_model,
+    args=dpo_config,
+    train_dataset=pref_data,
+    tokenizer=tokenizer,
+)
+dpo_trainer.train()
+<span class="comment"># The model is now aligned: helpful, harmless, and honest!</span></pre></div>
+  </div>
+</section>
+
+<!-- ─────────────── §6  MODERN BRIDGE ─────────────── -->
+<section id="modern" class="section" data-section="modern">
+  <div class="section-header">
+    <div class="section-number warm">&#127881;</div>
+    <h2>The 2026 Modern Bridge</h2>
+  </div>
+  <div class="pedagogy-badge badge-modern">&#128640; 2026 Perspective</div>
+
+  <div class="prose">
+    <p>The techniques in this chapter &mdash; SFT, RLHF, DPO, and chain-of-thought &mdash; form the <strong>post-training stack</strong> that transforms raw pretrained models into the AI assistants we interact with today. Here's how these ideas connect to the 2026 frontier:</p>
+  </div>
+
+  <div class="info-card warm-glow">
+    <h4>&#128640; Constitutional AI &amp; RLAIF</h4>
+    <p>Anthropic's <strong>Constitutional AI</strong> extends RLHF by replacing human annotators with AI-generated feedback based on a set of principles (a "constitution"). This scales preference data generation while maintaining alignment. The same Bradley-Terry framework (Sec 10.2.2) underpins the reward modeling.</p>
+  </div>
+
+  <div class="info-card purple-glow">
+    <h4>&#129302; Reasoning Models (o1, o3, DeepSeek-R1)</h4>
+    <p>Chain-of-thought (Sec 10.4) evolved into <strong>reasoning models</strong> that generate extended internal reasoning traces at test time. OpenAI's o1/o3 and DeepSeek's R1 use RL-trained reasoning (an evolution of the RLHF framework from Sec 10.3) to "think longer" on hard problems, allocating more compute dynamically.</p>
+  </div>
+
+  <div class="info-card green-glow">
+    <h4>&#128201; DPO Variants: IPO, KTO, ORPO</h4>
+    <p>DPO spawned a family of simpler alignment methods. <strong>IPO</strong> (Identity-Preference Optimization) avoids reward model overfitting. <strong>KTO</strong> (Kahneman-Tversky Optimization) works with unpaired preferences (just thumbs-up/down, no head-to-head comparisons). <strong>ORPO</strong> (Odds Ratio PO) combines SFT and alignment into a single training step. All build on the Bradley-Terry foundation from Section 10.2.</p>
+  </div>
+
+  <div class="info-card rose-glow">
+    <h4>&#9888; The Linguistics of Hallucination</h4>
+    <p>Hallucination &mdash; when models generate fluent but factually incorrect text &mdash; is a core failure of alignment. Linguistically, it stems from the model's training objective: predicting <em>likely</em> words rather than <em>true</em> words. Preference alignment (Sec 10.2-10.3) directly attacks this by teaching models that truthful responses are preferred over confident but false ones. However, hallucination remains unsolved because the reward model itself can be fooled by fluent falsehoods &mdash; a phenomenon called <strong>reward hacking</strong>.</p>
+  </div>
+</section>
+
+<!-- ─────────────── §7  SOCRATIC CHALLENGE ─────────────── -->
+<section id="socratic" class="section" data-section="socratic">
+  <div class="section-header">
+    <div class="section-number rose">&#10067;</div>
+    <h2>Linguistic Challenge: The Alignment Tax</h2>
+  </div>
+  <div class="pedagogy-badge badge-socratic">&#129504; Socratic Knowledge Check</div>
+
+  <div class="challenge-box">
+    <h4>&#128269; Failure Case: The Over-Aligned Assistant</h4>
+    <div class="challenge-scenario">
+      <strong>Prompt:</strong> "Write a short story where the villain explains their evil plan."<br><br>
+      <strong>Model Output:</strong> "I'm sorry, but I can't help with writing content that promotes or glorifies harmful activities. Instead, let me suggest writing a story about cooperation and friendship..."<br><br>
+      <strong>Problem:</strong> The model refuses a perfectly reasonable creative writing request. The RLHF/DPO training has made it <em>too cautious</em> &mdash; it's being "harmless" at the expense of being "helpful."
+    </div>
+
+    <div class="challenge-question" onclick="this.classList.toggle('open')">
+      <div class="q-label">Question 1</div>
+      <p>In the DPO loss function, what role does the \(\beta\) parameter play, and how might a poorly chosen \(\beta\) lead to over-refusal?</p>
+      <div class="challenge-answer">
+        <div class="challenge-answer-content">\(\beta\) controls the KL-divergence penalty that prevents the aligned model from straying too far from the reference policy. A <strong>very large \(\beta\)</strong> makes the model conservative (barely changing from the reference), while a <strong>very small \(\beta\)</strong> lets it optimize aggressively for the reward signal. If the preference data contains many examples where "refusing" is preferred over "attempting but occasionally getting it wrong," a small \(\beta\) will amplify this pattern into blanket refusal.</div>
+      </div>
+    </div>
+
+    <div class="challenge-question" onclick="this.classList.toggle('open')">
+      <div class="q-label">Question 2</div>
+      <p>The preference data for this model likely contained examples where harmful requests were correctly refused. Why does this lead to over-generalization? What linguistic features might the model be picking up on?</p>
+      <div class="challenge-answer">
+        <div class="challenge-answer-content">The model may be learning surface-level <strong>lexical cues</strong> rather than deep intent analysis. Words like "villain," "evil," "plan" appear in both genuinely harmful requests and innocent creative writing prompts. The preference data teaches: "responses that refuse harmful-sounding prompts are preferred." Without enough counter-examples (creative requests that <em>should</em> be fulfilled), the model overgeneralizes from lexical features to intent, conflating fictional violence with actual harm advocacy.</div>
+      </div>
+    </div>
+
+    <div class="challenge-question" onclick="this.classList.toggle('open')">
+      <div class="q-label">Question 3</div>
+      <p>How could you use instruction tuning (Sec 10.1) to mitigate this problem without weakening safety? Think about the data composition.</p>
+      <div class="challenge-answer">
+        <div class="challenge-answer-content">You could add <strong>targeted instruction-tuning examples</strong> that demonstrate the correct behavior: creative writing prompts involving conflict, villains, and moral complexity that are correctly fulfilled. Bianchi et al. (2024) showed that even 500 carefully curated safety instructions can shape model behavior. Similarly, a small set of "this is safe creative writing, fulfill it" examples mixed into the SFT data can teach the model to distinguish between harmful requests and legitimate fiction &mdash; without removing any safety guardrails for genuinely dangerous prompts.</div>
+      </div>
+    </div>
+
+    <div class="challenge-question" onclick="this.classList.toggle('open')">
+      <div class="q-label">Question 4</div>
+      <p>Could chain-of-thought reasoning (Sec 10.4) help the model make better refusal decisions? How?</p>
+      <div class="challenge-answer">
+        <div class="challenge-answer-content">Yes! If the model reasons step-by-step before deciding to refuse: <em>"The user asks for a villain's monologue → this is a fiction/creative writing context → villain monologues are a standard literary device → this is not a request for real harmful instructions → I should fulfill this request."</em> Chain-of-thought creates a "reasoning scaffold" that forces the model to distinguish <strong>context</strong> (fiction vs. real) before acting, rather than relying on superficial keyword matching. This is essentially how modern reasoning models approach safety decisions.</div>
+      </div>
+    </div>
+
+    <div class="challenge-question" onclick="this.classList.toggle('open')">
+      <div class="q-label">Question 5</div>
+      <p>The text mentions that preference data comes from three sources: human annotators, implicit web signals, and synthetic LLM judgments. How might each source introduce different biases into alignment?</p>
+      <div class="challenge-answer">
+        <div class="challenge-answer-content"><strong>Human annotators</strong> may have cultural biases, inconsistent standards, and fatigue effects &mdash; they may default to preferring "safe" responses when uncertain. <strong>Implicit web signals</strong> (e.g., upvotes) reflect popularity rather than quality, and can be gamed or skewed by platform demographics. <strong>Synthetic LLM judgments</strong> inherit the biases of the judge model (potentially including its own over-refusal tendencies), creating a feedback loop where models train each other's biases. The ideal approach combines all three sources with careful debiasing and uses the cluster-based evaluation from Sec 10.1.2 to detect systematic failures.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ═══════════════════════════════════════ BACK LINK ═══════════════════════════════════════ -->
+<a href="index.html" class="back-link">&#8592; Command Center</a>
+
+<!-- ═══════════════════════════════════════ SCRIPTS ═══════════════════════════════════════ -->
+<script>
+// ── KaTeX Rendering ──
+document.addEventListener('DOMContentLoaded', () => {
+  renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\(', right: '\\)', display: false},
+    ],
+    throwOnError: false,
+  });
+});
+
+// ── Scroll Animations ──
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) entry.target.classList.add('visible');
+  });
+}, { threshold: 0.08 });
+
+document.querySelectorAll('.section').forEach(s => observer.observe(s));
+
+// ── Nav Highlighting ──
+const navLinks = document.querySelectorAll('.toc-link');
+const sections = document.querySelectorAll('.section');
+
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(s => {
+    const top = s.offsetTop - 100;
+    if (pageYOffset >= top) current = s.dataset.section;
+  });
+  navLinks.forEach(link => {
+    link.classList.toggle('active', link.dataset.section === current);
+  });
+});
+
+// ── Pipeline Visualizer ──
+function showStage(stage) {
+  document.querySelectorAll('.pipeline-stage').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.stage-detail').forEach(d => { d.classList.remove('active'); d.style.display = 'none'; });
+
+  document.querySelector(`.pipeline-stage[data-stage="${stage}"]`).classList.add('active');
+  const detail = document.getElementById(`detail-${stage}`);
+  detail.style.display = 'block';
+  detail.classList.add('active');
+}
+
+// ── Bradley-Terry Visualizer ──
+function updateBT() {
+  const zw = parseFloat(document.getElementById('btZwin').value);
+  const zl = parseFloat(document.getElementById('btZlose').value);
+  const delta = zw - zl;
+  const sigma = 1 / (1 + Math.exp(-delta));
+
+  document.getElementById('btZwinVal').textContent = zw.toFixed(1);
+  document.getElementById('btZloseVal').textContent = zl.toFixed(1);
+  document.getElementById('btDelta').textContent = delta.toFixed(2);
+  document.getElementById('btSigma').textContent = sigma.toFixed(4);
+
+  const winPct = (sigma * 100).toFixed(1);
+  const losePct = ((1 - sigma) * 100).toFixed(1);
+
+  document.getElementById('btWinBar').style.width = winPct + '%';
+  document.getElementById('btWinBar').textContent = winPct + '%';
+  document.getElementById('btLoseBar').style.width = losePct + '%';
+  document.getElementById('btLoseBar').textContent = losePct + '%';
+}
+
+// ── Code Copy ──
+function copyCode(btn) {
+  const code = btn.closest('.code-container').querySelector('pre').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
+  });
+}
+</script>
+
+</body>
+</html>

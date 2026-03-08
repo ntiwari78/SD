@@ -1,0 +1,1914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 23: Coreference Resolution & Entity Linking | SLP</title>
+
+    <!-- MathJax Configuration BEFORE Script -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg-full.min.js" async></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Sticky Navigation */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #334155;
+            padding: 1rem 2rem;
+            display: flex;
+            gap: 2rem;
+            overflow-x: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #14b8a6 #1e293b;
+        }
+
+        nav a {
+            color: #94a3b8;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        nav a:hover,
+        nav a.active {
+            color: #14b8a6;
+            background-color: rgba(20, 184, 166, 0.1);
+        }
+
+        section {
+            min-height: 100vh;
+            padding: 4rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #14b8a6, #ef4444);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 2rem 0 1.5rem 0;
+            background: linear-gradient(90deg, #14b8a6, #0891b2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #14b8a6;
+            margin: 1.5rem 0 1rem 0;
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: #cbd5e1;
+            line-height: 1.8;
+        }
+
+        .subtitle {
+            font-size: 1.3rem;
+            color: #94a3b8;
+            margin-bottom: 2rem;
+            font-weight: 500;
+        }
+
+        .card {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: #14b8a6;
+            box-shadow: 0 0 20px rgba(20, 184, 166, 0.1);
+        }
+
+        .card-title {
+            color: #14b8a6;
+            font-weight: 600;
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .feynman-section {
+            text-align: center;
+            padding: 6rem 2rem;
+            background: linear-gradient(135deg, rgba(20, 184, 166, 0.1), rgba(239, 68, 68, 0.1));
+            border-radius: 12px;
+            margin-bottom: 3rem;
+        }
+
+        .feynman-analogy {
+            font-size: 1.1rem;
+            color: #cbd5e1;
+            margin-top: 2rem;
+            padding: 1.5rem;
+            border-left: 4px solid #14b8a6;
+            background-color: rgba(20, 184, 166, 0.05);
+            border-radius: 4px;
+            font-style: italic;
+        }
+
+        /* Canvas Visualizer */
+        #canvas-visualizer {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            display: block;
+            margin: 2rem auto;
+            cursor: pointer;
+        }
+
+        .visualizer-controls {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            background-color: #14b8a6;
+            color: #0f172a;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+        }
+
+        .btn:hover {
+            background-color: #0d9488;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);
+        }
+
+        .btn-secondary {
+            background-color: #ef4444;
+        }
+
+        .btn-secondary:hover {
+            background-color: #dc2626;
+        }
+
+        select {
+            background-color: #1e293b;
+            color: #e2e8f0;
+            border: 1px solid #334155;
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+        }
+
+        .code-block {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            position: relative;
+            overflow-x: auto;
+        }
+
+        .code-block pre {
+            margin: 0;
+            color: #cbd5e1;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .code-label {
+            color: #14b8a6;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background-color: #14b8a6;
+            color: #0f172a;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+        }
+
+        .copy-btn:hover {
+            background-color: #0d9488;
+        }
+
+        .copy-btn.copied {
+            background-color: #22c55e;
+        }
+
+        .quiz-container {
+            margin: 2rem 0;
+        }
+
+        .quiz-item {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .quiz-question {
+            color: #e2e8f0;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            font-size: 1.05rem;
+        }
+
+        .quiz-option {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .quiz-option:hover {
+            background-color: rgba(20, 184, 166, 0.1);
+        }
+
+        .quiz-option input[type="radio"] {
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+        }
+
+        .quiz-option label {
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .quiz-explanation {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-left: 4px solid #eab308;
+            background-color: rgba(235, 179, 8, 0.05);
+            border-radius: 4px;
+            color: #cbd5e1;
+            display: none;
+        }
+
+        .quiz-explanation.show {
+            display: block;
+        }
+
+        .quiz-explanation.correct {
+            border-left-color: #22c55e;
+            background-color: rgba(34, 197, 94, 0.05);
+        }
+
+        .quiz-explanation.incorrect {
+            border-left-color: #ef4444;
+            background-color: rgba(239, 68, 68, 0.05);
+        }
+
+        .fade-in-up {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease-out;
+        }
+
+        .fade-in-up.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .timeline {
+            position: relative;
+            padding: 2rem 0;
+        }
+
+        .timeline-item {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 2rem;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.6s ease-out;
+        }
+
+        .timeline-item.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .timeline-year {
+            color: #14b8a6;
+            font-weight: 700;
+            font-size: 1.3rem;
+            min-width: 100px;
+        }
+
+        .timeline-content {
+            background-color: #1e293b;
+            border-left: 3px solid #14b8a6;
+            padding: 1.5rem;
+            border-radius: 4px;
+            flex: 1;
+        }
+
+        .timeline-content h4 {
+            color: #e2e8f0;
+            margin-bottom: 0.5rem;
+        }
+
+        .timeline-content p {
+            color: #cbd5e1;
+            margin: 0;
+        }
+
+        .math-highlight {
+            background-color: rgba(20, 184, 166, 0.1);
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            border-left: 2px solid #14b8a6;
+        }
+
+        .method-box {
+            background: linear-gradient(135deg, rgba(20, 184, 166, 0.1), rgba(0, 0, 0, 0.2));
+            border: 1px solid #334155;
+            border-left: 4px solid #14b8a6;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+        }
+
+        .method-box h4 {
+            color: #14b8a6;
+            margin-bottom: 1rem;
+        }
+
+        .equation {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+        }
+
+        ul, ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+            color: #cbd5e1;
+        }
+
+        strong {
+            color: #14b8a6;
+        }
+
+        em {
+            color: #cbd5e1;
+            font-style: italic;
+        }
+
+        .accent-primary {
+            color: #14b8a6;
+        }
+
+        .accent-secondary {
+            color: #ef4444;
+        }
+
+        .accent-tertiary {
+            color: #eab308;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            nav {
+                padding: 0.75rem 1rem;
+                gap: 0.5rem;
+            }
+
+            nav a {
+                padding: 0.4rem 0.75rem;
+                font-size: 0.8rem;
+            }
+
+            section {
+                padding: 2rem 1rem;
+            }
+
+            .timeline-item {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .feynman-section {
+                padding: 3rem 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sticky Navigation -->
+    <nav id="main-nav">
+        <a href="#feynman" class="nav-link active">Feynman Bridge</a>
+        <a href="#technical" class="nav-link">Technical Ascent</a>
+        <a href="#visualizer" class="nav-link">Visualizer</a>
+        <a href="#code" class="nav-link">Code Lab</a>
+        <a href="#socratic" class="nav-link">Socratic Challenge</a>
+        <a href="#modern" class="nav-link">Modern Bridge</a>
+        <a href="#history" class="nav-link">Historical Context</a>
+    </nav>
+
+    <!-- SECTION 1: FEYNMAN BRIDGE -->
+    <section id="feynman">
+        <div class="feynman-section">
+            <h1>Coreference Resolution & Entity Linking</h1>
+            <p class="subtitle">Chapter 23 · Teaching Machines Who "They" Are</p>
+
+            <div class="feynman-analogy">
+                <strong>The Core Insight:</strong> When you read a novel, you effortlessly track that "the detective," "she," and "Holmes" all refer to the same character. Your brain maintains a <em>discourse model</em>—a mental set of entities in the story—and connects new mentions to existing characters. Coreference resolution gives machines this same ability. Entity linking goes further: it connects mentions in text not just to other mentions, but to real-world entities in knowledge bases like Wikipedia, creating a bridge between natural language and structured knowledge.
+                <br><br>
+                This chapter teaches us how to build systems that can:
+                <ul style="margin-top: 1rem;">
+                    <li><strong>Track entities</strong> across text, handling pronouns, synonyms, and varied mention forms</li>
+                    <li><strong>Cluster mentions</strong> into equivalence classes (coreference chains)</li>
+                    <li><strong>Link entities</strong> to knowledge bases for fact verification and knowledge integration</li>
+                    <li><strong>Navigate linguistic phenomena</strong> like cataphora, elision, and implicit references</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 2: TECHNICAL ASCENT -->
+    <section id="technical" class="fade-in-up">
+        <h2>Technical Ascent: The Core Concepts</h2>
+
+        <!-- 23.1: Coreference Phenomena -->
+        <h3>23.1 Coreference Phenomena and Discourse Models</h3>
+
+        <p>Before we can build systems to resolve coreference, we must understand the linguistic phenomena at play. Coreference is fundamentally about tracking <strong>who refers to whom</strong> in discourse.</p>
+
+        <div class="card">
+            <div class="card-title">Key Definitions</div>
+            <p><strong>Mention:</strong> A span of text that refers to an entity (e.g., "the detective," "she," "Holmes," "it").</p>
+            <p><strong>Referent:</strong> The real-world entity that a mention points to (e.g., the actual detective character).</p>
+            <p><strong>Coreference:</strong> Two or more mentions that refer to the same entity form a <em>coreference link</em>. All coreferent mentions in a document form a <em>coreference chain</em>.</p>
+            <p><strong>Discourse model:</strong> The set of entities (discourse referents) that have been introduced into the conversation. Each new entity evokes a new discourse referent; subsequent mentions access or modify existing referents.</p>
+        </div>
+
+        <p><strong>Types of Referring Expressions:</strong></p>
+        <ul>
+            <li><strong>Indefinites</strong> (e.g., "a dog", "an elephant") – introduce new discourse entities</li>
+            <li><strong>Definites</strong> (e.g., "the dog", "the elephant") – refer to previously established entities</li>
+            <li><strong>Pronouns</strong> (e.g., "it", "she", "they") – typically refer to recent antecedents</li>
+            <li><strong>Demonstratives</strong> (e.g., "this", "that", "these") – spatially or temporally anchored references</li>
+            <li><strong>Proper names</strong> (e.g., "Fido", "Maria") – directly reference entities</li>
+            <li><strong>Zero anaphora</strong> (elided pronouns) – omitted pronouns, common in pro-drop languages like Chinese</li>
+        </ul>
+
+        <h4 style="color: #cbd5e1; margin-top: 1.5rem;">Information Status (Prince 1981/1992)</h4>
+        <p>Entities can be classified by their status in discourse:</p>
+        <div class="method-box">
+            <h4>Discourse Status: New vs. Old</h4>
+            <ul>
+                <li><strong>Discourse-new:</strong> First mention in the discourse (indefinite NPs like "a dog")</li>
+                <li><strong>Discourse-old:</strong> Previously mentioned (definite NPs, pronouns, names)</li>
+            </ul>
+        </div>
+
+        <div class="method-box">
+            <h4>Hearer Status: New vs. Old</h4>
+            <ul>
+                <li><strong>Hearer-new:</strong> Assumed not known to the listener (new information)</li>
+                <li><strong>Hearer-old:</strong> Assumed known to the listener (shared knowledge)</li>
+            </ul>
+        </div>
+
+        <p style="margin-top: 1.5rem;"><strong>Types of Entities (by information status):</strong></p>
+        <ul>
+            <li><strong>Brand-new:</strong> Not previously mentioned or known ("I saw <u>a dog</u>")</li>
+            <li><strong>Unused:</strong> Not mentioned but identifiable ("The <u>president</u> gave a speech")</li>
+            <li><strong>Inferable:</strong> Inferrable from context ("The burglar broke into <u>the house</u>; the <u>door</u> was damaged")</li>
+            <li><strong>Textually evoked:</strong> Previously mentioned in discourse ("I bought <u>a dog</u>; the <u>dog</u> is friendly")</li>
+            <li><strong>Situationally evoked:</strong> Present in shared context ("Please pass <u>the salt</u>" at a dinner table)</li>
+        </ul>
+
+        <h4 style="color: #cbd5e1; margin-top: 1.5rem;">Related Phenomena: Anaphora and Cataphora</h4>
+        <p><strong>Anaphora:</strong> A mention refers back to a previous antecedent. Example: "John arrived early. <u>He</u> was excited." (He = John, anaphoric)</p>
+        <p><strong>Cataphora:</strong> A mention refers forward to a subsequent expression. Example: "When <u>he</u> arrived, <u>John</u> was excited." (he = John, cataphoric, less common)</p>
+
+        <h4 style="color: #cbd5e1; margin-top: 1.5rem;">Linguistic Constraints on Coreference</h4>
+
+        <div class="card">
+            <div class="card-title">Binding Theory</div>
+            <p>Binding theory (from Chomsky) constrains pronoun and reflexive resolution:</p>
+            <ul>
+                <li><strong>Reflexives</strong> (himself, herself) must have antecedents in the same clause: "John saw himself" (reflexive = John)</li>
+                <li><strong>Pronouns</strong> must have antecedents in different clauses: "John said he left" (he = someone other than John, typically)</li>
+                <li><strong>Names and full NPs</strong> can corefer with nearly any other entity</li>
+            </ul>
+        </div>
+
+        <p style="margin-top: 1.5rem;"><strong>Other Constraints:</strong></p>
+        <ul>
+            <li><strong>Number agreement:</strong> Singular pronouns (he, she) match singular referents; plural (they) match plural referents</li>
+            <li><strong>Gender agreement:</strong> he → masculine, she → feminine, it → neuter</li>
+            <li><strong>Person agreement:</strong> I/we (first), you (second), he/she/it/they (third)</li>
+            <li><strong>Grammatical role hierarchy:</strong> Subjects > Objects > Obliques (pronouns prefer subjects as antecedents)</li>
+            <li><strong>Recency:</strong> Recent mentions are preferred over distant ones</li>
+            <li><strong>Verb semantics:</strong> Some verbs prefer certain argument structures (e.g., "convince" prefers object control)</li>
+        </ul>
+
+        <h4 style="color: #cbd5e1; margin-top: 1.5rem;">Non-Referring Expressions</h4>
+        <p>Not all NPs refer to entities in the discourse model. Systems must identify and exclude:</p>
+        <ul>
+            <li><strong>Pleonastic "it":</strong> "It is raining" (it does not refer to an entity)</li>
+            <li><strong>Appositives:</strong> "My friend, John" (John is an appositive, not a separate mention)</li>
+            <li><strong>Predicative NPs:</strong> "He is a teacher" (a teacher is a property, not a coreference relation)</li>
+            <li><strong>Generic NPs:</strong> "Dogs are animals" (no specific entity reference)</li>
+        </ul>
+
+        <!-- 23.2: Datasets and Tasks -->
+        <h3>23.2 Coreference Tasks and Datasets</h3>
+
+        <p>The primary task in coreference is <strong>mention clustering</strong>: partition all mentions in a document into equivalence classes such that mentions in the same class corefer.</p>
+
+        <div class="card">
+            <div class="card-title">Major Corpora</div>
+            <ul>
+                <li><strong>OntoNotes:</strong> Large corpus with coreference annotations across 7 genres (news, broadcast news, broadcast conversation, web data, pivotized English, telephone conversations, Chinese). ~3.6M words with detailed linguistic annotation.</li>
+                <li><strong>CoNLL-2011/2012 Shared Tasks:</strong> Standardized evaluation on OntoNotes. CoNLL-2012 became the standard benchmark for English coreference.</li>
+                <li><strong>SemEval tasks:</strong> Multilingual and cross-lingual coreference evaluation.</li>
+            </ul>
+        </div>
+
+        <h4 style="color: #cbd5e1; margin-top: 1.5rem;">The Coreference Chain</h4>
+        <p>Each document is represented as a set of coreference chains. A chain is a list of mentions that all refer to the same entity:</p>
+        <pre style="background-color: #1e293b; padding: 1rem; border-radius: 4px; overflow-x: auto;">Chain 1 (President Obama):
+  - "Barack Hussein Obama" (sentence 1)
+  - "the President" (sentence 3)
+  - "he" (sentence 5)
+
+Chain 2 (White House):
+  - "the White House" (sentence 2)
+  - "the building" (sentence 4)
+</pre>
+
+        <!-- 23.3: Mention Detection -->
+        <h3>23.3 Mention Detection</h3>
+
+        <p>The first step in coreference resolution is identifying all potential mentions. Mentions fall into three broad categories:</p>
+
+        <div class="method-box">
+            <h4>Three Types of Mentions</h4>
+            <ul>
+                <li><strong>Pronouns:</strong> he, she, it, they, etc. — detected via POS tagging</li>
+                <li><strong>Named entities:</strong> Persons, organizations, locations — detected via NER</li>
+                <li><strong>Full noun phrases:</strong> "the dog", "a blue car", "my favorite book" — detected via constituency parsing</li>
+            </ul>
+        </div>
+
+        <h4 style="color: #cbd5e1; margin-top: 1.5rem;">Mention Detection Strategy</h4>
+        <p>Standard approach: <strong>Over-generate, then prune</strong></p>
+        <ol>
+            <li><strong>Extract mentions:</strong> From constituency/dependency parses and NER, extract all NP spans and pronouns</li>
+            <li><strong>Apply pruning heuristics:</strong> Remove non-referring expressions
+                <ul>
+                    <li>Discard mentions that are numeric entities ("123", "50%")</li>
+                    <li>Identify and remove pleonastic "it" (use statistical classifier or heuristics)</li>
+                    <li>Remove mentions that are articles or determiners only</li>
+                    <li>Discard mentions nested inside other mentions (prefer larger, complete NPs)</li>
+                </ul>
+            </li>
+        </ol>
+
+        <!-- 23.4: Coreference Architectures -->
+        <h3>23.4 Coreference Resolution Architectures</h3>
+
+        <p>Given a set of mentions, we need to partition them into coreference chains. Three main architectures have dominated the literature:</p>
+
+        <h4 style="color: #cbd5e1; margin-top: 1.5rem;">Architecture 1: Mention-Pair Classification</h4>
+        <div class="method-box">
+            <h4>Mention-Pair Model</h4>
+            <p><strong>Idea:</strong> Train a binary classifier to decide if two mentions corefer.</p>
+            <p><strong>Process:</strong></p>
+            <ol>
+                <li>For each mention $m_i$, consider all earlier mentions as potential antecedents</li>
+                <li>Score each pair $(m_i, m_j)$ with a classifier: $p(\text{corefer} | m_i, m_j)$</li>
+                <li>Link each mention to a previous mention if the score exceeds a threshold, or use <strong>closest-first linking</strong> or <strong>best-first linking</strong></li>
+            </ol>
+            <p><strong>Advantage:</strong> Simple, interpretable</p>
+            <p><strong>Disadvantage:</strong> Does not enforce transitivity; makes local decisions without considering global structure</p>
+        </div>
+
+        <h4 style="color: #cbd5e1; margin-top: 1.5rem;">Architecture 2: Mention-Ranking</h4>
+        <div class="method-box">
+            <h4>Mention-Ranking Model</h4>
+            <p><strong>Idea:</strong> For each mention, predict a probability distribution over candidate antecedents (including "new entity").</p>
+            <p>For mention $m_i$, compute softmax over all candidate antecedents $a_j$ and a special token $\epsilon$ (representing a new entity):</p>
+        </div>
+
+        <div class="equation">
+            $$p(a_j | m_i) = \frac{e^{s(m_i, a_j)}}{\sum_{k=1}^{i-1} e^{s(m_i, a_k)} + e^{s(m_i, \epsilon)}}$$
+            <p style="text-align: center; margin-top: 1rem; color: #cbd5e1;">where $s(m_i, a_j)$ is a scoring function (learned from features or neural representations)</p>
+        </div>
+
+        <p><strong>Loss function:</strong> For each mention $m_i$, include all gold antecedents in the target set $\text{GOLD}(m_i)$:</p>
+
+        <div class="equation">
+            $$L = -\sum_{i} \log \sum_{a_j \in \text{GOLD}(m_i)} p(a_j | m_i)$$
+            <p style="text-align: center; margin-top: 1rem; color: #cbd5e1;">This marginalizes over all gold antecedents, allowing flexibility in linking decisions.</p>
+        </div>
+
+        <p style="margin-top: 1.5rem;"><strong>Advantages:</strong> Globally normalized (softmax); handles one-to-many mappings (multiple gold antecedents)</p>
+        <p><strong>Disadvantage:</strong> Requires defining "all candidate antecedents" (window of recent mentions)</p>
+
+        <h4 style="color: #cbd5e1; margin-top: 1.5rem;">Architecture 3: Entity-Based Models</h4>
+        <div class="method-box">
+            <h4>Cluster-Based Coreference</h4>
+            <p><strong>Idea:</strong> Maintain clusters of mentions. For each new mention, decide whether to create a new cluster or add to an existing one. Features consider entire clusters, not just pairwise mention interactions.</p>
+            <p><strong>Example features:</strong></p>
+            <ul>
+                <li>Average distance between new mention and all mentions in cluster</li>
+                <li>Number of gender/number agreements within cluster</li>
+                <li>Semantic similarity between new mention and representative mention of cluster</li>
+            </ul>
+            <p><strong>Advantage:</strong> Leverages entity-level information</p>
+            <p><strong>Disadvantage:</strong> Greedy decisions may not be recoverable</p>
+        </div>
+
+        <!-- 23.5: Classic Features -->
+        <h3>23.5 Classic Features for Coreference</h3>
+
+        <p>Before neural methods dominated, systems relied on hand-crafted features. Many remain useful in hybrid approaches:</p>
+
+        <div class="card">
+            <div class="card-title">Feature Categories</div>
+            <ul>
+                <li><strong>Lexical:</strong> String match (exact or partial head match), synonym match using WordNet</li>
+                <li><strong>Morphological:</strong> Gender agreement (he/she/it), number agreement (singular/plural), person (1st/2nd/3rd)</li>
+                <li><strong>Syntactic:</strong> Binding theory constraints, grammatical role (subject > object), semantic role labels</li>
+                <li><strong>Semantic:</strong> Named entity type match (PERSON, ORG, LOC), semantic class compatibility</li>
+                <li><strong>Positional:</strong> Distance between mentions (recency bias), sentence distance, document position</li>
+                <li><strong>Salience:</strong> Mention is a subject (high salience), pronoun vs. full NP, capitalization</li>
+            </ul>
+        </div>
+
+        <!-- 23.6: Neural Coreference -->
+        <h3>23.6 Neural Coreference: End-to-End Models</h3>
+
+        <p>Lee et al. (2017) introduced end-to-end neural coreference (e2e-coref), which eliminates the mention detection stage and jointly learns to identify mentions and resolve coreference.</p>
+
+        <h4 style="color: #cbd5e1; margin-top: 1.5rem;">Key Innovation: Span Representation</h4>
+
+        <p>Instead of detecting mentions first, enumerate all possible spans up to length $L$ and score them. A span $i$ has representation:</p>
+
+        <div class="equation">
+            $$g_i = [\mathbf{x}_{\text{START}(i)} ; \mathbf{x}_{\text{END}(i)} ; \hat{\mathbf{x}}_i ; \phi(i)]$$
+            <p style="text-align: center; margin-top: 1rem; color: #cbd5e1; font-size: 0.95rem;">where $\mathbf{x}_{\text{START}(i)}$ and $\mathbf{x}_{\text{END}(i)}$ are LSTM/transformer embeddings at span boundaries, $\hat{\mathbf{x}}_i$ is an attention-weighted head representation, and $\phi(i)$ are hand-crafted span features (length, position)</p>
+        </div>
+
+        <h4 style="color: #cbd5e1; margin-top: 1.5rem;">Scoring Functions</h4>
+
+        <p><strong>Mention score:</strong> Probability that span $i$ is a mention:</p>
+
+        <div class="equation">
+            $$s_m(i) = \mathbf{w}_m \cdot \text{FFNN}_m(g_i)$$
+            <p style="text-align: center; margin-top: 1rem; color: #cbd5e1;">where FFNN is a feed-forward neural network and $\mathbf{w}_m$ is a learned weight vector</p>
+        </div>
+
+        <p><strong>Antecedent score:</strong> Compatibility of span $i$ with antecedent span $j$:</p>
+
+        <div class="equation">
+            $$s_a(i,j) = \mathbf{w}_a \cdot \text{FFNN}_a([g_i ; g_j ; g_i \circ g_j ; \phi(i,j)])$$
+            <p style="text-align: center; margin-top: 1rem; color: #cbd5e1; font-size: 0.95rem;">where $\circ$ is element-wise multiplication and $\phi(i,j)$ includes span distance and other pair features</p>
+        </div>
+
+        <p><strong>Final pairwise score (mention $i$, antecedent $j$):</strong></p>
+
+        <div class="equation">
+            $$s(i,j) = s_m(i) + s_m(j) + s_a(i,j)$$
+        </div>
+
+        <h4 style="color: #cbd5e1; margin-top: 1.5rem;">Pruning Strategy</h4>
+
+        <p>Since enumerating all spans is expensive, use a two-pass approach:</p>
+        <ol>
+            <li><strong>First pass:</strong> Keep only top $\lambda T$ spans by mention score, where $T$ = document length, $\lambda \approx 0.4$</li>
+            <li><strong>Second pass:</strong> For remaining spans, score all antecedent pairs</li>
+        </ol>
+
+        <p style="margin-top: 1.5rem;"><strong>Training loss:</strong> Marginal likelihood over all gold clusters:</p>
+
+        <div class="equation">
+            $$L = -\log \sum_{(i,j) \in \text{GOLD}} p(j | i)$$
+            <p style="text-align: center; margin-top: 1rem; color: #cbd5e1;">where gold pairs include all mentions linked via coreference chains</p>
+        </div>
+
+        <!-- 23.7: Entity Linking -->
+        <h3>23.7 Entity Linking</h3>
+
+        <p><strong>Entity linking (EL)</strong> is the task of linking named entity mentions in text to entities in a knowledge base (Wikipedia, Wikidata, DBpedia, etc.). Unlike coreference, EL grounds mentions in structured knowledge.</p>
+
+        <h4 style="color: #cbd5e1; margin-top: 1.5rem;">Entity Linking Subtasks</h4>
+
+        <div class="card">
+            <div class="card-title">EL Pipeline</div>
+            <ol>
+                <li><strong>Entity recognition:</strong> Identify entity mention spans (often NER)</li>
+                <li><strong>Candidate generation:</strong> For each mention, generate likely knowledge base candidates</li>
+                <li><strong>Candidate ranking:</strong> Rank candidates and select best match</li>
+            </ol>
+        </div>
+
+        <h4 style="color: #cbd5e1; margin-top: 1.5rem;">TAGME: Knowledge Base Entity Linking (Ferragina & Scairano 2010)</h4>
+
+        <p>TAGME is a classical approach that builds on Wikipedia hyperlink statistics.</p>
+
+        <p><strong>Anchor dictionary:</strong> Mine all Wikipedia hyperlinks to build a dictionary mapping mention strings to entities:</p>
+
+        <div class="equation">
+            $$\text{prior}(e | m) = \frac{\text{count}(m \to e)}{\text{count}(m)}$$
+            <p style="text-align: center; margin-top: 1rem; color: #cbd5e1;">This is the "link probability": given mention $m$, what is the probability it links to entity $e$?</p>
+        </div>
+
+        <p><strong>Entity relatedness (Milne-Witten):</strong> Measure semantic similarity between candidate entities using Wikipedia link overlap:</p>
+
+        <div class="equation">
+            $$\text{rel}(e_1, e_2) = \frac{\log(\max(|A|,|B|)) - \log(|A \cap B|)}{\log(|W|) - \log(\min(|A|,|B|))}$$
+            <p style="text-align: center; margin-top: 1rem; color: #cbd5e1; font-size: 0.95rem;">where $A$ and $B$ are sets of Wikipedia pages linking to entities $e_1$ and $e_2$, and $W$ is the set of all Wikipedia pages</p>
+        </div>
+
+        <p style="margin-top: 1.5rem;"><strong>TAGME scoring:</strong> For each mention and its candidates, combine prior probability and relatedness to other mentions' entities:</p>
+
+        <div class="equation">
+            $$\text{score}(e | m) = \text{prior}(e|m) + \sum_{m' \text{ in context}} \text{rel}(e, e')$$
+        </div>
+
+        <h4 style="color: #cbd5e1; margin-top: 1.5rem;">Modern Neural Approach: ELQ (Li et al. 2020)</h4>
+
+        <div class="method-box">
+            <h4>Entity Linking with Bi-Encoders</h4>
+            <p><strong>Idea:</strong> Use BERT (or similar transformers) to encode mentions and entities into a shared embedding space, then link via dense similarity.</p>
+            <p><strong>Architecture:</strong></p>
+            <ul>
+                <li><strong>Mention encoder:</strong> BERT encodes mention and context → mention embedding</li>
+                <li><strong>Entity encoder:</strong> BERT encodes entity title and description → entity embedding</li>
+                <li><strong>Scoring:</strong> $\text{score}(e|m) = \text{sim}(\text{emb}_m, \text{emb}_e)$ (e.g., dot product, cosine similarity)</li>
+            </ul>
+            <p><strong>Training:</strong> Contrastive loss: push correct entity embedding closer, incorrect ones farther</p>
+        </div>
+
+        <!-- 23.8: Evaluation Metrics -->
+        <h3>23.8 Evaluation Metrics for Coreference</h3>
+
+        <p>Evaluating coreference is complex because the task involves clustering. Three main metrics have been standardized:</p>
+
+        <h4 style="color: #cbd5e1; margin-top: 1.5rem;">MUC (Message Understanding Conference) Metric</h4>
+
+        <p><strong>Idea:</strong> Count minimum number of links needed to form predicted clusters from key (gold) clusters.</p>
+
+        <p><strong>Recall:</strong></p>
+
+        <div class="equation">
+            $$\text{Recall}_{\text{MUC}} = \frac{\sum_i (|S_i| - |p(S_i)|)}{\sum_i (|S_i| - 1)}$$
+            <p style="text-align: center; margin-top: 1rem; color: #cbd5e1; font-size: 0.95rem;">where $S_i$ is a key cluster, $p(S_i)$ is its partition in the response</p>
+        </div>
+
+        <p style="margin-top: 1rem;"><strong>Precision:</strong> Swap roles of key and response.</p>
+
+        <p><strong>Issue:</strong> MUC treats all mistakes equally; penalizes singleton (single-mention) errors less than large cluster errors.</p>
+
+        <h4 style="color: #cbd5e1; margin-top: 1.5rem;">B³ (Cubed) Metric</h4>
+
+        <p><strong>Idea:</strong> Compute precision and recall for each mention, then average.</p>
+
+        <p><strong>For mention $m$ with gold cluster $K(m)$ and response cluster $R(m)$:</strong></p>
+
+        <div class="equation">
+            $$\text{Recall}(m) = \frac{|R(m) \cap K(m)|}{|K(m)|}, \quad \text{Precision}(m) = \frac{|R(m) \cap K(m)|}{|R(m)|}$$
+        </div>
+
+        <p style="margin-top: 1rem;">Then average over all mentions.</p>
+
+        <p><strong>Advantage:</strong> Gives equal weight to all mentions; handles singletons uniformly</p>
+
+        <h4 style="color: #cbd5e1; margin-top: 1.5rem;">CEAF (Entity-based F-Measure)</h4>
+
+        <p><strong>Idea:</strong> Find optimal one-to-one mapping between key and response clusters using entity-level similarity $\phi_4$:</p>
+
+        <div class="equation">
+            $$\phi_4(K_i, R_j) = \frac{2 |K_i \cap R_j|}{|K_i| + |R_j|}$$
+            <p style="text-align: center; margin-top: 1rem; color: #cbd5e1;">Then solve the assignment problem to maximize total similarity</p>
+        </div>
+
+        <p style="margin-top: 1.5rem;"><strong>CoNLL Metric (Standard Benchmark):</strong></p>
+
+        <div class="equation">
+            $$\text{F}_{\text{CoNLL}} = \frac{\text{F}_{\text{MUC}} + \text{F}_{\text{B}^3} + \text{F}_{\text{CEAF}_{\phi_4}}}{3}$$
+            <p style="text-align: center; margin-top: 1rem; color: #cbd5e1;">Average of three F-scores</p>
+        </div>
+
+        <!-- 23.9: Winograd Schema -->
+        <h3>23.9 The Winograd Schema Challenge</h3>
+
+        <p>The Winograd Schema Challenge (Levesque et al., 2012) highlights the limitation of shallow pattern matching in coreference resolution. It requires <strong>world knowledge</strong> and <strong>commonsense reasoning</strong>.</p>
+
+        <div class="card">
+            <div class="card-title">Classic Winograd Example</div>
+            <p><strong>Sentence:</strong> "The city council refused the demonstrators a permit because <em>they</em> feared violence."</p>
+            <p><strong>Question:</strong> Who is "they"?</p>
+            <p><strong>Analysis:</strong> Without world knowledge, both "council" and "demonstrators" are plausible antecedents for "they" (plural). But human reasoning knows that councils, not demonstrators, have the authority to refuse permits and would fear violence.</p>
+            <p><strong>Answer:</strong> they = council</p>
+        </div>
+
+        <p style="margin-top: 1.5rem;"><strong>Variant with opposite answer:</strong></p>
+        <p>"The city council refused the demonstrators a permit because <em>they</em> advocated violence."</p>
+        <p>Now "they" more naturally refers to demonstrators (who advocate, not councils).</p>
+
+        <p style="margin-top: 1rem;">The Winograd Schema shows that pure coreference resolution (mention clustering) is insufficient; systems need world knowledge, event understanding, and inference capabilities.</p>
+
+        <!-- 23.10: Gender Bias -->
+        <h3>23.10 Gender Bias in Coreference Systems</h3>
+
+        <p>Like many NLP systems, coreference resolvers exhibit gender bias, learning stereotypical associations from training data. Several datasets have been introduced to measure and mitigate this:</p>
+
+        <div class="card">
+            <div class="card-title">WinoBias Dataset (Zhao et al. 2018)</div>
+            <p>Extends Winograd-style problems with gender stereotypes. Each example has two versions:</p>
+            <ul>
+                <li><strong>Stereotypical:</strong> Pronoun matches stereotyped occupation gender (e.g., nurse = female)</li>
+                <li><strong>Anti-stereotypical:</strong> Pronoun contradicts stereotype</li>
+            </ul>
+            <p>Example: "The nurse asked the <u>doctor</u> to help her patient" vs. "The nurse asked the <u>doctor</u> to help his patient."</p>
+            <p>Biased systems score stereotypical examples higher.</p>
+        </div>
+
+        <div class="card">
+            <div class="card-title">GAP Dataset (Webster et al. 2018)</div>
+            <p>Google AI's Gender-balanced Annotated Pronoun resolution dataset: ~4K examples with 50% pronoun-entity gender agreement, reducing gender stereotyping.</p>
+        </div>
+
+        <p style="margin-top: 1.5rem;"><strong>Mitigation strategies:</strong></p>
+        <ul>
+            <li>Use gender-balanced datasets (GAP)</li>
+            <li>Add gender fairness constraints during training</li>
+            <li>Data augmentation: create anti-stereotypical examples</li>
+            <li>Evaluate separately on stereotypical vs. anti-stereotypical subsets</li>
+        </ul>
+
+    </section>
+
+    <!-- SECTION 3: VISUALIZER -->
+    <section id="visualizer" class="fade-in-up">
+        <h2>Interactive Visualizer: Mention-Ranking in Action</h2>
+
+        <p>Watch the mention-ranking algorithm process a text step by step, scoring candidates and building coreference chains in real time.</p>
+
+        <div style="margin: 2rem 0;">
+            <label for="example-select" style="color: #e2e8f0; font-weight: 600; margin-right: 1rem;">Choose Example:</label>
+            <select id="example-select">
+                <option value="example1">Example 1: Detective Story</option>
+                <option value="example2">Example 2: Business Meeting</option>
+                <option value="example3">Example 3: Family Drama</option>
+            </select>
+        </div>
+
+        <canvas id="canvas-visualizer" width="1000" height="400"></canvas>
+
+        <div class="visualizer-controls">
+            <button class="btn" id="next-btn">Next Step</button>
+            <button class="btn btn-secondary" id="reset-btn">Reset</button>
+            <button class="btn" id="auto-play-btn">Auto Play (5s intervals)</button>
+        </div>
+
+        <div style="margin-top: 2rem; padding: 1.5rem; background-color: #1e293b; border-left: 4px solid #14b8a6; border-radius: 4px;">
+            <p id="status-text" style="color: #cbd5e1; margin-bottom: 0.5rem;"><strong>Status:</strong> Ready to start. Click "Next Step" to begin.</p>
+            <p id="detail-text" style="color: #94a3b8; margin: 0;"><strong>Details:</strong> (Details will appear here)</p>
+        </div>
+    </section>
+
+    <!-- SECTION 4: CODE LAB -->
+    <section id="code" class="fade-in-up">
+        <h2>Code Lab: Building Coreference Systems</h2>
+
+        <p>Explore three practical approaches to coreference resolution: rule-based heuristics, feature-based mention-ranking, and entity linking with TAGME-style priors.</p>
+
+        <h3>Lab 1: Rule-Based Pronoun Resolution</h3>
+        <p>A simple rule-based approach using recency and agreement constraints:</p>
+
+        <div class="code-block">
+            <span class="code-label">rule_based_pronoun_resolution.py</span>
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code>import re
+from collections import defaultdict
+
+class PronounResolver:
+    """Simple rule-based pronoun resolution using recency and agreement."""
+
+    def __init__(self):
+        self.pronouns_3rd = {
+            'he': 'male', 'she': 'female', 'it': 'neuter',
+            'him': 'male', 'her': 'female',
+            'his': 'male', 'hers': 'female', 'its': 'neuter',
+            'they': 'plural', 'them': 'plural', 'their': 'plural'
+        }
+        self.reflexives = {'himself', 'herself', 'itself', 'themselves'}
+
+    def is_pronoun(self, word):
+        return word.lower() in self.pronouns_3rd or word.lower() in self.reflexives
+
+    def get_number(self, word):
+        """Return singular or plural."""
+        return 'plural' if word.lower() in ['they', 'them', 'their'] else 'singular'
+
+    def get_gender(self, word):
+        """Return gender of pronoun."""
+        return self.pronouns_3rd.get(word.lower(), 'unknown')
+
+    def extract_noun_phrases(self, sentence):
+        """Simple NP extraction: sequences of DET+ADJ*+NOUN."""
+        nps = []
+        words = sentence.split()
+        # Very simplified: just capture capitalized sequences or 'the X' patterns
+        i = 0
+        while i < len(words):
+            if words[i].lower() in ['the', 'a', 'an']:
+                start = i
+                i += 1
+                while i < len(words) and not words[i][0].isupper() and words[i].lower() not in ['.', ',']:
+                    i += 1
+                nps.append(' '.join(words[start:i]))
+            elif words[i][0].isupper():
+                nps.append(words[i])
+                i += 1
+            else:
+                i += 1
+        return nps
+
+    def resolve(self, sentences):
+        """Resolve pronouns across sentences."""
+        chains = defaultdict(list)
+        entities_seen = {}  # Map from entity name to chain ID
+        chain_counter = 0
+
+        for sent_idx, sent in enumerate(sentences):
+            words = sent.split()
+            nps = self.extract_noun_phrases(sent)
+
+            # Add NPs to entity list
+            for np in nps:
+                head = np.split()[-1]  # Simple head: last word
+                if np not in entities_seen:
+                    entities_seen[np] = chain_counter
+                    chains[chain_counter].append((sent_idx, np, 'NP'))
+                    chain_counter += 1
+
+            # Find and resolve pronouns
+            for word_idx, word in enumerate(words):
+                if self.is_pronoun(word):
+                    # Find best antecedent from recent NPs
+                    best_antecedent = None
+                    best_distance = float('inf')
+
+                    for entity, chain_id in entities_seen.items():
+                        # Prefer recent mentions
+                        if (sent_idx, entity, 'NP') in chains[chain_id]:
+                            distance = sent_idx  # Recency
+                            if distance < best_distance:
+                                best_distance = distance
+                                best_antecedent = entity
+
+                    if best_antecedent:
+                        chain_id = entities_seen[best_antecedent]
+                        chains[chain_id].append((sent_idx, word, 'PRONOUN'))
+
+        return chains
+
+# Example usage
+resolver = PronounResolver()
+sentences = [
+    "John arrived at the office yesterday.",
+    "The manager greeted him warmly.",
+    "He said the project was going well."
+]
+
+chains = resolver.resolve(sentences)
+for chain_id, mentions in chains.items():
+    print(f"Chain {chain_id}: {mentions}")</code></pre>
+        </div>
+
+        <h3>Lab 2: Feature-Based Mention-Ranking</h3>
+        <p>A simplified neural-inspired mention-ranking model with feature vectors:</p>
+
+        <div class="code-block">
+            <span class="code-label">feature_based_mention_ranking.py</span>
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code>import numpy as np
+from itertools import combinations
+
+class MentionRanker:
+    """Simplified mention-ranking using feature vectors and dot-product scoring."""
+
+    def __init__(self, feature_dim=10):
+        self.feature_dim = feature_dim
+        # Simulate learned weights
+        self.weights = np.random.randn(feature_dim)
+
+    def string_match(self, m1, m2):
+        """1 if heads match, 0 otherwise."""
+        h1, h2 = m1.split()[-1].lower(), m2.split()[-1].lower()
+        return 1.0 if h1 == h2 else 0.0
+
+    def distance_feature(self, idx1, idx2):
+        """Negative distance (prefer recent antecedents)."""
+        return -abs(idx2 - idx1)
+
+    def length_feature(self, m1, m2):
+        """Absolute difference in lengths."""
+        return -abs(len(m1.split()) - len(m2.split()))
+
+    def semantic_similarity(self, m1, m2):
+        """Placeholder: word overlap similarity."""
+        words1 = set(m1.lower().split())
+        words2 = set(m2.lower().split())
+        if not words1 or not words2:
+            return 0.0
+        return len(words1 & words2) / len(words1 | words2)
+
+    def extract_features(self, mention_i, mention_j, idx_i, idx_j):
+        """Extract feature vector for mention pair."""
+        features = np.zeros(self.feature_dim)
+        features[0] = self.string_match(mention_i, mention_j)
+        features[1] = self.distance_feature(idx_i, idx_j) / 10.0  # normalize
+        features[2] = self.length_feature(mention_i, mention_j) / 5.0
+        features[3] = self.semantic_similarity(mention_i, mention_j)
+        return features
+
+    def score_pair(self, mention_i, mention_j, idx_i, idx_j):
+        """Compute coreference score for mention pair."""
+        features = self.extract_features(mention_i, mention_j, idx_i, idx_j)
+        # Dot product with learned weights (simplified neural scoring)
+        score = np.dot(self.weights[:len(features)], features)
+        return score
+
+    def cluster_mentions(self, mentions):
+        """
+        Cluster mentions using greedy best-first linking.
+        Mentions: list of (mention_text, sentence_index) tuples
+        """
+        clusters = []  # List of lists, each inner list is a cluster
+
+        for current_idx, (current_mention, current_sent) in enumerate(mentions):
+            best_score = -float('inf')
+            best_cluster = None
+
+            # Score against existing clusters (use cluster representative)
+            for cluster_idx, cluster in enumerate(clusters):
+                representative = cluster[0]  # Use first mention as representative
+                rep_mention, rep_sent = representative
+
+                score = self.score_pair(current_mention, rep_mention, current_sent, rep_sent)
+
+                if score > best_score:
+                    best_score = score
+                    best_cluster = cluster_idx
+
+            # If score is negative, start new cluster
+            if best_cluster is not None and best_score > 0:
+                clusters[best_cluster].append((current_mention, current_sent))
+            else:
+                clusters.append([(current_mention, current_sent)])
+
+        return clusters
+
+# Example usage
+ranker = MentionRanker()
+mentions = [
+    ("Barack Hussein Obama", 0),
+    ("the President", 1),
+    ("he", 2),
+    ("the White House", 1),
+    ("it", 3),
+    ("the building", 4),
+    ("he", 5),
+]
+
+clusters = ranker.cluster_mentions(mentions)
+for i, cluster in enumerate(clusters):
+    print(f"Cluster {i}: {cluster}")</code></pre>
+        </div>
+
+        <h3>Lab 3: Entity Linking with TAGME-Style Anchor Priors</h3>
+        <p>A simplified entity linking system using anchor dictionary and entity relatedness:</p>
+
+        <div class="code-block">
+            <span class="code-label">entity_linking_tagme.py</span>
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code>import math
+from collections import defaultdict
+
+class TAGMELinker:
+    """Simplified TAGME-style entity linking using anchor priors and relatedness."""
+
+    def __init__(self):
+        # Anchor dictionary: mention -> {entity: count}
+        self.anchor_dict = defaultdict(lambda: defaultdict(int))
+        # Entity to Wikipedia pages linking to it (for relatedness)
+        self.entity_links = defaultdict(set)
+        # All entities
+        self.all_entities = set()
+
+    def add_anchor(self, mention, entity, count=1):
+        """Add entry to anchor dictionary."""
+        self.anchor_dict[mention.lower()][entity] += count
+        self.all_entities.add(entity)
+
+    def set_entity_links(self, entity, wikipedia_pages):
+        """Set the Wikipedia pages linking to an entity."""
+        self.entity_links[entity] = set(wikipedia_pages)
+
+    def prior_probability(self, mention, entity):
+        """P(entity | mention) from anchor dictionary."""
+        mention_key = mention.lower()
+        if mention_key not in self.anchor_dict:
+            return 0.0
+
+        entity_count = self.anchor_dict[mention_key].get(entity, 0)
+        total_count = sum(self.anchor_dict[mention_key].values())
+
+        return entity_count / total_count if total_count > 0 else 0.0
+
+    def milne_witten_relatedness(self, e1, e2):
+        """
+        Milne-Witten semantic relatedness between two entities.
+        Based on Wikipedia link overlap.
+        """
+        A = self.entity_links.get(e1, set())
+        B = self.entity_links.get(e2, set())
+
+        if not A or not B:
+            return 0.0
+
+        intersection = len(A & B)
+        union = len(A | B)
+
+        if intersection == 0:
+            return 0.0
+
+        max_ab = max(len(A), len(B))
+        min_ab = min(len(A), len(B))
+        all_pages = len(A | B) + 1000  # Approximate total Wikipedia pages
+
+        numerator = math.log(max_ab + 1)
+        denominator = math.log(all_pages)
+        overlap_term = math.log(intersection + 1) / denominator
+
+        relatedness = (numerator - overlap_term) / (math.log(all_pages) - math.log(min_ab + 1))
+        return max(0, relatedness)  # Clamp to [0, 1]
+
+    def link_entities(self, mentions, context_entities=None):
+        """
+        Link mentions to entities, considering context.
+
+        mentions: list of mention strings
+        context_entities: dict mapping previous mentions to their linked entities
+        """
+        if context_entities is None:
+            context_entities = {}
+
+        results = {}
+
+        for mention in mentions:
+            candidates = self.anchor_dict.get(mention.lower(), {})
+
+            if not candidates:
+                results[mention] = None
+                continue
+
+            best_entity = None
+            best_score = -float('inf')
+
+            for entity in candidates:
+                # Start with prior probability
+                score = math.log(self.prior_probability(mention, entity) + 1e-6)
+
+                # Add context-based relatedness
+                for prev_mention, prev_entity in context_entities.items():
+                    if prev_entity:
+                        relatedness = self.milne_witten_relatedness(entity, prev_entity)
+                        score += relatedness
+
+                if score > best_score:
+                    best_score = score
+                    best_entity = entity
+
+            results[mention] = best_entity
+
+        return results
+
+# Example usage: build a small knowledge base
+linker = TAGMELinker()
+
+# Add anchor entries (mention -> entity mappings from Wikipedia)
+linker.add_anchor("Obama", "Barack_Obama", count=100)
+linker.add_anchor("Obama", "Michelle_Obama", count=20)
+linker.add_anchor("President", "Barack_Obama", count=50)
+linker.add_anchor("White House", "White_House", count=200)
+linker.add_anchor("the building", "White_House", count=10)
+
+# Set Wikipedia linking relationships (simplified)
+linker.set_entity_links("Barack_Obama",
+    ["Politics", "United_States", "Democratic_Party", "Harvard"])
+linker.set_entity_links("White_House",
+    ["Architecture", "Washington_DC", "United_States", "Government"])
+linker.set_entity_links("Michelle_Obama",
+    ["Politics", "United_States", "Democratic_Party", "Princeton"])
+
+# Link mentions with context
+mentions = ["Obama", "the President", "White House"]
+links = linker.link_entities(mentions)
+
+print("Entity Links:")
+for mention, entity in links.items():
+    print(f"  '{mention}' -> {entity}")</code></pre>
+        </div>
+    </section>
+
+    <!-- SECTION 5: SOCRATIC CHALLENGE -->
+    <section id="socratic" class="fade-in-up">
+        <h2>Socratic Challenge: Test Your Understanding</h2>
+
+        <p>Answer these multiple-choice questions to deepen your understanding of coreference resolution and entity linking.</p>
+
+        <div class="quiz-container">
+            <!-- Question 1 -->
+            <div class="quiz-item">
+                <div class="quiz-question">
+                    1. In the mention-ranking model, why do we sum the loss over all gold antecedents (rather than just one best antecedent)?
+                </div>
+                <div>
+                    <label class="quiz-option">
+                        <input type="radio" name="q1" value="a">
+                        <span>To ensure the model learns to rank all antecedents equally</span>
+                    </label>
+                    <label class="quiz-option">
+                        <input type="radio" name="q1" value="b">
+                        <span>Because in natural discourse, multiple valid antecedents can create ambiguity; the model should learn probability mass over all possible correct answers</span>
+                    </label>
+                    <label class="quiz-option">
+                        <input type="radio" name="q1" value="c">
+                        <span>To prevent overfitting by averaging gradients</span>
+                    </label>
+                    <label class="quiz-option">
+                        <input type="radio" name="q1" value="d">
+                        <span>It's a computational optimization trick that has no semantic meaning</span>
+                    </label>
+                </div>
+                <div class="quiz-explanation">
+                    <strong>Correct Answer: B</strong><br>
+                    In natural discourse, a pronoun can sometimes refer to multiple valid antecedents, creating genuine ambiguity. By summing over all gold antecedents, the loss $L = -\sum_{i} \log \sum_{a_j \in \text{GOLD}(m_i)} p(a_j | m_i)$ allows the model to distribute probability mass across all correct answers, rather than forcing it to pick a single "best" one. This is called marginalization and is key to handling ambiguity in structured prediction.
+                </div>
+            </div>
+
+            <!-- Question 2 -->
+            <div class="quiz-item">
+                <div class="quiz-question">
+                    2. What key difference distinguishes the B³ metric from the MUC metric in coreference evaluation?
+                </div>
+                <div>
+                    <label class="quiz-option">
+                        <input type="radio" name="q2" value="a">
+                        <span>B³ uses entity alignment, while MUC uses pairwise comparisons</span>
+                    </label>
+                    <label class="quiz-option">
+                        <input type="radio" name="q2" value="b">
+                        <span>MUC counts minimum links needed in clusters; B³ evaluates recall and precision per mention, treating all mentions (including singletons) equally</span>
+                    </label>
+                    <label class="quiz-option">
+                        <input type="radio" name="q2" value="c">
+                        <span>B³ is only used for entity linking, while MUC is for coreference</span>
+                    </label>
+                    <label class="quiz-option">
+                        <input type="radio" name="q2" value="d">
+                        <span>They're equivalent; B³ is just a newer name for MUC</span>
+                    </label>
+                </div>
+                <div class="quiz-explanation">
+                    <strong>Correct Answer: B</strong><br>
+                    MUC focuses on "edit distance"—how many links are needed to form predicted clusters from gold ones. This can underweight singleton mentions (entities mentioned once). B³, by contrast, computes precision and recall for each individual mention: how many predicted cluster members overlap with the gold cluster? This gives equal weight to all mentions, making B³ fairer for evaluating systems that must handle rare, singleton entities accurately.
+                </div>
+            </div>
+
+            <!-- Question 3 -->
+            <div class="quiz-item">
+                <div class="quiz-question">
+                    3. Why is the Winograd Schema Challenge particularly challenging for coreference systems?
+                </div>
+                <div>
+                    <label class="quiz-option">
+                        <input type="radio" name="q3" value="a">
+                        <span>The pronouns have unusual morphology that parsers can't handle</span>
+                    </label>
+                    <label class="quiz-option">
+                        <input type="radio" name="q3" value="b">
+                        <span>It requires world knowledge and commonsense reasoning about events and entities; shallow pattern matching on number/gender agreement is insufficient</span>
+                    </label>
+                    <label class="quiz-option">
+                        <input type="radio" name="q3" value="c">
+                        <span>The antecedent is always a proper noun, which systems refuse to handle</span>
+                    </label>
+                    <label class="quiz-option">
+                        <input type="radio" name="q3" value="d">
+                        <span>There are always multiple correct answers, making evaluation impossible</span>
+                    </label>
+                </div>
+                <div class="quiz-explanation">
+                    <strong>Correct Answer: B</strong><br>
+                    Winograd Schema examples like "The city council refused the demonstrators a permit because they feared violence" require understanding that councils (not demonstrators) have the authority to refuse permits. This demands commonsense knowledge and event understanding, not just morphological agreement or recency. The schema highlights that pure clustering approaches are insufficient—we need reasoning about the world. Variants with opposite answers show that the task is not about grammatical patterns but semantic understanding.
+                </div>
+            </div>
+
+            <!-- Question 4 -->
+            <div class="quiz-item">
+                <div class="quiz-question">
+                    4. In the end-to-end neural coreference model (Lee et al. 2017), what do the three components of the span score $s(i,j) = s_m(i) + s_m(j) + s_a(i,j)$ capture?
+                </div>
+                <div>
+                    <label class="quiz-option">
+                        <input type="radio" name="q4" value="a">
+                        <span>Spell-checking, POS tagging, and NER scores</span>
+                    </label>
+                    <label class="quiz-option">
+                        <input type="radio" name="q4" value="b">
+                        <span>$s_m(i)$ and $s_m(j)$ = probability that spans $i$ and $j$ are real mentions; $s_a(i,j)$ = compatibility/relatedness between the two mentions as potential coreferents</span>
+                    </label>
+                    <label class="quiz-option">
+                        <input type="radio" name="q4" value="c">
+                        <span>Distance, gender agreement, and semantic class</span>
+                    </label>
+                    <label class="quiz-option">
+                        <input type="radio" name="q4" value="d">
+                        <span>Only antecedent scores; mention scores are computed separately</span>
+                    </label>
+                </div>
+                <div class="quiz-explanation">
+                    <strong>Correct Answer: B</strong><br>
+                    The end-to-end model jointly learns mention detection and coreference linking. The mention scores $s_m(i)$ and $s_m(j)$ rate whether spans $i$ and $j$ are legitimate mentions (high scores for likely mentions, low for pleonastic "it" or determiners). The antecedent score $s_a(i,j)$ captures whether the two mentions are compatible—do they refer to the same entity? By summing all three, we get a holistic score: "both spans are mentions, and they're likely coreferent." During pruning, only high-scoring mentions are kept; during linking, we find the best antecedent.
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 2rem; padding: 1.5rem; background-color: #1e293b; border-radius: 8px; text-align: center;">
+            <button class="btn" onclick="checkAnswers()">Check My Answers</button>
+            <p id="score-display" style="margin-top: 1rem; color: #cbd5e1;"></p>
+        </div>
+    </section>
+
+    <!-- SECTION 6: MODERN BRIDGE -->
+    <section id="modern" class="fade-in-up">
+        <h2>Modern Bridge: LLMs and Beyond</h2>
+
+        <h3>How Large Language Models Handle Coreference</h3>
+
+        <p>Modern large language models (GPT-4, Claude, Gemini) handle coreference implicitly through their transformer-based architectures. Rather than explicit clustering algorithms, they learn rich contextual representations where coreferent mentions converge to similar embeddings.</p>
+
+        <div class="card">
+            <div class="card-title">LLM Advantages</div>
+            <ul>
+                <li><strong>Implicit entity tracking:</strong> Transformer attention automatically tracks which tokens refer to the same entity</li>
+                <li><strong>Commonsense knowledge:</strong> Pre-trained on vast text, LLMs understand world knowledge needed for Winograd-style examples</li>
+                <li><strong>Zero-shot capability:</strong> Can resolve pronouns without task-specific training</li>
+                <li><strong>Multilingual:</strong> Single model handles multiple languages, including pro-drop languages</li>
+            </ul>
+        </div>
+
+        <h3>Prompt-Based Coreference Resolution</h3>
+
+        <p>Rather than training dedicated models, we can use in-context learning with LLMs:</p>
+
+        <div class="code-block">
+            <span class="code-label">LLM Prompt for Coreference</span>
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code>Resolve coreference in the following text. For each pronoun, identify its antecedent.
+
+Text: "John went to the store with his friend Maria. He bought a book for her. She was delighted."
+
+Output:
+- "He" (sentence 2) → "John" (sentence 1)
+- "her" (sentence 2) → "Maria" (sentence 1)
+- "She" (sentence 3) → "Maria" (sentence 2)</code></pre>
+        </div>
+
+        <h3>Entity Linking with Dense Retrieval and LLM Re-ranking</h3>
+
+        <p>Modern entity linking combines dense vector retrieval with LLM-based re-ranking:</p>
+
+        <div class="method-box">
+            <h4>Hybrid Entity Linking Pipeline</h4>
+            <ol>
+                <li><strong>Mention encoding:</strong> Use BERT or bi-encoder to embed the mention and its context</li>
+                <li><strong>Candidate retrieval:</strong> Retrieve top-k entities from knowledge base via dense similarity search</li>
+                <li><strong>LLM re-ranking:</strong> Use a large language model to score candidates in context, considering:
+                    <ul>
+                        <li>Semantic fit with surrounding text</li>
+                        <li>Entity type compatibility</li>
+                        <li>Coherence with other linked entities</li>
+                    </ul>
+                </li>
+                <li><strong>Final linking:</strong> Select highest-scoring candidate</li>
+            </ol>
+        </div>
+
+        <h3>Coreference in Multilingual and Cross-Lingual Settings</h3>
+
+        <p>Modern approaches extend coreference to multiple languages:</p>
+
+        <ul>
+            <li><strong>Multilingual transformers (mBERT, XLM-R):</strong> Single model handles 100+ languages with transfer learning</li>
+            <li><strong>Cross-lingual coreference:</strong> Link coreferent mentions across different languages (useful for information extraction from multilingual documents)</li>
+            <li><strong>Pro-drop handling:</strong> Languages like Chinese, Japanese, Spanish allow omitted pronouns (zero anaphora); models must infer these elided mentions</li>
+        </ul>
+
+        <h3>Remaining Challenges</h3>
+
+        <div class="card">
+            <div class="card-title">Open Problems in Coreference</div>
+            <ul>
+                <li><strong>Implicit references:</strong> "I bought a book. The author was brilliant." (The author = the author of the book, inferred relation)</li>
+                <li><strong>Bridging anaphora:</strong> "The car broke down. The engine was smoking." (The engine = part-of the car, not direct coreference)</li>
+                <li><strong>Discourse deixis:</strong> "John left the party early. That surprised everyone." (That = the event of leaving, not an entity)</li>
+                <li><strong>Rare entities:</strong> Systems fail on newly emerging entities (new organizations, people)</li>
+                <li><strong>Long documents:</strong> Maintaining discourse model over 10k+ tokens remains challenging</li>
+                <li><strong>Bias and fairness:</strong> Gender bias persists; need for inclusive training data</li>
+                <li><strong>Joint tasks:</strong> Coreference often needs to coordinate with other tasks (named entity recognition, semantic role labeling, question answering)</li>
+            </ul>
+        </div>
+
+        <h3>Autoformalization and Coreference</h3>
+
+        <p>Recent work on <strong>autoformalization</strong> (converting natural language to logical forms) highlights coreference as a bridge between informal language and formal reasoning:</p>
+
+        <p>Example: "If a student submits homework late, they are penalized."</p>
+
+        <p>Formal representation must track that "a student" introduces a variable, and "they" refers back to the same variable:</p>
+
+        <div style="background-color: #1e293b; padding: 1rem; border-radius: 4px; margin: 1rem 0;">
+            <p style="color: #cbd5e1; margin: 0; font-family: monospace;">∀x. Student(x) ∧ SubmitsLate(x) → Penalized(x)</p>
+        </div>
+
+        <p>This shows that coreference resolution is foundational for tasks that require precise meaning extraction from natural language.</p>
+
+    </section>
+
+    <!-- SECTION 7: HISTORICAL CONTEXT -->
+    <section id="history" class="fade-in-up">
+        <h2>Historical Context: The Evolution of Coreference Research</h2>
+
+        <p>Coreference resolution has evolved from simple heuristics to deep neural models over nearly 50 years. Here's a timeline of key milestones:</p>
+
+        <div class="timeline">
+            <div class="timeline-item fade-in-up">
+                <div class="timeline-year">1976</div>
+                <div class="timeline-content">
+                    <h4>Hobbs' Algorithm</h4>
+                    <p>Jerry Hobbs introduces the <strong>naive algorithm</strong>, a breadth-first search of the parse tree to find pronoun antecedents. Despite its simplicity, this algorithm achieves surprisingly good results (80%+) on limited domains, establishing that structure-based heuristics can be effective.</p>
+                </div>
+            </div>
+
+            <div class="timeline-item fade-in-up">
+                <div class="timeline-year">1981</div>
+                <div class="timeline-content">
+                    <h4>Centering Theory</h4>
+                    <p>Aravind Joshi and colleagues propose <strong>centering theory</strong>, formalizing how discourse entities are tracked and preferred as antecedents. The "forward-looking center" (Cf) and "backward-looking center" (Cb) concepts become foundational for modeling discourse coherence.</p>
+                </div>
+            </div>
+
+            <div class="timeline-item fade-in-up">
+                <div class="timeline-year">1995</div>
+                <div class="timeline-content">
+                    <h4>MUC Evaluation and Shared Tasks</h4>
+                    <p>The Message Understanding Conference introduces the first standardized <strong>MUC metric</strong> for coreference evaluation, enabling direct comparison of systems. The coreference shared task becomes a driver for research progress.</p>
+                </div>
+            </div>
+
+            <div class="timeline-item fade-in-up">
+                <div class="timeline-year">1998</div>
+                <div class="timeline-content">
+                    <h4>B³ Metric Proposed</h4>
+                    <p>Amit Bagga and Breck Baldwin propose the <strong>B³ (cubed) metric</strong>, addressing limitations of MUC by evaluating precision and recall per mention. This enables fairer evaluation on documents with many singleton entities.</p>
+                </div>
+            </div>
+
+            <div class="timeline-item fade-in-up">
+                <div class="timeline-year">2005</div>
+                <div class="timeline-content">
+                    <h4>CEAF Metric by Luo</h4>
+                    <p>Xiaoqiang Luo introduces <strong>CEAF (entity-based F-measure)</strong>, which uses optimal cluster alignment. The combination of MUC, B³, and CEAF becomes the <strong>CoNLL metric</strong>, the gold standard in coreference evaluation.</p>
+                </div>
+            </div>
+
+            <div class="timeline-item fade-in-up">
+                <div class="timeline-year">2010</div>
+                <div class="timeline-content">
+                    <h4>TAGME: Anchor-Based Entity Linking</h4>
+                    <p>Paolo Ferragina and Ugo Scairano propose <strong>TAGME</strong>, demonstrating that Wikipedia hyperlink anchor statistics can effectively link mentions to entities. This makes entity linking practical for large-scale knowledge bases.</p>
+                </div>
+            </div>
+
+            <div class="timeline-item fade-in-up">
+                <div class="timeline-year">2012</div>
+                <div class="timeline-content">
+                    <h4>CoNLL Shared Task on OntoNotes</h4>
+                    <p>The CoNLL-2012 shared task on coreference resolution in OntoNotes becomes the standard benchmark for the next decade, driving adoption of neural methods and enabling systematic comparison of systems across multiple languages and genres.</p>
+                </div>
+            </div>
+
+            <div class="timeline-item fade-in-up">
+                <div class="timeline-year">2017</div>
+                <div class="timeline-content">
+                    <h4>End-to-End Neural Coreference (Lee et al.)</h4>
+                    <p>Kenton Lee et al. introduce <strong>end-to-end neural coreference</strong>, eliminating the mention detection pipeline and jointly learning to identify mentions and resolve coreference. This approach achieves state-of-the-art on CoNLL-2012, establishing neural methods as dominant.</p>
+                </div>
+            </div>
+
+            <div class="timeline-item fade-in-up">
+                <div class="timeline-year">2018</div>
+                <div class="timeline-content">
+                    <h4>Gender Bias Datasets: WinoBias and GAP</h4>
+                    <p>Jiaominag Zhao et al. introduce <strong>WinoBias</strong> and Google releases the <strong>GAP</strong> dataset, highlighting gender bias in coreference systems. These datasets drive research on fairness and mitigation strategies.</p>
+                </div>
+            </div>
+
+            <div class="timeline-item fade-in-up">
+                <div class="timeline-year">2020</div>
+                <div class="timeline-content">
+                    <h4>ELQ: Neural Entity Linking with Dense Retrieval</h4>
+                    <p>Hovav Shwartz et al. and Xiang Li et al. propose <strong>ELQ</strong> and related dense retrieval approaches, replacing sparse, feature-based methods with neural bi-encoders. This enables scaling entity linking to millions of entities.</p>
+                </div>
+            </div>
+
+            <div class="timeline-item fade-in-up">
+                <div class="timeline-year">2023-2025</div>
+                <div class="timeline-content">
+                    <h4>LLM-Based Coreference and Reasoning</h4>
+                    <p>Large language models (GPT-3/4, Claude, Gemini) demonstrate strong implicit coreference resolution and commonsense reasoning capabilities. Research shifts toward understanding how transformers handle discourse phenomena and leveraging LLMs for few-shot or zero-shot resolution.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 2rem;">
+            <div class="card-title">Key Takeaway</div>
+            <p>Coreference resolution has evolved from heuristic-based algorithms to neural end-to-end models, and now to implicit resolution within large language models. Yet core challenges—ambiguity, world knowledge, rare entities—remain open. The field continues to drive innovation in discourse understanding, structured prediction, and fairness in NLP.</p>
+        </div>
+    </section>
+
+    <!-- JavaScript for Interactions -->
+    <script>
+        // ============ Navigation ============
+        const navLinks = document.querySelectorAll('.nav-link');
+        const sections = document.querySelectorAll('section');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (pageYOffset >= sectionTop - 200) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href').slice(1) === current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+
+        // ============ Scroll Reveal Animation ============
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.fade-in-up').forEach(el => {
+            observer.observe(el);
+        });
+
+        document.querySelectorAll('.timeline-item').forEach(el => {
+            observer.observe(el);
+        });
+
+        // ============ Canvas Visualizer ============
+        const canvas = document.getElementById('canvas-visualizer');
+        const ctx = canvas.getContext('2d');
+
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = 1000 * dpr;
+        canvas.height = 400 * dpr;
+        ctx.scale(dpr, dpr);
+
+        const examples = {
+            example1: {
+                text: "Sherlock Holmes was a detective. He lived in London. The building was famous.",
+                mentions: [
+                    { text: "Sherlock Holmes", pos: 0, sent: 0 },
+                    { text: "He", pos: 1, sent: 1 },
+                    { text: "London", pos: 1, sent: 1 },
+                    { text: "The building", pos: 2, sent: 2 }
+                ],
+                chains: [[0, 1], [2], [3]]
+            },
+            example2: {
+                text: "The CEO was ambitious. She led the company. It thrived under her leadership.",
+                mentions: [
+                    { text: "The CEO", pos: 0, sent: 0 },
+                    { text: "She", pos: 1, sent: 1 },
+                    { text: "the company", pos: 1, sent: 1 },
+                    { text: "It", pos: 2, sent: 2 },
+                    { text: "her", pos: 2, sent: 2 }
+                ],
+                chains: [[0, 1, 4], [2, 3]]
+            },
+            example3: {
+                text: "Mary had a sister. They were close. She helped him with his work.",
+                mentions: [
+                    { text: "Mary", pos: 0, sent: 0 },
+                    { text: "a sister", pos: 0, sent: 0 },
+                    { text: "They", pos: 1, sent: 1 },
+                    { text: "She", pos: 2, sent: 2 },
+                    { text: "him", pos: 2, sent: 2 }
+                ],
+                chains: [[0, 1, 2, 3], [4]]
+            }
+        };
+
+        let currentExample = 'example1';
+        let currentStep = 0;
+        let autoPlayInterval = null;
+
+        const colors = ['#14b8a6', '#ef4444', '#eab308', '#8b5cf6', '#ec4899'];
+
+        function drawVisualization() {
+            const example = examples[currentExample];
+            const dpr = window.devicePixelRatio || 1;
+
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, 1000, 400);
+
+            const mentionHeight = 80;
+            const startY = 50;
+
+            // Draw mentions
+            example.mentions.forEach((mention, idx) => {
+                const x = 50 + idx * 200;
+                const y = startY;
+
+                ctx.fillStyle = idx < currentStep ? '#1e293b' : '#334155';
+                ctx.fillRect(x - 40, y - 20, 120, 40);
+
+                ctx.strokeStyle = idx < currentStep ? '#14b8a6' : '#475569';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x - 40, y - 20, 120, 40);
+
+                ctx.fillStyle = '#e2e8f0';
+                ctx.font = 'bold 12px Inter';
+                ctx.textAlign = 'center';
+                ctx.fillText(mention.text.substring(0, 12), x + 20, y + 5);
+            });
+
+            // Draw coreference arcs
+            if (currentStep > 0) {
+                example.chains.forEach((chain, chainIdx) => {
+                    const color = colors[chainIdx % colors.length];
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 2;
+
+                    for (let i = 0; i < chain.length - 1; i++) {
+                        const idx1 = chain[i];
+                        const idx2 = chain[i + 1];
+
+                        if (idx2 < currentStep) {
+                            const x1 = 50 + idx1 * 200 + 20;
+                            const x2 = 50 + idx2 * 200 + 20;
+                            const arcY = startY + mentionHeight + 20;
+
+                            ctx.beginPath();
+                            ctx.moveTo(x1, startY + 20);
+                            ctx.quadraticCurveTo((x1 + x2) / 2, arcY, x2, startY + 20);
+                            ctx.stroke();
+                        }
+                    }
+                });
+            }
+
+            // Status text
+            const statusEl = document.getElementById('status-text');
+            const detailEl = document.getElementById('detail-text');
+
+            if (currentStep === 0) {
+                statusEl.innerHTML = '<strong>Status:</strong> Ready to start. Click "Next Step" to process mentions.';
+                detailEl.innerHTML = '<strong>Details:</strong> (Details will appear as you progress)';
+            } else if (currentStep <= example.mentions.length) {
+                const mention = example.mentions[currentStep - 1];
+                statusEl.innerHTML = `<strong>Status:</strong> Processing mention ${currentStep} of ${example.mentions.length}`;
+                detailEl.innerHTML = `<strong>Details:</strong> Current mention: "${mention.text}". Searching for antecedents among previous mentions. Score calculation in progress...`;
+            } else {
+                statusEl.innerHTML = '<strong>Status:</strong> Complete! All mentions processed and linked.';
+                detailEl.innerHTML = `<strong>Details:</strong> Final coreference chains formed. Total mentions: ${example.mentions.length}. Chains: ${example.chains.length}.`;
+            }
+        }
+
+        document.getElementById('example-select').addEventListener('change', (e) => {
+            currentExample = e.target.value;
+            currentStep = 0;
+            drawVisualization();
+        });
+
+        document.getElementById('next-btn').addEventListener('click', () => {
+            if (currentStep <= examples[currentExample].mentions.length) {
+                currentStep++;
+                drawVisualization();
+            }
+        });
+
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            currentStep = 0;
+            if (autoPlayInterval) clearInterval(autoPlayInterval);
+            document.getElementById('auto-play-btn').textContent = 'Auto Play (5s intervals)';
+            drawVisualization();
+        });
+
+        document.getElementById('auto-play-btn').addEventListener('click', () => {
+            if (autoPlayInterval) {
+                clearInterval(autoPlayInterval);
+                autoPlayInterval = null;
+                document.getElementById('auto-play-btn').textContent = 'Auto Play (5s intervals)';
+            } else {
+                document.getElementById('auto-play-btn').textContent = 'Stop Auto Play';
+                autoPlayInterval = setInterval(() => {
+                    if (currentStep <= examples[currentExample].mentions.length) {
+                        currentStep++;
+                        drawVisualization();
+                    } else {
+                        clearInterval(autoPlayInterval);
+                        autoPlayInterval = null;
+                        document.getElementById('auto-play-btn').textContent = 'Auto Play (5s intervals)';
+                    }
+                }, 5000);
+            }
+        });
+
+        // Initial draw
+        drawVisualization();
+
+        // Redraw on resize
+        window.addEventListener('resize', drawVisualization);
+
+        // ============ Code Copy Buttons ============
+        function copyCode(button) {
+            const codeBlock = button.nextElementSibling;
+            const code = codeBlock.textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                button.textContent = 'Copied!';
+                button.classList.add('copied');
+                setTimeout(() => {
+                    button.textContent = 'Copy';
+                    button.classList.remove('copied');
+                }, 2000);
+            });
+        }
+
+        // ============ Quiz Logic ============
+        function checkAnswers() {
+            const correctAnswers = {
+                q1: 'b',
+                q2: 'b',
+                q3: 'b',
+                q4: 'b'
+            };
+
+            let score = 0;
+            let answered = 0;
+
+            for (const [question, correct] of Object.entries(correctAnswers)) {
+                const selected = document.querySelector(`input[name="${question}"]:checked`);
+                if (selected) {
+                    answered++;
+                    const explanation = document.querySelector(`input[name="${question}"]`).closest('.quiz-item').querySelector('.quiz-explanation');
+                    explanation.classList.add('show');
+
+                    if (selected.value === correct) {
+                        score++;
+                        explanation.classList.add('correct');
+                        explanation.classList.remove('incorrect');
+                    } else {
+                        explanation.classList.add('incorrect');
+                        explanation.classList.remove('correct');
+                    }
+                }
+            }
+
+            const scoreDisplay = document.getElementById('score-display');
+            if (answered === 0) {
+                scoreDisplay.textContent = 'Please answer at least one question.';
+                scoreDisplay.style.color = '#ef4444';
+            } else {
+                const percentage = Math.round((score / answered) * 100);
+                scoreDisplay.innerHTML = `You scored <strong>${score}/${answered}</strong> (${percentage}%). ${
+                    percentage === 100 ? '🌟 Perfect score!' : percentage >= 75 ? '✓ Solid understanding!' : 'Review the explanations to deepen your knowledge.'
+                }`;
+                scoreDisplay.style.color = percentage === 100 ? '#22c55e' : percentage >= 75 ? '#14b8a6' : '#eab308';
+            }
+        }
+
+        // Make checkAnswers global
+        window.checkAnswers = checkAnswers;
+        window.copyCode = copyCode;
+    </script>
+</body>
+</html>

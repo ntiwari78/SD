@@ -1,0 +1,1585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 13: RNNs and LSTMs — Researcher Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+:root {
+  --bg-primary: #0a0e1a;
+  --bg-secondary: #111827;
+  --bg-card: #1a2236;
+  --bg-card-hover: #1f2a42;
+  --accent-1: #f472b6;
+  --accent-2: #818cf8;
+  --accent-3: #34d399;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --border: #2a3452;
+  --code-bg: #0d1321;
+  --glow-1: rgba(244,114,182,0.15);
+  --glow-2: rgba(129,140,248,0.15);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+/* ─── Animated BG ─── */
+.bg-grid {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    radial-gradient(circle at 20% 30%, var(--glow-1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, var(--glow-2) 0%, transparent 50%);
+  opacity: 0.5;
+}
+/* ─── NAV ─── */
+nav {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(10,14,26,0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+}
+.nav-inner {
+  max-width: 1400px; margin: 0 auto;
+  display: flex; align-items: center; gap: 1.5rem;
+  height: 60px; overflow-x: auto;
+}
+.nav-brand {
+  font-weight: 800; font-size: 0.85rem;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  white-space: nowrap;
+}
+.nav-links { display: flex; gap: 0.25rem; }
+.nav-links a {
+  color: var(--text-muted); text-decoration: none;
+  font-size: 0.75rem; font-weight: 500;
+  padding: 0.35rem 0.75rem; border-radius: 6px;
+  transition: all 0.2s; white-space: nowrap;
+}
+.nav-links a:hover, .nav-links a.active {
+  color: var(--accent-1); background: var(--glow-1);
+}
+/* ─── HERO ─── */
+.hero {
+  position: relative; z-index: 1;
+  padding: 5rem 2rem 3rem;
+  text-align: center;
+}
+.hero-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  color: #fff; font-weight: 700; font-size: 0.75rem;
+  padding: 0.3rem 1rem; border-radius: 20px;
+  text-transform: uppercase; letter-spacing: 1.5px;
+  margin-bottom: 1.5rem;
+}
+.hero h1 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 800; line-height: 1.15;
+  background: linear-gradient(135deg, var(--accent-1) 0%, var(--accent-2) 50%, var(--accent-3) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  margin-bottom: 1rem;
+}
+.hero .subtitle {
+  font-size: 1.15rem; color: var(--text-secondary);
+  max-width: 700px; margin: 0 auto;
+}
+/* ─── MAIN ─── */
+.container {
+  position: relative; z-index: 1;
+  max-width: 1100px; margin: 0 auto;
+  padding: 0 2rem 4rem;
+}
+/* ─── SECTIONS ─── */
+.section {
+  margin-bottom: 4rem;
+  opacity: 0; transform: translateY(30px);
+  transition: all 0.6s cubic-bezier(0.16,1,0.3,1);
+}
+.section.visible { opacity: 1; transform: translateY(0); }
+.section-label {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  font-size: 0.7rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 2px;
+  color: var(--accent-1); margin-bottom: 0.75rem;
+}
+.section-label .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent-1);
+  animation: pulse-dot 2s infinite;
+}
+@keyframes pulse-dot {
+  0%,100% { opacity: 1; } 50% { opacity: 0.3; }
+}
+.section h2 {
+  font-size: 1.8rem; font-weight: 800;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, var(--text-primary), var(--accent-2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.section h3 {
+  font-size: 1.25rem; font-weight: 700;
+  color: var(--accent-2); margin: 2rem 0 0.75rem;
+}
+.section p, .section li {
+  color: var(--text-secondary); margin-bottom: 1rem;
+  font-size: 0.95rem;
+}
+.section ul { padding-left: 1.5rem; }
+/* ─── CARDS ─── */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px; padding: 2rem;
+  margin-bottom: 1.5rem;
+  transition: all 0.3s;
+}
+.card:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--accent-2);
+  box-shadow: 0 0 30px rgba(129,140,248,0.08);
+}
+/* ─── MATH ─── */
+.math-block {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px; padding: 1.5rem;
+  margin: 1.5rem 0; overflow-x: auto;
+  text-align: center;
+}
+.math-block .katex { font-size: 1.1rem; }
+.eq-label {
+  float: right; color: var(--text-muted);
+  font-size: 0.8rem; font-family: 'JetBrains Mono', monospace;
+}
+/* ─── CODE ─── */
+.code-block {
+  position: relative;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px; margin: 1.5rem 0;
+  overflow: hidden;
+}
+.code-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  background: rgba(129,140,248,0.08);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.75rem; font-weight: 600;
+  color: var(--accent-2);
+}
+.copy-btn {
+  background: rgba(129,140,248,0.15);
+  border: 1px solid var(--accent-2);
+  color: var(--accent-2);
+  padding: 0.25rem 0.75rem; border-radius: 6px;
+  font-size: 0.7rem; cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  transition: all 0.2s;
+}
+.copy-btn:hover { background: var(--accent-2); color: #fff; }
+.code-block pre {
+  padding: 1.25rem; overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem; line-height: 1.8;
+  color: var(--text-secondary);
+}
+.code-block .cm { color: #64748b; }
+.code-block .kw { color: var(--accent-1); }
+.code-block .fn { color: var(--accent-2); }
+.code-block .st { color: var(--accent-3); }
+.code-block .num { color: #fbbf24; }
+.code-block .op { color: #f472b6; }
+/* ─── TABS ─── */
+.tab-bar {
+  display: flex; gap: 0.25rem; margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;
+  overflow-x: auto;
+}
+.tab-btn {
+  padding: 0.5rem 1.25rem; border-radius: 8px 8px 0 0;
+  border: none; background: transparent;
+  color: var(--text-muted); font-family: 'Inter', sans-serif;
+  font-size: 0.8rem; font-weight: 600; cursor: pointer;
+  transition: all 0.2s; white-space: nowrap;
+}
+.tab-btn.active {
+  background: var(--glow-1); color: var(--accent-1);
+  border-bottom: 2px solid var(--accent-1);
+}
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+/* ─── INTERACTIVE VISUALIZERS ─── */
+.viz-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px; padding: 2rem;
+  margin: 2rem 0;
+}
+.viz-title {
+  font-size: 0.95rem; font-weight: 700;
+  color: var(--accent-1); margin-bottom: 1rem;
+  display: flex; align-items: center; gap: 0.5rem;
+}
+/* ─── RNN UNROLLER ─── */
+.rnn-unroll-viz {
+  display: flex; flex-direction: column; align-items: center; gap: 1rem;
+}
+.unroll-controls {
+  display: flex; align-items: center; gap: 1rem;
+  margin-bottom: 1rem;
+}
+.unroll-controls label {
+  color: var(--text-secondary); font-size: 0.85rem; font-weight: 500;
+}
+.unroll-slider {
+  -webkit-appearance: none; width: 200px; height: 6px;
+  border-radius: 3px; background: var(--border);
+  outline: none;
+}
+.unroll-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 18px; height: 18px;
+  border-radius: 50%; background: var(--accent-1);
+  cursor: pointer;
+}
+.rnn-canvas {
+  width: 100%; max-width: 800px; height: 280px;
+  background: var(--code-bg); border-radius: 12px;
+  border: 1px solid var(--border);
+}
+/* ─── LSTM GATE EXPLORER ─── */
+.gate-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+.gate-card {
+  background: var(--code-bg);
+  border: 2px solid var(--border);
+  border-radius: 12px; padding: 1.25rem;
+  cursor: pointer; transition: all 0.3s;
+  text-align: center;
+}
+.gate-card:hover, .gate-card.active {
+  border-color: var(--accent-1);
+  box-shadow: 0 0 20px var(--glow-1);
+}
+.gate-card .gate-icon {
+  font-size: 2rem; margin-bottom: 0.5rem;
+}
+.gate-card .gate-name {
+  font-weight: 700; font-size: 0.95rem;
+  color: var(--text-primary); margin-bottom: 0.25rem;
+}
+.gate-card .gate-brief {
+  font-size: 0.75rem; color: var(--text-muted);
+}
+.gate-detail {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px; padding: 1.5rem;
+  margin-top: 1rem;
+  display: none;
+}
+.gate-detail.active { display: block; }
+.gate-detail h4 {
+  color: var(--accent-1); font-size: 1rem;
+  margin-bottom: 0.75rem;
+}
+.gate-detail p {
+  color: var(--text-secondary); font-size: 0.85rem;
+}
+/* ─── ARCHITECTURE SELECTOR ─── */
+.arch-tabs {
+  display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap;
+}
+.arch-btn {
+  padding: 0.5rem 1rem; border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-card); color: var(--text-muted);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8rem; font-weight: 600;
+  cursor: pointer; transition: all 0.2s;
+}
+.arch-btn.active, .arch-btn:hover {
+  border-color: var(--accent-2); color: var(--accent-2);
+  background: var(--glow-2);
+}
+.arch-panel {
+  display: none;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px; padding: 1.5rem;
+}
+.arch-panel.active { display: block; }
+.arch-diagram {
+  width: 100%; max-width: 700px; height: 220px;
+  margin: 0 auto;
+}
+/* ─── ATTENTION HEATMAP ─── */
+.attn-heatmap-grid {
+  display: grid; gap: 2px;
+  margin: 1rem auto;
+  width: fit-content;
+}
+.attn-cell {
+  width: 52px; height: 52px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.65rem; font-weight: 600;
+  border-radius: 4px; transition: all 0.3s;
+  cursor: default;
+  font-family: 'JetBrains Mono', monospace;
+}
+.attn-label {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.7rem; font-weight: 600;
+  color: var(--text-muted); width: 52px; height: 52px;
+}
+/* ─── HISTORICAL SIDEBAR ─── */
+.historical-toggle {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  background: rgba(244,114,182,0.1);
+  border: 1px solid rgba(244,114,182,0.3);
+  border-radius: 8px; padding: 0.5rem 1rem;
+  color: var(--accent-1); font-size: 0.8rem;
+  font-weight: 600; cursor: pointer;
+  transition: all 0.2s; margin: 1rem 0;
+}
+.historical-toggle:hover { background: rgba(244,114,182,0.2); }
+.historical-content {
+  display: none; background: var(--code-bg);
+  border-left: 3px solid var(--accent-1);
+  border-radius: 0 12px 12px 0;
+  padding: 1.25rem 1.5rem; margin: 1rem 0;
+}
+.historical-content.show { display: block; }
+.historical-content h4 {
+  color: var(--accent-1); font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+.historical-content p {
+  color: var(--text-secondary); font-size: 0.85rem;
+}
+/* ─── COMPARISON TABLE ─── */
+.comp-table {
+  width: 100%; border-collapse: separate;
+  border-spacing: 0; margin: 1.5rem 0;
+  font-size: 0.8rem;
+}
+.comp-table th {
+  background: rgba(129,140,248,0.1);
+  color: var(--accent-2); font-weight: 700;
+  padding: 0.75rem 1rem; text-align: left;
+  border-bottom: 2px solid var(--accent-2);
+}
+.comp-table td {
+  padding: 0.75rem 1rem; color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+}
+.comp-table tr:hover td {
+  background: rgba(129,140,248,0.05);
+}
+/* ─── SOCRATIC ─── */
+.socratic-scenario {
+  background: linear-gradient(135deg, rgba(244,114,182,0.08), rgba(129,140,248,0.08));
+  border: 1px solid rgba(244,114,182,0.2);
+  border-radius: 16px; padding: 2rem; margin: 1.5rem 0;
+}
+.socratic-scenario h4 {
+  color: var(--accent-1); font-size: 1rem;
+  margin-bottom: 0.75rem;
+}
+.socratic-q {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px; padding: 1rem 1.25rem;
+  margin: 0.75rem 0; cursor: pointer;
+  transition: all 0.3s;
+}
+.socratic-q:hover { border-color: var(--accent-2); }
+.socratic-q .q-label {
+  font-weight: 700; color: var(--accent-2);
+  font-size: 0.85rem; margin-bottom: 0.25rem;
+}
+.socratic-q .q-text {
+  color: var(--text-secondary); font-size: 0.85rem;
+}
+.socratic-q .q-hint {
+  display: none; margin-top: 0.75rem; padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  color: var(--accent-3); font-size: 0.8rem;
+  font-style: italic;
+}
+.socratic-q.open .q-hint { display: block; }
+/* ─── RESPONSIVE ─── */
+@media(max-width:768px) {
+  .hero { padding: 3rem 1rem 2rem; }
+  .container { padding: 0 1rem 3rem; }
+  .gate-grid { grid-template-columns: 1fr 1fr; }
+  .attn-cell, .attn-label { width: 38px; height: 38px; font-size: 0.55rem; }
+}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+
+<!-- ─── NAV ─── -->
+<nav>
+  <div class="nav-inner">
+    <div class="nav-brand">CH 13 — RNNs &amp; LSTMs</div>
+    <div class="nav-links">
+      <a href="#feynman">Feynman Bridge</a>
+      <a href="#rnn-core">Simple RNNs</a>
+      <a href="#rnn-lm">RNN Language Models</a>
+      <a href="#nlp-tasks">NLP Tasks</a>
+      <a href="#architectures">Architectures</a>
+      <a href="#lstm">LSTM Deep Dive</a>
+      <a href="#encoder-decoder">Encoder-Decoder</a>
+      <a href="#attention">Attention</a>
+      <a href="#code-lab">Code Lab</a>
+      <a href="#modern">Modern Bridge</a>
+      <a href="#socratic">Socratic Challenge</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ─── HERO ─── -->
+<header class="hero">
+  <div class="hero-badge">Chapter 13 · Jurafsky &amp; Martin</div>
+  <h1>Recurrent Neural Networks<br>and Long Short-Term Memory</h1>
+  <p class="subtitle">From simple recurrence to gated memory — the architecture that taught neural networks to understand sequences, and the attention mechanism that eventually replaced it.</p>
+</header>
+
+<main class="container">
+
+<!-- ════════════════════════════════════════ -->
+<!-- FEYNMAN BRIDGE                          -->
+<!-- ════════════════════════════════════════ -->
+<section class="section" id="feynman">
+  <div class="section-label"><span class="dot"></span> Feynman Bridge</div>
+  <h2>The Notebook Analogy</h2>
+  <div class="card">
+    <p>Imagine you're reading a mystery novel. As you turn each page, you don't start from scratch — you carry a <strong>mental summary</strong> of everything that's happened so far. You remember who the suspects are, what clues have been found, and the current state of the investigation. Each new page updates that summary: some details become more important, others fade away.</p>
+    <p>A <strong>Recurrent Neural Network (RNN)</strong> works exactly like this. It reads a sequence — word by word — and at each step combines the new word with its running summary (the <em>hidden state</em>) to produce an updated summary. It's like passing a note to your future self at each step, saying "here's what matters so far."</p>
+    <p>But there's a problem. Imagine your mystery novel is 800 pages long. By page 750, can you still remember the vital clue from page 12? Probably not — your mental notepad has been overwritten too many times. This is the <strong>vanishing gradient problem</strong>.</p>
+    <p>The <strong>LSTM</strong> solves this by giving you something better than a single notepad. It gives you a notepad <em>plus</em> a lockbox. The lockbox (called the <em>context vector</em>) can store important facts for hundreds of pages. Three special gatekeepers — the <strong>forget gate</strong>, <strong>add gate</strong>, and <strong>output gate</strong> — decide what goes into or out of the lockbox at each step. The forget gate shreds irrelevant notes. The add gate files new important clues. The output gate decides what to share with your current reading.</p>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ -->
+<!-- SIMPLE RNN CORE                         -->
+<!-- ════════════════════════════════════════ -->
+<section class="section" id="rnn-core">
+  <div class="section-label"><span class="dot"></span> Technical Ascent</div>
+  <h2>13.1 — Simple Recurrent Neural Networks</h2>
+
+  <div class="card">
+    <h3>The Elman Network</h3>
+    <p>A simple RNN (also called an Elman network) processes a sequence one element at a time. At each time step <em>t</em>, the hidden layer depends on both the current input and the hidden layer from the previous time step:</p>
+    <div class="math-block">
+      <span class="eq-label">(13.1)</span>
+      $$\mathbf{h}_t = g(\mathbf{U}\mathbf{h}_{t-1} + \mathbf{W}\mathbf{x}_t)$$
+    </div>
+    <div class="math-block">
+      <span class="eq-label">(13.2)</span>
+      $$\mathbf{y}_t = f(\mathbf{V}\mathbf{h}_t)$$
+    </div>
+    <p>Three weight matrices are learned: <strong>W</strong> ∈ ℝ<sup>d<sub>h</sub>×d<sub>in</sub></sup> (input → hidden), <strong>U</strong> ∈ ℝ<sup>d<sub>h</sub>×d<sub>h</sub></sup> (previous hidden → current hidden), and <strong>V</strong> ∈ ℝ<sup>d<sub>out</sub>×d<sub>h</sub></sup> (hidden → output). The softmax output is:</p>
+    <div class="math-block">
+      <span class="eq-label">(13.3)</span>
+      $$\mathbf{y}_t = \text{softmax}(\mathbf{V}\mathbf{h}_t)$$
+    </div>
+  </div>
+
+  <!-- RNN Unroll Visualizer -->
+  <div class="viz-container">
+    <div class="viz-title">🔁 Interactive: RNN Unrolled Through Time</div>
+    <div class="rnn-unroll-viz">
+      <div class="unroll-controls">
+        <label>Time steps: <strong id="step-count">4</strong></label>
+        <input type="range" class="unroll-slider" id="unroll-slider" min="2" max="7" value="4">
+        <button class="arch-btn" id="play-btn" style="margin-left:0.5rem">▶ Animate</button>
+      </div>
+      <canvas id="rnn-canvas" class="rnn-canvas"></canvas>
+    </div>
+    <p style="color:var(--text-muted);font-size:0.8rem;text-align:center;margin-top:0.75rem">Weight matrices <strong>U</strong>, <strong>V</strong>, <strong>W</strong> are shared across all time steps. Adjust the slider to see different sequence lengths.</p>
+  </div>
+
+  <div class="card">
+    <h3>Training: Backpropagation Through Time (BPTT)</h3>
+    <p>Training uses the same backpropagation algorithm, but applied to the <em>unrolled</em> network. The loss at time <em>t</em> depends on the hidden state, which depends on every previous hidden state. The gradient must flow backward through all time steps — this is called <strong>backpropagation through time</strong>. For very long sequences, gradients are subject to repeated multiplications that can drive them toward zero (<em>vanishing gradients</em>) or infinity (<em>exploding gradients</em>).</p>
+  </div>
+
+  <div class="historical-toggle" onclick="toggleHistorical('hist-elman')">📜 Historical Context: Elman Networks &amp; PDP</div>
+  <div class="historical-content" id="hist-elman">
+    <h4>From Cognitive Modeling to NLP</h4>
+    <p>Recurrent networks with hidden-layer recurrence were introduced by Jeffrey Elman (1990), building on the Parallel Distributed Processing (PDP) group at UC San Diego. Michael Jordan (1986) had earlier explored output-layer recurrence. These models were primarily studied for cognitive modeling before finding practical NLP applications. The key insight — that unrolling recurrence creates a standard feedforward graph — enabled training with ordinary backpropagation (Rumelhart & McClelland, 1986).</p>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ -->
+<!-- RNN LANGUAGE MODELS                     -->
+<!-- ════════════════════════════════════════ -->
+<section class="section" id="rnn-lm">
+  <div class="section-label"><span class="dot"></span> Technical Ascent</div>
+  <h2>13.2 — RNNs as Language Models</h2>
+
+  <div class="card">
+    <p>An RNN language model predicts the next word given all previous words. Unlike n-gram models (fixed context) or feedforward LMs (fixed window), the RNN's hidden state can in principle represent <em>unbounded</em> context. At each step:</p>
+    <div class="math-block">
+      <span class="eq-label">(13.4–13.6)</span>
+      $$\mathbf{e}_t = \mathbf{E}\mathbf{x}_t \qquad \mathbf{h}_t = g(\mathbf{U}\mathbf{h}_{t-1} + \mathbf{W}\mathbf{e}_t) \qquad \hat{\mathbf{y}}_t = \text{softmax}(\mathbf{V}\mathbf{h}_t)$$
+    </div>
+    <p>The probability of a word <em>k</em> being the next word is the <em>k</em>-th component of ŷ<sub>t</sub>:</p>
+    <div class="math-block">
+      <span class="eq-label">(13.7)</span>
+      $$P(w_{t+1} = k \mid w_1, \ldots, w_t) = \hat{\mathbf{y}}_t[k]$$
+    </div>
+
+    <h3>Self-Supervised Training</h3>
+    <p>Training is <strong>self-supervised</strong>: the natural sequence of words provides its own labels. The cross-entropy loss at time <em>t</em> simplifies to the negative log probability assigned to the true next word:</p>
+    <div class="math-block">
+      <span class="eq-label">(13.11)</span>
+      $$L_{CE}(\hat{\mathbf{y}}_t, \mathbf{y}_t) = -\log \hat{\mathbf{y}}_t[w_{t+1}]$$
+    </div>
+    <p>We always feed the <em>correct</em> word (not the model's prediction) as the next input — this is called <strong>teacher forcing</strong>.</p>
+
+    <h3>Weight Tying</h3>
+    <p>Since the input embedding matrix <strong>E</strong> and the output matrix <strong>V</strong> have transposed shapes, we can share weights by setting <strong>V</strong> = <strong>E</strong><sup>T</sup>. This <strong>weight tying</strong> reduces parameters and often improves perplexity:</p>
+    <div class="math-block">
+      <span class="eq-label">(13.14)</span>
+      $$\hat{\mathbf{y}}_t = \text{softmax}(\mathbf{E}^\top \mathbf{h}_t)$$
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ -->
+<!-- NLP TASKS                               -->
+<!-- ════════════════════════════════════════ -->
+<section class="section" id="nlp-tasks">
+  <div class="section-label"><span class="dot"></span> Technical Ascent</div>
+  <h2>13.3 — RNNs for NLP Tasks</h2>
+
+  <div class="card">
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab(event,'task-labeling')">Sequence Labeling</button>
+      <button class="tab-btn" onclick="switchTab(event,'task-classify')">Classification</button>
+      <button class="tab-btn" onclick="switchTab(event,'task-gen')">Generation</button>
+    </div>
+
+    <div class="tab-content active" id="task-labeling">
+      <h3>Sequence Labeling (e.g., POS Tagging)</h3>
+      <p>Each input token receives a label. The RNN processes the sequence left-to-right, and at each time step a softmax over the tag set produces a distribution. Example: "Janet/NNP will/MD back/VB the/DT bill/NN".</p>
+      <p>The loss is the sum of cross-entropy losses at every position, enabling end-to-end training.</p>
+    </div>
+
+    <div class="tab-content" id="task-classify">
+      <h3>Sequence Classification (e.g., Sentiment)</h3>
+      <p>The entire sequence maps to a single label. The RNN reads all tokens, and the <strong>final hidden state h<sub>n</sub></strong> serves as a compressed representation of the whole input. This is fed to a feedforward classifier:</p>
+      <p>Alternatively, we can <strong>pool</strong> all hidden states (mean or max pooling):</p>
+      <div class="math-block">
+        <span class="eq-label">(13.15)</span>
+        $$\mathbf{h}_{mean} = \frac{1}{n}\sum_{i=1}^{n}\mathbf{h}_i$$
+      </div>
+    </div>
+
+    <div class="tab-content" id="task-gen">
+      <h3>Autoregressive Generation</h3>
+      <p><strong>Autoregressive generation</strong> (or <em>causal LM generation</em>) uses a trained language model to produce text word-by-word. Starting from a special &lt;s&gt; token, each generated word is fed back as input for the next step. This continues until an end-of-sequence marker or length limit is reached.</p>
+      <p>The key: each generated word is <em>conditioned on all previously generated words</em>, via the hidden state that carries forward context.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ -->
+<!-- ARCHITECTURES                           -->
+<!-- ════════════════════════════════════════ -->
+<section class="section" id="architectures">
+  <div class="section-label"><span class="dot"></span> Technical Ascent</div>
+  <h2>13.4 — Stacked &amp; Bidirectional Architectures</h2>
+
+  <div class="viz-container">
+    <div class="viz-title">🏗️ Interactive: Architecture Explorer</div>
+    <div class="arch-tabs">
+      <button class="arch-btn active" onclick="switchArch(event,'arch-stacked')">Stacked RNN</button>
+      <button class="arch-btn" onclick="switchArch(event,'arch-bidir')">Bidirectional RNN</button>
+      <button class="arch-btn" onclick="switchArch(event,'arch-bidir-class')">BiRNN for Classification</button>
+    </div>
+
+    <div class="arch-panel active" id="arch-stacked">
+      <canvas class="arch-diagram" id="canvas-stacked"></canvas>
+      <p style="color:var(--text-secondary);font-size:0.85rem;margin-top:1rem"><strong>Stacked RNNs</strong> feed the output of one RNN layer as input to the next. Multiple layers induce increasingly abstract representations — similar to how early visual cortex layers detect edges while deeper layers detect objects. Training costs rise with each added layer.</p>
+    </div>
+
+    <div class="arch-panel" id="arch-bidir">
+      <canvas class="arch-diagram" id="canvas-bidir"></canvas>
+      <p style="color:var(--text-secondary);font-size:0.85rem;margin-top:1rem"><strong>Bidirectional RNNs</strong> run two independent RNNs — one forward, one backward — and concatenate their hidden states. At each position <em>t</em>, the representation captures <em>both</em> left and right context:</p>
+      <div class="math-block">
+        <span class="eq-label">(13.18)</span>
+        $$\mathbf{h}_t = \mathbf{h}_t^f \oplus \mathbf{h}_t^b$$
+      </div>
+    </div>
+
+    <div class="arch-panel" id="arch-bidir-class">
+      <canvas class="arch-diagram" id="canvas-bidir-class"></canvas>
+      <p style="color:var(--text-secondary);font-size:0.85rem;margin-top:1rem"><strong>BiRNN for Classification:</strong> Instead of using only the final hidden state (which is biased toward the end of the sentence), we combine the final forward state h<sub>n</sub><sup>→</sup> and the final backward state h<sub>1</sub><sup>←</sup>, giving balanced coverage of the entire input.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ -->
+<!-- LSTM DEEP DIVE                          -->
+<!-- ════════════════════════════════════════ -->
+<section class="section" id="lstm">
+  <div class="section-label"><span class="dot"></span> Technical Ascent</div>
+  <h2>13.5 — The LSTM: Gated Memory</h2>
+
+  <div class="card">
+    <p>The LSTM (Hochreiter &amp; Schmidhuber, 1997) addresses the vanishing gradient problem by introducing an explicit <strong>context vector c<sub>t</sub></strong> alongside the hidden state, controlled by three learned gates. Each gate uses sigmoid activation (producing values between 0 and 1) to act as a soft mask via element-wise (Hadamard) multiplication.</p>
+  </div>
+
+  <div class="viz-container">
+    <div class="viz-title">🔐 Interactive: LSTM Gate Explorer</div>
+    <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem">Click each gate to see its equations, purpose, and how it manipulates the context vector.</p>
+    <div class="gate-grid">
+      <div class="gate-card active" onclick="selectGate('forget')" id="gate-forget">
+        <div class="gate-icon">🗑️</div>
+        <div class="gate-name">Forget Gate</div>
+        <div class="gate-brief">What to erase</div>
+      </div>
+      <div class="gate-card" onclick="selectGate('add')" id="gate-add">
+        <div class="gate-icon">📝</div>
+        <div class="gate-name">Add Gate</div>
+        <div class="gate-brief">What to remember</div>
+      </div>
+      <div class="gate-card" onclick="selectGate('output')" id="gate-output">
+        <div class="gate-icon">📤</div>
+        <div class="gate-name">Output Gate</div>
+        <div class="gate-brief">What to reveal</div>
+      </div>
+      <div class="gate-card" onclick="selectGate('context')" id="gate-context">
+        <div class="gate-icon">🔄</div>
+        <div class="gate-name">Context Update</div>
+        <div class="gate-brief">Putting it together</div>
+      </div>
+    </div>
+
+    <div class="gate-detail active" id="detail-forget">
+      <h4>Forget Gate — Erasing Irrelevant Context</h4>
+      <p>Computes a mask that decides which dimensions of the old context to keep or discard. A sigmoid squashes values near 0 (forget) or 1 (keep):</p>
+      <div class="math-block">
+        $$\mathbf{f}_t = \sigma(\mathbf{U}_f\mathbf{h}_{t-1} + \mathbf{W}_f\mathbf{x}_t) \qquad \mathbf{k}_t = \mathbf{c}_{t-1} \odot \mathbf{f}_t$$
+      </div>
+      <p>After applying the forget gate, <strong>k<sub>t</sub></strong> is the "cleaned" version of the old context, with irrelevant entries suppressed.</p>
+    </div>
+    <div class="gate-detail" id="detail-add">
+      <h4>Add Gate — Filing New Information</h4>
+      <p>First, compute a candidate new information vector using tanh (the same basic recurrence). Then, an add (input) gate decides which parts to actually store:</p>
+      <div class="math-block">
+        $$\mathbf{g}_t = \tanh(\mathbf{U}_g\mathbf{h}_{t-1} + \mathbf{W}_g\mathbf{x}_t) \qquad \mathbf{i}_t = \sigma(\mathbf{U}_i\mathbf{h}_{t-1} + \mathbf{W}_i\mathbf{x}_t) \qquad \mathbf{j}_t = \mathbf{g}_t \odot \mathbf{i}_t$$
+      </div>
+      <p>The filtered new information <strong>j<sub>t</sub></strong> is added to the cleaned context to form the updated context: <strong>c<sub>t</sub> = j<sub>t</sub> + k<sub>t</sub></strong>.</p>
+    </div>
+    <div class="gate-detail" id="detail-output">
+      <h4>Output Gate — Revealing the Current State</h4>
+      <p>The output gate decides which parts of the context are relevant for the <em>current</em> hidden state (as opposed to information preserved for future use):</p>
+      <div class="math-block">
+        $$\mathbf{o}_t = \sigma(\mathbf{U}_o\mathbf{h}_{t-1} + \mathbf{W}_o\mathbf{x}_t) \qquad \mathbf{h}_t = \mathbf{o}_t \odot \tanh(\mathbf{c}_t)$$
+      </div>
+      <p>The hidden state <strong>h<sub>t</sub></strong> is what gets passed to the output layer and to the next time step. The context <strong>c<sub>t</sub></strong> flows separately through the "highway" — this is the key to long-range memory.</p>
+    </div>
+    <div class="gate-detail" id="detail-context">
+      <h4>Full Context Update Pipeline</h4>
+      <p>Putting all three gates together in sequence:</p>
+      <div class="math-block">
+        $$\underbrace{\mathbf{c}_t = \underbrace{\mathbf{g}_t \odot \mathbf{i}_t}_{\text{new info}} + \underbrace{\mathbf{c}_{t-1} \odot \mathbf{f}_t}_{\text{retained old}}}_{\text{updated context}} \qquad \mathbf{h}_t = \mathbf{o}_t \odot \tanh(\mathbf{c}_t)$$
+      </div>
+      <p>The context vector acts as a <strong>memory highway</strong>. Because it's updated via addition (not multiplication), gradients can flow through it without vanishing — solving the core problem of simple RNNs.</p>
+    </div>
+  </div>
+
+  <!-- RNN vs LSTM comparison -->
+  <table class="comp-table">
+    <tr><th>Property</th><th>Simple RNN</th><th>LSTM</th></tr>
+    <tr><td>Hidden state</td><td>h<sub>t</sub> only</td><td>h<sub>t</sub> + context c<sub>t</sub></td></tr>
+    <tr><td>Weight matrices</td><td>3 (W, U, V)</td><td>8+ (W,U per gate × 3 gates + base)</td></tr>
+    <tr><td>Long-range memory</td><td>Poor (vanishing gradients)</td><td>Strong (additive context highway)</td></tr>
+    <tr><td>Gating mechanism</td><td>None</td><td>Forget, Add, Output gates</td></tr>
+    <tr><td>Gradient flow</td><td>Multiplicative → vanishes</td><td>Additive context → stable</td></tr>
+    <tr><td>Modern usage</td><td>Rare (pedagogical)</td><td>Still used in edge/streaming cases</td></tr>
+  </table>
+</section>
+
+<!-- ════════════════════════════════════════ -->
+<!-- ENCODER-DECODER                         -->
+<!-- ════════════════════════════════════════ -->
+<section class="section" id="encoder-decoder">
+  <div class="section-label"><span class="dot"></span> Technical Ascent</div>
+  <h2>13.7 — The Encoder-Decoder Model</h2>
+
+  <div class="card">
+    <p>When input and output sequences differ in length and don't align word-for-word (e.g., machine translation, summarization), we use the <strong>encoder-decoder</strong> (sequence-to-sequence) architecture:</p>
+    <p><strong>Encoder:</strong> Reads the input x<sub>1:n</sub> and produces contextualized hidden states h<sub>1:n</sub><sup>e</sup>.<br>
+    <strong>Context:</strong> c = h<sub>n</sub><sup>e</sup> — the final encoder state compresses the entire input.<br>
+    <strong>Decoder:</strong> Generates output autoregressively, conditioned on context plus previous output:</p>
+    <div class="math-block">
+      <span class="eq-label">(13.32)</span>
+      $$\mathbf{h}_t^d = g(\hat{\mathbf{y}}_{t-1},\; \mathbf{h}_{t-1}^d,\; \mathbf{c})$$
+    </div>
+    <p>The context vector <strong>c</strong> is provided at <em>every</em> decoding step (not just the first) to prevent its influence from fading. The decoder produces ŷ<sub>t</sub> = softmax(h<sub>t</sub><sup>d</sup>) at each step, sampling or greedy-decoding the next token.</p>
+
+    <h3>The Bottleneck Problem</h3>
+    <p>A single fixed vector <strong>c</strong> must encode <em>everything</em> about the source — a severe bottleneck for long sentences. This motivates the <strong>attention mechanism</strong> (Section 13.8).</p>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ -->
+<!-- ATTENTION                               -->
+<!-- ════════════════════════════════════════ -->
+<section class="section" id="attention">
+  <div class="section-label"><span class="dot"></span> Technical Ascent</div>
+  <h2>13.8 — Attention Mechanism</h2>
+
+  <div class="card">
+    <p>Instead of a single static context, attention provides a <strong>dynamic, per-step context</strong> that is a weighted average of <em>all</em> encoder hidden states, where the weights depend on the current decoder state:</p>
+    <div class="math-block">
+      <span class="eq-label">(13.35)</span>
+      $$\text{score}(\mathbf{h}_{i-1}^d, \mathbf{h}_j^e) = \mathbf{h}_{i-1}^d \cdot \mathbf{h}_j^e \qquad \text{(dot-product attention)}$$
+    </div>
+    <div class="math-block">
+      <span class="eq-label">(13.36)</span>
+      $$\alpha_{ij} = \frac{\exp(\text{score}(\mathbf{h}_{i-1}^d, \mathbf{h}_j^e))}{\sum_k \exp(\text{score}(\mathbf{h}_{i-1}^d, \mathbf{h}_k^e))}$$
+    </div>
+    <div class="math-block">
+      <span class="eq-label">(13.37)</span>
+      $$\mathbf{c}_i = \sum_j \alpha_{ij}\, \mathbf{h}_j^e$$
+    </div>
+    <p>The decoder hidden state is then computed with this dynamic context:</p>
+    <div class="math-block">
+      <span class="eq-label">(13.34)</span>
+      $$\mathbf{h}_i^d = g(\hat{\mathbf{y}}_{i-1},\; \mathbf{h}_{i-1}^d,\; \mathbf{c}_i)$$
+    </div>
+    <p>A more powerful alternative uses <strong>bilinear attention</strong>: score = h<sup>d</sup><sub>i-1</sub> <strong>W<sub>s</sub></strong> h<sup>e</sup><sub>j</sub>, where W<sub>s</sub> is a learned weight matrix. This evolves into the <strong>self-attention</strong> mechanism at the heart of Transformers (Chapter 8).</p>
+  </div>
+
+  <!-- Attention Heatmap Visualizer -->
+  <div class="viz-container">
+    <div class="viz-title">🔥 Interactive: Attention Heatmap (EN → ES Translation)</div>
+    <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem">Hover over cells to see attention weights. Brighter = higher weight. This simulates how the decoder "looks at" different source words when generating each target word.</p>
+    <div id="attn-heatmap" style="display:flex;justify-content:center;overflow-x:auto"></div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ -->
+<!-- CODE LAB                                -->
+<!-- ════════════════════════════════════════ -->
+<section class="section" id="code-lab">
+  <div class="section-label"><span class="dot"></span> Code Lab</div>
+  <h2>Implementation: RNN &amp; LSTM from Scratch + PyTorch</h2>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab(event,'code-rnn')">Simple RNN (NumPy)</button>
+    <button class="tab-btn" onclick="switchTab(event,'code-lstm')">LSTM (PyTorch)</button>
+    <button class="tab-btn" onclick="switchTab(event,'code-seq2seq')">Encoder-Decoder + Attention</button>
+  </div>
+
+  <div class="tab-content active" id="code-rnn">
+    <div class="code-block">
+      <div class="code-header">
+        <span>simple_rnn_forward.py — NumPy from scratch</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      </div>
+      <pre><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cm"># ── Simple RNN Forward Pass (Elman Network) ──</span>
+<span class="cm"># Implements Eq. 13.1-13.3 from the textbook</span>
+
+<span class="kw">def</span> <span class="fn">softmax</span>(z):
+    <span class="cm">"""Numerically stable softmax over last axis."""</span>
+    e = np.exp(z - np.max(z, axis=-<span class="num">1</span>, keepdims=<span class="kw">True</span>))
+    <span class="kw">return</span> e / e.sum(axis=-<span class="num">1</span>, keepdims=<span class="kw">True</span>)
+
+<span class="kw">def</span> <span class="fn">rnn_forward</span>(X, W, U, V, h0=<span class="kw">None</span>):
+    <span class="cm">"""
+    Forward pass for a simple RNN.
+
+    Args:
+        X:  input sequence, shape (T, d_in)       — T time steps
+        W:  input-to-hidden weights (d_h, d_in)
+        U:  hidden-to-hidden weights (d_h, d_h)    — the recurrence
+        V:  hidden-to-output weights (d_out, d_h)
+        h0: initial hidden state (d_h,)            — defaults to zeros
+
+    Returns:
+        Y: output sequence (T, d_out) — softmax probabilities
+        H: hidden states   (T, d_h)  — for inspection / BPTT
+    """</span>
+    T, d_in = X.shape
+    d_h = W.shape[<span class="num">0</span>]
+
+    <span class="cm"># Initialize hidden state to zeros if not provided</span>
+    h_prev = h0 <span class="kw">if</span> h0 <span class="kw">is not None else</span> np.zeros(d_h)
+
+    H = []       <span class="cm"># store all hidden states</span>
+    Y = []       <span class="cm"># store all outputs</span>
+
+    <span class="kw">for</span> t <span class="kw">in</span> range(T):
+        <span class="cm"># Eq 13.1: h_t = g(U·h_{t-1} + W·x_t)</span>
+        <span class="cm"># Using tanh as the activation function g</span>
+        h_t = np.tanh(U @ h_prev + W @ X[t])
+
+        <span class="cm"># Eq 13.3: y_t = softmax(V·h_t)</span>
+        y_t = softmax(V @ h_t)
+
+        H.append(h_t)
+        Y.append(y_t)
+        h_prev = h_t    <span class="cm"># pass hidden state to next step</span>
+
+    <span class="kw">return</span> np.array(Y), np.array(H)
+
+<span class="cm"># ── Demo: predict next character in "hello" ──</span>
+vocab = {<span class="st">'h'</span>: <span class="num">0</span>, <span class="st">'e'</span>: <span class="num">1</span>, <span class="st">'l'</span>: <span class="num">2</span>, <span class="st">'o'</span>: <span class="num">3</span>}
+d_in, d_h, d_out = <span class="num">4</span>, <span class="num">8</span>, <span class="num">4</span>
+
+<span class="cm"># Random weights (in practice, these are learned)</span>
+np.random.seed(<span class="num">42</span>)
+W = np.random.randn(d_h, d_in) * <span class="num">0.1</span>
+U = np.random.randn(d_h, d_h) * <span class="num">0.1</span>
+V = np.random.randn(d_out, d_h) * <span class="num">0.1</span>
+
+<span class="cm"># One-hot encode "hell" → predict "ello"</span>
+X = np.eye(d_in)[[vocab[c] <span class="kw">for</span> c <span class="kw">in</span> <span class="st">"hell"</span>]]
+Y, H = rnn_forward(X, W, U, V)
+
+<span class="kw">print</span>(<span class="st">"Hidden states shape:"</span>, H.shape)   <span class="cm"># (4, 8)</span>
+<span class="kw">print</span>(<span class="st">"Output probs shape:"</span>, Y.shape)     <span class="cm"># (4, 4)</span>
+<span class="kw">print</span>(<span class="st">"Predicted next chars:"</span>,
+      [list(vocab.keys())[i] <span class="kw">for</span> i <span class="kw">in</span> np.argmax(Y, axis=<span class="num">1</span>)])</pre>
+    </div>
+  </div>
+
+  <div class="tab-content" id="code-lstm">
+    <div class="code-block">
+      <div class="code-header">
+        <span>lstm_language_model.py — PyTorch LSTM for Language Modeling</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      </div>
+      <pre><span class="kw">import</span> torch
+<span class="kw">import</span> torch.nn <span class="kw">as</span> nn
+
+<span class="cm"># ── LSTM Language Model with Weight Tying (Eq 13.14) ──</span>
+
+<span class="kw">class</span> <span class="fn">LSTMLanguageModel</span>(nn.Module):
+    <span class="cm">"""
+    An LSTM-based language model implementing:
+    - Embedding layer (E)
+    - Multi-layer LSTM with dropout
+    - Weight tying: V = E^T (Eq 13.14)
+    """</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, vocab_size, d_model=<span class="num">256</span>, n_layers=<span class="num">2</span>, dropout=<span class="num">0.3</span>):
+        <span class="kw">super</span>().__init__()
+
+        <span class="cm"># Input embedding: x_t → e_t (Eq 13.4)</span>
+        self.embedding = nn.Embedding(vocab_size, d_model)
+
+        <span class="cm"># Stacked LSTM (Section 13.4.1)</span>
+        <span class="cm"># Each layer: h_t, c_t = LSTM(e_t, h_{t-1}, c_{t-1})</span>
+        self.lstm = nn.LSTM(
+            input_size=d_model,
+            hidden_size=d_model,   <span class="cm"># same as embedding for weight tying</span>
+            num_layers=n_layers,
+            dropout=dropout <span class="kw">if</span> n_layers > <span class="num">1</span> <span class="kw">else</span> <span class="num">0</span>,
+            batch_first=<span class="kw">True</span>
+        )
+
+        self.dropout = nn.Dropout(dropout)
+
+        <span class="cm"># Output projection: h_t → logits over vocab</span>
+        self.output_proj = nn.Linear(d_model, vocab_size, bias=<span class="kw">False</span>)
+
+        <span class="cm"># Weight tying (Eq 13.14): V = E^T</span>
+        <span class="cm"># Share weights between embedding and output projection</span>
+        self.output_proj.weight = self.embedding.weight
+
+        self._init_weights()
+
+    <span class="kw">def</span> <span class="fn">_init_weights</span>(self):
+        <span class="cm">"""Initialize weights for stable training."""</span>
+        nn.init.uniform_(self.embedding.weight, -<span class="num">0.1</span>, <span class="num">0.1</span>)
+        <span class="kw">for</span> name, param <span class="kw">in</span> self.lstm.named_parameters():
+            <span class="kw">if</span> <span class="st">'weight'</span> <span class="kw">in</span> name:
+                nn.init.orthogonal_(param)  <span class="cm"># helps gradient flow</span>
+            <span class="kw">elif</span> <span class="st">'bias'</span> <span class="kw">in</span> name:
+                nn.init.zeros_(param)
+                <span class="cm"># Set forget gate bias to 1 (remember by default)</span>
+                n = param.size(<span class="num">0</span>)
+                param.data[n//<span class="num">4</span>:n//<span class="num">2</span>].fill_(<span class="num">1.0</span>)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x, hidden=<span class="kw">None</span>):
+        <span class="cm">"""
+        Args:
+            x: token indices (batch, seq_len)
+            hidden: tuple (h_0, c_0) or None
+        Returns:
+            logits: (batch, seq_len, vocab_size)
+            hidden: updated (h_n, c_n)
+        """</span>
+        <span class="cm"># Eq 13.4: e_t = E·x_t</span>
+        emb = self.dropout(self.embedding(x))
+
+        <span class="cm"># Run through stacked LSTM</span>
+        <span class="cm"># lstm_out contains h_t at every time step</span>
+        lstm_out, hidden = self.lstm(emb, hidden)
+        lstm_out = self.dropout(lstm_out)
+
+        <span class="cm"># Eq 13.14: ŷ_t = softmax(E^T · h_t)</span>
+        <span class="cm"># (softmax applied later in loss function)</span>
+        logits = self.output_proj(lstm_out)
+
+        <span class="kw">return</span> logits, hidden
+
+<span class="cm"># ── Training loop sketch ──</span>
+vocab_size = <span class="num">10000</span>
+model = LSTMLanguageModel(vocab_size, d_model=<span class="num">512</span>, n_layers=<span class="num">2</span>)
+optimizer = torch.optim.Adam(model.parameters(), lr=<span class="num">1e-3</span>)
+criterion = nn.CrossEntropyLoss()  <span class="cm"># Eq 13.11: -log ŷ_t[w_{t+1}]</span>
+
+<span class="cm"># Dummy training step (teacher forcing)</span>
+x = torch.randint(<span class="num">0</span>, vocab_size, (<span class="num">32</span>, <span class="num">64</span>))  <span class="cm"># (batch=32, seq=64)</span>
+target = torch.randint(<span class="num">0</span>, vocab_size, (<span class="num">32</span>, <span class="num">64</span>))
+
+logits, _ = model(x)                          <span class="cm"># (32, 64, 10000)</span>
+loss = criterion(logits.view(-<span class="num">1</span>, vocab_size), target.view(-<span class="num">1</span>))
+loss.backward()
+torch.nn.utils.clip_grad_norm_(model.parameters(), <span class="num">0.5</span>)  <span class="cm"># prevent exploding gradients</span>
+optimizer.step()
+
+<span class="kw">print</span>(<span class="st">f"Parameters: {sum(p.numel() for p in model.parameters()):,}"</span>)
+<span class="kw">print</span>(<span class="st">f"Loss: {loss.item():.4f}"</span>)</pre>
+    </div>
+  </div>
+
+  <div class="tab-content" id="code-seq2seq">
+    <div class="code-block">
+      <div class="code-header">
+        <span>seq2seq_attention.py — Encoder-Decoder with Dot-Product Attention</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      </div>
+      <pre><span class="kw">import</span> torch
+<span class="kw">import</span> torch.nn <span class="kw">as</span> nn
+<span class="kw">import</span> torch.nn.functional <span class="kw">as</span> F
+
+<span class="cm"># ── Encoder: Bidirectional LSTM ──</span>
+<span class="kw">class</span> <span class="fn">Encoder</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, vocab_size, d_model=<span class="num">256</span>, n_layers=<span class="num">2</span>):
+        <span class="kw">super</span>().__init__()
+        self.embedding = nn.Embedding(vocab_size, d_model)
+        self.lstm = nn.LSTM(
+            d_model, d_model, n_layers,
+            batch_first=<span class="kw">True</span>, bidirectional=<span class="kw">True</span>  <span class="cm"># Eq 13.16-13.18</span>
+        )
+        <span class="cm"># Project bidir hidden states to decoder size</span>
+        self.proj = nn.Linear(d_model * <span class="num">2</span>, d_model)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, src):
+        emb = self.embedding(src)
+        enc_out, (h, c) = self.lstm(emb)
+        <span class="cm"># enc_out: (batch, src_len, 2*d_model) — all hidden states</span>
+        enc_out = self.proj(enc_out)  <span class="cm"># → (batch, src_len, d_model)</span>
+        <span class="kw">return</span> enc_out, (h, c)
+
+<span class="cm"># ── Dot-Product Attention (Eq 13.35-13.37) ──</span>
+<span class="kw">class</span> <span class="fn">DotProductAttention</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">forward</span>(self, decoder_state, encoder_states):
+        <span class="cm"># decoder_state: (batch, d_model)</span>
+        <span class="cm"># encoder_states: (batch, src_len, d_model)</span>
+
+        <span class="cm"># Eq 13.35: score = h^d · h^e (dot product)</span>
+        scores = torch.bmm(
+            encoder_states,                        <span class="cm"># (B, src, d)</span>
+            decoder_state.unsqueeze(<span class="num">2</span>)             <span class="cm"># (B, d, 1)</span>
+        ).squeeze(<span class="num">2</span>)                               <span class="cm"># (B, src)</span>
+
+        <span class="cm"># Eq 13.36: α = softmax(scores)</span>
+        attn_weights = F.softmax(scores, dim=-<span class="num">1</span>)  <span class="cm"># (B, src)</span>
+
+        <span class="cm"># Eq 13.37: c_i = Σ α_ij · h^e_j</span>
+        context = torch.bmm(
+            attn_weights.unsqueeze(<span class="num">1</span>),             <span class="cm"># (B, 1, src)</span>
+            encoder_states                         <span class="cm"># (B, src, d)</span>
+        ).squeeze(<span class="num">1</span>)                               <span class="cm"># (B, d)</span>
+
+        <span class="kw">return</span> context, attn_weights
+
+<span class="cm"># ── Decoder with Attention (Eq 13.34) ──</span>
+<span class="kw">class</span> <span class="fn">AttentionDecoder</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, vocab_size, d_model=<span class="num">256</span>):
+        <span class="kw">super</span>().__init__()
+        self.embedding = nn.Embedding(vocab_size, d_model)
+        <span class="cm"># Input = [embedding; context] → LSTM</span>
+        self.lstm_cell = nn.LSTMCell(d_model * <span class="num">2</span>, d_model)
+        self.attention = DotProductAttention()
+        self.output_proj = nn.Linear(d_model, vocab_size)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, tgt_token, h, c, enc_states):
+        <span class="cm"># Eq 13.34: h^d_i = g(ŷ_{i-1}, h^d_{i-1}, c_i)</span>
+        emb = self.embedding(tgt_token)          <span class="cm"># (B, d)</span>
+        context, weights = self.attention(h, enc_states)
+        lstm_input = torch.cat([emb, context], dim=-<span class="num">1</span>)
+        h, c = self.lstm_cell(lstm_input, (h, c))
+        logits = self.output_proj(h)
+        <span class="kw">return</span> logits, h, c, weights
+
+<span class="kw">print</span>(<span class="st">"✓ Encoder-Decoder with Attention defined"</span>)</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ -->
+<!-- MODERN BRIDGE                           -->
+<!-- ════════════════════════════════════════ -->
+<section class="section" id="modern">
+  <div class="section-label"><span class="dot"></span> Modern Bridge · 2026</div>
+  <h2>From RNNs to the Transformer Era</h2>
+
+  <div class="card">
+    <h3>The Attention Revolution</h3>
+    <p>The attention mechanism introduced here (Bahdanau et al., 2015) was the critical stepping stone to Transformers (Vaswani et al., 2017). The key insight: if attention can look at <em>all</em> encoder states, why not let <em>every</em> position attend to <em>every other position</em> — even within the same sequence? This is <strong>self-attention</strong>, and it removes the sequential bottleneck of RNNs entirely.</p>
+
+    <h3>Are RNNs Dead?</h3>
+    <p>Not quite. While Transformers dominate language modeling and generation, RNN-like architectures have made a comeback in specific niches:</p>
+    <p><strong>State Space Models (S4, Mamba):</strong> These architectures (Gu et al., 2022; Gu &amp; Dao, 2023) reformulate recurrence as linear state equations, achieving O(n) inference while rivaling Transformer quality. Mamba and its successors are used in long-context applications where the quadratic cost of self-attention is prohibitive.</p>
+    <p><strong>RWKV (Peng et al., 2023):</strong> A "Receptance Weighted Key Value" model that combines the parallelizable training of Transformers with RNN-like O(1) inference per token. Models up to 14B parameters have been trained.</p>
+    <p><strong>Edge &amp; Streaming:</strong> On-device NLP (keyword spotting, wake-word detection, real-time ASR) still relies heavily on LSTMs and GRUs due to their low memory footprint and constant-time per-step inference.</p>
+
+    <h3>LSTMs in the Hallucination Conversation</h3>
+    <p>An important linguistic note: RNN/LSTM language models exhibit the same tendency toward <em>fluent but unfaithful</em> generation that modern LLMs do. The autoregressive generation procedure (Section 13.3.3) conditions only on the model's own hidden state — there's no built-in mechanism for factual grounding. This is the same architectural root cause of hallucination that persists in Transformer-based systems. The attention mechanism helped by allowing direct access to source tokens (reducing hallucination in translation), foreshadowing RAG-style approaches.</p>
+  </div>
+
+  <div class="historical-toggle" onclick="toggleHistorical('hist-lstm')">📜 Historical Context: The LSTM Origin Story</div>
+  <div class="historical-content" id="hist-lstm">
+    <h4>Hochreiter &amp; Schmidhuber (1997)</h4>
+    <p>Sepp Hochreiter's 1991 diploma thesis first identified the vanishing gradient problem in detail. His collaboration with Jürgen Schmidhuber produced the LSTM in 1997. However, it took nearly 15 years for practical applications to emerge — Graves &amp; Schmidhuber (2005) showed impressive results on phoneme recognition, and Graves et al. (2013) demonstrated breakthrough speech recognition performance. The combination of LSTMs with pretrained embeddings (word2vec, GloVe) in 2013-2014 launched the modern deep learning era in NLP, which was then rapidly superseded by Transformers after 2017.</p>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ -->
+<!-- SOCRATIC CHALLENGE                      -->
+<!-- ════════════════════════════════════════ -->
+<section class="section" id="socratic">
+  <div class="section-label"><span class="dot"></span> Socratic Challenge</div>
+  <h2>The Vanishing Agreement</h2>
+
+  <div class="socratic-scenario">
+    <h4>Scenario: Subject-Verb Agreement Across a Relative Clause</h4>
+    <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:0.5rem">You're evaluating a simple (non-LSTM) RNN language model on the sentence:</p>
+    <p style="color:var(--accent-1);font-weight:700;font-size:1rem;margin-bottom:1rem">"The flights the airline was canceling <strong>were</strong> full."</p>
+    <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:1rem">Your model assigns high probability to "was" after "canceling" but very low probability to "were" — it predicts "was full" instead of "were full." The plural subject "flights" is 5 words back, and the intervening singular "airline" appears to confuse the model.</p>
+
+    <div class="socratic-q" onclick="this.classList.toggle('open')">
+      <div class="q-label">Question 1</div>
+      <div class="q-text">Why does the simple RNN assign higher probability to "was" despite "flights" being the true subject? What property of hidden states causes this?</div>
+      <div class="q-hint">The hidden state is updated multiplicatively at each step via h_t = tanh(Uh_{t-1} + Wx_t). After 5 steps, the information about "flights" has been repeatedly transformed and blended with newer inputs. The hidden state is biased toward local/recent information — this is the essence of the vanishing gradient problem. The weights U are simultaneously trying to (a) represent current context and (b) carry forward distant information, and they can't do both well.</div>
+    </div>
+
+    <div class="socratic-q" onclick="this.classList.toggle('open')">
+      <div class="q-label">Question 2</div>
+      <div class="q-text">How would an LSTM potentially solve this? Which specific gate would be most critical, and what would it need to learn?</div>
+      <div class="q-hint">The LSTM's context vector c_t provides an additive memory highway. The forget gate could learn to preserve the "plural subject" feature in the context across the relative clause. The add gate would store "subject is plural" when processing "flights", and the forget gate would NOT erase this while processing "the airline was canceling." Finally, the output gate would surface this information when the model reaches the position where a verb is predicted.</div>
+    </div>
+
+    <div class="socratic-q" onclick="this.classList.toggle('open')">
+      <div class="q-label">Question 3</div>
+      <div class="q-text">Would a bidirectional RNN help with this specific task? Why or why not?</div>
+      <div class="q-hint">Yes, a bidirectional RNN would help significantly. The backward RNN would process "were full" before reaching "canceling", so at the position of "were", the backward hidden state already knows about the upcoming verb agreement. However, BiRNNs can only be used when the entire input is available (not for autoregressive generation). For language modeling (predicting the next word), we can only use unidirectional left-to-right models, so BiRNNs wouldn't apply there.</div>
+    </div>
+
+    <div class="socratic-q" onclick="this.classList.toggle('open')">
+      <div class="q-label">Question 4</div>
+      <div class="q-text">Why is the gradient "vanishing" rather than "exploding" in this case? What mathematical property of the repeated matrix multiplication through time causes this?</div>
+      <div class="q-hint">During BPTT, the gradient of the loss with respect to h_1 involves multiplying the Jacobian ∂h_t/∂h_{t-1} repeatedly for each time step. Since tanh squashes values to [-1, 1] and its derivative is at most 1 (at tanh(0)), and the eigenvalues of U typically have magnitude < 1, the product of many such terms tends toward zero exponentially. If the largest eigenvalue of U were > 1, we'd get exploding gradients instead — which is why gradient clipping is used in practice.</div>
+    </div>
+
+    <div class="socratic-q" onclick="this.classList.toggle('open')">
+      <div class="q-label">Question 5</div>
+      <div class="q-text">Modern Transformers handle this agreement task easily. What architectural feature — descended from the attention mechanism in this chapter — makes long-distance dependencies trivial for Transformers?</div>
+      <div class="q-hint">Self-attention allows every position to directly attend to every other position in O(1) hops, regardless of distance. The word "were" can directly attend to "flights" with a single attention computation, without information having to flow through 5 intermediate hidden states. The attention weights α explicitly learn that verb positions should attend to their grammatical subjects. This is a direct evolution from the encoder-decoder attention (Eq 13.35-13.37) described in this chapter — applied within a single sequence.</div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+// ─── Scroll Reveal ───
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.08 });
+document.querySelectorAll('.section').forEach(s => observer.observe(s));
+
+// ─── KaTeX ───
+document.addEventListener('DOMContentLoaded', () => {
+  renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '$', right: '$', display: false}
+    ],
+    throwOnError: false
+  });
+  drawRNNCanvas(4);
+  drawArchCanvases();
+  buildAttentionHeatmap();
+});
+
+// ─── Tabs ───
+function switchTab(e, id) {
+  const bar = e.target.closest('.section, .card, .container');
+  bar.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  bar.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  e.target.classList.add('active');
+  document.getElementById(id).classList.add('active');
+}
+
+// ─── Architecture Tabs ───
+function switchArch(e, id) {
+  document.querySelectorAll('.arch-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.arch-panel').forEach(p => p.classList.remove('active'));
+  e.target.classList.add('active');
+  document.getElementById(id).classList.add('active');
+  // Redraw canvases when shown
+  setTimeout(drawArchCanvases, 50);
+}
+
+// ─── LSTM Gate Explorer ───
+function selectGate(gate) {
+  document.querySelectorAll('.gate-card').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.gate-detail').forEach(d => d.classList.remove('active'));
+  document.getElementById('gate-' + gate).classList.add('active');
+  document.getElementById('detail-' + gate).classList.add('active');
+}
+
+// ─── Historical Toggle ───
+function toggleHistorical(id) {
+  document.getElementById(id).classList.toggle('show');
+}
+
+// ─── Copy Code ───
+function copyCode(btn) {
+  const pre = btn.closest('.code-block').querySelector('pre');
+  navigator.clipboard.writeText(pre.textContent).then(() => {
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
+  });
+}
+
+// ─── RNN Unroll Canvas ───
+const unrollSlider = document.getElementById('unroll-slider');
+const stepCount = document.getElementById('step-count');
+unrollSlider.addEventListener('input', () => {
+  const n = parseInt(unrollSlider.value);
+  stepCount.textContent = n;
+  drawRNNCanvas(n);
+});
+
+let animating = false;
+document.getElementById('play-btn').addEventListener('click', () => {
+  if (animating) return;
+  animating = true;
+  let step = 0;
+  const n = parseInt(unrollSlider.value);
+  const interval = setInterval(() => {
+    step++;
+    drawRNNCanvas(n, step);
+    if (step >= n) { clearInterval(interval); animating = false; }
+  }, 600);
+});
+
+function drawRNNCanvas(steps, highlight = -1) {
+  const canvas = document.getElementById('rnn-canvas');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.offsetWidth * dpr;
+  canvas.height = canvas.offsetHeight * dpr;
+  ctx.scale(dpr, dpr);
+  const W = canvas.offsetWidth, H = canvas.offsetHeight;
+  ctx.clearRect(0, 0, W, H);
+
+  const margin = 60;
+  const spacing = (W - 2 * margin) / (steps - 1 || 1);
+  const yInput = H - 40, yHidden = H / 2, yOutput = 45;
+  const r = 18;
+
+  // Draw connections
+  for (let t = 0; t < steps; t++) {
+    const x = margin + t * spacing;
+    const isActive = t < highlight;
+    const isCurrent = t === highlight - 1;
+
+    // x → h (W)
+    ctx.beginPath();
+    ctx.moveTo(x, yInput - 12);
+    ctx.lineTo(x, yHidden + r + 2);
+    ctx.strokeStyle = isActive ? '#f472b6' : 'rgba(148,163,184,0.25)';
+    ctx.lineWidth = isActive ? 2 : 1;
+    ctx.stroke();
+
+    // h → y (V)
+    ctx.beginPath();
+    ctx.moveTo(x, yHidden - r - 2);
+    ctx.lineTo(x, yOutput + 12);
+    ctx.strokeStyle = isActive ? '#818cf8' : 'rgba(148,163,184,0.25)';
+    ctx.lineWidth = isActive ? 2 : 1;
+    ctx.stroke();
+
+    // h → h (U) — recurrent connection
+    if (t < steps - 1) {
+      const nx = margin + (t + 1) * spacing;
+      ctx.beginPath();
+      ctx.moveTo(x + r + 2, yHidden);
+      ctx.lineTo(nx - r - 2, yHidden);
+      ctx.strokeStyle = (t < highlight - 1) ? '#34d399' : 'rgba(148,163,184,0.25)';
+      ctx.lineWidth = (t < highlight - 1) ? 2.5 : 1;
+      ctx.stroke();
+      // Arrow
+      ctx.beginPath();
+      ctx.moveTo(nx - r - 2, yHidden);
+      ctx.lineTo(nx - r - 10, yHidden - 4);
+      ctx.lineTo(nx - r - 10, yHidden + 4);
+      ctx.closePath();
+      ctx.fillStyle = (t < highlight - 1) ? '#34d399' : 'rgba(148,163,184,0.25)';
+      ctx.fill();
+    }
+  }
+
+  // Draw nodes
+  for (let t = 0; t < steps; t++) {
+    const x = margin + t * spacing;
+    const isActive = t < highlight;
+    const isCurrent = t === highlight - 1;
+
+    // Input node
+    ctx.beginPath();
+    ctx.arc(x, yInput, 10, 0, Math.PI * 2);
+    ctx.fillStyle = isActive ? '#f472b6' : 'rgba(244,114,182,0.2)';
+    ctx.fill();
+
+    // Hidden node
+    ctx.beginPath();
+    ctx.arc(x, yHidden, r, 0, Math.PI * 2);
+    ctx.fillStyle = isCurrent ? 'rgba(52,211,153,0.4)' : isActive ? 'rgba(129,140,248,0.3)' : 'rgba(129,140,248,0.1)';
+    ctx.fill();
+    ctx.strokeStyle = isCurrent ? '#34d399' : isActive ? '#818cf8' : 'rgba(129,140,248,0.3)';
+    ctx.lineWidth = isCurrent ? 2.5 : 1.5;
+    ctx.stroke();
+
+    // Output node
+    ctx.beginPath();
+    ctx.arc(x, yOutput, 10, 0, Math.PI * 2);
+    ctx.fillStyle = isActive ? '#818cf8' : 'rgba(129,140,248,0.2)';
+    ctx.fill();
+
+    // Labels
+    ctx.fillStyle = 'rgba(241,245,249,0.7)';
+    ctx.font = '11px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText(`x${t + 1}`, x, yInput + 24);
+    ctx.fillText(`h${t + 1}`, x, yHidden + 5);
+    ctx.fillText(`y${t + 1}`, x, yOutput - 18);
+  }
+
+  // Weight labels
+  if (steps > 1) {
+    ctx.font = 'bold 11px Inter';
+    ctx.fillStyle = '#f472b6';
+    ctx.fillText('W', margin - 22, (yInput + yHidden) / 2);
+    ctx.fillStyle = '#818cf8';
+    ctx.fillText('V', margin - 22, (yHidden + yOutput) / 2);
+    ctx.fillStyle = '#34d399';
+    ctx.fillText('U', margin + spacing / 2, yHidden - r - 8);
+  }
+}
+
+// ─── Architecture Canvases ───
+function drawArchCanvases() {
+  drawStackedCanvas();
+  drawBidirCanvas();
+  drawBidirClassCanvas();
+}
+
+function drawStackedCanvas() {
+  const canvas = document.getElementById('canvas-stacked');
+  if (!canvas || !canvas.offsetWidth) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.offsetWidth * dpr;
+  canvas.height = canvas.offsetHeight * dpr;
+  ctx.scale(dpr, dpr);
+  const W = canvas.offsetWidth, H = canvas.offsetHeight;
+  ctx.clearRect(0, 0, W, H);
+
+  const layers = 3, steps = 4;
+  const mx = 80, my = 30;
+  const sx = (W - 2 * mx) / (steps - 1);
+  const sy = (H - 2 * my) / (layers + 1);
+
+  const colors = ['#f472b6', '#818cf8', '#34d399'];
+
+  for (let l = 0; l < layers; l++) {
+    const y = H - my - (l + 1) * sy;
+    for (let t = 0; t < steps; t++) {
+      const x = mx + t * sx;
+      // Horizontal connection
+      if (t < steps - 1) {
+        ctx.beginPath();
+        ctx.moveTo(x + 14, y);
+        ctx.lineTo(x + sx - 14, y);
+        ctx.strokeStyle = colors[l];
+        ctx.lineWidth = 1.5;
+        ctx.globalAlpha = 0.5;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+      // Vertical connection
+      if (l < layers - 1) {
+        ctx.beginPath();
+        ctx.moveTo(x, y - 14);
+        ctx.lineTo(x, y - sy + 14);
+        ctx.strokeStyle = 'rgba(148,163,184,0.3)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+      // Node
+      ctx.beginPath();
+      ctx.arc(x, y, 12, 0, Math.PI * 2);
+      ctx.fillStyle = colors[l] + '33';
+      ctx.fill();
+      ctx.strokeStyle = colors[l];
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+    // Layer label
+    ctx.fillStyle = colors[l];
+    ctx.font = 'bold 11px Inter';
+    ctx.textAlign = 'right';
+    ctx.fillText(`Layer ${l + 1}`, mx - 20, y + 4);
+  }
+
+  // Input/output labels
+  ctx.font = '10px JetBrains Mono';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(241,245,249,0.5)';
+  for (let t = 0; t < steps; t++) {
+    const x = mx + t * sx;
+    ctx.fillText(`x${t + 1}`, x, H - my + 16);
+    ctx.fillText(`y${t + 1}`, x, my - 6);
+  }
+}
+
+function drawBidirCanvas() {
+  const canvas = document.getElementById('canvas-bidir');
+  if (!canvas || !canvas.offsetWidth) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.offsetWidth * dpr;
+  canvas.height = canvas.offsetHeight * dpr;
+  ctx.scale(dpr, dpr);
+  const W = canvas.offsetWidth, H = canvas.offsetHeight;
+  ctx.clearRect(0, 0, W, H);
+
+  const steps = 4, mx = 80;
+  const sx = (W - 2 * mx) / (steps - 1);
+  const yFwd = H * 0.45, yBwd = H * 0.65;
+  const yIn = H - 25, yOut = 25;
+
+  for (let t = 0; t < steps; t++) {
+    const x = mx + t * sx;
+
+    // Input line
+    ctx.beginPath(); ctx.moveTo(x, yIn - 8); ctx.lineTo(x, yBwd + 14);
+    ctx.strokeStyle = 'rgba(148,163,184,0.2)'; ctx.lineWidth = 1; ctx.stroke();
+    // Output line
+    ctx.beginPath(); ctx.moveTo(x, yFwd - 14); ctx.lineTo(x, yOut + 8);
+    ctx.strokeStyle = 'rgba(148,163,184,0.2)'; ctx.stroke();
+
+    // Forward connections →
+    if (t < steps - 1) {
+      ctx.beginPath(); ctx.moveTo(x + 14, yFwd); ctx.lineTo(x + sx - 14, yFwd);
+      ctx.strokeStyle = '#f472b6'; ctx.lineWidth = 2; ctx.globalAlpha = 0.6; ctx.stroke(); ctx.globalAlpha = 1;
+    }
+    // Backward connections ←
+    if (t > 0) {
+      ctx.beginPath(); ctx.moveTo(x - 14, yBwd); ctx.lineTo(x - sx + 14, yBwd);
+      ctx.strokeStyle = '#818cf8'; ctx.lineWidth = 2; ctx.globalAlpha = 0.6; ctx.stroke(); ctx.globalAlpha = 1;
+    }
+
+    // Forward node
+    ctx.beginPath(); ctx.arc(x, yFwd, 12, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(244,114,182,0.15)'; ctx.fill();
+    ctx.strokeStyle = '#f472b6'; ctx.lineWidth = 1.5; ctx.stroke();
+
+    // Backward node
+    ctx.beginPath(); ctx.arc(x, yBwd, 12, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(129,140,248,0.15)'; ctx.fill();
+    ctx.strokeStyle = '#818cf8'; ctx.lineWidth = 1.5; ctx.stroke();
+
+    // Labels
+    ctx.font = '10px JetBrains Mono'; ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(241,245,249,0.5)';
+    ctx.fillText(`x${t + 1}`, x, yIn + 4);
+    ctx.fillText(`y${t + 1}`, x, yOut - 4);
+  }
+
+  ctx.font = 'bold 11px Inter'; ctx.textAlign = 'right';
+  ctx.fillStyle = '#f472b6'; ctx.fillText('Forward →', mx - 16, yFwd + 4);
+  ctx.fillStyle = '#818cf8'; ctx.fillText('← Backward', mx - 16, yBwd + 4);
+}
+
+function drawBidirClassCanvas() {
+  const canvas = document.getElementById('canvas-bidir-class');
+  if (!canvas || !canvas.offsetWidth) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.offsetWidth * dpr;
+  canvas.height = canvas.offsetHeight * dpr;
+  ctx.scale(dpr, dpr);
+  const W = canvas.offsetWidth, H = canvas.offsetHeight;
+  ctx.clearRect(0, 0, W, H);
+
+  const steps = 4, mx = 100;
+  const sx = (W - 2 * mx) / (steps - 1);
+  const yFwd = H * 0.55, yBwd = H * 0.7;
+  const yIn = H - 20, yClass = 30;
+
+  for (let t = 0; t < steps; t++) {
+    const x = mx + t * sx;
+    ctx.beginPath(); ctx.moveTo(x, yIn - 5); ctx.lineTo(x, yBwd + 12);
+    ctx.strokeStyle = 'rgba(148,163,184,0.2)'; ctx.lineWidth = 1; ctx.stroke();
+
+    if (t < steps - 1) {
+      ctx.beginPath(); ctx.moveTo(x + 12, yFwd); ctx.lineTo(x + sx - 12, yFwd);
+      ctx.strokeStyle = '#f472b6'; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.5; ctx.stroke(); ctx.globalAlpha = 1;
+    }
+    if (t > 0) {
+      ctx.beginPath(); ctx.moveTo(x - 12, yBwd); ctx.lineTo(x - sx + 12, yBwd);
+      ctx.strokeStyle = '#818cf8'; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.5; ctx.stroke(); ctx.globalAlpha = 1;
+    }
+
+    ctx.beginPath(); ctx.arc(x, yFwd, 10, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(244,114,182,0.15)'; ctx.fill();
+    ctx.strokeStyle = '#f472b6'; ctx.lineWidth = 1.5; ctx.stroke();
+
+    ctx.beginPath(); ctx.arc(x, yBwd, 10, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(129,140,248,0.15)'; ctx.fill();
+    ctx.strokeStyle = '#818cf8'; ctx.lineWidth = 1.5; ctx.stroke();
+
+    ctx.font = '9px JetBrains Mono'; ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(241,245,249,0.4)';
+    ctx.fillText(`x${t + 1}`, x, yIn + 2);
+  }
+
+  // Lines from last forward and first backward to classifier
+  const xLast = mx + (steps - 1) * sx;
+  const xFirst = mx;
+  const xMid = W / 2;
+
+  ctx.beginPath(); ctx.moveTo(xLast, yFwd - 12); ctx.lineTo(xMid + 15, yClass + 18);
+  ctx.strokeStyle = '#f472b6'; ctx.lineWidth = 2; ctx.globalAlpha = 0.7; ctx.stroke(); ctx.globalAlpha = 1;
+  ctx.beginPath(); ctx.moveTo(xFirst, yBwd - 12); ctx.lineTo(xMid - 15, yClass + 18);
+  ctx.strokeStyle = '#818cf8'; ctx.lineWidth = 2; ctx.globalAlpha = 0.7; ctx.stroke(); ctx.globalAlpha = 1;
+
+  // Classifier box
+  ctx.fillStyle = 'rgba(52,211,153,0.15)';
+  ctx.strokeStyle = '#34d399';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(xMid - 45, yClass - 10, 90, 28, 8);
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#34d399'; ctx.font = 'bold 11px Inter'; ctx.textAlign = 'center';
+  ctx.fillText('Classifier', xMid, yClass + 9);
+
+  // Labels
+  ctx.font = 'bold 9px Inter';
+  ctx.fillStyle = '#f472b6'; ctx.textAlign = 'left';
+  ctx.fillText('h→ₙ', xLast + 14, yFwd + 3);
+  ctx.fillStyle = '#818cf8'; ctx.textAlign = 'right';
+  ctx.fillText('h←₁', xFirst - 14, yBwd + 3);
+}
+
+// ─── Attention Heatmap ───
+function buildAttentionHeatmap() {
+  const src = ['the', 'green', 'witch', 'arrived'];
+  const tgt = ['llegó', 'la', 'bruja', 'verde'];
+  // Simulated attention weights (rows=target, cols=source)
+  const weights = [
+    [0.05, 0.05, 0.10, 0.80],  // llegó ← arrived
+    [0.10, 0.10, 0.60, 0.20],  // la ← witch (det)
+    [0.05, 0.15, 0.70, 0.10],  // bruja ← witch
+    [0.10, 0.75, 0.10, 0.05],  // verde ← green
+  ];
+
+  const container = document.getElementById('attn-heatmap');
+  const cols = src.length + 1;
+  const grid = document.createElement('div');
+  grid.style.display = 'grid';
+  grid.style.gridTemplateColumns = `repeat(${cols}, 52px)`;
+  grid.style.gap = '3px';
+
+  // Header row
+  grid.appendChild(createLabel(''));
+  src.forEach(w => grid.appendChild(createLabel(w)));
+
+  // Data rows
+  tgt.forEach((tw, i) => {
+    grid.appendChild(createLabel(tw));
+    src.forEach((sw, j) => {
+      const cell = document.createElement('div');
+      cell.className = 'attn-cell';
+      const w = weights[i][j];
+      const r = Math.round(244 * w + 20);
+      const g = Math.round(114 * w + 20);
+      const b = Math.round(182 * w + 40);
+      cell.style.background = `rgba(${r},${g},${b},${0.15 + w * 0.85})`;
+      cell.style.color = w > 0.4 ? '#fff' : 'rgba(255,255,255,0.5)';
+      cell.textContent = w.toFixed(2);
+      cell.title = `${tw} ← ${sw}: α = ${w.toFixed(2)}`;
+      grid.appendChild(cell);
+    });
+  });
+
+  container.appendChild(grid);
+
+  function createLabel(text) {
+    const el = document.createElement('div');
+    el.className = 'attn-label';
+    el.textContent = text;
+    el.style.fontWeight = '700';
+    return el;
+  }
+}
+
+// ─── Nav Active State ───
+const sections = document.querySelectorAll('section[id]');
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(s => {
+    if (window.scrollY >= s.offsetTop - 120) current = s.id;
+  });
+  document.querySelectorAll('.nav-links a').forEach(a => {
+    a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+  });
+});
+</script>
+</body>
+</html>

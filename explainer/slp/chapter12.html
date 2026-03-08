@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 12 · Machine Translation &amp; Sequence-to-Sequence Models</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<style>
+:root{--bg-primary:#0a0e17;--bg-secondary:#111827;--bg-tertiary:#1a2332;--bg-card:#151d2b;--bg-code:#0d1117;--accent-primary:#60a5fa;--accent-secondary:#a78bfa;--accent-tertiary:#34d399;--accent-warm:#f59e0b;--accent-rose:#f472b6;--accent-orange:#fb923c;--text-primary:#e2e8f0;--text-secondary:#94a3b8;--text-muted:#64748b;--border-color:#1e293b;--border-accent:#2d3a4d}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg-primary);color:var(--text-primary);line-height:1.75;overflow-x:hidden}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--bg-primary)}::-webkit-scrollbar-thumb{background:var(--border-accent);border-radius:3px}
+
+.hero{position:relative;min-height:65vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,#0a0e17 0%,#111827 40%,#1a1a30 70%,#0a0e17 100%);overflow:hidden;border-bottom:1px solid var(--border-color)}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 600px 400px at 25% 50%,rgba(251,146,60,0.07) 0%,transparent 70%),radial-gradient(ellipse 500px 350px at 75% 30%,rgba(167,139,250,0.06) 0%,transparent 70%);pointer-events:none}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(251,146,60,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(251,146,60,0.03) 1px,transparent 1px);background-size:60px 60px;mask-image:radial-gradient(ellipse 70% 70% at 50% 50%,black 30%,transparent 100%)}
+.hero-content{position:relative;text-align:center;max-width:900px;padding:2rem;z-index:1}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(251,146,60,0.1);border:1px solid rgba(251,146,60,0.2);border-radius:999px;padding:6px 18px;font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--accent-orange);letter-spacing:.1em;text-transform:uppercase;margin-bottom:1.5rem}
+.hero-badge .dot{width:6px;height:6px;background:var(--accent-tertiary);border-radius:50%;animation:pulse-dot 2s infinite}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.3}}
+.hero h1{font-size:clamp(2rem,5vw,3.5rem);font-weight:800;line-height:1.15;letter-spacing:-.03em;margin-bottom:1rem;background:linear-gradient(135deg,#e2e8f0 0%,#fb923c 50%,#a78bfa 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero h1 .thin{font-weight:300;opacity:.7}
+.hero-sub{font-size:1.1rem;color:var(--text-secondary);max-width:650px;margin:0 auto 2rem}
+.hero-meta{display:flex;gap:2rem;justify-content:center;flex-wrap:wrap;font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--text-muted)}.hero-meta span{display:flex;align-items:center;gap:6px}
+
+.toc-nav{position:sticky;top:0;z-index:100;background:rgba(10,14,23,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border-color);padding:0 2rem;overflow-x:auto}
+.toc-nav-inner{max-width:1200px;margin:0 auto;display:flex;gap:0;align-items:stretch;min-height:48px}
+.toc-link{display:flex;align-items:center;padding:0 .85rem;font-size:.75rem;font-weight:500;color:var(--text-muted);text-decoration:none;white-space:nowrap;border-bottom:2px solid transparent;transition:all .2s;font-family:'JetBrains Mono',monospace}
+.toc-link:hover{color:var(--text-primary);border-bottom-color:var(--accent-orange)}.toc-link.active{color:var(--accent-orange);border-bottom-color:var(--accent-orange)}
+
+.main-container{max-width:1000px;margin:0 auto;padding:3rem 2rem 6rem}
+.section{margin-bottom:5rem;opacity:0;transform:translateY(30px);transition:opacity .6s ease,transform .6s ease}.section.visible{opacity:1;transform:translateY(0)}
+.section-header{display:flex;align-items:center;gap:1rem;margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid var(--border-color)}
+.section-number{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:700;color:var(--bg-primary);background:var(--accent-orange);width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.section-number.blue{background:var(--accent-primary)}.section-number.purple{background:var(--accent-secondary)}.section-number.green{background:var(--accent-tertiary)}.section-number.warm{background:var(--accent-warm)}.section-number.rose{background:var(--accent-rose)}
+.section-header h2{font-size:1.6rem;font-weight:700;letter-spacing:-.02em}
+
+.pedagogy-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:.65rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:1.5rem}
+.badge-feynman{background:rgba(251,146,60,0.1);color:var(--accent-orange);border:1px solid rgba(251,146,60,0.2)}
+.badge-technical{background:rgba(167,139,250,0.1);color:var(--accent-secondary);border:1px solid rgba(167,139,250,0.2)}
+.badge-code{background:rgba(52,211,153,0.1);color:var(--accent-tertiary);border:1px solid rgba(52,211,153,0.2)}
+.badge-socratic{background:rgba(244,114,182,0.1);color:var(--accent-rose);border:1px solid rgba(244,114,182,0.2)}
+.badge-modern{background:rgba(245,158,11,0.1);color:var(--accent-warm);border:1px solid rgba(245,158,11,0.2)}
+
+.prose{color:var(--text-secondary);font-size:.95rem}.prose p{margin-bottom:1.25rem}.prose strong{color:var(--text-primary);font-weight:600}.prose em{color:var(--accent-orange);font-style:normal}
+.info-card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:12px;padding:1.5rem;margin:1.5rem 0}
+.info-card.orange-glow{border-left:3px solid var(--accent-orange);background:linear-gradient(135deg,var(--bg-card),rgba(251,146,60,0.03))}
+.info-card.blue-glow{border-left:3px solid var(--accent-primary);background:linear-gradient(135deg,var(--bg-card),rgba(96,165,250,0.03))}
+.info-card.purple-glow{border-left:3px solid var(--accent-secondary);background:linear-gradient(135deg,var(--bg-card),rgba(167,139,250,0.03))}
+.info-card.green-glow{border-left:3px solid var(--accent-tertiary);background:linear-gradient(135deg,var(--bg-card),rgba(52,211,153,0.03))}
+.info-card.warm-glow{border-left:3px solid var(--accent-warm);background:linear-gradient(135deg,var(--bg-card),rgba(245,158,11,0.03))}
+.info-card.rose-glow{border-left:3px solid var(--accent-rose);background:linear-gradient(135deg,var(--bg-card),rgba(244,114,182,0.03))}
+.info-card h4{font-size:.85rem;font-weight:700;color:var(--text-primary);margin-bottom:.75rem;display:flex;align-items:center;gap:8px}
+.info-card p,.info-card li{font-size:.88rem;color:var(--text-secondary);line-height:1.7}.info-card ul{padding-left:1.2rem;margin-top:.5rem}.info-card li{margin-bottom:.4rem}
+
+.math-block{background:var(--bg-code);border:1px solid var(--border-color);border-radius:10px;padding:1.5rem 2rem;margin:1.5rem 0;overflow-x:auto;text-align:center}
+.math-label{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.75rem}
+
+.code-container{background:var(--bg-code);border:1px solid var(--border-color);border-radius:10px;overflow:hidden;margin:1.5rem 0}
+.code-header{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;background:var(--bg-tertiary);border-bottom:1px solid var(--border-color)}
+.code-header .lang{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent-tertiary);text-transform:uppercase;letter-spacing:.08em}
+.code-header .copy-btn{background:none;border:1px solid var(--border-accent);color:var(--text-muted);font-family:'JetBrains Mono',monospace;font-size:.65rem;padding:3px 10px;border-radius:4px;cursor:pointer;transition:all .2s}
+.code-header .copy-btn:hover{color:var(--text-primary);border-color:var(--accent-orange)}
+.code-body{padding:1.25rem;overflow-x:auto;font-family:'JetBrains Mono',monospace;font-size:.78rem;line-height:1.8;color:var(--text-secondary)}
+.code-body .comment{color:#546e7a;font-style:italic}.code-body .keyword{color:#c792ea}.code-body .string{color:#c3e88d}.code-body .number{color:#f78c6c}
+
+.visualizer{background:var(--bg-card);border:1px solid var(--border-color);border-radius:12px;overflow:hidden;margin:2rem 0}
+.viz-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;background:var(--bg-tertiary);border-bottom:1px solid var(--border-color)}
+.viz-header h4{font-size:.85rem;font-weight:600;display:flex;align-items:center;gap:8px}
+.viz-header .interactive-tag{font-family:'JetBrains Mono',monospace;font-size:.6rem;background:rgba(52,211,153,0.15);color:var(--accent-tertiary);padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.08em}
+.viz-body{padding:1.5rem}
+
+/* Beam Search */
+.beam-tree{position:relative;min-height:280px}
+.beam-node{position:absolute;background:var(--bg-code);border:2px solid var(--border-accent);border-radius:8px;padding:4px 10px;font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text-secondary);cursor:pointer;transition:all .3s;z-index:2}
+.beam-node:hover,.beam-node.active{border-color:var(--accent-orange);color:var(--accent-orange);box-shadow:0 0 12px rgba(251,146,60,0.2)}
+.beam-node.pruned{opacity:.3;border-style:dashed}
+.beam-node .prob{font-size:.6rem;color:var(--text-muted);display:block}
+.beam-edge{position:absolute;height:2px;background:var(--border-accent);transform-origin:left center;z-index:1}
+.beam-edge.active{background:var(--accent-orange)}
+.beam-edge.pruned{background:var(--border-color);opacity:.3}
+
+/* Alignment */
+.align-grid{display:grid;gap:2px;margin:1rem 0}
+.align-cell{width:100%;aspect-ratio:1;border-radius:4px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-family:'JetBrains Mono',monospace}
+.align-src,.align-tgt{font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:600;display:flex;align-items:center;justify-content:center;color:var(--text-primary)}
+
+/* chrF calculator */
+.chrf-input{width:100%;background:var(--bg-code);border:1px solid var(--border-color);border-radius:8px;padding:.75rem 1rem;color:var(--text-primary);font-family:'JetBrains Mono',monospace;font-size:.82rem;margin:.5rem 0;outline:none}
+.chrf-input:focus{border-color:var(--accent-orange)}
+.chrf-result{font-family:'JetBrains Mono',monospace;font-size:.9rem;color:var(--accent-orange);margin-top:1rem;text-align:center;padding:1rem;background:var(--bg-code);border-radius:8px;border:1px solid var(--border-color)}
+
+.comparison-table{width:100%;border-collapse:collapse;font-size:.82rem;margin:1.5rem 0}
+.comparison-table th{text-align:left;padding:.75rem 1rem;background:var(--bg-tertiary);border-bottom:2px solid var(--accent-orange);font-family:'JetBrains Mono',monospace;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--accent-orange)}
+.comparison-table td{padding:.75rem 1rem;border-bottom:1px solid var(--border-color);color:var(--text-secondary)}.comparison-table tr:hover td{background:rgba(251,146,60,0.03)}
+
+.sidebar-toggle{background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:10px;margin:1.5rem 0;overflow:hidden}
+.sidebar-toggle-header{padding:1rem 1.25rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:background .2s}.sidebar-toggle-header:hover{background:var(--bg-card)}
+.sidebar-toggle-header h4{font-size:.85rem;font-weight:600;display:flex;align-items:center;gap:8px}
+.sidebar-toggle-arrow{transition:transform .3s;color:var(--text-muted)}.sidebar-toggle.open .sidebar-toggle-arrow{transform:rotate(180deg)}
+.sidebar-toggle-body{max-height:0;overflow:hidden;transition:max-height .4s ease}.sidebar-toggle.open .sidebar-toggle-body{max-height:2000px}
+.sidebar-toggle-content{padding:1rem 1.25rem 1.25rem;border-top:1px solid var(--border-color);font-size:.88rem;color:var(--text-secondary);line-height:1.7}
+
+.challenge-box{background:linear-gradient(135deg,rgba(244,114,182,0.05),rgba(167,139,250,0.05));border:1px solid rgba(244,114,182,0.2);border-radius:12px;padding:2rem;margin:2rem 0}
+.challenge-box h4{font-size:1rem;font-weight:700;color:var(--accent-rose);margin-bottom:1rem;display:flex;align-items:center;gap:8px}
+.challenge-scenario{background:var(--bg-code);border:1px solid var(--border-color);border-radius:8px;padding:1rem;margin:1rem 0;font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text-secondary);line-height:1.7}
+.challenge-question{padding:.75rem 1rem;margin:.5rem 0;border-radius:8px;background:rgba(244,114,182,0.05);border:1px solid rgba(244,114,182,0.1);cursor:pointer;transition:all .2s}
+.challenge-question:hover{background:rgba(244,114,182,0.1)}.challenge-question .q-label{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent-rose);font-weight:600;margin-bottom:.25rem}
+.challenge-question p{font-size:.85rem;color:var(--text-secondary)}
+.challenge-answer{max-height:0;overflow:hidden;transition:max-height .3s ease}.challenge-answer-content{padding:.75rem 1rem;font-size:.82rem;color:var(--accent-tertiary);background:rgba(52,211,153,0.05);border-radius:6px;margin-top:.5rem;line-height:1.6}
+.challenge-question.open .challenge-answer{max-height:500px}
+
+/* Divergence Examples */
+.divergence-card{background:var(--bg-code);border:1px solid var(--border-color);border-radius:10px;padding:1.25rem;margin:.75rem 0;display:grid;grid-template-columns:80px 1fr;gap:1rem;align-items:center}
+.divergence-card .lang-tag{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;text-align:center;padding:.3rem .5rem;border-radius:6px}
+.divergence-card .lang-text{font-size:.85rem;color:var(--text-secondary);line-height:1.6}
+.divergence-card .lang-text .highlight{color:var(--accent-orange);font-weight:600}
+
+.back-link{position:fixed;bottom:2rem;right:2rem;background:var(--accent-orange);color:var(--bg-primary);padding:10px 18px;border-radius:10px;text-decoration:none;font-family:'JetBrains Mono',monospace;font-size:.75rem;font-weight:600;box-shadow:0 4px 20px rgba(251,146,60,0.3);transition:all .2s;z-index:100}
+.back-link:hover{transform:translateY(-2px)}
+@media(max-width:768px){.main-container{padding:2rem 1rem 4rem}.hero{min-height:50vh}}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+    <div class="hero-badge"><span class="dot"></span> Chapter 12 · Part I: Large Language Models</div>
+    <h1>Machine Translation <span class="thin">&amp;</span><br>Encoder-Decoder Models</h1>
+    <p class="hero-sub">From linguistic typology to cross-attention to beam search &mdash; how transformers translate between the world's 7,000 languages.</p>
+    <div class="hero-meta">
+      <span>&#128218; Jurafsky &amp; Martin, 3rd Ed. Jan 2026</span>
+      <span>&#9201; ~45 min read</span>
+      <span>&#128300; 5 Interactive Modules</span>
+    </div>
+  </div>
+</section>
+
+<!-- NAV -->
+<nav class="toc-nav">
+  <div class="toc-nav-inner">
+    <a href="#feynman" class="toc-link active" data-section="feynman">Feynman Bridge</a>
+    <a href="#typology" class="toc-link" data-section="typology">12.1 Typology</a>
+    <a href="#encdec" class="toc-link" data-section="encdec">12.2-3 Encoder-Decoder</a>
+    <a href="#beam" class="toc-link" data-section="beam">12.4 Beam Search</a>
+    <a href="#eval" class="toc-link" data-section="eval">12.6 Evaluation</a>
+    <a href="#code" class="toc-link" data-section="code">Code Lab</a>
+    <a href="#modern" class="toc-link" data-section="modern">Modern Bridge</a>
+    <a href="#socratic" class="toc-link" data-section="socratic">Challenge</a>
+  </div>
+</nav>
+
+<main class="main-container">
+
+<!-- §0 FEYNMAN -->
+<section id="feynman" class="section" data-section="feynman">
+  <div class="section-header"><div class="section-number">F</div><h2>The Feynman Bridge</h2></div>
+  <div class="pedagogy-badge badge-feynman">&#127758; Zero-Jargon Intuition</div>
+  <div class="prose">
+    <p>Imagine you're a simultaneous interpreter at the United Nations. A speaker says a full sentence in Chinese, and you need to produce the equivalent sentence in English. You can't translate word by word &mdash; Chinese puts the verb at a different position, doesn't mark plurals the same way, and sometimes omits pronouns entirely. You need to <strong>listen to the whole sentence first</strong> (encode it in your mind), then <strong>produce the English version</strong> (decode it) in the right order for English grammar.</p>
+
+    <p>That's exactly what an <em>encoder-decoder</em> model does. The <strong>encoder</strong> reads the entire source sentence and builds a rich internal representation &mdash; like a mental model of the meaning. The <strong>decoder</strong> then generates the target sentence one word at a time, consulting that mental model at each step through a mechanism called <em>cross-attention</em> (like glancing back at your notes of what the speaker said).</p>
+
+    <p>But how do you choose the best translation when there are millions of possible word sequences? That's where <em>beam search</em> comes in. Instead of committing to one word at a time (greedy), you keep the top few candidates alive at each step, like an interpreter mentally juggling multiple phrasings before committing to the best one.</p>
+  </div>
+
+  <div class="info-card orange-glow">
+    <h4>&#127760; Scale of the Problem</h4>
+    <p>Google Translate alone processes <strong>hundreds of billions of words per day</strong> across 100+ languages. MT is probably the most widely deployed NLP technology in the world, helping bridge the <em>digital divide</em> in information access between high- and low-resource languages.</p>
+  </div>
+</section>
+
+<!-- §1 TYPOLOGY -->
+<section id="typology" class="section" data-section="typology">
+  <div class="section-header"><div class="section-number">12.1</div><h2>Language Divergences &amp; Typology</h2></div>
+  <div class="pedagogy-badge badge-technical">&#128200; Technical Ascent</div>
+
+  <div class="prose">
+    <p>Languages differ systematically in ways that create <strong>translation divergences</strong>. Understanding these patterns &mdash; studied as <em>linguistic typology</em> &mdash; is essential for building MT systems that handle the structural reorderings between languages.</p>
+  </div>
+
+  <!-- Word Order -->
+  <div class="visualizer">
+    <div class="viz-header">
+      <h4>&#127760; Word Order Typology Explorer</h4>
+      <span class="interactive-tag">Interactive</span>
+    </div>
+    <div class="viz-body">
+      <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:1rem;">Click a language type to see how "He wrote a letter to a friend" is expressed.</p>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.25rem;">
+        <button class="wo-btn active" onclick="showWO('svo')" style="padding:6px 16px;border-radius:6px;border:1px solid var(--accent-orange);background:rgba(251,146,60,0.15);color:var(--accent-orange);font-family:'JetBrains Mono',monospace;font-size:.72rem;cursor:pointer;font-weight:600">SVO</button>
+        <button class="wo-btn" onclick="showWO('sov')" style="padding:6px 16px;border-radius:6px;border:1px solid var(--border-accent);background:transparent;color:var(--text-muted);font-family:'JetBrains Mono',monospace;font-size:.72rem;cursor:pointer;font-weight:600">SOV</button>
+        <button class="wo-btn" onclick="showWO('vso')" style="padding:6px 16px;border-radius:6px;border:1px solid var(--border-accent);background:transparent;color:var(--text-muted);font-family:'JetBrains Mono',monospace;font-size:.72rem;cursor:pointer;font-weight:600">VSO</button>
+      </div>
+      <div id="wo-svo" class="wo-detail">
+        <div class="divergence-card"><div class="lang-tag" style="background:rgba(96,165,250,0.15);color:var(--accent-primary);">EN</div><div class="lang-text">He <span class="highlight">wrote</span> a letter to a friend &mdash; Verb between Subject and Object. Uses <strong>prepositions</strong> (to).</div></div>
+        <div class="divergence-card"><div class="lang-tag" style="background:rgba(96,165,250,0.15);color:var(--accent-primary);">ZH</div><div class="lang-text">&#20182; &#32473;&#26379;&#21451; <span class="highlight">&#20889;&#20102;</span> &#19968;&#23553;&#20449; &mdash; SVO, but goal PP comes <em>before</em> the verb (unlike English).</div></div>
+      </div>
+      <div id="wo-sov" class="wo-detail" style="display:none">
+        <div class="divergence-card"><div class="lang-tag" style="background:rgba(167,139,250,0.15);color:var(--accent-secondary);">JA</div><div class="lang-text">tomodachi <em>ni</em> tegami-o <span class="highlight">kaita</span> &mdash; Verb at END. Uses <strong>postpositions</strong> (ni = to). No pronoun "he" needed.</div></div>
+        <div class="divergence-card"><div class="lang-tag" style="background:rgba(167,139,250,0.15);color:var(--accent-secondary);">HI</div><div class="lang-text">usne dost ko ek khat <span class="highlight">likha</span> &mdash; SOV order. Hindi also uses postpositions (ko = to).</div></div>
+      </div>
+      <div id="wo-vso" class="wo-detail" style="display:none">
+        <div class="divergence-card"><div class="lang-tag" style="background:rgba(52,211,153,0.15);color:var(--accent-tertiary);">AR</div><div class="lang-text"><span class="highlight">katabt</span> ris&#257;la li &#7779;adq &mdash; Verb FIRST. Also uses prepositions (li = to), like SVO languages.</div></div>
+        <div class="divergence-card"><div class="lang-tag" style="background:rgba(52,211,153,0.15);color:var(--accent-tertiary);">GA</div><div class="lang-text"><span class="highlight">Scr&iacute;obh</span> s&eacute; litir chuig cara &mdash; Irish VSO: Verb-Subject-Object.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-card purple-glow">
+    <h4>&#128220; Other Divergence Types</h4>
+    <ul>
+      <li><strong>Lexical:</strong> English "wall" = German "Wand" (inside) OR "Mauer" (outside). One word maps to many.</li>
+      <li><strong>Morphological:</strong> Isolating languages (Vietnamese: 1 morpheme/word) vs. polysynthetic (Yupik: whole sentence = 1 word).</li>
+      <li><strong>Pro-drop:</strong> Japanese/Chinese omit pronouns ("cold" languages); English requires them ("hot" language).</li>
+      <li><strong>Motion:</strong> English marks direction on particles ("float <em>out</em>"); Spanish marks it on verbs ("<em>sali&oacute;</em> flotando").</li>
+    </ul>
+  </div>
+</section>
+
+<!-- §2 ENCODER-DECODER -->
+<section id="encdec" class="section" data-section="encdec">
+  <div class="section-header"><div class="section-number purple">12.3</div><h2>The Encoder-Decoder Transformer</h2></div>
+  <div class="pedagogy-badge badge-technical">&#128200; Technical Ascent</div>
+
+  <div class="prose">
+    <p>The encoder-decoder architecture has two transformer stacks. The <strong>encoder</strong> processes source tokens \(x_1, \ldots, x_n\) with bidirectional self-attention (it can look at the full source). The <strong>decoder</strong> generates target tokens autoregressively with causal self-attention, plus a <em>cross-attention</em> layer that attends to the encoder output.</p>
+  </div>
+
+  <div class="math-block">
+    <div class="math-label">Encoder-Decoder Core Equations</div>
+    <div>$$\mathbf{H}_{\text{enc}} = \text{Encoder}(x_1, \ldots, x_n) \qquad y_{t+1} = \text{Decoder}(\mathbf{H}_{\text{enc}},\; y_1, \ldots, y_t)$$</div>
+  </div>
+
+  <div class="math-block">
+    <div class="math-label">Cross-Attention: Queries from decoder, Keys &amp; Values from encoder</div>
+    <div>$$Q = H_{\text{dec}}^{[\ell-1]} W^Q \qquad K = H_{\text{enc}} W^K \qquad V = H_{\text{enc}} W^V$$</div>
+    <div style="margin-top:.75rem">$$\text{CrossAttn}(Q,K,V) = \text{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right) V$$</div>
+  </div>
+
+  <div class="math-block">
+    <div class="math-label">Training Loss: Cross-Entropy with Teacher Forcing</div>
+    <div>$$\mathcal{L}_{\text{CE}}(\hat{y}_t, y_t) = -\log \hat{y}_t[w_{t+1}]$$</div>
+  </div>
+
+  <div class="info-card orange-glow">
+    <h4>&#9889; Why Cross-Attention is the Key Innovation</h4>
+    <p>In standard self-attention, Q, K, and V all come from the same sequence. In cross-attention, Q comes from the <em>decoder</em> (what am I looking for?) while K and V come from the <em>encoder</em> (what's available in the source sentence?). This lets every decoder position attend to every source position &mdash; the decoder "glances back at its notes" of the source at each generation step.</p>
+  </div>
+
+  <div class="sidebar-toggle" onclick="this.classList.toggle('open')">
+    <div class="sidebar-toggle-header">
+      <h4>&#128220; Historical Context: From Phrase-Based SMT to Neural MT</h4>
+      <span class="sidebar-toggle-arrow">&#9660;</span>
+    </div>
+    <div class="sidebar-toggle-body">
+      <div class="sidebar-toggle-content">
+        <p>Before neural MT, the dominant paradigm was <strong>phrase-based statistical MT</strong> (2000s-2014), which translated by finding aligned phrase pairs in parallel corpora and scoring translations with a log-linear model. Neural MT (Sutskever et al., 2014; Bahdanau et al., 2015) replaced this with end-to-end sequence-to-sequence models, first using RNNs with attention, then transformers (Vaswani et al., 2017). The transformer encoder-decoder became the standard MT architecture by 2018 and remains so today, powering Google Translate, DeepL, and Meta's NLLB (No Language Left Behind) for 200 languages.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- §3 BEAM SEARCH -->
+<section id="beam" class="section" data-section="beam">
+  <div class="section-header"><div class="section-number warm">12.4</div><h2>Decoding: Beam Search</h2></div>
+  <div class="pedagogy-badge badge-technical">&#128200; Technical Ascent</div>
+
+  <div class="prose">
+    <p>Greedy decoding picks the highest-probability word at each step, but a locally optimal choice may lead to a globally suboptimal translation. <strong>Beam search</strong> keeps the top \(k\) hypotheses (the <em>beam width</em>) at each step, extending each by all vocabulary words, scoring the \(k \times |V|\) candidates, and pruning back to the best \(k\).</p>
+  </div>
+
+  <div class="math-block">
+    <div class="math-label">Beam Search Scoring (Log-Probability with Length Normalization)</div>
+    <div>$$\text{score}(y) = \frac{1}{t} \sum_{i=1}^{t} \log P(y_i \mid y_1, \ldots, y_{i-1}, x)$$</div>
+  </div>
+
+  <!-- Interactive Beam Search -->
+  <div class="visualizer">
+    <div class="viz-header">
+      <h4>&#127795; Beam Search Tree (k=2)</h4>
+      <span class="interactive-tag">Interactive</span>
+    </div>
+    <div class="viz-body">
+      <p style="font-size:.8rem;color:var(--text-muted);margin-bottom:1rem;">Translating "The green witch arrived" &mdash; active beam paths shown in orange, pruned paths dashed. Click nodes to inspect.</p>
+      <div style="overflow-x:auto;">
+        <div class="beam-tree" id="beamTree" style="width:700px;height:260px;">
+          <!-- t=0 -->
+          <div class="beam-node active" style="left:10px;top:120px;" onclick="showBeamInfo('start')">BOS<span class="prob">0.00</span></div>
+          <!-- t=1 -->
+          <div class="beam-node active" style="left:140px;top:60px;" onclick="showBeamInfo('arrived')">arrived<span class="prob">-1.60</span></div>
+          <div class="beam-node active" style="left:140px;top:170px;" onclick="showBeamInfo('the')">the<span class="prob">-0.92</span></div>
+          <!-- t=2 -->
+          <div class="beam-node pruned" style="left:290px;top:30px;" onclick="showBeamInfo('arr_the')">the<span class="prob">-2.29</span></div>
+          <div class="beam-node pruned" style="left:290px;top:90px;" onclick="showBeamInfo('arr_witch')">witch<span class="prob">-3.90</span></div>
+          <div class="beam-node active" style="left:290px;top:150px;" onclick="showBeamInfo('the_green')">green<span class="prob">-1.61</span></div>
+          <div class="beam-node active" style="left:290px;top:210px;" onclick="showBeamInfo('the_witch')">witch<span class="prob">-2.12</span></div>
+          <!-- t=3 -->
+          <div class="beam-node active" style="left:440px;top:120px;" onclick="showBeamInfo('tgw')">witch<span class="prob">-1.83</span></div>
+          <div class="beam-node pruned" style="left:440px;top:200px;" onclick="showBeamInfo('tw_arr')">arrived<span class="prob">-3.72</span></div>
+          <!-- t=4 -->
+          <div class="beam-node active" style="left:580px;top:120px;" onclick="showBeamInfo('final')">arrived<span class="prob">-2.05</span></div>
+        </div>
+      </div>
+      <div id="beamInfo" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent-orange);margin-top:1rem;padding:.75rem;background:var(--bg-code);border-radius:6px;border:1px solid var(--border-color);min-height:2rem;">
+        Best path: BOS &#8594; the &#8594; green &#8594; witch &#8594; arrived &#8594; EOS &nbsp;|&nbsp; Total log P = -2.05
+      </div>
+    </div>
+  </div>
+
+  <div class="info-card blue-glow">
+    <h4>&#128161; Minimum Bayes Risk (MBR) Decoding</h4>
+    <p>An alternative to beam search: sample many candidate translations, then choose the one most similar to all the others (using chrF or BERTScore). Instead of finding the <em>most probable</em> translation, MBR finds the one with the <em>least expected error</em>. Works with as few as 32-64 samples.</p>
+  </div>
+</section>
+
+<!-- §4 EVALUATION -->
+<section id="eval" class="section" data-section="eval">
+  <div class="section-header"><div class="section-number green">12.6</div><h2>MT Evaluation: chrF, BLEU &amp; BERTScore</h2></div>
+  <div class="pedagogy-badge badge-technical">&#128200; Technical Ascent</div>
+
+  <div class="prose">
+    <p>MT quality is judged on two axes: <em>adequacy</em> (is the meaning preserved?) and <em>fluency</em> (is the target grammatical and natural?). The simplest robust automatic metric is <strong>chrF</strong> &mdash; character n-gram F-score between the hypothesis and a human reference translation.</p>
+  </div>
+
+  <div class="math-block">
+    <div class="math-label">chrF: Character F-Score (&#946; = 2 weighs recall 2x precision)</div>
+    <div>$$\text{chrF}_\beta = (1 + \beta^2) \frac{\text{chrP} \cdot \text{chrR}}{\beta^2 \cdot \text{chrP} + \text{chrR}} \qquad \Rightarrow \qquad \text{chrF}_2 = \frac{5 \cdot \text{chrP} \cdot \text{chrR}}{4 \cdot \text{chrP} + \text{chrR}}$$</div>
+  </div>
+
+  <!-- Interactive chrF Calculator -->
+  <div class="visualizer">
+    <div class="viz-header">
+      <h4>&#128202; Live chrF Calculator</h4>
+      <span class="interactive-tag">Interactive</span>
+    </div>
+    <div class="viz-body">
+      <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text-muted);display:block;margin-bottom:.25rem;">REFERENCE (human translation)</label>
+      <input type="text" class="chrf-input" id="chrfRef" value="witness for the past" oninput="computeChrF()">
+      <label style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text-muted);display:block;margin-bottom:.25rem;">HYPOTHESIS (MT output)</label>
+      <input type="text" class="chrf-input" id="chrfHyp" value="witness of the past" oninput="computeChrF()">
+      <div class="chrf-result" id="chrfResult">chrF₂ = 0.860 &nbsp;|&nbsp; chrP = 0.906 &nbsp;|&nbsp; chrR = 0.855</div>
+    </div>
+  </div>
+
+  <table class="comparison-table">
+    <thead><tr><th>Metric</th><th>Unit</th><th>Strengths</th><th>Weaknesses</th></tr></thead>
+    <tbody>
+      <tr><td><strong>chrF</strong></td><td>Character n-grams</td><td>Simple, robust, works across morphologies</td><td>Local; can't detect reordering or discourse</td></tr>
+      <tr><td><strong>BLEU</strong></td><td>Word n-grams</td><td>Widely used, corpus-level</td><td>Sensitive to tokenization; poor for rich morphology</td></tr>
+      <tr><td><strong>BERTScore</strong></td><td>BERT embeddings</td><td>Captures semantic similarity beyond surface</td><td>Expensive; less interpretable</td></tr>
+      <tr><td><strong>Human Eval</strong></td><td>Ratings / rankings</td><td>Gold standard</td><td>Slow, expensive, rater disagreement</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- §5 CODE -->
+<section id="code" class="section" data-section="code">
+  <div class="section-header"><div class="section-number green">&#128187;</div><h2>Code Lab: Encoder-Decoder Translation</h2></div>
+  <div class="pedagogy-badge badge-code">&#128187; Implementation</div>
+
+  <div class="code-container">
+    <div class="code-header"><span class="lang">Python &middot; HuggingFace Translation + chrF Eval</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <div class="code-body"><pre><span class="comment"># ═══════════════════════════════════════════════════════</span>
+<span class="comment"># Machine Translation with Encoder-Decoder (Sec 12.2-3)</span>
+<span class="comment"># + chrF Evaluation (Sec 12.6)</span>
+<span class="comment"># ═══════════════════════════════════════════════════════</span>
+
+<span class="keyword">from</span> transformers <span class="keyword">import</span> MarianMTModel, MarianTokenizer
+<span class="keyword">import</span> sacrebleu  <span class="comment"># Standardized BLEU/chrF (Post, 2018)</span>
+
+<span class="comment"># ── Load a pretrained encoder-decoder MT model ──</span>
+<span class="comment"># MarianMT uses the transformer enc-dec architecture</span>
+<span class="comment"># from Sec 12.3, with cross-attention in the decoder.</span>
+model_name = <span class="string">"Helsinki-NLP/opus-mt-en-es"</span>  <span class="comment"># English→Spanish</span>
+tokenizer = MarianTokenizer.from_pretrained(model_name)
+model = MarianMTModel.from_pretrained(model_name)
+
+<span class="comment"># ── Translate: Encoder processes source, decoder generates target ──</span>
+<span class="comment"># Internally this runs beam search (Sec 12.4) with k=4 by default</span>
+source = [<span class="string">"The green witch arrived"</span>]
+tokens = tokenizer(source, return_tensors=<span class="string">"pt"</span>, padding=<span class="number">True</span>)
+translated = model.generate(
+    **tokens,
+    num_beams=<span class="number">5</span>,          <span class="comment"># Beam width k=5 (Sec 12.4)</span>
+    max_length=<span class="number">50</span>,
+)
+output = tokenizer.batch_decode(translated, skip_special_tokens=<span class="number">True</span>)
+print(<span class="string">f"Translation: {output[0]}"</span>)
+<span class="comment"># → "Llegó la bruja verde"</span>
+
+<span class="comment"># ── Evaluate with chrF (Sec 12.6) ──</span>
+<span class="comment"># chrF = character n-gram F-score (β=2, weighs recall 2x)</span>
+<span class="comment"># chrF_β = (1+β²) · chrP·chrR / (β²·chrP + chrR)</span>
+reference = [<span class="string">"Llegó la bruja verde"</span>]
+hypothesis = output[<span class="number">0</span>]
+chrf = sacrebleu.corpus_chrf([hypothesis], [reference])
+print(<span class="string">f"chrF2 score: {chrf.score:.1f}"</span>)
+<span class="comment"># → chrF2 score: 100.0 (perfect match!)</span>
+
+<span class="comment"># ── Also compute BLEU for comparison ──</span>
+bleu = sacrebleu.corpus_bleu([hypothesis], [reference])
+print(<span class="string">f"BLEU score: {bleu.score:.1f}"</span>)</pre></div>
+  </div>
+</section>
+
+<!-- §6 MODERN BRIDGE -->
+<section id="modern" class="section" data-section="modern">
+  <div class="section-header"><div class="section-number warm">&#127881;</div><h2>The 2026 Modern Bridge</h2></div>
+  <div class="pedagogy-badge badge-modern">&#128640; 2026 Perspective</div>
+
+  <div class="info-card warm-glow">
+    <h4>&#128640; LLMs as Universal Translators</h4>
+    <p>Modern LLMs like GPT-4, Gemini, and Claude can translate between hundreds of languages via prompting alone &mdash; no dedicated encoder-decoder needed. However, dedicated MT systems still outperform LLMs on low-resource language pairs and domain-specific translation, because they're trained on curated parallel data rather than general web text.</p>
+  </div>
+
+  <div class="info-card purple-glow">
+    <h4>&#129302; NLLB: No Language Left Behind</h4>
+    <p>Meta's NLLB project (2022) built a single encoder-decoder model supporting <strong>200 languages</strong>, including many low-resource African and Asian languages. It uses the techniques from Section 12.5: backtranslation for data augmentation, multilingual training, and careful data curation with native speaker involvement. The cross-attention mechanism from Section 12.3 scales elegantly to this many-to-many setting.</p>
+  </div>
+
+  <div class="info-card green-glow">
+    <h4>&#128202; MBR Decoding Goes Mainstream</h4>
+    <p>Minimum Bayes Risk decoding (Sec 12.4.1) has seen a resurgence. Instead of beam search, systems sample 64+ candidate translations, then select the one most similar to all others using chrF or BERTScore as the utility function. This consistently outperforms beam search across languages and is becoming the default for high-quality MT.</p>
+  </div>
+
+  <div class="info-card rose-glow">
+    <h4>&#9888; The Low-Resource Gap Remains</h4>
+    <p>Despite progress, most of the world's ~7,000 languages still lack sufficient parallel data. The sociotechnical issues from Section 12.5.3 persist: native speakers are often excluded from curation and evaluation, corpora contain boilerplate and mistranslations, and most systems route through English as a pivot. Participatory design approaches (Nekoto et al., 2020) and direct non-English language pairs are active research areas.</p>
+  </div>
+</section>
+
+<!-- §7 SOCRATIC -->
+<section id="socratic" class="section" data-section="socratic">
+  <div class="section-header"><div class="section-number rose">&#10067;</div><h2>Linguistic Challenge: The Pro-Drop Problem</h2></div>
+  <div class="pedagogy-badge badge-socratic">&#129504; Socratic Knowledge Check</div>
+
+  <div class="challenge-box">
+    <h4>&#128269; Failure Case: Lost in Translation from Japanese</h4>
+    <div class="challenge-scenario">
+      <strong>Source (Japanese):</strong> &#26412;&#12434;&#35501;&#12435;&#12384;&#12290; (hon-o yonda.) = "[Someone] read a book."<br><br>
+      <strong>MT Output (English):</strong> "Read a book."<br><br>
+      <strong>Correct Translation:</strong> "She read a book." (context: a story about a woman)<br><br>
+      <strong>Problem:</strong> Japanese is a pro-drop language (Sec 12.1.4) &mdash; the subject pronoun is omitted. The MT system correctly translates the verb and object, but fails to recover the implied subject "she" that English grammar requires.
+    </div>
+
+    <div class="challenge-question" onclick="this.classList.toggle('open')">
+      <div class="q-label">Question 1</div>
+      <p>What typological property of Japanese causes this failure? How does it relate to the "hot" vs. "cold" language distinction from Section 12.1.4?</p>
+      <div class="challenge-answer"><div class="challenge-answer-content">Japanese is a <strong>pro-drop</strong> (or "cold") language &mdash; it routinely omits pronouns that are recoverable from context. English is a "hot" language that requires explicit pronouns. The MT system must perform <em>pragmatic inference</em> to recover the dropped pronoun, which requires understanding discourse context beyond the single sentence. The encoder-decoder processes one sentence at a time, so it can't see the broader narrative establishing that "she" is the topic.</div></div>
+    </div>
+
+    <div class="challenge-question" onclick="this.classList.toggle('open')">
+      <div class="q-label">Question 2</div>
+      <p>The cross-attention mechanism (Eq. 12.12) lets the decoder attend to source tokens. Why can't it solve the pro-drop problem in this case?</p>
+      <div class="challenge-answer"><div class="challenge-answer-content">Cross-attention can only attend to what's <em>present in the source sentence</em>. If the subject pronoun is simply absent from the Japanese source (it's not a hidden token &mdash; it literally doesn't exist), there's nothing for the decoder to attend to. The information about "she" exists only in the <strong>discourse context</strong> (previous sentences), which the encoder never sees. Cross-attention is powerful but bounded by the encoder's input; it can't attend to information that was never encoded.</div></div>
+    </div>
+
+    <div class="challenge-question" onclick="this.classList.toggle('open')">
+      <div class="q-label">Question 3</div>
+      <p>Beam search (Sec 12.4) explores multiple hypotheses. Could increasing the beam width help recover the correct pronoun? Why or why not?</p>
+      <div class="challenge-answer"><div class="challenge-answer-content">Increasing beam width would keep more candidate translations alive (e.g., "He read," "She read," "I read," "They read"). However, <strong>all candidates would be scored by the same model</strong>, which has no information about the correct pronoun since it's absent from the source. The model might assign the highest probability to the most frequent pronoun in training data (likely "he" due to gender bias in corpora), which might still be wrong. Beam search explores more paths but can't inject information the model doesn't have.</div></div>
+    </div>
+
+    <div class="challenge-question" onclick="this.classList.toggle('open')">
+      <div class="q-label">Question 4</div>
+      <p>How might translating at the document level (rather than sentence level) help with this problem? What are the trade-offs?</p>
+      <div class="challenge-answer"><div class="challenge-answer-content">Document-level MT would feed multiple sentences (or the full document) to the encoder, giving cross-attention access to prior context where the subject was explicitly mentioned. This would let the model see "Yuki picked up a book" in a previous sentence and correctly infer "she" for the current one. Trade-offs: (1) <strong>Computational cost:</strong> encoding an entire document is much more expensive than a single sentence. (2) <strong>Training data:</strong> most parallel corpora are sentence-aligned, not document-aligned. (3) <strong>Attention dilution:</strong> with very long contexts, the model may struggle to focus on the right preceding sentence. Current research addresses this with hierarchical attention and sliding window approaches.</div></div>
+    </div>
+
+    <div class="challenge-question" onclick="this.classList.toggle('open')">
+      <div class="q-label">Question 5</div>
+      <p>The chrF metric (Sec 12.6) would give this translation a high score despite the missing pronoun. Why? What does this reveal about automatic evaluation?</p>
+      <div class="challenge-answer"><div class="challenge-answer-content">chrF measures <strong>character n-gram overlap</strong> between hypothesis and reference. The hypothesis "Read a book" shares most characters with "She read a book" &mdash; the only difference is the missing "She " (4 characters out of ~18). chrF would compute high precision (all hypothesis characters appear in the reference) and moderate recall (most reference characters appear in the hypothesis), yielding a relatively high score despite a semantically critical error. This reveals that overlap metrics are <strong>insensitive to omissions of short but semantically crucial words</strong>. A single missing pronoun can completely change meaning ("he" vs. "she" vs. no one), but barely affects character overlap. This is why human evaluation and embedding-based metrics like BERTScore are needed for nuanced quality assessment.</div></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<a href="index.html" class="back-link">&#8592; Command Center</a>
+
+<script>
+document.addEventListener('DOMContentLoaded',()=>{renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false})});
+const observer=new IntersectionObserver(e=>{e.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')})},{threshold:.08});
+document.querySelectorAll('.section').forEach(s=>observer.observe(s));
+const navLinks=document.querySelectorAll('.toc-link'),sections=document.querySelectorAll('.section');
+window.addEventListener('scroll',()=>{let c='';sections.forEach(s=>{if(pageYOffset>=s.offsetTop-100)c=s.dataset.section});navLinks.forEach(l=>l.classList.toggle('active',l.dataset.section===c))});
+
+// Word Order
+function showWO(type){
+  document.querySelectorAll('.wo-detail').forEach(d=>d.style.display='none');
+  document.getElementById('wo-'+type).style.display='block';
+  document.querySelectorAll('.wo-btn').forEach(b=>{b.style.background='transparent';b.style.borderColor='var(--border-accent)';b.style.color='var(--text-muted)'});
+  event.target.style.background='rgba(251,146,60,0.15)';event.target.style.borderColor='var(--accent-orange)';event.target.style.color='var(--accent-orange)';
+}
+
+// Beam Info
+function showBeamInfo(node){
+  const info={
+    'start':'Start: BOS token. Log P = 0.00',
+    'arrived':'BOS → arrived: log P(arrived|BOS) = -1.60',
+    'the':'BOS → the: log P(the|BOS) = -0.92 ← Better first step!',
+    'arr_the':'BOS → arrived → the: cumulative log P = -2.29 (PRUNED: not in top-2)',
+    'arr_witch':'BOS → arrived → witch: cumulative log P = -3.90 (PRUNED)',
+    'the_green':'BOS → the → green: cumulative log P = -1.61 ← Best path so far',
+    'the_witch':'BOS → the → witch: cumulative log P = -2.12',
+    'tgw':'BOS → the → green → witch: cumulative log P = -1.83',
+    'tw_arr':'BOS → the → witch → arrived: cumulative log P = -3.72 (PRUNED)',
+    'final':'BOS → the → green → witch → arrived → EOS: Final log P = -2.05 ← BEST TRANSLATION'
+  };
+  document.getElementById('beamInfo').textContent=info[node]||'Click a node to inspect';
+}
+
+// chrF Calculator
+function computeChrF(){
+  const ref=document.getElementById('chrfRef').value.replace(/\s/g,'');
+  const hyp=document.getElementById('chrfHyp').value.replace(/\s/g,'');
+  if(!ref||!hyp){document.getElementById('chrfResult').textContent='Enter both strings';return}
+  let totalP=0,totalR=0,n=0;
+  for(let k=1;k<=2;k++){
+    const refNgrams={},hypNgrams={};
+    for(let i=0;i<=ref.length-k;i++){const ng=ref.substring(i,i+k);refNgrams[ng]=(refNgrams[ng]||0)+1}
+    for(let i=0;i<=hyp.length-k;i++){const ng=hyp.substring(i,i+k);hypNgrams[ng]=(hypNgrams[ng]||0)+1}
+    let matchP=0,matchR=0;
+    for(const ng in hypNgrams)matchP+=Math.min(hypNgrams[ng],refNgrams[ng]||0);
+    for(const ng in refNgrams)matchR+=Math.min(refNgrams[ng],hypNgrams[ng]||0);
+    const hypTotal=Math.max(hyp.length-k+1,1),refTotal=Math.max(ref.length-k+1,1);
+    totalP+=matchP/hypTotal;totalR+=matchR/refTotal;n++
+  }
+  const chrP=totalP/n,chrR=totalR/n;
+  const chrF=chrP+chrR>0?(5*chrP*chrR)/(4*chrP+chrR):0;
+  document.getElementById('chrfResult').textContent=`chrF₂ = ${chrF.toFixed(3)}  |  chrP = ${chrP.toFixed(3)}  |  chrR = ${chrR.toFixed(3)}`;
+}
+
+function copyCode(btn){const code=btn.closest('.code-container').querySelector('pre').textContent;navigator.clipboard.writeText(code).then(()=>{btn.textContent='Copied!';setTimeout(()=>btn.textContent='Copy',2000)})}
+</script>
+</body>
+</html>

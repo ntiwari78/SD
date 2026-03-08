@@ -1,0 +1,1761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 16: Text-to-Speech - Speech and Language Processing</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            padding: 3rem 2rem;
+            text-align: center;
+            border-bottom: 2px solid #334155;
+            position: relative;
+        }
+
+        header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #8b5cf6, #f43f5e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        header p {
+            font-size: 1.1rem;
+            color: #cbd5e1;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* Navigation */
+        nav#chapterNav {
+            position: sticky;
+            top: 0;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(8px);
+            padding: 1rem 2rem;
+            border-bottom: 2px solid #334155;
+            display: flex;
+            gap: 2rem;
+            overflow-x: auto;
+            z-index: 100;
+        }
+
+        nav#chapterNav a {
+            color: #cbd5e1;
+            text-decoration: none;
+            font-weight: 500;
+            white-space: nowrap;
+            padding: 0.5rem 0;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        nav#chapterNav a:hover {
+            color: #8b5cf6;
+            border-bottom-color: #8b5cf6;
+        }
+
+        /* Main content */
+        main {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        section {
+            margin: 4rem 0;
+            opacity: 0;
+            transition: opacity 0.6s ease;
+        }
+
+        section.revealed {
+            opacity: 1;
+        }
+
+        h2 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: #8b5cf6;
+            border-bottom: 3px solid #334155;
+            padding-bottom: 1rem;
+        }
+
+        h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            color: #f43f5e;
+        }
+
+        h4 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            color: #14b8a6;
+        }
+
+        p {
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+
+        .card {
+            background: #1e293b;
+            border: 2px solid #334155;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: #8b5cf6;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(139, 92, 246, 0.15);
+        }
+
+        .card-violet {
+            border-left: 4px solid #8b5cf6;
+        }
+
+        .card-rose {
+            border-left: 4px solid #f43f5e;
+        }
+
+        .card-teal {
+            border-left: 4px solid #14b8a6;
+        }
+
+        /* Code blocks */
+        .code-tabs {
+            background: #1e293b;
+            border: 2px solid #334155;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+            overflow: hidden;
+        }
+
+        .code-tabs-header {
+            display: flex;
+            border-bottom: 2px solid #334155;
+            background: #0f172a;
+        }
+
+        .code-tab-btn {
+            flex: 1;
+            padding: 1rem;
+            background: none;
+            border: none;
+            color: #cbd5e1;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .code-tab-btn.active {
+            color: #8b5cf6;
+            border-bottom: 3px solid #8b5cf6;
+            background: rgba(139, 92, 246, 0.1);
+        }
+
+        .code-tab-btn:hover {
+            color: #8b5cf6;
+        }
+
+        .code-tab-content {
+            display: none;
+            position: relative;
+        }
+
+        .code-tab-content.active {
+            display: block;
+        }
+
+        pre {
+            background: #0f172a;
+            padding: 1.5rem;
+            overflow-x: auto;
+            font-size: 0.9rem;
+            border-radius: 4px;
+            margin: 0;
+        }
+
+        code {
+            font-family: 'Monaco', 'Courier New', monospace;
+            color: #e2e8f0;
+        }
+
+        .keyword { color: #f43f5e; }
+        .string { color: #14b8a6; }
+        .comment { color: #64748b; }
+        .function { color: #8b5cf6; }
+        .number { color: #fbbf24; }
+
+        .copy-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: #8b5cf6;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .copy-btn:hover {
+            background: #a78bfa;
+            transform: scale(1.05);
+        }
+
+        /* Visualizers */
+        .visualizer-wrapper {
+            background: #1e293b;
+            border: 2px solid #334155;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .visualizer-title {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #8b5cf6;
+            margin-bottom: 1rem;
+        }
+
+        canvas {
+            display: block;
+            border: 1px solid #334155;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+
+        .visualizer-controls {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            background: #8b5cf6;
+            color: white;
+            border: none;
+            padding: 0.7rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+        }
+
+        button:hover {
+            background: #a78bfa;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+        }
+
+        button.secondary {
+            background: #64748b;
+        }
+
+        button.secondary:hover {
+            background: #78869f;
+        }
+
+        /* Collapsible sections */
+        .collapsible {
+            background: #1e293b;
+            border: 2px solid #334155;
+            border-radius: 8px;
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+
+        .collapsible-header {
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            color: #e2e8f0;
+            background: #0f172a;
+            transition: all 0.3s ease;
+        }
+
+        .collapsible-header:hover {
+            background: #1e293b;
+            color: #8b5cf6;
+        }
+
+        .collapsible-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s ease;
+            color: #8b5cf6;
+        }
+
+        .collapsible.active .collapsible-icon {
+            transform: rotate(180deg);
+        }
+
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            padding: 0 1.5rem;
+        }
+
+        .collapsible.active .collapsible-content {
+            max-height: 2000px;
+            padding: 1rem 1.5rem;
+        }
+
+        /* Socratic challenge */
+        .socratic-question {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(244, 63, 94, 0.1));
+            border-left: 4px solid #f43f5e;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+
+        .socratic-question strong {
+            color: #f43f5e;
+        }
+
+        .discussion-point {
+            background: #0f172a;
+            padding: 1rem;
+            margin-top: 0.5rem;
+            border-radius: 4px;
+            border-left: 3px solid #14b8a6;
+        }
+
+        /* MOS Rating */
+        .mos-container {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 1.5rem 0;
+        }
+
+        .mos-system {
+            background: #0f172a;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 2px solid #334155;
+            text-align: center;
+            min-width: 200px;
+        }
+
+        .mos-label {
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #cbd5e1;
+        }
+
+        .stars {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        .star {
+            font-size: 2rem;
+            cursor: pointer;
+            opacity: 0.5;
+            transition: all 0.2s ease;
+        }
+
+        .star:hover,
+        .star.active {
+            opacity: 1;
+            color: #fbbf24;
+            transform: scale(1.2);
+        }
+
+        .mos-score {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #8b5cf6;
+            margin-top: 1rem;
+        }
+
+        /* Timeline */
+        .timeline {
+            position: relative;
+            padding: 2rem 0;
+        }
+
+        .timeline-item {
+            margin-bottom: 2rem;
+            padding-left: 2rem;
+            position: relative;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 12px;
+            height: 12px;
+            background: #8b5cf6;
+            border-radius: 50%;
+            border: 3px solid #0f172a;
+        }
+
+        .timeline-item::after {
+            content: '';
+            position: absolute;
+            left: 4px;
+            top: 12px;
+            width: 3px;
+            height: calc(100% + 2rem);
+            background: #334155;
+        }
+
+        .timeline-item:last-child::after {
+            display: none;
+        }
+
+        .timeline-year {
+            font-weight: 700;
+            color: #f43f5e;
+            font-size: 1.1rem;
+        }
+
+        .timeline-description {
+            color: #cbd5e1;
+            margin-top: 0.3rem;
+        }
+
+        /* Math */
+        .katex {
+            font-size: 1.1em;
+        }
+
+        .katex-display {
+            margin: 1.5rem 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 2rem;
+            }
+
+            nav#chapterNav {
+                flex-wrap: wrap;
+                gap: 1rem;
+            }
+
+            h2 {
+                font-size: 1.8rem;
+            }
+
+            h3 {
+                font-size: 1.3rem;
+            }
+
+            main {
+                padding: 1rem;
+            }
+
+            .mos-container {
+                gap: 1rem;
+            }
+        }
+
+        /* Utilities */
+        .highlight {
+            background: rgba(139, 92, 246, 0.2);
+            padding: 0.2rem 0.4rem;
+            border-radius: 2px;
+            color: #a78bfa;
+        }
+
+        .equation-box {
+            background: #0f172a;
+            border: 2px solid #8b5cf6;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        ul, ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Chapter 16: Text-to-Speech</h1>
+        <p>From Speech Recognition to Speech Generation — Creating Natural Human Voice from Written Text</p>
+    </header>
+
+    <nav id="chapterNav">
+        <a href="#feynman">Feynman Bridge</a>
+        <a href="#technical">Technical Ascent</a>
+        <a href="#code">Code Lab</a>
+        <a href="#socratic">Socratic Challenge</a>
+        <a href="#modern">Modern Bridge</a>
+        <a href="#history">Historical Context</a>
+    </nav>
+
+    <main>
+        <!-- SECTION 1: FEYNMAN BRIDGE -->
+        <section id="feynman">
+            <h2>Feynman Bridge: From Recognizing Speech to Creating It</h2>
+
+            <div class="card card-violet">
+                <h3>The ASR-to-TTS Reversal</h3>
+                <p>
+                    In Chapter 15, we studied <span class="highlight">Automatic Speech Recognition (ASR)</span> — the challenge of converting
+                    speech waveforms into text. Text-to-Speech (TTS) inverts this problem: we start with written text
+                    and must produce natural-sounding speech.
+                </p>
+                <p>
+                    But here's the key insight: modern TTS doesn't generate raw waveforms (16,000+ samples per second).
+                    Instead, it uses a clever two-stage approach inspired by data compression:
+                </p>
+            </div>
+
+            <h3>The Speech Compression Analogy</h3>
+            <p>
+                Think of a ZIP file: when you compress a file, you trade detailed information for compactness —
+                fewer bytes, lossless representation. When you unzip, you recover the original.
+            </p>
+
+            <div class="card card-rose">
+                <strong>The TTS Pipeline as "Audio Compression-Decompression":</strong>
+                <ul>
+                    <li><strong>Audio Codec (Compression):</strong> Takes a high-resolution audio waveform (24 kHz, 16-bit)
+                        and extracts a compact <span class="highlight">sequence of discrete tokens</span> (roughly 75 tokens per second)</li>
+                    <li><strong>Language Model (Generation):</strong> Trained on thousands of speakers and 60,000+ hours of audio,
+                        the model learns to predict the next audio token given text and a voice sample</li>
+                    <li><strong>Codec Decoder (Decompression):</strong> Takes the generated token sequence and reconstructs
+                        the high-resolution waveform</li>
+                </ul>
+            </div>
+
+            <p>
+                Why is this better than predicting raw samples? <strong>Tokens are discrete, compressible, and learnable.</strong>
+                A language model trained on 75 tokens/sec is far more efficient than predicting 24,000 samples/sec.
+            </p>
+        </section>
+
+        <!-- SECTION 2: TECHNICAL ASCENT -->
+        <section id="technical">
+            <h2>Technical Ascent: The Architecture of Modern TTS</h2>
+
+            <h3>16.1 TTS Overview</h3>
+            <div class="card card-violet">
+                <p>
+                    Modern zero-shot TTS systems are remarkable: trained on 60,000+ hours of speech from
+                    thousands of speakers, they can synthesize any voice from just 3 seconds of audio sample.
+                    The two core components are:
+                </p>
+                <ol>
+                    <li><strong>Audio Tokenizer (Codec):</strong> Compresses speech into discrete tokens</li>
+                    <li><strong>Conditional Language Model:</strong> Generates audio tokens conditioned on text + voice</li>
+                </ol>
+            </div>
+
+            <h4>The Complete Pipeline</h4>
+            <p>
+                Given input text and a reference audio clip, the system:
+            </p>
+            <ol>
+                <li>Tokenizes text using BPE (Byte Pair Encoding)</li>
+                <li>Encodes the voice reference audio into a sequence of discrete code vectors</li>
+                <li>Runs a transformer language model to generate audio token codes</li>
+                <li>Decodes the token sequence back into a waveform</li>
+            </ol>
+
+            <h3>16.2 Using a Codec to Learn Discrete Audio Tokens</h3>
+            <div class="card card-teal">
+                <h4>EnCodec Architecture</h4>
+                <p>
+                    The audio codec consists of three stages:
+                </p>
+                <ol>
+                    <li><strong>Encoder:</strong> Downsamples 24 kHz audio to ~75 Hz (320x compression via stride [2,4,5,8])</li>
+                    <li><strong>Vector Quantizer:</strong> Maps encoder outputs to discrete codebook entries</li>
+                    <li><strong>Decoder:</strong> Upsamples discrete tokens back to 24 kHz waveform</li>
+                </ol>
+            </div>
+
+            <h4>Vector Quantization (VQ)</h4>
+            <p>
+                At its core, vector quantization is <span class="highlight">discrete clustering</span>.
+                Given an encoder output vector, find the closest codeword in a learned codebook:
+            </p>
+
+            <div class="equation-box">
+                \[z_t^q = \arg\min_k \|z_t - c_k\|^2\]
+                where \(c_k\) is the \(k\)-th codeword in the codebook (typically \(k = 1024\)).
+            </div>
+
+            <p>
+                The quantized vector is then passed to the decoder. Gradient flow uses the
+                <span class="highlight">straight-through estimator</span>: copy gradients from the
+                quantized output back to the encoder input.
+            </p>
+
+            <h4>Residual Vector Quantization (RVQ)</h4>
+            <p>
+                A single VQ stage can lose information. RVQ stacks multiple VQ codebooks hierarchically,
+                each quantizing the residual (prediction error) of the previous stage:
+            </p>
+
+            <div class="equation-box">
+                \[\text{residual} = z_t - z_t^{q(1)}\]
+                <strong>Equation 16.1</strong>
+            </div>
+
+            <p>
+                Then quantize the residual with codebook 2, compute new residual, and repeat for codebooks 3-8.
+                This gives us <strong>8 discrete tokens per audio frame</strong>.
+            </p>
+
+            <h4>Training Loss for the Codec</h4>
+            <p>
+                The codec is trained with a combination of losses:
+            </p>
+
+            <div class="equation-box">
+                \[\mathcal{L}_{\text{reconstruction}}(x, \hat{x}) = \sum_t \|x_t - \hat{x}_t\|^2\]
+                <strong>Equation 16.2</strong>
+            </div>
+
+            <div class="equation-box">
+                \[\mathcal{L}_{\text{VQ}}(x, \hat{x}) = \sum_c \sum_t \|z_t^{(c)} - z_t^{q(c)}\|^2\]
+                <strong>Equation 16.3</strong>
+            </div>
+
+            <div class="equation-box">
+                \[\mathcal{L}(x, \hat{x}) = \lambda_1 \mathcal{L}_{\text{reconstruction}} + \lambda_2 \mathcal{L}_{\text{GAN}} + \lambda_3 \mathcal{L}_{\text{VQ}}\]
+                <strong>Equation 16.4</strong>
+            </div>
+
+            <p>
+                Here \(\mathcal{L}_{\text{GAN}}\) is an adversarial loss from a discriminator that ensures
+                reconstructed audio sounds natural. The trade-off parameters \(\lambda_1, \lambda_2, \lambda_3\)
+                balance reconstruction quality, naturalness, and token quantization error.
+            </p>
+
+            <h3>16.3 VALL-E: 2-Stage Language Model</h3>
+            <div class="card card-rose">
+                <h4>Autoregressive + Non-Autoregressive Generation</h4>
+                <p>
+                    Once we have an audio codec, the problem becomes: given text and voice tokens,
+                    generate the audio tokens. VALL-E uses a two-stage approach:
+                </p>
+                <ol>
+                    <li><strong>Stage 1 (Autoregressive):</strong> Generate the first quantizer codes left-to-right</li>
+                    <li><strong>Stage 2 (Non-Autoregressive):</strong> Fill in quantizers 2-8 in parallel (7 iterations)</li>
+                </ol>
+            </div>
+
+            <p>
+                Why two stages? The first quantizer carries the most information and requires careful sequential generation.
+                The remaining quantizers refine details and can be generated in parallel, making inference faster.
+            </p>
+
+            <h4>Code Matrix Representation</h4>
+            <p>
+                The encoded audio is represented as a matrix \(C\) where each row is a time step and each column is a quantizer:
+            </p>
+
+            <div class="equation-box">
+                \[C^{(T \times 8)} = \text{EnCodec}(y)\]
+                <strong>Equation 16.5</strong>
+            </div>
+
+            <h4>Training Objective</h4>
+            <p>
+                During training, the model is taught to predict the code sequence given text:
+            </p>
+
+            <div class="equation-box">
+                \[\mathcal{L} = -\log p(C \mid x) = -\log \prod_t p(c_{&lt;t,:} \mid x)\]
+                <strong>Equation 16.6</strong>
+            </div>
+
+            <h4>Inference with Zero-Shot Voice Cloning</h4>
+            <p>
+                At inference time, we condition on a reference voice sample:
+            </p>
+
+            <div class="equation-box">
+                \[C_T = \operatorname{arg\,max} \, p(C_T \mid C_P, x) = \operatorname{arg\,max} \prod_t p(c_{t,:} \mid c_{&lt;t,:}, C_P, x)\]
+                <strong>Equation 16.7</strong>
+            </div>
+
+            <p>
+                where \(C_P\) are the code tokens from the enrolled voice sample \(y_0\) and \(x\) is the input text.
+            </p>
+
+            <h3>16.4 TTS Evaluation Metrics</h3>
+            <div class="card card-violet">
+                <h4>Subjective Evaluation</h4>
+                <ul>
+                    <li><strong>MOS (Mean Opinion Score):</strong> Human listeners rate quality on a 1-5 scale. Average across listeners for each system.</li>
+                    <li><strong>CMOS (Comparative MOS):</strong> Directly compare two systems. Scale ranges from -3 (system A much worse) to +3 (system A much better).</li>
+                </ul>
+
+                <h4>Objective Evaluation</h4>
+                <ul>
+                    <li><strong>WER (Word Error Rate):</strong> Run synthesized speech through ASR system, compare text. Lower is better.</li>
+                    <li><strong>Speaker Verification:</strong> Use a speaker identification model to measure how well the synthesized speech matches the reference voice.</li>
+                </ul>
+            </div>
+
+            <h3>16.5 Other Speech Tasks</h3>
+            <p>
+                The same codec and language modeling techniques extend to related tasks:
+            </p>
+
+            <div class="card card-teal">
+                <ul>
+                    <li><strong>Speaker Diarization:</strong> "Who spoke when?" — segment multi-speaker audio and identify speakers</li>
+                    <li><strong>Speaker Recognition:</strong> Verify or identify a speaker from their voice</li>
+                    <li><strong>Language Identification:</strong> Detect which language is spoken in an audio clip</li>
+                    <li><strong>Wake Word Detection:</strong> Low-footprint model to detect voice assistant trigger words (e.g., "Hey Siri")</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- SECTION 3: CODE IMPLEMENTATION -->
+        <section id="code">
+            <h2>Code Lab: Building TTS Components</h2>
+
+            <p>
+                Let's implement the core TTS components from scratch. These examples show the logic
+                behind vector quantization and VALL-E-style inference.
+            </p>
+
+            <div class="code-tabs">
+                <div class="code-tabs-header">
+                    <button class="code-tab-btn active" data-tab="tab1">Vector Quantization (NumPy)</button>
+                    <button class="code-tab-btn" data-tab="tab2">Residual VQ</button>
+                    <button class="code-tab-btn" data-tab="tab3">VALL-E Inference</button>
+                </div>
+
+                <div class="code-tab-content active" id="tab1">
+                    <div style="position: relative;">
+                        <button class="copy-btn" onclick="copyCode('code1')">Copy</button>
+                        <pre><code id="code1"><span class="keyword">import</span> numpy <span class="keyword">as</span> np
+
+<span class="keyword">class</span> <span class="function">VectorQuantizer</span>:
+    <span class="string">"""Simple VQ with k-means-style codebook."""</span>
+    <span class="keyword">def</span> <span class="function">__init__</span>(<span class="keyword">self</span>, num_codes=<span class="number">1024</span>, dim=<span class="number">256</span>):
+        <span class="keyword">self</span>.num_codes = num_codes
+        <span class="keyword">self</span>.dim = dim
+        <span class="comment"># Initialize codebook randomly</span>
+        <span class="keyword">self</span>.codebook = np.random.randn(num_codes, dim).astype(np.float32)
+
+    <span class="keyword">def</span> <span class="function">train_kmeans</span>(<span class="keyword">self</span>, vectors, n_iters=<span class="number">50</span>):
+        <span class="string">"""Train codebook using k-means on encoder output vectors."""</span>
+        <span class="keyword">for</span> i <span class="keyword">in</span> <span class="function">range</span>(n_iters):
+            <span class="comment"># Assignment step: find nearest codeword for each vector</span>
+            dists = np.linalg.norm(
+                vectors[:, None, :] - <span class="keyword">self</span>.codebook[None, :, :], axis=<span class="number">2</span>
+            )
+            assignments = np.argmin(dists, axis=<span class="number">1</span>)
+            <span class="comment"># Re-estimation step: update codewords as cluster means</span>
+            <span class="keyword">for</span> k <span class="keyword">in</span> <span class="function">range</span>(<span class="keyword">self</span>.num_codes):
+                mask = assignments == k
+                <span class="keyword">if</span> mask.<span class="function">sum</span>() > <span class="number">0</span>:
+                    <span class="keyword">self</span>.codebook[k] = vectors[mask].mean(axis=<span class="number">0</span>)
+        <span class="keyword">return</span> assignments
+
+    <span class="keyword">def</span> <span class="function">quantize</span>(<span class="keyword">self</span>, z):
+        <span class="string">"""Quantize input vector z → nearest codeword."""</span>
+        dists = np.linalg.norm(z[None, :] - <span class="keyword">self</span>.codebook, axis=<span class="number">1</span>)
+        code = np.argmin(dists)
+        <span class="keyword">return</span> code, <span class="keyword">self</span>.codebook[code]
+
+<span class="comment"># Demo: quantize a random vector</span>
+vq = <span class="function">VectorQuantizer</span>(num_codes=<span class="number">1024</span>, dim=<span class="number">256</span>)
+z = np.random.randn(<span class="number">256</span>)
+code, codeword = vq.<span class="function">quantize</span>(z)
+<span class="function">print</span>(<span class="string">f"Input vector quantized to code {code}"</span>)
+<span class="function">print</span>(<span class="string">f"Quantization error: {np.linalg.norm(z - codeword):.4f}"</span>)</code></pre>
+                    </div>
+                </div>
+
+                <div class="code-tab-content" id="tab2">
+                    <div style="position: relative;">
+                        <button class="copy-btn" onclick="copyCode('code2')">Copy</button>
+                        <pre><code id="code2"><span class="keyword">import</span> numpy <span class="keyword">as</span> np
+
+<span class="keyword">class</span> <span class="function">ResidualVQ</span>:
+    <span class="string">"""Residual Vector Quantization with N codebooks."""</span>
+    <span class="keyword">def</span> <span class="function">__init__</span>(<span class="keyword">self</span>, n_quantizers=<span class="number">8</span>, num_codes=<span class="number">1024</span>, dim=<span class="number">256</span>):
+        <span class="keyword">self</span>.n_quantizers = n_quantizers
+        <span class="keyword">self</span>.codebooks = [
+            np.random.randn(num_codes, dim).astype(np.float32)
+            <span class="keyword">for</span> _ <span class="keyword">in</span> <span class="function">range</span>(n_quantizers)
+        ]
+
+    <span class="keyword">def</span> <span class="function">quantize</span>(<span class="keyword">self</span>, z):
+        <span class="string">"""RVQ: quantize z through cascade of codebooks on residuals."""</span>
+        codes = []
+        codewords = []
+        residual = z.copy()
+
+        <span class="keyword">for</span> i, codebook <span class="keyword">in</span> <span class="function">enumerate</span>(<span class="keyword">self</span>.codebooks):
+            <span class="comment"># Find nearest codeword in this codebook</span>
+            dists = np.linalg.norm(residual[None, :] - codebook, axis=<span class="number">1</span>)
+            code = np.argmin(dists)
+            codeword = codebook[code]
+            codes.append(code)
+            codewords.append(codeword)
+            <span class="comment"># Compute residual for next stage (Eq 16.1)</span>
+            residual = residual - codeword
+
+        <span class="keyword">return</span> codes, codewords
+
+    <span class="keyword">def</span> <span class="function">reconstruct</span>(<span class="keyword">self</span>, codewords):
+        <span class="string">"""Reconstruct by summing all codewords."""</span>
+        <span class="keyword">return</span> <span class="function">sum</span>(codewords)
+
+<span class="comment"># Demo: Residual VQ reduces error with each stage</span>
+rvq = <span class="function">ResidualVQ</span>(n_quantizers=<span class="number">8</span>, num_codes=<span class="number">1024</span>, dim=<span class="number">256</span>)
+z = np.random.randn(<span class="number">256</span>)
+codes, codewords = rvq.<span class="function">quantize</span>(z)
+z_reconstructed = rvq.<span class="function">reconstruct</span>(codewords)
+error = np.linalg.norm(z - z_reconstructed)
+<span class="function">print</span>(<span class="string">f"8 codes: {codes}"</span>)
+<span class="function">print</span>(<span class="string">f"Reconstruction error: {error:.4f}"</span>)</code></pre>
+                    </div>
+                </div>
+
+                <div class="code-tab-content" id="tab3">
+                    <div style="position: relative;">
+                        <button class="copy-btn" onclick="copyCode('code3')">Copy</button>
+                        <pre><code id="code3"><span class="keyword">import</span> torch
+<span class="keyword">import</span> torch.nn <span class="keyword">as</span> nn
+
+<span class="comment"># Pseudocode for VALL-E-style TTS inference</span>
+<span class="keyword">class</span> <span class="function">VALLE_Inference</span>:
+    <span class="keyword">def</span> <span class="function">__init__</span>(<span class="keyword">self</span>, ar_model, nar_model, codec, text_tokenizer):
+        <span class="keyword">self</span>.ar_model = ar_model      <span class="comment"># Autoregressive transformer</span>
+        <span class="keyword">self</span>.nar_model = nar_model    <span class="comment"># Non-autoregressive transformer</span>
+        <span class="keyword">self</span>.codec = codec             <span class="comment"># Pretrained EnCodec</span>
+        <span class="keyword">self</span>.tokenizer = text_tokenizer
+
+    <span class="keyword">def</span> <span class="function">synthesize</span>(<span class="keyword">self</span>, text, enrolled_audio, max_len=<span class="number">500</span>):
+        <span class="string">"""Zero-shot TTS: generate speech in enrolled voice."""</span>
+        <span class="comment"># Step 1: Tokenize text with BPE</span>
+        x = <span class="keyword">self</span>.tokenizer.<span class="function">encode</span>(text)           <span class="comment"># [L]</span>
+
+        <span class="comment"># Step 2: Get acoustic prompt from enrolled audio</span>
+        C_prompt = <span class="keyword">self</span>.codec.<span class="function">encode</span>(enrolled_audio)  <span class="comment"># [T', 8]</span>
+
+        <span class="comment"># Step 3: AR model generates first-quantizer codes</span>
+        codes_q1 = []
+        <span class="keyword">for</span> t <span class="keyword">in</span> <span class="function">range</span>(max_len):
+            logits = <span class="keyword">self</span>.ar_model(x, C_prompt, codes_q1)
+            next_code = torch.<span class="function">argmax</span>(logits, dim=-<span class="number">1</span>)
+            <span class="keyword">if</span> next_code == EOS_TOKEN:
+                <span class="keyword">break</span>
+            codes_q1.<span class="function">append</span>(next_code)
+
+        <span class="comment"># Step 4: NAR model fills remaining 7 quantizers</span>
+        all_codes = [codes_q1]
+        <span class="keyword">for</span> q <span class="keyword">in</span> <span class="function">range</span>(<span class="number">2</span>, <span class="number">9</span>):  <span class="comment"># quantizers 2-8</span>
+            codes_q = <span class="keyword">self</span>.nar_model(
+                x, C_prompt, all_codes, quantizer=q
+            )
+            all_codes.<span class="function">append</span>(codes_q)
+
+        <span class="comment"># Step 5: Stack codes into matrix and decode</span>
+        C = torch.<span class="function">stack</span>(all_codes, dim=-<span class="number">1</span>)  <span class="comment"># [T, 8]</span>
+        waveform = <span class="keyword">self</span>.codec.<span class="function">decode</span>(C)
+        <span class="keyword">return</span> waveform</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                function setupCodeTabs() {
+                    const buttons = document.querySelectorAll('.code-tab-btn');
+                    buttons.forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const tabId = btn.getAttribute('data-tab');
+                            document.querySelectorAll('.code-tab-content').forEach(content => {
+                                content.classList.remove('active');
+                            });
+                            document.querySelectorAll('.code-tab-btn').forEach(b => {
+                                b.classList.remove('active');
+                            });
+                            document.getElementById(tabId).classList.add('active');
+                            btn.classList.add('active');
+                        });
+                    });
+                }
+
+                function copyCode(elementId) {
+                    const code = document.getElementById(elementId).textContent;
+                    navigator.clipboard.writeText(code).then(() => {
+                        const btn = event.target;
+                        const oldText = btn.textContent;
+                        btn.textContent = 'Copied!';
+                        setTimeout(() => {
+                            btn.textContent = oldText;
+                        }, 2000);
+                    });
+                }
+
+                document.addEventListener('DOMContentLoaded', setupCodeTabs);
+            </script>
+        </section>
+
+        <!-- SECTION 4: SOCRATIC CHALLENGE -->
+        <section id="socratic">
+            <h2>Socratic Challenge: The Deepfake Dilemma</h2>
+
+            <div class="card card-rose">
+                <h3>A Real-World Crisis</h3>
+                <p>
+                    In January 2024, a robocall using an AI-cloned voice of President Joe Biden
+                    was sent to voters in New Hampshire, telling them not to vote in the primary election.
+                    The message was <span class="highlight">nearly indistinguishable from real speech</span>.
+                </p>
+                <p>
+                    Systems like VALL-E and similar zero-shot TTS models can clone any voice from just 3 seconds of audio.
+                    The technology is powerful for legitimate uses (accessibility, entertainment, multilingual content creation),
+                    but equally dangerous for impersonation, election interference, and fraud.
+                </p>
+            </div>
+
+            <h3>Questions for Reflection</h3>
+
+            <div class="socratic-question">
+                <strong>Q1: Consent and Voice Rights</strong><br>
+                <p>Should voice cloning technology require explicit consent from the voice owner?
+                If so, how do we enforce this? Should there be a "voice ownership registry" like copyright for recorded works?</p>
+                <details style="margin-top: 1rem;">
+                    <summary style="cursor: pointer; color: #14b8a6; font-weight: 600;">Expand discussion</summary>
+                    <div class="discussion-point">
+                        <p>Arguments for consent:</p>
+                        <ul>
+                            <li>Your voice is a unique biometric identifier — as personal as your fingerprint</li>
+                            <li>Malicious actors could impersonate you for fraud, defamation, or political deception</li>
+                            <li>Similar to copyright law: creators should control use of their creative output</li>
+                        </ul>
+                        <p style="margin-top: 1rem;">Arguments against rigid requirements:</p>
+                        <ul>
+                            <li>Training datasets contain millions of hours of speech — tracking consent is logistically infeasible</li>
+                            <li>Public figures' voices are already widely available; preventing training on them is difficult</li>
+                            <li>Some beneficial uses (accessibility, medical research) may proceed even without explicit consent</li>
+                        </ul>
+                    </div>
+                </details>
+            </div>
+
+            <div class="socratic-question">
+                <strong>Q2: Detection and Watermarking</strong><br>
+                <p>How can listeners, platforms, and regulators identify AI-generated speech?
+                Should we require imperceptible watermarks in all synthetic audio?</p>
+                <details style="margin-top: 1rem;">
+                    <summary style="cursor: pointer; color: #14b8a6; font-weight: 600;">Expand discussion</summary>
+                    <div class="discussion-point">
+                        <p><strong>Technical approaches:</strong></p>
+                        <ul>
+                            <li><strong>Audio watermarking:</strong> Embed hidden signals in synthesized speech that don't affect naturalness</li>
+                            <li><strong>Detection models:</strong> Train classifiers to distinguish real from generated speech (adversarial arms race)</li>
+                            <li><strong>Metadata:</strong> Require digital signatures or provenance information in media files</li>
+                        </ul>
+                        <p style="margin-top: 1rem;"><strong>Challenges:</strong></p>
+                        <ul>
+                            <li>An adversary can remove watermarks or deepfake-detection signals through further processing</li>
+                            <li>Detection models are brittle and can be fooled by minor audio modifications</li>
+                            <li>Watermarking reduces audio quality and is incompatible with some platforms</li>
+                        </ul>
+                    </div>
+                </details>
+            </div>
+
+            <div class="socratic-question">
+                <strong>Q3: Regulatory Landscape</strong><br>
+                <p>In 2024, the FCC ruled that AI-generated voice calls are illegal under existing robocall law.
+                Is this sufficient? What other regulations should exist?</p>
+                <details style="margin-top: 1rem;">
+                    <summary style="cursor: pointer; color: #14b8a6; font-weight: 600;">Expand discussion</summary>
+                    <div class="discussion-point">
+                        <p><strong>Current regulatory action:</strong></p>
+                        <ul>
+                            <li>FCC ruling makes AI voice calls illegal (fine up to $43,792 per violation)</li>
+                            <li>Several U.S. states passed laws requiring disclosure of synthetic media in political ads</li>
+                        </ul>
+                        <p style="margin-top: 1rem;"><strong>Proposed regulations:</strong></p>
+                        <ul>
+                            <li>Mandatory disclosure: any synthetic speech in media must be labeled as AI-generated</li>
+                            <li>Training data transparency: companies must disclose where voice data came from</li>
+                            <li>Voice cloning licensing: similar to patent/trademark — right holders can authorize commercial use</li>
+                            <li>Forensic standards: governments and platforms maintain detection tools</li>
+                        </ul>
+                    </div>
+                </details>
+            </div>
+
+            <div class="socratic-question">
+                <strong>Q4: The Beneficial Uses Paradox</strong><br>
+                <p>TTS enables powerful good: helping people with speech disabilities, creating multilingual content,
+                artistic expression. But strict regulation to prevent misuse might block these benefits. How do we thread this needle?</p>
+                <details style="margin-top: 1rem;">
+                    <summary style="cursor: pointer; color: #14b8a6; font-weight: 600;">Expand discussion</summary>
+                    <div class="discussion-point">
+                        <p><strong>Legitimate uses:</strong></p>
+                        <ul>
+                            <li>Accessibility for individuals with apraxia, dysarthria, or ALS</li>
+                            <li>Dubbing and localization of content (movies, books, education)</li>
+                            <li>Artistic and musical expression (creating new "performances" of classic works)</li>
+                            <li>Emergency communication systems</li>
+                        </ul>
+                        <p style="margin-top: 1rem;"><strong>Possible framework:</strong></p>
+                        <ul>
+                            <li><strong>Intent-based regulation:</strong> Focus on harmful use cases (impersonation, fraud) rather than the technology itself</li>
+                            <li><strong>Provenance tracking:</strong> Allow synthetic speech in contexts where source is transparent</li>
+                            <li><strong>Verification mechanisms:</strong> Invest in speaker verification to confirm identity</li>
+                        </ul>
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <!-- SECTION 5: MODERN BRIDGE -->
+        <section id="modern">
+            <h2>Modern Bridge: The Frontier of Speech Generation</h2>
+
+            <h3>Beyond VALL-E: What's Next?</h3>
+            <p>
+                The field is moving rapidly. Here are the cutting-edge developments:
+            </p>
+
+            <div class="card card-violet">
+                <h4>Spoken Language Models (GPT-4o, Gemini Voice)</h4>
+                <p>
+                    Rather than separate ASR → Text → TTS pipelines, new models like
+                    <span class="highlight">GPT-4o and Gemini</span> natively process and generate speech.
+                    They understand speech directly without intermediate text, allowing:
+                </p>
+                <ul>
+                    <li>Conversational AI that thinks in speech, not text</li>
+                    <li>Preservation of prosody and emotion during conversation</li>
+                    <li>Multi-modal reasoning (seeing an image while hearing the question)</li>
+                </ul>
+            </div>
+
+            <div class="card card-rose">
+                <h4>Emotional and Expressive TTS</h4>
+                <p>
+                    Beyond neutral synthesis, modern TTS systems control:
+                </p>
+                <ul>
+                    <li><strong>Emotion:</strong> Happiness, sadness, anger, neutral — modeled as continuous latent variables</li>
+                    <li><strong>Speaking style:</strong> Formal vs. casual, whispered, shouting, singing</li>
+                    <li><strong>Emphasis and rhythm:</strong> Which words to stress, pause duration</li>
+                    <li><strong>Accent and dialect:</strong> Regional variation within a language</li>
+                </ul>
+                <p>
+                    These are often controlled via additional embeddings or control tokens in the language model.
+                </p>
+            </div>
+
+            <div class="card card-teal">
+                <h4>Multilingual and Cross-Lingual TTS</h4>
+                <p>
+                    Training on data from many languages enables:
+                </p>
+                <ul>
+                    <li><strong>Multilingual synthesis:</strong> A single voice speaking multiple languages</li>
+                    <li><strong>Code-switching:</strong> Seamless mixing of languages in a single sentence</li>
+                    <li><strong>Zero-shot cross-lingual TTS:</strong> Clone a voice in a language never seen in training</li>
+                    <li><strong>Language identification:</strong> Automatically detect and synthesize in the correct language</li>
+                </ul>
+            </div>
+
+            <div class="card card-violet">
+                <h4>Real-Time Streaming TTS</h4>
+                <p>
+                    Conversational AI demands sub-100ms latency. Recent advances:
+                </p>
+                <ul>
+                    <li><strong>Streaming autoregressive models:</strong> Begin generating audio before the entire text is received</li>
+                    <li><strong>Chunked processing:</strong> Process text in segments, stream audio progressively</li>
+                    <li><strong>Low-latency codecs:</strong> Reduce computational overhead of encoding/decoding</li>
+                    <li><strong>Edge deployment:</strong> On-device TTS for privacy and responsiveness</li>
+                </ul>
+            </div>
+
+            <div class="card card-rose">
+                <h4>Audio Watermarking and Deepfake Detection</h4>
+                <p>
+                    As synthetic speech becomes indistinguishable, detection becomes critical:
+                </p>
+                <ul>
+                    <li><strong>Imperceptible watermarks:</strong> Embed fingerprints in the codec layer</li>
+                    <li><strong>Adversarial detection models:</strong> Learn to detect subtle artifacts of synthesis</li>
+                    <li><strong>Provenance tracking:</strong> Blockchain-based timestamping of authentic recordings</li>
+                </ul>
+            </div>
+
+            <div class="card card-teal">
+                <h4>Voice Conversion and Speech-to-Speech Translation</h4>
+                <p>
+                    Rather than text-to-speech, directly transform speech:
+                </p>
+                <ul>
+                    <li><strong>Voice conversion:</strong> Change speaker identity while preserving content and emotion</li>
+                    <li><strong>Speech-to-speech translation:</strong> Translate speech from one language to another while preserving original voice</li>
+                    <li><strong>Accent transformation:</strong> Change dialect or accent</li>
+                </ul>
+                <p>
+                    These skip the text bottleneck and preserve phonetic nuances.
+                </p>
+            </div>
+        </section>
+
+        <!-- SECTION 6: HISTORY -->
+        <section id="history">
+            <h2>Historical Context: The Evolution of Speech Synthesis</h2>
+
+            <p>
+                Text-to-speech has a rich 250-year history, from mechanical devices to neural networks.
+                Let's trace the major paradigm shifts:
+            </p>
+
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-year">1769-1790</div>
+                    <div class="timeline-description">
+                        <strong>Von Kempelen's Mechanical Speech Synthesizer</strong><br>
+                        Wolfgang von Kempelen, a Hungarian inventor, builds a mechanical device using
+                        bellows, leather vocal tract models, and resonators. It produces vowel-like sounds
+                        by simulating the physics of the human vocal system. A remarkable achievement of
+                        18th-century mechanical engineering.
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-year">1773</div>
+                    <div class="timeline-description">
+                        <strong>Kratzenstein's Vowel Synthesizer</strong><br>
+                        Christian Gottlieb Kratzenstein creates a set of organ pipes tuned to produce distinct vowels
+                        (a, e, i, o, u). Demonstrates that vowels are fundamentally about resonant frequencies.
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-year">1950s</div>
+                    <div class="timeline-description">
+                        <strong>Three Paradigms Emerge</strong><br>
+                        <ul>
+                            <li><strong>Formant synthesis:</strong> Generate speech by controlling resonance frequencies.
+                            The Haskins Pattern Playback device (1953) synthesizes speech by painting patterns on an optical disk.</li>
+                            <li><strong>Concatenative synthesis:</strong> Harris (1953) splices magnetic tape recordings of phonemes;
+                            Peterson (1958) develops the diphone model — pre-recorded units of two adjacent phonemes.</li>
+                            <li><strong>Articulatory synthesis:</strong> Stevens (1953) and Flanagan (1975) simulate the mechanics
+                            of the vocal tract to generate speech.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-year">1968</div>
+                    <div class="timeline-description">
+                        <strong>First Complete TTS System</strong><br>
+                        Umeda and Teranishi develop the first true text-to-speech system that handles text analysis,
+                        prosody generation, and speech synthesis. A milestone: automated conversion from unrestricted text to speech.
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-year">1980s-1990s</div>
+                    <div class="timeline-description">
+                        <strong>Unit Selection and Concatenation</strong><br>
+                        Sagisaka et al., and Hunt & Black develop unit selection synthesis: search large speech databases
+                        for the best matching phoneme units (considering acoustic features and context), then concatenate them.
+                        Produces natural-sounding speech by reusing recorded human samples. Dominates TTS for two decades.
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-year">2016-2017</div>
+                    <div class="timeline-description">
+                        <strong>WaveNet: The Neural Revolution</strong><br>
+                        Van den Oord et al. introduce WaveNet, a dilated convolutional neural network that generates
+                        raw audio samples autoregressively. For the first time, a single learned model produces natural speech
+                        directly from text, without hand-crafted features or unit selection. Training is slow, but quality
+                        is exceptional. Spawns a generation of neural TTS research.
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-year">2021-2023</div>
+                    <div class="timeline-description">
+                        <strong>Codec-Based and Transformer TTS</strong><br>
+                        Glow-TTS, Transformer-based models, and fast neural vocoding (like HiFi-GAN) accelerate synthesis.
+                        Systems become fast enough for real-time streaming. Research focuses on naturalness, speaker diversity,
+                        and emotional control.
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-year">2023</div>
+                    <div class="timeline-description">
+                        <strong>EnCodec + VALL-E: Zero-Shot TTS</strong><br>
+                        Meta's EnCodec (2022) and Microsoft's VALL-E (2023) introduce discrete audio tokens via vector quantization.
+                        A pretrained language model generates audio tokens from text and a voice prompt. Trained on 60,000+ hours
+                        of speech, the system achieves zero-shot voice cloning from just 3 seconds of reference audio.
+                        A paradigm shift: speech becomes a language modeling problem.
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-year">2024-2025</div>
+                    <div class="timeline-description">
+                        <strong>Spoken Language Models and Multimodal Speech</strong><br>
+                        GPT-4o (OpenAI) and Gemini (Google) introduce native speech understanding and generation.
+                        Models process audio directly without intermediate text, enabling conversational AI with preserved
+                        emotion and style. The future: speech becomes a first-class modality alongside text and vision.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VISUALIZERS SECTION -->
+        <section id="visualizers" style="margin-top: 4rem;">
+            <h2>Interactive Visualizers</h2>
+
+            <!-- Visualizer 1: VQ Explorer -->
+            <div class="visualizer-wrapper">
+                <div class="visualizer-title">Vector Quantization Explorer</div>
+                <p style="text-align: center; color: #cbd5e1; margin-bottom: 1rem; font-size: 0.95rem;">
+                    Click in the canvas to place a point. The system finds the nearest codebook centroid (purple dots) and snaps your point to it. Watch the quantization error!
+                </p>
+                <canvas id="vqCanvas" width="500" height="400" style="max-width: 100%; height: auto;"></canvas>
+                <div class="visualizer-controls">
+                    <button onclick="resetVQCanvas()">Reset</button>
+                    <button class="secondary" onclick="regenerateCodebook()">Regenerate Codebook</button>
+                </div>
+            </div>
+
+            <!-- Visualizer 2: Residual VQ -->
+            <div class="visualizer-wrapper">
+                <div class="visualizer-title">Residual VQ Step-Through (8-dimensional vector simplified)</div>
+                <p style="text-align: center; color: #cbd5e1; margin-bottom: 1rem; font-size: 0.95rem;">
+                    Watch how each quantization step reduces the residual error. Each bar represents a dimension of the vector.
+                </p>
+                <canvas id="rvqCanvas" width="600" height="350" style="max-width: 100%; height: auto;"></canvas>
+                <div class="visualizer-controls">
+                    <button onclick="nextRVQStep()">Next Step</button>
+                    <button class="secondary" onclick="resetRVQStep()">Reset</button>
+                </div>
+            </div>
+
+            <!-- Visualizer 3: VALL-E Pipeline -->
+            <div class="visualizer-wrapper">
+                <div class="visualizer-title">VALL-E Pipeline Simulator</div>
+                <p style="text-align: center; color: #cbd5e1; margin-bottom: 1rem; font-size: 0.95rem;">
+                    Animate the complete TTS pipeline: text tokenization, voice encoding, AR generation, NAR refinement, decoding.
+                </p>
+                <canvas id="pipelineCanvas" width="600" height="350" style="max-width: 100%; height: auto;"></canvas>
+                <div class="visualizer-controls">
+                    <button onclick="runPipeline()">Run Pipeline</button>
+                    <button class="secondary" onclick="resetPipeline()">Reset</button>
+                </div>
+            </div>
+
+            <!-- Visualizer 4: MOS Rating -->
+            <div class="visualizer-wrapper">
+                <div class="visualizer-title">MOS Rating Simulator</div>
+                <p style="text-align: center; color: #cbd5e1; margin-bottom: 1rem; font-size: 0.95rem;">
+                    Rate the quality of two TTS systems (1=bad, 5=excellent). Higher is better!
+                </p>
+                <div class="mos-container">
+                    <div class="mos-system">
+                        <div class="mos-label">System A</div>
+                        <div style="height: 40px; background: #0f172a; border: 1px solid #334155; border-radius: 4px; display: flex; align-items: center; margin-bottom: 1rem;">
+                            <div style="width: 100%; height: 20px; background: linear-gradient(90deg, #f43f5e, #14b8a6, #f43f5e); margin: 0 5px;"></div>
+                        </div>
+                        <div class="stars" id="starsA"></div>
+                        <div class="mos-score" id="scoreA">-</div>
+                    </div>
+                    <div class="mos-system">
+                        <div class="mos-label">System B</div>
+                        <div style="height: 40px; background: #0f172a; border: 1px solid #334155; border-radius: 4px; display: flex; align-items: center; margin-bottom: 1rem;">
+                            <div style="width: 100%; height: 20px; background: linear-gradient(90deg, #8b5cf6, #14b8a6); margin: 0 5px;"></div>
+                        </div>
+                        <div class="stars" id="starsB"></div>
+                        <div class="mos-score" id="scoreB">-</div>
+                    </div>
+                </div>
+                <div style="text-align: center;">
+                    <button onclick="revealGroundTruth()" id="revealBtn">Reveal Ground Truth</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // ============ INTERSECTION OBSERVER FOR SCROLL REVEAL ============
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('revealed');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('section').forEach(section => {
+            observer.observe(section);
+        });
+
+        // ============ COLLAPSIBLE SECTIONS ============
+        document.querySelectorAll('.collapsible-header').forEach(header => {
+            header.addEventListener('click', () => {
+                header.parentElement.classList.toggle('active');
+            });
+        });
+
+        // ============ MATH RENDERING ============
+        document.addEventListener('DOMContentLoaded', () => {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: '\\[', right: '\\]', display: true},
+                    {left: '\\(', right: '\\)', display: false}
+                ]
+            });
+        });
+
+        // ============ VISUALIZER 1: VQ EXPLORER ============
+        const vqCanvas = document.getElementById('vqCanvas');
+        const vqCtx = vqCanvas.getContext('2d');
+        let vqCodebook = [];
+        let vqSelectedPoint = null;
+        let vqQuantizedPoint = null;
+        let vqNearestIndex = -1;
+
+        function initVQCanvas() {
+            vqCodebook = [];
+            for (let i = 0; i < 16; i++) {
+                vqCodebook.push({
+                    x: Math.random() * (vqCanvas.width - 40) + 20,
+                    y: Math.random() * (vqCanvas.height - 40) + 20
+                });
+            }
+            drawVQCanvas();
+        }
+
+        function drawVQCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            vqCtx.clearRect(0, 0, vqCanvas.width, vqCanvas.height);
+
+            // Draw grid
+            vqCtx.strokeStyle = '#334155';
+            vqCtx.lineWidth = 1;
+            for (let i = 0; i < vqCanvas.width; i += 50) {
+                vqCtx.beginPath();
+                vqCtx.moveTo(i, 0);
+                vqCtx.lineTo(i, vqCanvas.height);
+                vqCtx.stroke();
+            }
+            for (let i = 0; i < vqCanvas.height; i += 50) {
+                vqCtx.beginPath();
+                vqCtx.moveTo(0, i);
+                vqCtx.lineTo(vqCanvas.width, i);
+                vqCtx.stroke();
+            }
+
+            // Draw codebook
+            vqCodebook.forEach((cb, idx) => {
+                vqCtx.fillStyle = idx === vqNearestIndex ? '#a78bfa' : '#8b5cf6';
+                vqCtx.beginPath();
+                vqCtx.arc(cb.x, cb.y, 6, 0, Math.PI * 2);
+                vqCtx.fill();
+            });
+
+            // Draw selected point and quantization
+            if (vqSelectedPoint) {
+                // Draw distance lines to all codebook points
+                vqCtx.strokeStyle = 'rgba(100, 116, 139, 0.3)';
+                vqCtx.lineWidth = 1;
+                vqCodebook.forEach(cb => {
+                    vqCtx.beginPath();
+                    vqCtx.moveTo(vqSelectedPoint.x, vqSelectedPoint.y);
+                    vqCtx.lineTo(cb.x, cb.y);
+                    vqCtx.stroke();
+                });
+
+                // Draw original point
+                vqCtx.fillStyle = '#e2e8f0';
+                vqCtx.beginPath();
+                vqCtx.arc(vqSelectedPoint.x, vqSelectedPoint.y, 5, 0, Math.PI * 2);
+                vqCtx.fill();
+
+                // Draw quantized point (snapped to nearest codebook)
+                if (vqQuantizedPoint) {
+                    vqCtx.fillStyle = '#14b8a6';
+                    vqCtx.beginPath();
+                    vqCtx.arc(vqQuantizedPoint.x, vqQuantizedPoint.y, 5, 0, Math.PI * 2);
+                    vqCtx.fill();
+
+                    // Draw error line (dotted)
+                    vqCtx.strokeStyle = '#f43f5e';
+                    vqCtx.lineWidth = 2;
+                    vqCtx.setLineDash([5, 5]);
+                    vqCtx.beginPath();
+                    vqCtx.moveTo(vqSelectedPoint.x, vqSelectedPoint.y);
+                    vqCtx.lineTo(vqQuantizedPoint.x, vqQuantizedPoint.y);
+                    vqCtx.stroke();
+                    vqCtx.setLineDash([]);
+
+                    // Display error
+                    const error = Math.sqrt(
+                        (vqSelectedPoint.x - vqQuantizedPoint.x) ** 2 +
+                        (vqSelectedPoint.y - vqQuantizedPoint.y) ** 2
+                    );
+                    vqCtx.fillStyle = '#e2e8f0';
+                    vqCtx.font = 'bold 14px Inter';
+                    vqCtx.fillText(`Error: ${error.toFixed(1)}px`, 10, 25);
+                }
+            }
+        }
+
+        vqCanvas.addEventListener('click', (e) => {
+            const rect = vqCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            vqSelectedPoint = { x, y };
+
+            // Find nearest codebook
+            let minDist = Infinity;
+            vqNearestIndex = 0;
+            vqCodebook.forEach((cb, idx) => {
+                const dist = Math.sqrt((x - cb.x) ** 2 + (y - cb.y) ** 2);
+                if (dist < minDist) {
+                    minDist = dist;
+                    vqNearestIndex = idx;
+                }
+            });
+            vqQuantizedPoint = vqCodebook[vqNearestIndex];
+            drawVQCanvas();
+        });
+
+        function resetVQCanvas() {
+            vqSelectedPoint = null;
+            vqQuantizedPoint = null;
+            vqNearestIndex = -1;
+            drawVQCanvas();
+        }
+
+        function regenerateCodebook() {
+            initVQCanvas();
+            vqSelectedPoint = null;
+            vqQuantizedPoint = null;
+            vqNearestIndex = -1;
+        }
+
+        initVQCanvas();
+
+        // ============ VISUALIZER 2: RESIDUAL VQ ============
+        const rvqCanvas = document.getElementById('rvqCanvas');
+        const rvqCtx = rvqCanvas.getContext('2d');
+        let rvqStep = 0;
+        const rvqVectorDim = 8;
+        let rvqOriginal = [];
+        let rvqSteps = [];
+
+        function initRVQ() {
+            rvqOriginal = Array.from({length: rvqVectorDim}, () => Math.random() * 100 - 50);
+            rvqSteps = [{residual: rvqOriginal.slice(), codeword: Array(rvqVectorDim).fill(0)}];
+
+            for (let i = 1; i < 4; i++) {
+                const codeword = Array.from({length: rvqVectorDim}, () => Math.random() * 30 - 15);
+                const residual = rvqSteps[i-1].residual.map((v, j) => v - codeword[j]);
+                rvqSteps.push({codeword, residual});
+            }
+            rvqStep = 0;
+        }
+
+        function drawRVQCanvas() {
+            const padding = 40;
+            const barWidth = (rvqCanvas.width - 2 * padding) / rvqVectorDim;
+            const maxValue = 100;
+            const centerY = rvqCanvas.height / 2;
+
+            rvqCtx.fillStyle = '#0f172a';
+            rvqCtx.fillRect(0, 0, rvqCanvas.width, rvqCanvas.height);
+
+            // Draw center line
+            rvqCtx.strokeStyle = '#334155';
+            rvqCtx.lineWidth = 1;
+            rvqCtx.beginPath();
+            rvqCtx.moveTo(padding, centerY);
+            rvqCtx.lineTo(rvqCanvas.width - padding, centerY);
+            rvqCtx.stroke();
+
+            // Draw original vector
+            rvqCtx.fillStyle = 'rgba(139, 92, 246, 0.5)';
+            rvqOriginal.forEach((v, i) => {
+                const height = (v / maxValue) * (centerY - 20);
+                const x = padding + i * barWidth + barWidth / 2;
+                rvqCtx.fillRect(x - barWidth * 0.35, centerY - height, barWidth * 0.3, height);
+            });
+
+            // Draw current residual and codeword
+            if (rvqStep < rvqSteps.length) {
+                const step = rvqSteps[rvqStep];
+
+                // Codeword
+                rvqCtx.fillStyle = 'rgba(244, 63, 94, 0.7)';
+                step.codeword.forEach((v, i) => {
+                    const height = (v / maxValue) * (centerY - 20);
+                    const x = padding + i * barWidth + barWidth / 2;
+                    rvqCtx.fillRect(x - barWidth * 0.2, centerY - height, barWidth * 0.2, height);
+                });
+
+                // Residual
+                rvqCtx.fillStyle = 'rgba(20, 184, 166, 0.7)';
+                step.residual.forEach((v, i) => {
+                    const height = (v / maxValue) * (centerY - 20);
+                    const x = padding + i * barWidth + barWidth / 2;
+                    rvqCtx.fillRect(x, centerY - height, barWidth * 0.2, height);
+                });
+            }
+
+            // Legend
+            rvqCtx.fillStyle = '#cbd5e1';
+            rvqCtx.font = '12px Inter';
+            rvqCtx.fillText('Original', 10, 20);
+            rvqCtx.fillStyle = '#f43f5e';
+            rvqCtx.fillText('Codeword', 100, 20);
+            rvqCtx.fillStyle = '#14b8a6';
+            rvqCtx.fillText('Residual', 200, 20);
+
+            // Step indicator
+            rvqCtx.fillStyle = '#8b5cf6';
+            rvqCtx.font = 'bold 16px Inter';
+            rvqCtx.fillText(`Step: ${rvqStep} / ${rvqSteps.length - 1}`, rvqCanvas.width - 200, 25);
+        }
+
+        function nextRVQStep() {
+            if (rvqStep < rvqSteps.length - 1) {
+                rvqStep++;
+            }
+            drawRVQCanvas();
+        }
+
+        function resetRVQStep() {
+            initRVQ();
+            drawRVQCanvas();
+        }
+
+        initRVQ();
+        drawRVQCanvas();
+
+        // ============ VISUALIZER 3: VALL-E PIPELINE ============
+        const pipelineCanvas = document.getElementById('pipelineCanvas');
+        const pipelineCtx = pipelineCanvas.getContext('2d');
+        let pipelinePhase = 0;
+        let pipelineAnimationStep = 0;
+
+        function drawPipelineCanvas() {
+            pipelineCtx.fillStyle = '#0f172a';
+            pipelineCtx.fillRect(0, 0, pipelineCanvas.width, pipelineCanvas.height);
+
+            const stages = [
+                {x: 30, label: 'Text'},
+                {x: 130, label: 'BPE'},
+                {x: 230, label: 'Voice'},
+                {x: 330, label: 'Codec'},
+                {x: 430, label: 'AR Gen'},
+                {x: 530, label: 'NAR Refine'}
+            ];
+
+            pipelineCtx.fillStyle = '#e2e8f0';
+            pipelineCtx.font = 'bold 12px Inter';
+
+            stages.forEach((stage, i) => {
+                const isActive = i <= pipelinePhase;
+                pipelineCtx.fillStyle = isActive ? '#8b5cf6' : '#334155';
+                pipelineCtx.beginPath();
+                pipelineCtx.arc(stage.x, 50, 20, 0, Math.PI * 2);
+                pipelineCtx.fill();
+
+                pipelineCtx.fillStyle = '#e2e8f0';
+                pipelineCtx.textAlign = 'center';
+                pipelineCtx.fillText(stage.label, stage.x, 150);
+
+                if (i < stages.length - 1) {
+                    pipelineCtx.strokeStyle = isActive ? '#14b8a6' : '#334155';
+                    pipelineCtx.lineWidth = 2;
+                    pipelineCtx.beginPath();
+                    pipelineCtx.moveTo(stage.x + 20, 50);
+                    pipelineCtx.lineTo(stages[i + 1].x - 20, 50);
+                    pipelineCtx.stroke();
+                }
+            });
+
+            // Animated tokens
+            if (pipelinePhase >= 1) {
+                for (let i = 0; i < Math.min(pipelineAnimationStep, 3); i++) {
+                    pipelineCtx.fillStyle = 'rgba(139, 92, 246, 0.7)';
+                    pipelineCtx.fillRect(160 + i * 15, 35, 10, 10);
+                }
+            }
+
+            if (pipelinePhase >= 4) {
+                for (let i = 0; i < Math.min(pipelineAnimationStep, 5); i++) {
+                    pipelineCtx.fillStyle = 'rgba(244, 63, 94, 0.7)';
+                    pipelineCtx.fillRect(430 + (i % 3) * 20, 30 + (Math.floor(i / 3)) * 20, 12, 8);
+                }
+            }
+
+            pipelineCtx.fillStyle = '#cbd5e1';
+            pipelineCtx.font = '14px Inter';
+            pipelineCtx.textAlign = 'left';
+            pipelineCtx.fillText(`Phase: ${pipelinePhase + 1}/6`, 30, 280);
+        }
+
+        function runPipeline() {
+            if (pipelinePhase < 5) {
+                pipelinePhase++;
+                pipelineAnimationStep = 0;
+                const animInterval = setInterval(() => {
+                    pipelineAnimationStep++;
+                    drawPipelineCanvas();
+                    if (pipelineAnimationStep > 5) clearInterval(animInterval);
+                }, 100);
+            } else {
+                pipelinePhase = 0;
+                pipelineAnimationStep = 0;
+                drawPipelineCanvas();
+            }
+        }
+
+        function resetPipeline() {
+            pipelinePhase = 0;
+            pipelineAnimationStep = 0;
+            drawPipelineCanvas();
+        }
+
+        drawPipelineCanvas();
+
+        // ============ VISUALIZER 4: MOS RATING ============
+        let mosScoresA = 0;
+        let mosScoresB = 0;
+
+        function initMOSRating() {
+            // Truth: System B is slightly better (3.8 vs 3.5)
+            mosScoresA = 3.5;
+            mosScoresB = 3.8;
+
+            const starsA = document.getElementById('starsA');
+            const starsB = document.getElementById('starsB');
+            starsA.innerHTML = '';
+            starsB.innerHTML = '';
+
+            for (let i = 1; i <= 5; i++) {
+                const starA = document.createElement('span');
+                starA.className = 'star';
+                starA.textContent = '★';
+                starA.onclick = () => selectMOS(i, 'A');
+                starsA.appendChild(starA);
+
+                const starB = document.createElement('span');
+                starB.className = 'star';
+                starB.textContent = '★';
+                starB.onclick = () => selectMOS(i, 'B');
+                starsB.appendChild(starB);
+            }
+        }
+
+        function selectMOS(rating, system) {
+            const container = system === 'A' ? document.getElementById('starsA') : document.getElementById('starsB');
+            container.querySelectorAll('.star').forEach((star, idx) => {
+                if (idx < rating) {
+                    star.classList.add('active');
+                } else {
+                    star.classList.remove('active');
+                }
+            });
+
+            const scoreEl = system === 'A' ? document.getElementById('scoreA') : document.getElementById('scoreB');
+            scoreEl.textContent = rating;
+        }
+
+        function revealGroundTruth() {
+            document.getElementById('scoreA').textContent = '3.5';
+            document.getElementById('scoreB').textContent = '3.8';
+            document.getElementById('revealBtn').textContent = 'System B is slightly better!';
+            document.getElementById('revealBtn').disabled = true;
+        }
+
+        initMOSRating();
+    </script>
+</body>
+</html>

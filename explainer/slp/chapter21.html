@@ -1,0 +1,2357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 21: Semantic Role Labeling - Speech and Language Processing</title>
+
+    <!-- MathJax Configuration MUST come before script tag -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$','$'],['\\(','\\)']],
+                displayMath: [['$$','$$'],['\\[','\\]']]
+            },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg-full.min.js" async></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            line-height: 1.6;
+            font-weight: 400;
+        }
+
+        /* ===== UTILITY CLASSES ===== */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .card {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: #8b5cf6;
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-weight: 700;
+            margin-top: 24px;
+            margin-bottom: 12px;
+            line-height: 1.3;
+        }
+
+        h1 {
+            font-size: 3rem;
+            color: #f1f5f9;
+            margin-top: 0;
+        }
+
+        h2 {
+            font-size: 2rem;
+            background: linear-gradient(135deg, #8b5cf6, #10b981);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        h3 {
+            font-size: 1.5rem;
+            color: #cbd5e1;
+        }
+
+        h4 {
+            font-size: 1.2rem;
+            color: #cbd5e1;
+            margin-top: 18px;
+        }
+
+        p {
+            margin-bottom: 16px;
+            color: #94a3b8;
+        }
+
+        a {
+            color: #8b5cf6;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        a:hover {
+            color: #10b981;
+            text-decoration: underline;
+        }
+
+        /* ===== SCROLL REVEAL ===== */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease;
+        }
+
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ===== STICKY NAVIGATION ===== */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(15, 23, 42, 0.95);
+            border-bottom: 1px solid #334155;
+            backdrop-filter: blur(10px);
+            padding: 16px 0;
+            margin-bottom: 40px;
+        }
+
+        nav .container {
+            display: flex;
+            gap: 24px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+
+        nav a {
+            padding: 8px 16px;
+            white-space: nowrap;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            background-color: #334155;
+            color: #cbd5e1;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        nav a:hover, nav a.active {
+            background-color: #8b5cf6;
+            color: #f1f5f9;
+        }
+
+        /* ===== HERO SECTION ===== */
+        #hero {
+            padding: 80px 20px;
+            text-align: center;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(16, 185, 129, 0.1) 50%, rgba(249, 115, 22, 0.1) 100%);
+            border-radius: 12px;
+            margin-bottom: 60px;
+        }
+
+        #hero h1 {
+            background: linear-gradient(135deg, #8b5cf6, #10b981, #f97316);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 16px;
+            animation: fadeInDown 0.8s ease;
+        }
+
+        #hero .subtitle {
+            font-size: 1.3rem;
+            color: #cbd5e1;
+            margin-bottom: 24px;
+            animation: fadeInUp 0.8s ease 0.2s both;
+        }
+
+        #hero .analogy {
+            background-color: #1e293b;
+            border-left: 4px solid #8b5cf6;
+            padding: 20px;
+            margin: 24px 0;
+            border-radius: 8px;
+            animation: fadeInUp 0.8s ease 0.4s both;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .analogy-title {
+            font-weight: 700;
+            color: #8b5cf6;
+            margin-bottom: 8px;
+        }
+
+        .analogy-text {
+            color: #94a3b8;
+            line-height: 1.8;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ===== SECTION STYLING ===== */
+        section {
+            margin-bottom: 60px;
+        }
+
+        section h2 {
+            margin-bottom: 32px;
+        }
+
+        /* ===== TECHNICAL SECTION ===== */
+        .subsection {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .subsection:hover {
+            border-color: #10b981;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
+        }
+
+        .subsection h3 {
+            color: #10b981;
+            margin-top: 0;
+            margin-bottom: 16px;
+        }
+
+        /* ===== TABLE STYLES ===== */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #0f172a;
+            color: #8b5cf6;
+            padding: 12px;
+            text-align: left;
+            font-weight: 700;
+            border: 1px solid #334155;
+        }
+
+        td {
+            padding: 12px;
+            border: 1px solid #334155;
+            color: #94a3b8;
+        }
+
+        tr:nth-child(even) {
+            background-color: #162031;
+        }
+
+        tr:hover {
+            background-color: #1e293b;
+        }
+
+        .role-name {
+            font-weight: 600;
+            color: #8b5cf6;
+        }
+
+        /* ===== CODE BLOCKS ===== */
+        .code-block {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px 0;
+            position: relative;
+            overflow-x: auto;
+        }
+
+        .code-block pre {
+            margin: 0;
+            font-family: 'Courier New', monospace;
+            color: #e2e8f0;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .code-label {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background-color: #8b5cf6;
+            color: #0f172a;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .copy-button {
+            position: absolute;
+            top: 8px;
+            right: 120px;
+            background-color: #10b981;
+            color: #0f172a;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .copy-button:hover {
+            background-color: #f97316;
+        }
+
+        .copy-button.copied {
+            background-color: #f97316;
+        }
+
+        /* ===== CANVAS VISUALIZER ===== */
+        .visualizer-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin: 24px 0;
+        }
+
+        @media (max-width: 1024px) {
+            .visualizer-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .visualizer-card {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .visualizer-title {
+            font-weight: 700;
+            color: #8b5cf6;
+            margin-bottom: 16px;
+            font-size: 1.1rem;
+        }
+
+        .sentence-input {
+            width: 100%;
+            padding: 12px;
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            color: #e2e8f0;
+            font-family: 'Inter', sans-serif;
+            margin-bottom: 12px;
+            font-size: 0.95rem;
+        }
+
+        .sentence-input:focus {
+            outline: none;
+            border-color: #8b5cf6;
+            box-shadow: 0 0 10px rgba(139, 92, 246, 0.2);
+        }
+
+        .preset-buttons {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .preset-btn {
+            padding: 8px 12px;
+            background-color: #334155;
+            color: #cbd5e1;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+
+        .preset-btn:hover {
+            background-color: #8b5cf6;
+            color: #f1f5f9;
+        }
+
+        canvas {
+            width: 100%;
+            height: auto;
+            border: 1px solid #334155;
+            border-radius: 8px;
+        }
+
+        .role-display {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+            min-height: 100px;
+        }
+
+        .role-span {
+            display: inline-block;
+            padding: 4px 8px;
+            margin: 4px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .role-span.arg0 { background-color: rgba(139, 92, 246, 0.3); color: #c4b5fd; }
+        .role-span.arg1 { background-color: rgba(16, 185, 129, 0.3); color: #a7f3d0; }
+        .role-span.arg2 { background-color: rgba(249, 115, 22, 0.3); color: #fed7aa; }
+        .role-span.argm { background-color: rgba(59, 130, 246, 0.3); color: #bfdbfe; }
+        .role-span.v { background-color: rgba(236, 72, 153, 0.3); color: #fbcfe8; }
+
+        /* ===== QUIZ STYLES ===== */
+        .quiz-question {
+            background-color: #1e293b;
+            border: 2px solid #334155;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .quiz-question:hover {
+            border-color: #8b5cf6;
+        }
+
+        .question-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin-bottom: 16px;
+        }
+
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .option {
+            padding: 12px;
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #cbd5e1;
+            font-weight: 500;
+        }
+
+        .option:hover {
+            border-color: #8b5cf6;
+            background-color: rgba(139, 92, 246, 0.1);
+        }
+
+        .option.selected {
+            border-color: #8b5cf6;
+            background-color: rgba(139, 92, 246, 0.2);
+            color: #e2e8f0;
+        }
+
+        .option.correct {
+            border-color: #10b981;
+            background-color: rgba(16, 185, 129, 0.2);
+            color: #e2e8f0;
+        }
+
+        .option.incorrect {
+            border-color: #ef4444;
+            background-color: rgba(239, 68, 68, 0.1);
+        }
+
+        .explanation {
+            background-color: #0f172a;
+            border-left: 4px solid #10b981;
+            padding: 16px;
+            border-radius: 6px;
+            margin-top: 16px;
+            color: #94a3b8;
+            display: none;
+        }
+
+        .explanation.show {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .explanation strong {
+            color: #10b981;
+        }
+
+        /* ===== INTERACTIVE TABLE ===== */
+        .interactive-table {
+            margin: 24px 0;
+        }
+
+        .role-row {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .role-row:hover {
+            border-color: #8b5cf6;
+            background-color: rgba(139, 92, 246, 0.1);
+        }
+
+        .role-row.active {
+            border-color: #10b981;
+            background-color: rgba(16, 185, 129, 0.1);
+        }
+
+        .role-header {
+            font-weight: 700;
+            color: #8b5cf6;
+            font-size: 1rem;
+            margin-bottom: 4px;
+        }
+
+        .role-definition {
+            color: #94a3b8;
+            font-size: 0.95rem;
+            margin-bottom: 8px;
+        }
+
+        .role-examples {
+            color: #cbd5e1;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .role-examples.show {
+            display: block;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #334155;
+        }
+
+        .example-sentence {
+            background-color: #1e293b;
+            padding: 8px;
+            margin: 4px 0;
+            border-radius: 4px;
+            font-style: italic;
+            color: #cbd5e1;
+        }
+
+        .example-highlight {
+            background-color: rgba(139, 92, 246, 0.3);
+            padding: 2px 4px;
+            border-radius: 2px;
+            font-weight: 600;
+            color: #c4b5fd;
+        }
+
+        /* ===== EQUATION STYLES ===== */
+        .equation-block {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 24px 0;
+            overflow-x: auto;
+        }
+
+        .equation-label {
+            font-weight: 600;
+            color: #8b5cf6;
+            margin-bottom: 12px;
+            font-size: 0.95rem;
+        }
+
+        /* ===== FOOTER ===== */
+        footer {
+            background-color: #0f172a;
+            border-top: 1px solid #334155;
+            padding: 40px 20px;
+            text-align: center;
+            color: #64748b;
+            margin-top: 60px;
+        }
+
+        footer p {
+            margin-bottom: 8px;
+        }
+
+        .footer-note {
+            font-size: 0.9rem;
+            color: #475569;
+            margin-top: 16px;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            h3 {
+                font-size: 1.2rem;
+            }
+
+            #hero {
+                padding: 40px 20px;
+            }
+
+            nav .container {
+                gap: 12px;
+            }
+
+            nav a {
+                padding: 6px 12px;
+                font-size: 0.85rem;
+            }
+
+            table {
+                font-size: 0.85rem;
+            }
+
+            th, td {
+                padding: 8px;
+            }
+
+            .preset-buttons {
+                flex-direction: column;
+            }
+
+            .preset-btn {
+                width: 100%;
+            }
+        }
+
+        /* ===== BADGE STYLES ===== */
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+
+        .badge-propbank {
+            background-color: rgba(139, 92, 246, 0.2);
+            color: #c4b5fd;
+        }
+
+        .badge-framenet {
+            background-color: rgba(16, 185, 129, 0.2);
+            color: #a7f3d0;
+        }
+
+        .badge-theory {
+            background-color: rgba(249, 115, 22, 0.2);
+            color: #fed7aa;
+        }
+
+        /* ===== EMPHASIS STYLES ===== */
+        .highlight {
+            background-color: rgba(139, 92, 246, 0.2);
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: #c4b5fd;
+            font-weight: 600;
+        }
+
+        strong {
+            font-weight: 700;
+            color: #e2e8f0;
+        }
+
+        em {
+            color: #cbd5e1;
+            font-style: italic;
+        }
+
+        code {
+            background-color: #0f172a;
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: #f87171;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        /* ===== FEATURE COMPARISON ===== */
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 24px 0;
+        }
+
+        @media (max-width: 768px) {
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .comparison-box {
+            background-color: #0f172a;
+            border: 2px solid #334155;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .comparison-box.propbank {
+            border-color: #8b5cf6;
+        }
+
+        .comparison-box.framenet {
+            border-color: #10b981;
+        }
+
+        .comparison-title {
+            font-weight: 700;
+            font-size: 1.2rem;
+            margin-bottom: 12px;
+            color: #e2e8f0;
+        }
+
+        .comparison-feature {
+            margin-bottom: 12px;
+            color: #94a3b8;
+        }
+
+        .comparison-feature strong {
+            color: #cbd5e1;
+        }
+
+        /* ===== LOADING ANIMATION ===== */
+        .loader {
+            border: 3px solid #334155;
+            border-top: 3px solid #8b5cf6;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* ===== GLOW EFFECT ===== */
+        .glow {
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.3), 0 0 40px rgba(139, 92, 246, 0.15);
+        }
+
+        /* ===== BUTTON STYLES ===== */
+        button {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+        }
+
+        .btn-primary {
+            background-color: #8b5cf6;
+            color: #0f172a;
+        }
+
+        .btn-primary:hover {
+            background-color: #a78bfa;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background-color: #10b981;
+            color: #0f172a;
+        }
+
+        .btn-secondary:hover {
+            background-color: #34d399;
+            transform: translateY(-2px);
+        }
+
+        /* ===== SCHEMA TABLE ===== */
+        .schema-row {
+            display: grid;
+            grid-template-columns: 150px 1fr 1fr;
+            gap: 12px;
+            padding: 12px;
+            border-bottom: 1px solid #334155;
+            align-items: start;
+        }
+
+        .schema-row:last-child {
+            border-bottom: none;
+        }
+
+        .schema-label {
+            font-weight: 700;
+            color: #8b5cf6;
+        }
+
+        /* ===== BREADCRUMBS ===== */
+        .breadcrumb {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            font-size: 0.9rem;
+            color: #64748b;
+        }
+
+        .breadcrumb a {
+            color: #8b5cf6;
+        }
+
+        .breadcrumb a:hover {
+            color: #10b981;
+        }
+
+        .breadcrumb span {
+            color: #475569;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="container">
+            <a href="#feynman" class="nav-link active">Feynman Bridge</a>
+            <a href="#technical" class="nav-link">Technical Ascent</a>
+            <a href="#visualizer" class="nav-link">Visualizer</a>
+            <a href="#code" class="nav-link">Code Lab</a>
+            <a href="#socratic" class="nav-link">Quiz</a>
+            <a href="#modern" class="nav-link">Modern Era</a>
+            <a href="#history" class="nav-link">History</a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="feynman" class="reveal">
+        <div id="hero" class="container">
+            <h1>Chapter 21: Semantic Role Labeling</h1>
+            <p class="subtitle">Understanding WHO did WHAT to WHOM and WHERE, WHEN, and HOW</p>
+
+            <div class="analogy">
+                <div class="analogy-title">🧠 Feynman Bridge: The Newspaper Headline</div>
+                <div class="analogy-text">
+                    Imagine reading a newspaper headline: <em>"Chef serves customer pasta."</em> Your brain instantly assigns roles:
+                    <ul style="margin-top: 12px; margin-left: 20px;">
+                        <li><strong>The chef</strong> = the DOER (Agent)</li>
+                        <li><strong>The customer</strong> = the RECEIVER (Beneficiary/Recipient)</li>
+                        <li><strong>The pasta</strong> = the THING (Theme/Patient)</li>
+                        <li><strong>Serves</strong> = the EVENT (Predicate)</li>
+                    </ul>
+                    <p style="margin-top: 12px;">
+                        Semantic Role Labeling (SRL) teaches machines to automatically identify and extract these semantic relationships from natural language. It's the bridge between shallow syntax ("who did what grammatically") and deep meaning ("who did what semantically").
+                    </p>
+                </div>
+            </div>
+
+            <p style="margin-top: 24px; color: #cbd5e1;">
+                <strong>Connection from Chapter 20:</strong> We learned to extract relations (e.g., "Company X acquired Company Y"). Now we dive deeper—not just extracting facts, but understanding the semantic structure of events at a fine-grained level.
+            </p>
+        </div>
+    </section>
+
+    <!-- Technical Section -->
+    <section id="technical" class="reveal">
+        <div class="container">
+            <h2>Technical Ascent: Core Concepts</h2>
+
+            <!-- 21.1: Semantic & Thematic Roles -->
+            <div class="subsection">
+                <h3>21.1 Semantic & Thematic Roles</h3>
+                <p>
+                    Semantic roles (also called <strong>thematic roles</strong>) represent the way participants in an event relate to the predicate. Unlike syntactic roles (subject, object), semantic roles describe the meaning of the participant's involvement.
+                </p>
+
+                <p style="margin-top: 16px;"><strong>Core Thematic Roles:</strong></p>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Role</th>
+                            <th>Definition</th>
+                            <th>Example</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="role-name">AGENT</td>
+                            <td>Volitional causer of an event; acts intentionally</td>
+                            <td>The <strong>waiter</strong> brought the check</td>
+                        </tr>
+                        <tr>
+                            <td class="role-name">EXPERIENCER</td>
+                            <td>Conscious entity that experiences an event or state</td>
+                            <td>John has <strong>a headache</strong>; <strong>Mary</strong> fears spiders</td>
+                        </tr>
+                        <tr>
+                            <td class="role-name">FORCE</td>
+                            <td>Non-volitional causer; an external force</td>
+                            <td>The <strong>wind</strong> blows down the tree</td>
+                        </tr>
+                        <tr>
+                            <td class="role-name">THEME / PATIENT</td>
+                            <td>Entity affected or changed by the action</td>
+                            <td>The waiter brought the <strong>check</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="role-name">RESULT</td>
+                            <td>Object created or produced by an action</td>
+                            <td>She built <strong>a house</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="role-name">CONTENT</td>
+                            <td>Propositional content of cognitive verbs</td>
+                            <td>He believes <strong>the earth is flat</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="role-name">INSTRUMENT</td>
+                            <td>Tool or means used to accomplish an action</td>
+                            <td>He cut the bread <strong>with a knife</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="role-name">BENEFICIARY</td>
+                            <td>Entity that benefits from an action</td>
+                            <td>She baked <strong>him</strong> a cake</td>
+                        </tr>
+                        <tr>
+                            <td class="role-name">SOURCE</td>
+                            <td>Origin or starting point of movement/transfer</td>
+                            <td>He flew <strong>from LA</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="role-name">GOAL</td>
+                            <td>Destination or endpoint of movement/transfer</td>
+                            <td>He flew <strong>to NYC</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="role-name">LOCATION</td>
+                            <td>Place where an event occurs</td>
+                            <td>The meeting happens <strong>in Boston</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="role-name">TEMPORAL</td>
+                            <td>Time at which an event occurs</td>
+                            <td>We met <strong>last Tuesday</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div style="background-color: #0f172a; border-left: 4px solid #10b981; padding: 16px; border-radius: 6px; margin-top: 20px;">
+                    <p style="margin-bottom: 0; color: #94a3b8;">
+                        <strong style="color: #10b981;">Key Insight:</strong> The same syntactic position can hold different semantic roles. For example, "I gave John a book" (John = BENEFICIARY) vs. "I gave the problem thought" (thought = THEME). Conversely, the same role can appear in different syntactic positions across verb classes.
+                    </p>
+                </div>
+            </div>
+
+            <!-- 21.2: Diathesis Alternations -->
+            <div class="subsection">
+                <h3>21.2 Diathesis Alternations</h3>
+                <p>
+                    A single verb can appear in multiple argument structures with different surface realizations. These <strong>diathesis alternations</strong> preserve the semantic relationships but change the grammatical form.
+                </p>
+
+                <h4 style="margin-top: 20px;">Common Alternations:</h4>
+
+                <p style="margin-top: 16px;"><strong>Dative Alternation:</strong></p>
+                <ul style="margin-left: 20px; margin-bottom: 16px;">
+                    <li>"She <strong>gave</strong> the dog a bone" (double object)</li>
+                    <li>"She <strong>gave</strong> a bone to the dog" (prepositional)</li>
+                    <li>Same semantic roles: AGENT (she), THEME (bone), GOAL (dog)</li>
+                </ul>
+
+                <p><strong>Locative Alternation:</strong></p>
+                <ul style="margin-left: 20px; margin-bottom: 16px;">
+                    <li>"She <strong>poured</strong> water into the bucket" (LOCATION as oblique)</li>
+                    <li>"She <strong>poured</strong> the bucket with water" (LOCATION as object)</li>
+                </ul>
+
+                <p><strong>Causative-Inchoative:</strong></p>
+                <ul style="margin-left: 20px; margin-bottom: 16px;">
+                    <li>"The chef <strong>melted</strong> the chocolate" (transitive)</li>
+                    <li>"The chocolate <strong>melted</strong>" (intransitive)</li>
+                </ul>
+
+                <p style="margin-top: 20px;">
+                    <strong>Beth Levin's Classification:</strong> Levin's seminal work organized 3,100 English verbs into classes based on shared alternation patterns. For example, "break" verbs (break, shatter, crack) all undergo the causative-inchoative alternation.
+                </p>
+
+                <h4 style="margin-top: 20px;">Problems with Thematic Roles (21.3):</h4>
+                <ul style="margin-left: 20px;">
+                    <li><strong>Fragmentation Problem:</strong> How many roles do we need? (10? 30? 100?). Different theories propose different inventories, making comparison difficult.</li>
+                    <li><strong>Role Ambiguity:</strong> "The key opened the door"—is the key an INSTRUMENT or an AGENT?</li>
+                    <li><strong>Dowty's Solution (1991):</strong> Rather than discrete roles, use <strong>proto-agent</strong> and <strong>proto-patient</strong> properties. An entity is a stronger AGENT if it has more agent-like properties (volition, sentience, change of state causation, etc.)</li>
+                </ul>
+
+                <div class="equation-block">
+                    <div class="equation-label">Dowty's Proto-Roles Framework:</div>
+                    <p style="color: #94a3b8; margin-bottom: 8px;">
+                        An entity is a <strong>proto-agent</strong> if it has properties like:
+                    </p>
+                    <ul style="margin-left: 20px; color: #94a3b8;">
+                        <li>Volitional involvement in the event</li>
+                        <li>Sentience (perception, consciousness)</li>
+                        <li>Causation of an event or change of state</li>
+                        <li>Movement relative to other participants</li>
+                        <li>Exists independently of the event</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 21.4: PropBank -->
+            <div class="subsection">
+                <h3>21.4 PropBank: A Resource</h3>
+                <p>
+                    <strong>PropBank</strong> (Palmer et al. 2005) is a large annotated corpus of English with semantic role labels aligned to verb predicates. It uses a numbering scheme rather than abstract role names.
+                </p>
+
+                <h4 style="margin-top: 16px;">Role Numbering Scheme:</h4>
+                <table style="margin: 16px 0;">
+                    <thead>
+                        <tr>
+                            <th>Argument</th>
+                            <th>Meaning (Proto-Role)</th>
+                            <th>Example</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="role-name">Arg0</td>
+                            <td>Proto-Agent (typically subject)</td>
+                            <td><strong>The chef</strong> served the customer pasta</td>
+                        </tr>
+                        <tr>
+                            <td class="role-name">Arg1</td>
+                            <td>Proto-Patient (typically object)</td>
+                            <td>The chef served <strong>the customer</strong> pasta</td>
+                        </tr>
+                        <tr>
+                            <td class="role-name">Arg2</td>
+                            <td>Instrument, start point, attribute, or beneficiary</td>
+                            <td>The chef served the customer <strong>pasta</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="role-name">Arg3</td>
+                            <td>End point, beneficiary, attribute, or attribute value</td>
+                            <td>—</td>
+                        </tr>
+                        <tr>
+                            <td class="role-name">Arg4</td>
+                            <td>Secondary predicate</td>
+                            <td>—</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p style="margin-top: 20px;"><strong>Adjunct/Modifier Arguments (ArgM):</strong></p>
+                <table style="margin: 16px 0;">
+                    <thead>
+                        <tr>
+                            <th>ArgM Type</th>
+                            <th>Meaning</th>
+                            <th>Example</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="role-name">ArgM-TMP</td>
+                            <td>Temporal modifier</td>
+                            <td>The chef served pasta <strong>yesterday</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="role-name">ArgM-LOC</td>
+                            <td>Locative modifier</td>
+                            <td>The chef served pasta <strong>in the kitchen</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="role-name">ArgM-DIR</td>
+                            <td>Directional modifier</td>
+                            <td>He moved <strong>to the left</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="role-name">ArgM-MNR</td>
+                            <td>Manner modifier</td>
+                            <td>He spoke <strong>loudly</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="role-name">ArgM-PRP</td>
+                            <td>Purpose/reason</td>
+                            <td>He ran <strong>to catch the bus</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="role-name">ArgM-DIS</td>
+                            <td>Discourse connective</td>
+                            <td><strong>However</strong>, she continued</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h4 style="margin-top: 20px;">Frame Files & Rolesets:</h4>
+                <p style="margin-top: 12px;">
+                    Each verb in PropBank has one or more <strong>rolesets</strong>, each with its own frame. Different verb senses can have different argument structures.
+                </p>
+
+                <div class="code-block">
+                    <div class="code-label">Example: PropBank Annotation</div>
+                    <pre>Sentence: The San Francisco Examiner issued a special edition.
+
+Annotations:
+  Predicate: issued
+  Arg0 (Agent): The San Francisco Examiner
+  Arg1 (Theme/Patient): a special edition
+
+  Roleset: issue.01 - emit, put out, supply
+    Arg0: Publisher/Issuer
+    Arg1: Thing issued
+    Arg2: Issued-to</pre>
+                </div>
+
+                <p style="margin-top: 20px;">
+                    <strong>NomBank:</strong> A parallel resource for <em>nominal predicates</em> (nouns). For example, "the destruction of the city" annotates "destruction" with Arg0 (destroyer) and Arg1 (thing destroyed).
+                </p>
+            </div>
+
+            <!-- 21.5: FrameNet -->
+            <div class="subsection">
+                <h3>21.5 FrameNet: Semantic Frames</h3>
+                <p>
+                    <strong>FrameNet</strong> (Fillmore et al., ongoing since 1997) is based on <strong>frame semantics</strong>—the idea that word meanings are best understood in the context of structured conceptual schemas called <em>frames</em>.
+                </p>
+
+                <p style="margin-top: 16px;">
+                    A <strong>frame</strong> is a script-like structure describing a scenario. For example, the COMMERCIAL_TRANSACTION frame includes roles like BUYER, SELLER, GOODS, MONEY, PLACE.
+                </p>
+
+                <h4 style="margin-top: 20px;">Frame Elements (Core vs. Non-Core):</h4>
+                <ul style="margin-left: 20px; margin-bottom: 16px;">
+                    <li><strong>Core Frame Elements:</strong> Essential to the frame; if missing, the sentence is incomplete or unusual. (e.g., BUYER and SELLER for COMMERCIAL_TRANSACTION)</li>
+                    <li><strong>Non-Core Frame Elements:</strong> Peripheral modifiers; present in some sentences but not necessary. (e.g., TIME, PLACE, MANNER)</li>
+                </ul>
+
+                <p><strong>Example: CHANGE_POSITION_ON_A_SCALE Frame</strong></p>
+                <table style="margin: 16px 0;">
+                    <thead>
+                        <tr>
+                            <th>Frame Element</th>
+                            <th>Definition</th>
+                            <th>Example</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="role-name">ITEM (core)</td>
+                            <td>Entity whose value changes</td>
+                            <td>Interest rates <strong>rose</strong> by 5%</td>
+                        </tr>
+                        <tr>
+                            <td class="role-name">ATTRIBUTE (core)</td>
+                            <td>Property being measured</td>
+                            <td>Interest <strong>rates</strong> rose by 5%</td>
+                        </tr>
+                        <tr>
+                            <td class="role-name">INITIAL_VALUE</td>
+                            <td>Starting value (often implicit)</td>
+                            <td>—</td>
+                        </tr>
+                        <tr>
+                            <td class="role-name">FINAL_VALUE</td>
+                            <td>Ending value</td>
+                            <td>Interest rates rose <strong>to 5%</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="role-name">DIFFERENCE</td>
+                            <td>Amount of change</td>
+                            <td>Interest rates rose <strong>by 5%</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="role-name">RATE_OF_CHANGE</td>
+                            <td>Speed of change</td>
+                            <td>Interest rates rose <strong>rapidly</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p style="margin-top: 20px;">
+                    <strong>Lexical Units:</strong> A frame is evoked by <em>lexical units</em>—pairings of a word and a sense. For CHANGE_POSITION_ON_A_SCALE: "rise" (climb), "fall" (descend), "increase", "decrease", etc.
+                </p>
+
+                <div class="comparison-grid">
+                    <div class="comparison-box propbank">
+                        <div class="comparison-title">PropBank Approach</div>
+                        <div class="comparison-feature">
+                            <strong>Annotation:</strong> Arg0, Arg1, Arg2, ...
+                        </div>
+                        <div class="comparison-feature">
+                            <strong>Coverage:</strong> Verb-centric; mainly predicates
+                        </div>
+                        <div class="comparison-feature">
+                            <strong>Frame:</strong> Simple numbered arguments
+                        </div>
+                        <div class="comparison-feature">
+                            <strong>Advantage:</strong> Fast annotation; clear semantics
+                        </div>
+                    </div>
+                    <div class="comparison-box framenet">
+                        <div class="comparison-title">FrameNet Approach</div>
+                        <div class="comparison-feature">
+                            <strong>Annotation:</strong> Named semantic roles (e.g., ITEM, SELLER)
+                        </div>
+                        <div class="comparison-feature">
+                            <strong>Coverage:</strong> Broader semantic phenomena including nouns, adjectives
+                        </div>
+                        <div class="comparison-feature">
+                            <strong>Frame:</strong> Complex conceptual scenarios
+                        </div>
+                        <div class="comparison-feature">
+                            <strong>Advantage:</strong> Richer semantic interpretation; cross-lexical consistency
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 21.6: SRL Algorithms -->
+            <div class="subsection">
+                <h3>21.6 Automatic SRL: Algorithms</h3>
+                <p>
+                    SRL is typically framed as a sequence labeling task: given a sentence and a predicate, assign semantic role labels to each token (or span of tokens).
+                </p>
+
+                <h4 style="margin-top: 20px;">Traditional Feature-Based Approach (Gildea & Jurafsky 2002):</h4>
+
+                <p style="margin-top: 12px;">
+                    Early systems used <strong>syntactic and lexical features</strong> extracted from parse trees:
+                </p>
+
+                <ul style="margin-left: 20px; margin-bottom: 16px;">
+                    <li><strong>Path Features:</strong> The path from predicate to argument in the parse tree. Example: <code>NP↑S↓VP↓VBD</code> means "go up to NP, up to S, down to VP, down to VBD"</li>
+                    <li><strong>Phrase Type:</strong> NP, VP, PP, ADVP, etc.</li>
+                    <li><strong>Headword:</strong> The syntactic head of the argument</li>
+                    <li><strong>Position:</strong> Before or after the predicate?</li>
+                    <li><strong>Voice:</strong> Active or passive?</li>
+                    <li><strong>Subcategorization:</strong> The argument frame of the verb</li>
+                </ul>
+
+                <div class="code-block">
+                    <div class="code-label">Example Path Feature</div>
+                    <pre>Sentence: The waiter brought the check.
+
+Predicate: brought
+Argument: check (Arg1)
+Path: NP↑VP↑S → NP↑VP
+
+This path encodes that "check" is an NP within the same VP as the predicate.</pre>
+                </div>
+
+                <h4 style="margin-top: 20px;">Neural Sequence Labeling (Modern Approach):</h4>
+
+                <p style="margin-top: 12px;">
+                    Modern SRL systems use <strong>BERT or other pre-trained transformers</strong> with BIO (Begin-Inside-Outside) tagging:
+                </p>
+
+                <table style="margin: 16px 0;">
+                    <thead>
+                        <tr>
+                            <th>Token</th>
+                            <th>Tag Example</th>
+                            <th>Meaning</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>The</td>
+                            <td>B-ARG0</td>
+                            <td>Begin Argument 0</td>
+                        </tr>
+                        <tr>
+                            <td>waiter</td>
+                            <td>I-ARG0</td>
+                            <td>Inside Argument 0</td>
+                        </tr>
+                        <tr>
+                            <td>brought</td>
+                            <td>B-V</td>
+                            <td>Begin Predicate (Verb)</td>
+                        </tr>
+                        <tr>
+                            <td>the</td>
+                            <td>B-ARG1</td>
+                            <td>Begin Argument 1</td>
+                        </tr>
+                        <tr>
+                            <td>check</td>
+                            <td>I-ARG1</td>
+                            <td>Inside Argument 1</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p style="margin-top: 20px;">
+                    <strong>Architecture:</strong> BERT encoder → predicate indicator → feed-forward network → softmax over tags
+                </p>
+
+                <div class="equation-block">
+                    <div class="equation-label">Probability Model for Tagging:</div>
+                    <div style="overflow-x: auto;">
+                        $$\hat{\mathbf{y}} = \text{argmax}_{\mathbf{y} \in \mathcal{T}} P(\mathbf{y} \mid \mathbf{w})$$
+                    </div>
+                    <p style="color: #94a3b8; margin-top: 12px;">
+                        Where $\mathbf{w}$ is the word sequence and $\mathcal{T}$ is the set of valid tag sequences.
+                    </p>
+                </div>
+
+                <h4 style="margin-top: 20px;">Global Optimization with ILP:</h4>
+                <p style="margin-top: 12px;">
+                    Some systems use <strong>Integer Linear Programming (ILP)</strong> to enforce global constraints:
+                </p>
+                <ul style="margin-left: 20px; margin-bottom: 16px;">
+                    <li>Each role (Arg0, Arg1, ...) appears at most once per predicate</li>
+                    <li>Arg0 cannot appear after Arg1 in some cases (structural constraints)</li>
+                    <li>Overlapping roles are disallowed</li>
+                </ul>
+
+                <h4 style="margin-top: 20px;">Evaluation Metrics:</h4>
+                <ul style="margin-left: 20px;">
+                    <li><strong>Precision:</strong> Of predicted arguments, how many are correct?</li>
+                    <li><strong>Recall:</strong> Of gold-standard arguments, how many did we find?</li>
+                    <li><strong>F-measure:</strong> Harmonic mean of precision and recall</li>
+                    <li><strong>Benchmarks:</strong> CoNLL-2005, CoNLL-2012 shared tasks</li>
+                </ul>
+            </div>
+
+            <!-- 21.7: Selectional Restrictions -->
+            <div class="subsection">
+                <h3>21.7 Selectional Restrictions & Preferences</h3>
+                <p>
+                    Verbs typically impose constraints on the semantic types of their arguments. For example, the THEME of "eat" must be something edible.
+                </p>
+
+                <p style="margin-top: 16px;">
+                    <strong>Selectional Restrictions:</strong> Hard constraints that arguments must satisfy. Example: "I want to eat someplace nearby"—the verb "eat" has an implicit THEME constraint (must be food-like).
+                </p>
+
+                <h4 style="margin-top: 20px;">Neo-Davidsonian Event Semantics:</h4>
+                <p style="margin-top: 12px;">
+                    Represent selectional restrictions formally using event variables:
+                </p>
+
+                <div class="equation-block">
+                    <div class="equation-label">Event Structure with Selectional Constraints:</div>
+                    <div style="overflow-x: auto;">
+                        $$\exists e, x, y \; \text{Eating}(e) \wedge \text{Agent}(e, x) \wedge \text{Theme}(e, y) \wedge \text{EdibleThing}(y)$$
+                    </div>
+                    <p style="color: #94a3b8; margin-top: 12px;">
+                        The constraint $\text{EdibleThing}(y)$ restricts what can be the THEME.
+                    </p>
+                </div>
+
+                <h4 style="margin-top: 20px;">WordNet Approach:</h4>
+                <p style="margin-top: 12px;">
+                    Represent semantic types as WordNet synsets. The verb "bark" selects for Arg0 = DOG_ANIMAL (or subordinates).
+                </p>
+
+                <h4 style="margin-top: 20px;">Selectional Preferences (Resnik 1993):</h4>
+                <p style="margin-top: 12px;">
+                    Rather than hard constraints, model <strong>soft preferences</strong>. How much information does a verb tell us about its argument's semantic class?
+                </p>
+
+                <div class="equation-block">
+                    <div class="equation-label">Selectional Preference Strength (KL Divergence):</div>
+                    <div style="overflow-x: auto;">
+                        $$S_R(v) = D(\mathcal{P}(c|v) \| \mathcal{P}(c)) = \sum_{c} \mathcal{P}(c|v) \log \frac{\mathcal{P}(c|v)}{\mathcal{P}(c)}$$
+                    </div>
+                    <p style="color: #94a3b8; margin-top: 12px;">
+                        $\mathcal{P}(c|v)$ = probability of semantic class $c$ given verb $v$<br/>
+                        $\mathcal{P}(c)$ = prior probability of class $c$<br/>
+                        High $S_R(v)$ = verb is selective (tells us a lot about argument types)
+                    </p>
+                </div>
+
+                <div class="equation-block">
+                    <div class="equation-label">Selectional Association for Role-Class Pair:</div>
+                    <div style="overflow-x: auto;">
+                        $$A_R(v, c) = \frac{1}{S_R(v)} \mathcal{P}(c|v) \log \frac{\mathcal{P}(c|v)}{\mathcal{P}(c)}$$
+                    </div>
+                    <p style="color: #94a3b8; margin-top: 12px;">
+                        Normalized measure of how strongly a verb-role prefers a semantic class.
+                    </p>
+                </div>
+
+                <h4 style="margin-top: 20px;">Conditional Probability Model:</h4>
+                <div class="equation-block">
+                    <div class="equation-label">Estimating P(noun | verb, role):</div>
+                    <div style="overflow-x: auto;">
+                        $$\mathcal{P}(n|v, r) = \frac{C(n, v, r)}{C(v, r)}$$
+                    </div>
+                    <p style="color: #94a3b8; margin-top: 12px;">
+                        Where $C(n, v, r)$ = count of noun $n$ in role $r$ of verb $v$<br/>
+                        Can use smoothing and back-off to WordNet hypernyms for unseen nouns.
+                    </p>
+                </div>
+
+                <p style="margin-top: 20px;">
+                    <strong>Pseudowords Evaluation:</strong> Evaluate selectional preferences by artificially creating ambiguous "pseudoword" pairs (e.g., combining "bank" and "stream") and seeing if the model can disambiguate based on selectional preferences.
+                </p>
+            </div>
+
+            <!-- 21.8: Primitive Decomposition -->
+            <div class="subsection">
+                <h3>21.8 Primitive Decomposition: Conceptual Dependency</h3>
+                <p>
+                    Some theories propose that verb meanings can be decomposed into primitive semantic components. This approach, called <strong>Conceptual Dependency (CD)</strong>, was influential in early AI and NLP.
+                </p>
+
+                <h4 style="margin-top: 20px;">Example Decomposition:</h4>
+                <div class="equation-block">
+                    <div class="equation-label">KILL Decomposition (Schank):</div>
+                    <div style="overflow-x: auto;">
+                        $$\text{KILL}(x, y) \iff \text{CAUSE}(x, \text{BECOME}(\text{NOT}(\text{ALIVE}(y))))$$
+                    </div>
+                    <p style="color: #94a3b8; margin-top: 12px;">
+                        "To kill" = to cause the state of being not-alive to come into being for $y$
+                    </p>
+                </div>
+
+                <h4 style="margin-top: 20px;">Schank's Primitive Acts:</h4>
+                <p style="margin-top: 12px;">
+                    All events decompose into a small set of primitives:
+                </p>
+
+                <ul style="margin-left: 20px;">
+                    <li><strong>ATRANS:</strong> Abstract transfer (e.g., "give", "take", "receive")</li>
+                    <li><strong>PTRANS:</strong> Physical transfer of location (e.g., "go", "move", "drive")</li>
+                    <li><strong>MTRANS:</strong> Mental transfer (e.g., "tell", "say", "communicate")</li>
+                    <li><strong>MBUILD:</strong> Mental construction (e.g., "think", "imagine", "plan")</li>
+                    <li><strong>PROPEL:</strong> Application of force (e.g., "push", "throw", "hit")</li>
+                    <li><strong>MOVE:</strong> Movement of a body part (e.g., "kick", "punch", "raise")</li>
+                    <li><strong>INGEST:</strong> Taking in substances (e.g., "eat", "drink", "breathe")</li>
+                    <li><strong>EXPEL:</strong> Expelling substances (e.g., "spit", "vomit", "exhale")</li>
+                    <li><strong>SPEAK:</strong> Vocalization (e.g., "say", "shout", "whisper")</li>
+                    <li><strong>ATTEND:</strong> Focusing sensory receptors (e.g., "look", "listen", "smell")</li>
+                </ul>
+
+                <p style="margin-top: 20px;">
+                    <strong>Limitations:</strong> While theoretically elegant, primitive decomposition has proven difficult to scale and is less used in modern NLP. However, it provides valuable insights into the structure of verb meanings.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Visualizer Section -->
+    <section id="visualizer" class="reveal">
+        <div class="container">
+            <h2>Interactive Visualizer</h2>
+
+            <div class="visualizer-container">
+                <div class="visualizer-card">
+                    <div class="visualizer-title">Semantic Role Labeler</div>
+                    <div class="preset-buttons">
+                        <button class="preset-btn" onclick="loadPreset(0)">Chef Example</button>
+                        <button class="preset-btn" onclick="loadPreset(1)">Wind Example</button>
+                        <button class="preset-btn" onclick="loadPreset(2)">Gift Example</button>
+                    </div>
+                    <input type="text" class="sentence-input" id="srlInput" placeholder="Type a sentence or choose a preset...">
+                    <canvas id="srlCanvas" width="600" height="200" style="margin-top: 16px;"></canvas>
+                    <div class="role-display" id="roleDisplay"></div>
+                </div>
+
+                <div class="visualizer-card">
+                    <div class="visualizer-title">Thematic Roles Explorer</div>
+                    <div id="rolesTable" style="max-height: 500px; overflow-y: auto;"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Code Lab Section -->
+    <section id="code" class="reveal">
+        <div class="container">
+            <h2>Code Lab: SRL Implementation</h2>
+
+            <p style="margin-bottom: 24px;">
+                Explore practical SRL implementations in Python. Use the copy buttons to extract code for your projects.
+            </p>
+
+            <!-- Lab 1 -->
+            <div class="card">
+                <h3>Lab 1: Simple Rule-Based SRL with spaCy</h3>
+                <p style="margin-bottom: 16px;">
+                    Extract semantic roles using dependency parsing. This approach is fast and interpretable, though less accurate than neural models.
+                </p>
+
+                <div class="code-block" style="position: relative;">
+                    <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    <div class="code-label">Python</div>
+                    <pre># Simple rule-based SRL using dependency parsing
+import spacy
+nlp = spacy.load("en_core_web_sm")
+
+def simple_srl(sentence):
+    """Extract semantic roles using syntactic dependencies."""
+    doc = nlp(sentence)
+    roles = {}
+    predicate = None
+
+    for token in doc:
+        # Find the predicate (main verb)
+        if token.dep_ == "ROOT" and token.pos_ == "VERB":
+            predicate = token.text
+            roles["PREDICATE"] = predicate
+
+        # Extract core arguments by dependency relation
+        if token.dep_ == "nsubj":  # Nominal subject
+            roles["ARG0 (Agent)"] = token.text
+        elif token.dep_ == "nsubjpass":  # Passive subject
+            roles["ARG0 (Affected)"] = token.text
+        elif token.dep_ == "dobj":  # Direct object
+            roles["ARG1 (Theme)"] = token.text
+        elif token.dep_ == "iobj":  # Indirect object
+            roles["ARG2 (Recipient)"] = token.text
+
+        # Handle modifiers
+        if token.dep_.startswith("prep"):
+            roles[f"ArgM-{token.text}"] = [child.text for child in token.children]
+        elif token.dep_ == "advmod":
+            roles["ArgM-MNR/TMP"] = token.text
+
+    return roles
+
+# Test the function
+test_sentences = [
+    "The chef served the customer pasta",
+    "She gave him a beautiful painting for his birthday",
+    "The wind knocked down the old tree"
+]
+
+for sent in test_sentences:
+    print(f"\nSentence: {sent}")
+    print("Roles:")
+    for role, word in simple_srl(sent).items():
+        print(f"  {role}: {word}")
+</pre>
+                </div>
+
+                <p style="margin-top: 16px; color: #94a3b8;">
+                    <strong>Note:</strong> This rule-based approach relies on syntactic dependencies, which are imperfect proxies for semantic roles. For production systems, use pre-trained neural models like <code>allennlp</code> or <code>transformers</code>-based SRL.
+                </p>
+            </div>
+
+            <!-- Lab 2 -->
+            <div class="card">
+                <h3>Lab 2: Selectional Preference Strength Calculation</h3>
+                <p style="margin-bottom: 16px;">
+                    Compute how selective a verb is about its argument types using KL divergence. High selectional preference strength means the verb strongly constrains its arguments' semantic types.
+                </p>
+
+                <div class="code-block" style="position: relative;">
+                    <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    <div class="code-label">Python</div>
+                    <pre>import math
+from collections import Counter
+
+# Simulated verb-class co-occurrence statistics
+# In practice, extract from large corpora (e.g., SRL-annotated data)
+verb_object_classes = {
+    "eat": Counter({
+        "FOOD": 45,
+        "SUBSTANCE": 5,
+        "PHYSICAL_OBJECT": 2,
+        "ENTITY": 1
+    }),
+    "read": Counter({
+        "WRITING": 40,
+        "TEXT": 8,
+        "ARTIFACT": 4,
+        "ENTITY": 2
+    }),
+    "be": Counter({
+        "ENTITY": 20,
+        "ABSTRACT": 18,
+        "PHYSICAL": 15,
+        "STATE": 10
+    }),
+}
+
+# Compute prior P(c) across all verbs
+total_count = sum(sum(v.values()) for v in verb_object_classes.values())
+class_totals = Counter()
+for counts in verb_object_classes.values():
+    class_totals += counts
+
+# Prior probability
+P_c = {c: n / total_count for c, n in class_totals.items()}
+
+def selectional_preference_strength(verb):
+    """
+    Calculate S_R(v) = D(P(c|v) || P(c))
+    High values indicate the verb is selective about its arguments.
+    """
+    counts = verb_object_classes.get(verb, Counter())
+    verb_total = sum(counts.values())
+
+    if verb_total == 0:
+        return 0.0
+
+    # P(c|v) = count(c,v) / count(v)
+    P_c_given_v = {c: n / verb_total for c, n in counts.items()}
+
+    # KL divergence: sum P(c|v) * log(P(c|v) / P(c))
+    sps = 0.0
+    for c, p_c_v in P_c_given_v.items():
+        if p_c_v > 0 and P_c.get(c, 0) > 0:
+            sps += p_c_v * math.log2(p_c_v / P_c.get(c, 1e-10))
+
+    return sps
+
+def selectional_association(verb, class_name):
+    """
+    A_R(v, c) = (1/S_R(v)) * P(c|v) * log(P(c|v) / P(c))
+    Association strength for a specific (verb, class) pair.
+    """
+    counts = verb_object_classes.get(verb, Counter())
+    verb_total = sum(counts.values())
+    sps = selectional_preference_strength(verb)
+
+    if verb_total == 0 or sps == 0:
+        return 0.0
+
+    p_c_v = counts.get(class_name, 0) / verb_total
+    if p_c_v == 0:
+        return 0.0
+
+    p_c = P_c.get(class_name, 1e-10)
+    assoc = (1.0 / sps) * p_c_v * math.log2(p_c_v / p_c)
+    return assoc
+
+# Compute and display results
+print("Selectional Preference Strength by Verb:")
+print("-" * 50)
+results = []
+for verb in verb_object_classes:
+    sps = selectional_preference_strength(verb)
+    results.append((verb, sps))
+
+results.sort(key=lambda x: x[1], reverse=True)
+for verb, sps in results:
+    print(f"S_R({verb:8s}) = {sps:.3f} bits")
+
+print("\nSelectional Association Examples:")
+print("-" * 50)
+print(f"eat + FOOD:    {selectional_association('eat', 'FOOD'):.3f}")
+print(f"eat + ENTITY:  {selectional_association('eat', 'ENTITY'):.3f}")
+print(f"read + WRITING:{selectional_association('read', 'WRITING'):.3f}")
+print(f"be + ABSTRACT: {selectional_association('be', 'ABSTRACT'):.3f}")
+</pre>
+                </div>
+
+                <p style="margin-top: 16px; color: #94a3b8;">
+                    <strong>Interpretation:</strong> "eat" has higher SPS than "be" because eating is more semantically constrained. The association values show which classes the verb prefers most.
+                </p>
+            </div>
+
+            <!-- Lab 3 -->
+            <div class="card">
+                <h3>Lab 3: BIO Tagger for SRL</h3>
+                <p style="margin-bottom: 16px;">
+                    Implement sequence labeling with Begin-Inside-Outside (BIO) tags. This is the basis for neural SRL systems.
+                </p>
+
+                <div class="code-block" style="position: relative;">
+                    <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    <div class="code-label">Python</div>
+                    <pre>def bio_tag_srl(tokens, predicate_idx, arg_spans):
+    """
+    Create BIO tags for semantic role labeling.
+
+    Args:
+        tokens: List of words
+        predicate_idx: Index of the predicate (verb)
+        arg_spans: Dict mapping role names to (start, end) indices
+
+    Returns:
+        List of BIO tags (one per token)
+    """
+    # Initialize all tokens as outside (O)
+    tags = ['O'] * len(tokens)
+
+    # Mark the predicate
+    tags[predicate_idx] = 'B-V'
+
+    # Mark arguments
+    for role, (start, end) in arg_spans.items():
+        # First token of argument gets B- prefix
+        tags[start] = f'B-{role}'
+
+        # Remaining tokens get I- prefix
+        for i in range(start + 1, end):
+            if i < len(tags):
+                tags[i] = f'I-{role}'
+
+    return tags
+
+# Example sentence
+sentence = "The chef served the customer pasta in the kitchen"
+tokens = sentence.split()
+predicate_idx = 2  # "served"
+
+# Define argument spans (start_inclusive, end_exclusive)
+arg_spans = {
+    "ARG0": (0, 2),      # "The chef"
+    "ARG2": (3, 5),      # "the customer"
+    "ARG1": (5, 6),      # "pasta"
+    "ARGM-LOC": (6, 9)   # "in the kitchen"
+}
+
+# Generate BIO tags
+tags = bio_tag_srl(tokens, predicate_idx, arg_spans)
+
+# Display results
+print("BIO Tagging Results")
+print("=" * 50)
+print(f"{'Token':<15} {'Tag':<15}")
+print("-" * 50)
+for token, tag in zip(tokens, tags):
+    print(f"{token:<15} {tag:<15}")
+
+print("\n\nExtract Arguments from BIO Tags")
+print("=" * 50)
+
+def extract_args_from_bio(tokens, tags):
+    """Convert BIO tags back to (role, span) pairs."""
+    args = {}
+    current_role = None
+    start_idx = None
+
+    for i, tag in enumerate(tags):
+        if tag == 'O' or tag.startswith('B-'):
+            # End current argument if exists
+            if current_role is not None and start_idx is not None:
+                span = ' '.join(tokens[start_idx:i])
+                if current_role not in args:
+                    args[current_role] = []
+                args[current_role].append(span)
+
+            # Start new argument
+            if tag.startswith('B-'):
+                current_role = tag[2:]  # Remove 'B-' prefix
+                start_idx = i
+            else:
+                current_role = None
+                start_idx = None
+        elif tag.startswith('I-'):
+            # Continue current argument (no action needed)
+            pass
+
+    # Handle last argument
+    if current_role is not None and start_idx is not None:
+        span = ' '.join(tokens[start_idx:])
+        if current_role not in args:
+            args[current_role] = []
+        args[current_role].append(span)
+
+    return args
+
+# Extract and display
+extracted = extract_args_from_bio(tokens, tags)
+for role, spans in extracted.items():
+    for span in spans:
+        print(f"{role:12s}: {span}")
+</pre>
+                </div>
+
+                <p style="margin-top: 16px; color: #94a3b8;">
+                    <strong>Key Concept:</strong> BIO tags encode argument boundaries and roles. B-(role) marks the first token; I-(role) marks continuation. Modern systems use neural encoders (BERT) to predict these tags and decode spans with global constraints.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quiz Section -->
+    <section id="socratic" class="reveal">
+        <div class="container">
+            <h2>Socratic Challenge: Test Your Understanding</h2>
+
+            <div class="quiz-question">
+                <div class="question-text">Q1: In the sentence "The wind blew the door open", what thematic role does "the wind" play?</div>
+                <div class="options">
+                    <div class="option" onclick="selectOption(this, false)">A) Agent—a volitional causer</div>
+                    <div class="option" onclick="selectOption(this, true)">B) Force—a non-volitional causer ✓</div>
+                    <div class="option" onclick="selectOption(this, false)">C) Instrument—a tool used by an agent</div>
+                    <div class="option" onclick="selectOption(this, false)">D) Experiencer—an entity that experiences a state</div>
+                </div>
+                <div class="explanation">
+                    <strong>Correct!</strong> The wind is a non-volitional causer—it has no intention or consciousness. An Agent requires volition (intentional action). Force is the role for natural, non-agentive causers like winds, earthquakes, or forces of nature.
+                </div>
+            </div>
+
+            <div class="quiz-question">
+                <div class="question-text">Q2: In PropBank, what distinguishes Arg0 from Arg1?</div>
+                <div class="options">
+                    <div class="option" onclick="selectOption(this, false)">A) Arg0 is always the subject; Arg1 is always the object</div>
+                    <div class="option" onclick="selectOption(this, true)">B) Arg0 is the proto-agent; Arg1 is the proto-patient ✓</div>
+                    <div class="option" onclick="selectOption(this, false)">C) Arg0 contains animate entities; Arg1 contains inanimate</div>
+                    <div class="option" onclick="selectOption(this, false)">D) Arg0 is transitive; Arg1 is intransitive</div>
+                </div>
+                <div class="explanation">
+                    <strong>Correct!</strong> PropBank uses Dowty's proto-role framework. Arg0 corresponds to the proto-agent (entity with properties like volition, sentience, causation), while Arg1 corresponds to the proto-patient (entity that is affected or changes state). This allows consistent labeling across different syntactic constructions.
+                </div>
+            </div>
+
+            <div class="quiz-question">
+                <div class="question-text">Q3: What does selectional preference strength (S_R(v)) measure?</div>
+                <div class="options">
+                    <div class="option" onclick="selectOption(this, false)">A) How many arguments a verb can take</div>
+                    <div class="option" onclick="selectOption(this, true)">B) How much information a verb provides about its arguments' semantic types ✓</div>
+                    <div class="option" onclick="selectOption(this, false)">C) The probability of a verb appearing in a passive construction</div>
+                    <div class="option" onclick="selectOption(this, false)">D) The frequency of a verb in a corpus</div>
+                </div>
+                <div class="explanation">
+                    <strong>Correct!</strong> S_R(v) uses KL divergence to measure how much knowing a verb tells us about its argument's semantic class. High SPS (e.g., "eat") means the verb is very selective about argument types. Low SPS (e.g., "be") means the verb accepts many semantic types. Formula: $S_R(v) = \sum_c P(c|v) \log \frac{P(c|v)}{P(c)}$
+                </div>
+            </div>
+
+            <div class="quiz-question">
+                <div class="question-text">Q4: In the primitive decomposition KILL(x,y) ⟺ CAUSE(x, BECOME(NOT(ALIVE(y)))), which primitive represents the change of state?</div>
+                <div class="options">
+                    <div class="option" onclick="selectOption(this, false)">A) CAUSE—causes an event to happen</div>
+                    <div class="option" onclick="selectOption(this, false)">B) NOT—negates a predicate</div>
+                    <div class="option" onclick="selectOption(this, true)">C) BECOME—captures a change of state ✓</div>
+                    <div class="option" onclick="selectOption(this, false)">D) ALIVE—is the final state</div>
+                </div>
+                <div class="explanation">
+                    <strong>Correct!</strong> BECOME is Schank's primitive for state transitions. The decomposition says: "X kills Y" means "X causes Y to become not-alive." CAUSE initiates the event; BECOME represents the change; NOT/ALIVE specify the new state. This decomposition highlights how complex concepts can be built from simpler semantic primitives.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Modern Era Section -->
+    <section id="modern" class="reveal">
+        <div class="container">
+            <h2>Modern Era: Recent Advances</h2>
+
+            <div class="card">
+                <h3>Neural SRL and Pre-trained Language Models</h3>
+                <p>
+                    The 2018 release of BERT revolutionized SRL. Pre-trained transformers capture semantic relationships implicitly, enabling end-to-end SRL with minimal task-specific engineering.
+                </p>
+                <ul style="margin-left: 20px; margin-top: 12px;">
+                    <li><strong>He et al. (2017):</strong> First neural SRL systems using LSTMs and attention mechanisms</li>
+                    <li><strong>Shi et al. (2019):</strong> BERT-based SRL, achieving 85.5 F1 on CoNLL-2012</li>
+                    <li><strong>Larger Models:</strong> RoBERTa, ELECTRA, and T5 further improve performance</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>Multilingual and Cross-lingual SRL</h3>
+                <p>
+                    Multilingual BERT enables SRL in 100+ languages with limited annotations. Zero-shot and few-shot learning approaches extend SRL to low-resource languages.
+                </p>
+            </div>
+
+            <div class="card">
+                <h3>Implicit Argument Detection (iSRL)</h3>
+                <p>
+                    Standard SRL only extracts explicit arguments. <strong>Implicit SRL</strong> recovers omitted arguments from context:
+                </p>
+                <p style="margin-left: 20px; margin-top: 12px;">
+                    Example: "I met my friend yesterday. [He] was driving a new car."
+                    The implicit ARG0 of "was driving" is "he" (refers to the friend from the previous sentence).
+                </p>
+            </div>
+
+            <div class="card">
+                <h3>Connotation Frames & Beyond</h3>
+                <p>
+                    <strong>Connotation Frames</strong> extend SRL to capture pragmatic and connotative dimensions. Example: "The politician cut funding for education" carries a negative connotation; "The politician trimmed wasteful spending" is positive, despite similar surface semantics.
+                </p>
+            </div>
+
+            <div class="card">
+                <h3>Applications in NLU Systems</h3>
+                <ul style="margin-left: 20px;">
+                    <li><strong>Question Answering:</strong> SRL helps match questions to candidate passages by aligning semantic roles</li>
+                    <li><strong>Machine Translation:</strong> SRL preserves meaning during translation by maintaining role correspondence</li>
+                    <li><strong>Summarization:</strong> Extract key event participants to generate summaries</li>
+                    <li><strong>Fact Extraction:</strong> SRL output directly populates knowledge base facts</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- History Section -->
+    <section id="history" class="reveal">
+        <div class="container">
+            <h2>Historical Context: The Evolution of SRL</h2>
+
+            <div class="card">
+                <h3>Ancient Foundations: Pāṇini (5th Century BCE)</h3>
+                <p>
+                    The Sanskrit grammarian Pāṇini's <em>Ashtadhyayi</em> ("Eight Chapters") outlined the structure of Sanskrit grammar, including early insights into argument structure and verb classes. His case system prefigured modern thematic roles.
+                </p>
+            </div>
+
+            <div class="card">
+                <h3>Case Grammar: Fillmore (1966–1968)</h3>
+                <p>
+                    Charles Fillmore's <strong>Case Grammar</strong> proposed that deep semantic structure is built from a limited set of cases (Agent, Patient, Instrument, etc.) rather than traditional syntactic constituents. This theory directly inspired modern SRL.
+                </p>
+                <p style="margin-top: 12px;">
+                    Fillmore distinguished:
+                </p>
+                <ul style="margin-left: 20px;">
+                    <li><strong>Deep case:</strong> Semantic role in event structure</li>
+                    <li><strong>Surface case:</strong> Grammatical marking (nominative, accusative, oblique)</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>Frame Semantics: Fillmore (1980s)</h3>
+                <p>
+                    Fillmore extended his theory to <strong>Frame Semantics</strong>, proposing that word meanings are best understood in the context of conceptual frames (script-like structures). This directly led to the FrameNet project.
+                </p>
+            </div>
+
+            <div class="card">
+                <h3>Generative Lexicon: Pustejovsky (1995)</h3>
+                <p>
+                    James Pustejovsky's <strong>Generative Lexicon</strong> theory proposed rich lexical representations that encode how words compose and how their arguments coerce. Influenced later work on implicit semantics.
+                </p>
+            </div>
+
+            <div class="card">
+                <h3>PropBank Project: Palmer et al. (2005)</h3>
+                <p>
+                    Martha Palmer et al. created the first large-scale annotated corpus for semantic role labeling, PropBank, using the Penn Treebank. This enabled supervised learning of SRL models.
+                </p>
+                <ul style="margin-left: 20px; margin-top: 12px;">
+                    <li>100,000+ predicate-argument annotations</li>
+                    <li>Frame files systematically describing verb senses</li>
+                    <li>Enabled benchmark evaluation via CoNLL shared tasks</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>FrameNet Project: Fillmore et al. (1997–present)</h3>
+                <p>
+                    An ongoing collaborative project to build a large lexical database based on frame semantics. Complements PropBank with richer, more abstract semantic descriptions.
+                </p>
+            </div>
+
+            <div class="card">
+                <h3>Feature-Based SRL: Gildea & Jurafsky (2002)</h3>
+                <p>
+                    Seminal work on automatic SRL using syntactic features from parse trees. Established SRL as a supervised learning problem and set the foundation for later systems.
+                </p>
+            </div>
+
+            <div class="card">
+                <h3>CoNLL Shared Tasks (2004–2012)</h3>
+                <p>
+                    Annual shared tasks that standardized SRL evaluation and drove progress:
+                </p>
+                <ul style="margin-left: 20px;">
+                    <li><strong>CoNLL-2005:</strong> Semantic role labeling for English</li>
+                    <li><strong>CoNLL-2009:</strong> Multilingual semantic role labeling</li>
+                    <li><strong>CoNLL-2012:</strong> Coreference resolution and SRL combined</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>Neural Era (2011–present)</h3>
+                <p>
+                    The deep learning revolution transformed SRL:
+                </p>
+                <ul style="margin-left: 20px;">
+                    <li><strong>Collobert et al. (2011):</strong> First neural SRL using convolutional networks</li>
+                    <li><strong>RNN/LSTM approaches (2014–2017):</strong> Sequence models with attention</li>
+                    <li><strong>BERT & Transformers (2018+):</strong> Pre-trained models achieving near-human performance</li>
+                </ul>
+                <p style="margin-top: 12px;">
+                    Current state-of-the-art: 85%+ F-measure on CoNLL-2012
+                </p>
+            </div>
+
+            <div class="card">
+                <h3>Key Insights from History</h3>
+                <ul style="margin-left: 20px;">
+                    <li>The move from rules to statistical learning enabled scaling SRL to real data</li>
+                    <li>Pre-trained language models provide rich, task-agnostic representations that are ideal for SRL</li>
+                    <li>The distinction between shallow syntactic roles and deep semantic roles remains fundamental</li>
+                    <li>Multilingual and cross-lingual work is pushing boundaries for low-resource languages</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p><strong>Chapter 21: Semantic Role Labeling</strong></p>
+            <p>From <em>Speech and Language Processing</em> by Dan Jurafsky & James H. Martin</p>
+            <div class="footer-note">
+                Interactive Educational Resource | Built with HTML5, Canvas, and MathJax<br/>
+                Navigate using the menu above. Try the visualizer, code labs, and quiz to deepen your understanding.
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // ===== SCROLL REVEAL ANIMATIONS =====
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.reveal').forEach(el => {
+            observer.observe(el);
+        });
+
+        // ===== NAVIGATION =====
+        document.querySelectorAll('nav a').forEach(link => {
+            link.addEventListener('click', () => {
+                document.querySelectorAll('nav a').forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+            });
+        });
+
+        // Set initial active link
+        document.querySelector('nav a').classList.add('active');
+
+        // Update active nav on scroll
+        window.addEventListener('scroll', () => {
+            const scrollY = window.scrollY;
+            document.querySelectorAll('section').forEach(section => {
+                const rect = section.getBoundingClientRect();
+                const sectionId = section.id;
+                const navLink = document.querySelector(`nav a[href="#${sectionId}"]`);
+
+                if (rect.top <= 150 && rect.bottom > 150) {
+                    document.querySelectorAll('nav a').forEach(l => l.classList.remove('active'));
+                    if (navLink) navLink.classList.add('active');
+                }
+            });
+        });
+
+        // ===== CODE COPY FUNCTIONALITY =====
+        function copyCode(button) {
+            const codeBlock = button.closest('.code-block');
+            const preElement = codeBlock.querySelector('pre');
+            const code = preElement.textContent;
+
+            navigator.clipboard.writeText(code).then(() => {
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                button.classList.add('copied');
+
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.classList.remove('copied');
+                }, 2000);
+            });
+        }
+
+        // ===== QUIZ FUNCTIONALITY =====
+        function selectOption(element, isCorrect) {
+            const question = element.closest('.quiz-question');
+            const options = question.querySelectorAll('.option');
+            const explanation = question.querySelector('.explanation');
+
+            // Remove previous selections
+            options.forEach(opt => {
+                opt.classList.remove('selected', 'correct', 'incorrect');
+            });
+
+            // Mark selected option
+            element.classList.add('selected');
+
+            if (isCorrect) {
+                element.classList.add('correct');
+            } else {
+                element.classList.add('incorrect');
+            }
+
+            // Show explanation
+            explanation.classList.add('show');
+
+            // Disable further clicks
+            options.forEach(opt => opt.style.pointerEvents = 'none');
+        }
+
+        // ===== VISUALIZER FUNCTIONALITY =====
+        const presets = [
+            "The chef served the customer pasta in the kitchen",
+            "The wind knocked down the old tree",
+            "She gave him a beautiful painting for his birthday"
+        ];
+
+        function loadPreset(index) {
+            const input = document.getElementById('srlInput');
+            input.value = presets[index];
+            updateSRL();
+        }
+
+        function updateSRL() {
+            const input = document.getElementById('srlInput');
+            const sentence = input.value;
+
+            if (!sentence.trim()) return;
+
+            // Parse sentence and extract roles (simple heuristic)
+            const words = sentence.split(/\s+/);
+            const roleDisplay = document.getElementById('roleDisplay');
+
+            // Simple heuristic SRL
+            const roles = extractRoles(words);
+
+            // Display roles
+            roleDisplay.innerHTML = roles.map(r =>
+                `<span class="role-span ${r.class}">${r.word} → ${r.role}</span>`
+            ).join('');
+
+            // Draw canvas visualization
+            drawSRLCanvas(words, roles);
+        }
+
+        function extractRoles(words) {
+            const roles = [];
+            const text = words.join(' ').toLowerCase();
+
+            // Very simple heuristic matching
+            if (text.includes('chef') || text.includes('waiter')) {
+                roles.push({ word: 'chef/waiter', role: 'ARG0 (Agent)', class: 'arg0' });
+            }
+            if (text.includes('served') || text.includes('gave') || text.includes('knocked')) {
+                roles.push({ word: 'served/gave/knocked', role: 'VERB', class: 'v' });
+            }
+            if (text.includes('customer') || text.includes('tree') || text.includes('him')) {
+                roles.push({ word: 'customer/tree/him', role: 'ARG1 (Theme)', class: 'arg1' });
+            }
+            if (text.includes('pasta') || text.includes('painting')) {
+                roles.push({ word: 'pasta/painting', role: 'ARG2 (Theme)', class: 'arg2' });
+            }
+            if (text.includes('kitchen') || text.includes('birthday')) {
+                roles.push({ word: 'kitchen/birthday', role: 'ARGM (Modifier)', class: 'argm' });
+            }
+
+            return roles;
+        }
+
+        function drawSRLCanvas(words, roles) {
+            const canvas = document.getElementById('srlCanvas');
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+
+            // Scale canvas for DPR
+            canvas.width = canvas.offsetWidth * dpr;
+            canvas.height = canvas.offsetHeight * dpr;
+            ctx.scale(dpr, dpr);
+
+            const width = canvas.offsetWidth;
+            const height = canvas.offsetHeight;
+
+            // Clear canvas
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw words
+            ctx.font = '14px Inter';
+            ctx.fillStyle = '#e2e8f0';
+            ctx.textAlign = 'center';
+
+            const wordWidth = width / (words.length + 1);
+            const baseY = height / 2;
+
+            words.forEach((word, i) => {
+                const x = (i + 1) * wordWidth;
+                ctx.fillText(word, x, baseY);
+            });
+
+            // Draw role labels above words
+            const roleMap = {};
+            roles.forEach(r => {
+                for (let i = 0; i < words.length; i++) {
+                    if (words[i].includes(r.word.split('/')[0])) {
+                        roleMap[i] = r;
+                        break;
+                    }
+                }
+            });
+
+            Object.entries(roleMap).forEach(([idx, role]) => {
+                const x = (parseInt(idx) + 1) * wordWidth;
+                ctx.fillStyle = '#8b5cf6';
+                ctx.font = 'bold 12px Inter';
+                ctx.fillText(role.role, x, baseY - 30);
+
+                // Draw box around role label
+                ctx.strokeStyle = '#8b5cf6';
+                ctx.strokeRect(x - 40, baseY - 40, 80, 15);
+            });
+        }
+
+        // ===== INTERACTIVE ROLES TABLE =====
+        function initRolesTable() {
+            const rolesData = [
+                {
+                    role: 'AGENT',
+                    definition: 'Volitional causer; acts intentionally',
+                    examples: [
+                        'The <span class="example-highlight">chef</span> cooked dinner',
+                        'John <span class="example-highlight">ate</span> the apple'
+                    ]
+                },
+                {
+                    role: 'FORCE',
+                    definition: 'Non-volitional causer; external force',
+                    examples: [
+                        'The <span class="example-highlight">wind</span> blew down the tree',
+                        'The <span class="example-highlight">earthquake</span> damaged the building'
+                    ]
+                },
+                {
+                    role: 'EXPERIENCER',
+                    definition: 'Conscious entity experiencing an event',
+                    examples: [
+                        '<span class="example-highlight">Mary</span> fears spiders',
+                        '<span class="example-highlight">John</span> has a headache'
+                    ]
+                },
+                {
+                    role: 'THEME/PATIENT',
+                    definition: 'Entity affected or changed',
+                    examples: [
+                        'The chef cooked <span class="example-highlight">dinner</span>',
+                        'John ate <span class="example-highlight">the apple</span>'
+                    ]
+                },
+                {
+                    role: 'INSTRUMENT',
+                    definition: 'Tool or means used',
+                    examples: [
+                        'He cut the bread <span class="example-highlight">with a knife</span>',
+                        'She wrote the letter <span class="example-highlight">with a pen</span>'
+                    ]
+                },
+                {
+                    role: 'BENEFICIARY',
+                    definition: 'Entity that benefits',
+                    examples: [
+                        'She baked <span class="example-highlight">him</span> a cake',
+                        'He bought <span class="example-highlight">her</span> a gift'
+                    ]
+                }
+            ];
+
+            const container = document.getElementById('rolesTable');
+            container.innerHTML = rolesData.map((item, idx) => `
+                <div class="role-row" onclick="toggleRoleDetails(this)">
+                    <div class="role-header">${item.role}</div>
+                    <div class="role-definition">${item.definition}</div>
+                    <div class="role-examples" id="examples-${idx}">
+                        ${item.examples.map(ex => `<div class="example-sentence">${ex}</div>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleRoleDetails(element) {
+            element.classList.toggle('active');
+            const examples = element.querySelector('.role-examples');
+            examples.classList.toggle('show');
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            initRolesTable();
+            document.getElementById('srlInput').addEventListener('input', updateSRL);
+
+            // Initial visualization
+            updateSRL();
+        });
+
+        // ===== MATHJAX CONFIG =====
+        // MathJax is loaded externally, configuration is in the HTML head
+    </script>
+</body>
+</html>

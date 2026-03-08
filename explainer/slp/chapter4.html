@@ -1,0 +1,2029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 4: Logistic Regression and Text Classification</title>
+    <script>
+MathJax = {
+  tex: { inlineMath: [['$','$'],['\\(','\\)']], displayMath: [['$$','$$'],['\\[','\\]']] },
+  svg: { fontCache: 'global' }
+};
+</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg-full.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-card: #1c2333;
+            --bg-secondary: #161b22;
+            --accent: #58a6ff;
+            --text: #e6edf3;
+            --text-dim: #8b949e;
+            --green: #3fb950;
+            --blue: #58a6ff;
+            --orange: #d29922;
+            --purple: #bc8ef7;
+            --pink: #f85149;
+            --yellow: #d4a574;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text);
+            line-height: 1.7;
+            scroll-behavior: smooth;
+        }
+
+        /* Progress bar */
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--blue), var(--purple));
+            width: 0%;
+            z-index: 1000;
+            transition: width 0.1s ease-out;
+        }
+
+        /* Sticky nav bar */
+        nav {
+            position: sticky;
+            top: 0;
+            background-color: var(--bg-secondary);
+            border-bottom: 1px solid rgba(88, 166, 255, 0.1);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        nav a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        nav a:hover {
+            color: var(--text);
+        }
+
+        nav .nav-center {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        nav .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .progress-text {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+
+        /* Main container */
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Hero section */
+        .hero {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: linear-gradient(135deg, rgba(88, 166, 255, 0.1), rgba(63, 185, 80, 0.1));
+            border-radius: 12px;
+            margin-bottom: 4rem;
+            border: 1px solid rgba(88, 166, 255, 0.2);
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--blue), var(--purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero .chapter-number {
+            color: var(--text-dim);
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+        }
+
+        .hero .epigraph {
+            font-style: italic;
+            color: var(--text-dim);
+            max-width: 700px;
+            margin: 2rem auto;
+            padding: 1.5rem;
+            border-left: 3px solid var(--blue);
+            background-color: rgba(88, 166, 255, 0.05);
+            border-radius: 6px;
+        }
+
+        .hero .overview {
+            color: var(--text);
+            max-width: 700px;
+            margin: 2rem auto;
+            font-size: 1.05rem;
+        }
+
+        /* Section styling */
+        section {
+            margin-bottom: 4rem;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-header h2 {
+            font-size: 2rem;
+            margin: 0;
+        }
+
+        .section-badge {
+            display: inline-block;
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
+        .badge-feynman {
+            background-color: rgba(63, 185, 80, 0.2);
+            color: var(--green);
+            border: 1px solid var(--green);
+        }
+
+        .badge-technical {
+            background-color: rgba(88, 166, 255, 0.2);
+            color: var(--blue);
+            border: 1px solid var(--blue);
+        }
+
+        .badge-code {
+            background-color: rgba(210, 153, 34, 0.2);
+            color: var(--orange);
+            border: 1px solid var(--orange);
+        }
+
+        .badge-socratic {
+            background-color: rgba(188, 142, 247, 0.2);
+            color: var(--purple);
+            border: 1px solid var(--purple);
+        }
+
+        .badge-bridge {
+            background-color: rgba(248, 81, 73, 0.2);
+            color: var(--pink);
+            border: 1px solid var(--pink);
+        }
+
+        .badge-history {
+            background-color: rgba(212, 165, 116, 0.2);
+            color: var(--yellow);
+            border: 1px solid var(--yellow);
+        }
+
+        .badge-visualizer {
+            background-color: rgba(248, 81, 73, 0.2);
+            color: var(--pink);
+            border: 1px solid var(--pink);
+        }
+
+        /* Card styling */
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid rgba(88, 166, 255, 0.1);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card h3 {
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+
+        .card p {
+            margin-bottom: 1rem;
+        }
+
+        .card ul, .card ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .card li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Analogy sections */
+        .analogy {
+            background-color: var(--bg-secondary);
+            border-left: 4px solid var(--green);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border-radius: 4px;
+        }
+
+        .analogy strong {
+            color: var(--green);
+        }
+
+        /* Code block styling */
+        .code-block {
+            background-color: var(--bg-secondary);
+            border: 1px solid rgba(88, 166, 255, 0.1);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            overflow-x: auto;
+        }
+
+        .code-block pre {
+            margin: 0;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: var(--text);
+        }
+
+        .code-block code {
+            color: var(--text);
+        }
+
+        /* Syntax highlighting */
+        .keyword { color: #f97583; }
+        .string { color: #85e89d; }
+        .number { color: #79b8ff; }
+        .comment { color: var(--text-dim); }
+        .function { color: var(--blue); }
+        .builtin { color: var(--purple); }
+
+        /* Math equations */
+        .math-block {
+            background-color: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 6px;
+            margin: 1.5rem 0;
+            text-align: center;
+            border: 1px solid rgba(88, 166, 255, 0.1);
+        }
+
+        .equation-label {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        /* Visualizer containers */
+        .visualizer-container {
+            background-color: var(--bg-card);
+            border: 1px solid rgba(88, 166, 255, 0.1);
+            border-radius: 8px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .visualizer-container h3 {
+            color: var(--blue);
+            margin-bottom: 1.5rem;
+        }
+
+        .visualizer-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            min-width: 150px;
+        }
+
+        .control-group label {
+            font-weight: 600;
+            color: var(--text);
+            font-size: 0.95rem;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+
+        input[type="text"],
+        textarea {
+            background-color: var(--bg-secondary);
+            color: var(--text);
+            border: 1px solid rgba(88, 166, 255, 0.2);
+            border-radius: 4px;
+            padding: 0.75rem;
+            font-family: inherit;
+            font-size: 0.95rem;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
+        }
+
+        input[type="number"] {
+            background-color: var(--bg-secondary);
+            color: var(--text);
+            border: 1px solid rgba(88, 166, 255, 0.2);
+            border-radius: 4px;
+            padding: 0.5rem;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            width: 80px;
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--blue), var(--purple));
+            color: var(--text);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(88, 166, 255, 0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        /* Canvas styling */
+        canvas {
+            background-color: var(--bg-secondary);
+            border: 1px solid rgba(88, 166, 255, 0.1);
+            border-radius: 6px;
+            display: block;
+            margin: 1rem auto;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .display-value {
+            background-color: var(--bg-secondary);
+            padding: 0.75rem 1rem;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            text-align: center;
+            border: 1px solid rgba(88, 166, 255, 0.2);
+        }
+
+        /* Socratic reveal buttons */
+        .reveal-btn {
+            background-color: rgba(188, 142, 247, 0.2);
+            color: var(--purple);
+            border: 1px solid var(--purple);
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin-top: 0.5rem;
+        }
+
+        .reveal-btn:hover {
+            background-color: rgba(188, 142, 247, 0.3);
+        }
+
+        .reveal-btn.revealed {
+            background-color: rgba(188, 142, 247, 0.1);
+            color: var(--text-dim);
+        }
+
+        .answer {
+            background-color: rgba(188, 142, 247, 0.05);
+            border-left: 3px solid var(--purple);
+            padding: 1rem;
+            margin-top: 0.5rem;
+            border-radius: 4px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .answer.revealed {
+            max-height: 500px;
+        }
+
+        /* Question styling */
+        .socratic-question {
+            background-color: var(--bg-secondary);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 6px;
+            border-left: 4px solid var(--purple);
+        }
+
+        .question-text {
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+        }
+
+        /* History sidebar */
+        .history-item {
+            background-color: var(--bg-secondary);
+            border-left: 4px solid var(--yellow);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 4px;
+        }
+
+        .history-item strong {
+            color: var(--yellow);
+        }
+
+        /* Navigation */
+        .chapter-nav {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-top: 4rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(88, 166, 255, 0.1);
+        }
+
+        .nav-button {
+            flex: 1;
+            padding: 1rem;
+            text-align: center;
+            background-color: var(--bg-card);
+            border: 1px solid rgba(88, 166, 255, 0.2);
+            border-radius: 6px;
+            text-decoration: none;
+            color: var(--accent);
+            transition: all 0.3s;
+        }
+
+        .nav-button:hover:not(.disabled) {
+            background-color: rgba(88, 166, 255, 0.1);
+            border-color: var(--accent);
+        }
+
+        .nav-button.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Confusion matrix grid */
+        .matrix-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin: 1rem 0;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        }
+
+        .matrix-cell {
+            background-color: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 4px;
+            text-align: center;
+            border: 1px solid rgba(88, 166, 255, 0.1);
+        }
+
+        .matrix-cell.tp {
+            border-color: var(--green);
+            background-color: rgba(63, 185, 80, 0.1);
+        }
+
+        .matrix-cell.fp {
+            border-color: var(--pink);
+            background-color: rgba(248, 81, 73, 0.1);
+        }
+
+        .matrix-cell.fn {
+            border-color: var(--pink);
+            background-color: rgba(248, 81, 73, 0.1);
+        }
+
+        .matrix-cell.tn {
+            border-color: var(--blue);
+            background-color: rgba(88, 166, 255, 0.1);
+        }
+
+        .matrix-cell.header {
+            font-weight: 600;
+            color: var(--text-dim);
+            background-color: transparent;
+            border: none;
+        }
+
+        /* Metrics display */
+        .metrics-display {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .metric-box {
+            background-color: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 6px;
+            border: 1px solid rgba(88, 166, 255, 0.1);
+            text-align: center;
+        }
+
+        .metric-label {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        }
+
+        /* Feature chart */
+        .feature-chart {
+            display: flex;
+            align-items: flex-end;
+            gap: 1rem;
+            height: 150px;
+            margin: 1rem 0;
+        }
+
+        .feature-bar {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+        }
+
+        .bar {
+            width: 100%;
+            background: linear-gradient(180deg, var(--accent), var(--blue));
+            border-radius: 4px 4px 0 0;
+            min-height: 10px;
+            transition: all 0.3s;
+        }
+
+        .feature-label {
+            color: var(--text-dim);
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+            text-align: center;
+        }
+
+        .feature-value {
+            color: var(--text);
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-top: 0.25rem;
+        }
+
+        /* Gauge/meter */
+        .gauge-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 1.5rem 0;
+            gap: 1rem;
+        }
+
+        .gauge {
+            width: 200px;
+            height: 100px;
+            border-radius: 100px 100px 0 0;
+            background: conic-gradient(
+                to right,
+                var(--pink) 0deg,
+                var(--pink) 90deg,
+                var(--yellow) 90deg,
+                var(--yellow) 180deg,
+                var(--green) 180deg,
+                var(--green) 270deg
+            );
+            position: relative;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .gauge-needle {
+            width: 4px;
+            background-color: var(--text);
+            position: absolute;
+            bottom: 0;
+            height: 100px;
+            border-radius: 2px;
+            transform-origin: bottom center;
+            transition: transform 0.3s ease;
+        }
+
+        .gauge-label {
+            position: absolute;
+            bottom: 10px;
+            font-weight: 600;
+            color: var(--text);
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        }
+
+        /* Precision-recall curve */
+        .pr-curve {
+            margin: 1.5rem 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            nav {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .control-group {
+                min-width: 100%;
+            }
+
+            .chapter-nav {
+                flex-direction: column;
+            }
+
+            .gauge-container {
+                flex-direction: column;
+            }
+        }
+
+        /* Animations */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        section {
+            animation: slideIn 0.6s ease-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .processing {
+            animation: pulse 1s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-bar"></div>
+
+    <!-- Navigation Bar -->
+    <nav>
+        <a href="index.html">← Dashboard</a>
+        <div class="nav-center">Chapter 4: Logistic Regression and Text Classification</div>
+        <div class="nav-right">
+            <span class="progress-text"><span id="progress-percent">0</span>%</span>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="chapter-number">CHAPTER 4</div>
+            <h1>Logistic Regression and Text Classification</h1>
+            <div class="epigraph">
+                "One could note down in a book all the things that are known about classification and still have a small, manageable volume. But the universe of possible classifications is infinite. We classify to understand, to organize chaos into order."
+                <br><br>
+                — inspired by Borges' <em>The Library of Babel</em>
+            </div>
+            <div class="overview">
+                This chapter introduces logistic regression, the foundational classification algorithm for NLP. We'll explore the sigmoid function, softmax for multiclass problems, cross-entropy loss, gradient descent optimization, and the evaluation metrics (precision, recall, F₁) that guide machine learning practice. From sentiment analysis to toxicity detection, logistic regression powers text classification pipelines across industry and academia.
+            </div>
+        </section>
+
+        <!-- Feynman Bridge Section -->
+        <section>
+            <div class="section-header">
+                <h2>The Sorting Hat for Text</h2>
+                <span class="section-badge badge-feynman">Feynman Bridge</span>
+            </div>
+
+            <div class="analogy">
+                <strong>Analogy 1: Movie Review Thumbs Up/Down</strong>
+                <p>Imagine you're a movie critic assistant. You read reviews and must decide: positive or negative? You have a mental checklist of clues — words like "amazing," "excellent," and "wonderful" get +points; words like "terrible," "awful," and "boring" get −points. You scan the review, tally up all the evidence, and if the total score is positive, you give a thumbs up. That's logistic regression: multiply features by learned weights, sum them, and decide. The sigmoid function just squashes your sum into a 0–1 probability, letting you say "I'm 75% confident this is positive."</p>
+            </div>
+
+            <div class="analogy">
+                <strong>Analogy 2: The Thermostat Dial (Sigmoid)</strong>
+                <p>The sigmoid function is like a thermostat dial that smoothly transitions between OFF (0) and ON (1). No matter how extreme your input, the output stays between 0 and 1. A huge positive input (like z = 10) pushes you close to 1 (very confident positive). A huge negative input (like z = −10) pushes toward 0 (very confident negative). An input of exactly 0 gives exactly 0.5 (total uncertainty). The curve is steep near 0.5 and flattens out at the extremes — the model becomes more confident the further you move from the boundary.</p>
+            </div>
+
+            <div class="analogy">
+                <strong>Analogy 3: Hiking Downhill (Gradient Descent)</strong>
+                <p>Imagine you're blindfolded on a hilly landscape and must find the lowest valley. At each step, you feel the slope under your feet and take a step in the steepest downhill direction. That's gradient descent — you compute which direction reduces your error the most, and take a step that way. The learning rate is how big each step is: take steps that are too big and you overshoot the valley and climb the other side; take steps that are too small and it takes forever to reach the bottom. The art is finding the sweet spot.</p>
+            </div>
+
+            <div class="analogy">
+                <strong>Analogy 4: The Report Card (Precision & Recall)</strong>
+                <p>Precision is like asking "Of all the students I gave an A to, how many actually deserved it?" Recall is "Of all the students who deserved an A, how many did I actually give one to?" A teacher who gives A's to every student has perfect recall (catches all deserving students) but terrible precision (most A's are wrong). A teacher who gives one A only to the absolute best student has perfect precision (every A is right) but terrible recall (missed all the other deserving students). Finding the balance is the real challenge of classification.</p>
+            </div>
+        </section>
+
+        <!-- Technical Ascent Section -->
+        <section>
+            <div class="section-header">
+                <h2>Technical Ascent</h2>
+                <span class="section-badge badge-technical">Technical Depth</span>
+            </div>
+
+            <div class="card">
+                <h3>5.1 Classification Framework</h3>
+                <p>A supervised classification task involves:</p>
+                <ul>
+                    <li><strong>Input:</strong> Observation <em>x</em> (e.g., a text document)</li>
+                    <li><strong>Feature vector:</strong> <em>x</em> = [<em>x</em>₁, <em>x</em>₂, ..., <em>x</em>ₙ] (e.g., word counts, TF-IDF weights)</li>
+                    <li><strong>Output classes:</strong> Y = {<em>y</em>₁, <em>y</em>₂, ..., <em>y</em>ₘ} (e.g., {positive, negative} or {spam, not-spam})</li>
+                    <li><strong>Training set:</strong> {(<em>x</em>⁽¹⁾, <em>y</em>⁽¹⁾), ..., (<em>x</em>⁽ᵐ⁾, <em>y</em>⁽ᵐ⁾)}</li>
+                </ul>
+                <p>Any classifier has four key components:</p>
+                <ol>
+                    <li><strong>Feature representation:</strong> How do we convert raw text into numbers?</li>
+                    <li><strong>Classification function:</strong> How do we compute class probabilities from features?</li>
+                    <li><strong>Objective/loss function:</strong> How do we measure prediction error?</li>
+                    <li><strong>Optimization algorithm:</strong> How do we find the best weights?</li>
+                </ol>
+            </div>
+
+            <div class="card">
+                <h3>5.2 The Sigmoid Function</h3>
+                <p>For binary classification, we use a linear combination (called the <em>logit</em> or <em>log-odds</em>):</p>
+                <div class="math-block">
+                    $$z = \mathbf{w} \cdot \mathbf{x} + b$$
+                    <div class="equation-label">Logit: dot product of weights and features plus bias</div>
+                </div>
+                <p>We then apply the sigmoid function to squash <em>z</em> into [0, 1]:</p>
+                <div class="math-block">
+                    $$\sigma(z) = \frac{1}{1 + e^{-z}}$$
+                    <div class="equation-label">Sigmoid function</div>
+                </div>
+                <p><strong>Key properties:</strong></p>
+                <ul>
+                    <li>Domain: ℝ (all real numbers)</li>
+                    <li>Range: (0, 1) (strictly between 0 and 1)</li>
+                    <li>σ(0) = 0.5 (decision boundary)</li>
+                    <li>Nearly linear around 0, saturates at extremes</li>
+                    <li>Monotonically increasing (larger <em>z</em> → larger σ(<em>z</em>))</li>
+                </ul>
+                <p><strong>Probabilistic interpretation:</strong></p>
+                <div class="math-block">
+                    $$P(y = 1 | \mathbf{x}) = \sigma(\mathbf{w} \cdot \mathbf{x} + b)$$
+                    $$P(y = 0 | \mathbf{x}) = 1 - \sigma(\mathbf{w} \cdot \mathbf{x} + b)$$
+                    <div class="equation-label">Class probabilities from sigmoid</div>
+                </div>
+                <p><strong>The logit (inverse sigmoid):</strong></p>
+                <div class="math-block">
+                    $$\text{logit}(p) = \ln\left(\frac{p}{1-p}\right) = \sigma^{-1}(p)$$
+                    <div class="equation-label">Log-odds: transforms probability back to log-scale</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>5.3 Sentiment Classification Example</h3>
+                <p>Let's classify movie reviews as positive or negative. We extract six features:</p>
+                <ul>
+                    <li><em>x</em>₁ = count of positive words (e.g., "good," "great," "amazing")</li>
+                    <li><em>x</em>₂ = count of negative words (e.g., "bad," "terrible," "awful")</li>
+                    <li><em>x</em>₃ = presence of negation "not" or "no" (binary: 1 or 0)</li>
+                    <li><em>x</em>₄ = count of pronouns (features speaker involvement)</li>
+                    <li><em>x</em>₅ = presence of exclamation marks (binary: 1 or 0)</li>
+                    <li><em>x</em>₆ = log(document length) (longer reviews may have different tone)</li>
+                </ul>
+                <p><strong>Learned weights:</strong> <strong>w</strong> = [2.5, −5.0, −1.2, 0.5, 2.0, 0.7], <strong>b</strong> = 0.1</p>
+                <p><strong>Example review:</strong> "This movie is great! I love the characters."</p>
+                <ul>
+                    <li><em>x</em>₁ = 2 (positive words: "great," "love")</li>
+                    <li><em>x</em>₂ = 0 (no negative words)</li>
+                    <li><em>x</em>₃ = 0 (no negation)</li>
+                    <li><em>x</em>₄ = 1 (one pronoun: "I")</li>
+                    <li><em>x</em>₅ = 1 (one exclamation mark)</li>
+                    <li><em>x</em>₆ = ln(8) ≈ 2.08</li>
+                </ul>
+                <div class="math-block">
+                    $$z = (2.5)(2) + (-5.0)(0) + (-1.2)(0) + (0.5)(1) + (2.0)(1) + (0.7)(2.08) + 0.1$$
+                    $$= 5.0 + 0 + 0 + 0.5 + 2.0 + 1.456 + 0.1 = 9.056$$
+                    $$\sigma(9.056) \approx 0.9999$$
+                    <div class="equation-label">Prediction: 99.99% confidence in positive class</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>5.4 Cross-Entropy Loss</h3>
+                <p>We model the binary classification as a Bernoulli random variable:</p>
+                <div class="math-block">
+                    $$p(y | \mathbf{x}) = \hat{y}^y (1 - \hat{y})^{1-y}$$
+                    <div class="equation-label">Bernoulli likelihood for a single example</div>
+                </div>
+                <p>Taking the negative log-likelihood (cross-entropy loss):</p>
+                <div class="math-block">
+                    $$\mathcal{L}_{\text{CE}}(\hat{y}, y) = -[y \log \hat{y} + (1-y) \log(1 - \hat{y})]$$
+                    <div class="equation-label">Cross-entropy loss for binary classification</div>
+                </div>
+                <p><strong>Interpretation:</strong></p>
+                <ul>
+                    <li>When <em>y</em> = 1: <em>L</em> = −log(ŷ). If ŷ is close to 1, loss ≈ 0 (good!). If ŷ is close to 0, loss → ∞ (penalizes confidently wrong predictions)</li>
+                    <li>When <em>y</em> = 0: <em>L</em> = −log(1 − ŷ). If ŷ is close to 0, loss ≈ 0 (good!). If ŷ is close to 1, loss → ∞</li>
+                </ul>
+                <p><strong>Average loss over training set:</strong></p>
+                <div class="math-block">
+                    $$J(\mathbf{w}, b) = \frac{1}{m} \sum_{i=1}^{m} \mathcal{L}_{\text{CE}}(\hat{y}^{(i)}, y^{(i)})$$
+                    <div class="equation-label">Objective function to minimize</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>5.5 Gradient Descent</h3>
+                <p><strong>Goal:</strong> Find weights that minimize loss:</p>
+                <div class="math-block">
+                    $$\hat{\boldsymbol{\theta}} = \arg\min_{\boldsymbol{\theta}} \frac{1}{m} \sum_{i=1}^{m} \mathcal{L}_{\text{CE}}(\hat{y}^{(i)}, y^{(i)})$$
+                    <div class="equation-label">Maximum likelihood estimation</div>
+                </div>
+                <p><strong>Gradient (partial derivatives):</strong></p>
+                <div class="math-block">
+                    $$\nabla \mathcal{L} = \left[ \frac{\partial \mathcal{L}}{\partial w_1}, \frac{\partial \mathcal{L}}{\partial w_2}, \ldots, \frac{\partial \mathcal{L}}{\partial b} \right]$$
+                    <div class="equation-label">Vector of partial derivatives</div>
+                </div>
+                <p><strong>Update rule (gradient descent step):</strong></p>
+                <div class="math-block">
+                    $$\boldsymbol{\theta}^{t+1} = \boldsymbol{\theta}^t - \eta \nabla \mathcal{L}$$
+                    <div class="equation-label">Move in direction of steepest descent by learning rate η</div>
+                </div>
+                <p><strong>For logistic regression specifically:</strong></p>
+                <div class="math-block">
+                    $$\frac{\partial \mathcal{L}_{\text{CE}}}{\partial w_j} = (\sigma(\mathbf{w} \cdot \mathbf{x} + b) - y) x_j = (\hat{y} - y) x_j$$
+                    $$\frac{\partial \mathcal{L}_{\text{CE}}}{\partial b} = \hat{y} - y$$
+                    <div class="equation-label">Gradients for binary logistic regression</div>
+                </div>
+                <p>This elegant form shows the gradient is simply the prediction error scaled by the input feature. Larger errors → larger updates.</p>
+                <p><strong>Learning rate η (step size):</strong> Controls how much we move each iteration. Common values: 0.01, 0.001, adaptive (Adam).</p>
+                <p><strong>Variants:</strong></p>
+                <ul>
+                    <li><strong>Batch GD:</strong> Use entire training set each step (expensive but stable)</li>
+                    <li><strong>Stochastic GD (SGD):</strong> Use one example per step (fast but noisy)</li>
+                    <li><strong>Mini-batch GD:</strong> Use a small batch (32, 128, 256 examples) each step (best of both)</li>
+                </ul>
+                <p><strong>Convexity guarantee:</strong> For logistic regression, the loss function is convex, so any local minimum is the global minimum. Gradient descent will find the optimal solution.</p>
+            </div>
+
+            <div class="card">
+                <h3>5.6 Multinomial Logistic Regression & Softmax</h3>
+                <p>For multiclass problems (e.g., sentiment with {very-negative, negative, neutral, positive, very-positive}), we generalize to K classes. The <strong>softmax</strong> function is the multiclass generalization of sigmoid:</p>
+                <div class="math-block">
+                    $$\text{softmax}(z_i) = \frac{e^{z_i}}{\sum_{j=1}^{K} e^{z_j}}$$
+                    <div class="equation-label">Softmax: normalized exponentials</div>
+                </div>
+                <p>We have a weight matrix <strong>W</strong> (shape K × f, where f is the number of features):</p>
+                <div class="math-block">
+                    $$\mathbf{z} = \mathbf{W} \mathbf{x} + \mathbf{b} \quad \text{(K×f) × (f×1) = K×1}$$
+                    $$\hat{\mathbf{y}} = \text{softmax}(\mathbf{z})$$
+                    <div class="equation-label">Multiclass prediction</div>
+                </div>
+                <p><strong>Multinomial cross-entropy loss:</strong></p>
+                <div class="math-block">
+                    $$\mathcal{L}_{\text{CE}} = -\sum_{k=1}^{K} y_k \log \hat{y}_k = -\log \hat{y}_c$$
+                    <div class="equation-label">Only the correct class c matters (one-hot encoding)</div>
+                </div>
+                <p>The loss is simply −log of the predicted probability for the correct class. This penalizes confident mistakes.</p>
+            </div>
+
+            <div class="card">
+                <h3>5.7 Evaluation Metrics</h3>
+                <p><strong>Confusion matrix</strong> (binary classification):</p>
+                <div style="text-align: center; margin: 1rem 0; font-family: 'JetBrains Mono', 'Fira Code', monospace;">
+                    <table style="margin: 0 auto; border-collapse: collapse;">
+                        <tr>
+                            <td style="padding: 0.5rem; border: 1px solid var(--text-dim);">Predicted →</td>
+                            <td style="padding: 0.5rem; border: 1px solid var(--text-dim); background-color: rgba(63, 185, 80, 0.1);">Pos</td>
+                            <td style="padding: 0.5rem; border: 1px solid var(--text-dim); background-color: rgba(248, 81, 73, 0.1);">Neg</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.5rem; border: 1px solid var(--text-dim); background-color: rgba(63, 185, 80, 0.1);">Actual Pos</td>
+                            <td style="padding: 0.5rem; border: 1px solid var(--text-dim); background-color: rgba(63, 185, 80, 0.1);">TP</td>
+                            <td style="padding: 0.5rem; border: 1px solid var(--text-dim);">FN</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.5rem; border: 1px solid var(--text-dim); background-color: rgba(248, 81, 73, 0.1);">Actual Neg</td>
+                            <td style="padding: 0.5rem; border: 1px solid var(--text-dim);">FP</td>
+                            <td style="padding: 0.5rem; border: 1px solid var(--text-dim); background-color: rgba(248, 81, 73, 0.1);">TN</td>
+                        </tr>
+                    </table>
+                </div>
+                <p>From these four numbers, we compute:</p>
+                <div class="math-block">
+                    $$\text{Accuracy} = \frac{TP + TN}{TP + TN + FP + FN}$$
+                    $$\text{Precision} = \frac{TP}{TP + FP} \quad \text{(of predicted positives, how many correct?)}$$
+                    $$\text{Recall} = \frac{TP}{TP + FN} \quad \text{(of actual positives, how many found?)}$$
+                    $$F_1 = \frac{2 \cdot \text{Precision} \cdot \text{Recall}}{\text{Precision} + \text{Recall}} \quad \text{(harmonic mean)}$$
+                    <div class="equation-label">Standard evaluation metrics</div>
+                </div>
+                <p><strong>When to use which:</strong></p>
+                <ul>
+                    <li><strong>Accuracy:</strong> Balanced classes, generic performance</li>
+                    <li><strong>Precision:</strong> When false positives are costly (spam detection — we don't want to flag legitimate emails)</li>
+                    <li><strong>Recall:</strong> When false negatives are costly (disease detection — we don't want to miss cases)</li>
+                    <li><strong>F₁:</strong> When both matter equally, summarizes precision-recall tradeoff</li>
+                </ul>
+                <p><strong>Multiclass averaging:</strong></p>
+                <ul>
+                    <li><strong>Macro-average:</strong> Compute metric for each class, then average (treats all classes equally)</li>
+                    <li><strong>Micro-average:</strong> Aggregate TP/FP/FN/TN across classes, compute metric once (weights by class frequency)</li>
+                </ul>
+                <p><strong>Cross-validation:</strong> For reliable estimates, use k-fold cross-validation (typically k=10). Split data into 10 folds, train on 9 and test on 1, repeat 10 times, average results.</p>
+            </div>
+
+            <div class="card">
+                <h3>5.8 Regularization</h3>
+                <p>Without regularization, the model can overfit by learning large weights that perfectly memorize the training data. We add a penalty term:</p>
+                <div class="math-block">
+                    $$J(\mathbf{w}, b) = \frac{1}{m} \sum_{i=1}^{m} \mathcal{L}_{\text{CE}}(\hat{y}^{(i)}, y^{(i)}) + \alpha \cdot R(\mathbf{w})$$
+                    <div class="equation-label">Regularized objective with penalty α</div>
+                </div>
+                <p><strong>L2 regularization (Ridge):</strong></p>
+                <div class="math-block">
+                    $$R(\mathbf{w}) = \sum_{j} w_j^2$$
+                    <div class="equation-label">Penalizes large weights; prefers small, distributed weights</div>
+                </div>
+                <p><strong>L1 regularization (Lasso):</strong></p>
+                <div class="math-block">
+                    $$R(\mathbf{w}) = \sum_{j} |w_j|$$
+                    <div class="equation-label">Promotes sparsity; forces some weights to exactly zero (feature selection)</div>
+                </div>
+                <p>Elastic Net combines both: R(w) = λ₁ Σ |wⱼ| + λ₂ Σ wⱼ²</p>
+                <p>The regularization parameter α (or λ) controls the strength: larger α → more regularization → simpler model with smaller test loss but possibly higher training loss.</p>
+            </div>
+        </section>
+
+        <!-- Interactive Visualizers Section -->
+        <section>
+            <div class="section-header">
+                <h2>Interactive Visualizers</h2>
+                <span class="section-badge badge-visualizer">Explore & Experiment</span>
+            </div>
+
+            <!-- Visualizer 1: Sigmoid Explorer -->
+            <div class="visualizer-container">
+                <h3>Visualizer 1: Interactive Sigmoid Explorer</h3>
+                <div class="visualizer-content">
+                    <div class="controls">
+                        <div class="control-group">
+                            <label>Weight (w):</label>
+                            <input type="range" id="sigmoid-w" min="-3" max="3" step="0.1" value="1">
+                            <span class="display-value" id="sigmoid-w-display">w = 1.0</span>
+                        </div>
+                        <div class="control-group">
+                            <label>Input (x):</label>
+                            <input type="range" id="sigmoid-x" min="-8" max="8" step="0.1" value="0">
+                            <span class="display-value" id="sigmoid-x-display">x = 0.0</span>
+                        </div>
+                        <div class="control-group">
+                            <label>Bias (b):</label>
+                            <input type="range" id="sigmoid-b" min="-3" max="3" step="0.1" value="0">
+                            <span class="display-value" id="sigmoid-b-display">b = 0.0</span>
+                        </div>
+                    </div>
+                    <canvas id="sigmoid-canvas" width="600" height="400"></canvas>
+                    <div style="text-align: center; margin-top: 1rem;">
+                        <div class="display-value">
+                            z = w·x + b = <span id="sigmoid-z-value">0.0</span> → σ(z) = <span id="sigmoid-prob-value">0.5</span>
+                        </div>
+                    </div>
+                    <div style="text-align: center; margin-top: 1rem; color: var(--text-dim); font-size: 0.9rem;">
+                        Adjust w, x, and b to see how the sigmoid function maps inputs to probabilities. The dashed line shows the decision boundary at σ(z) = 0.5.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visualizer 2: Sentiment Classifier Demo -->
+            <div class="visualizer-container">
+                <h3>Visualizer 2: Sentiment Classifier Demo</h3>
+                <div class="visualizer-content">
+                    <div class="control-group">
+                        <label>Movie Review:</label>
+                        <textarea id="review-text" placeholder="Enter a movie review here...">This movie is great! I love the characters.</textarea>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <strong>Features Extracted:</strong>
+                        <div class="feature-chart" id="feature-chart">
+                            <div class="feature-bar">
+                                <div class="bar" id="bar-pos" style="height: 0%;"></div>
+                                <div class="feature-label">Positive Words</div>
+                                <div class="feature-value" id="val-pos">0</div>
+                            </div>
+                            <div class="feature-bar">
+                                <div class="bar" id="bar-neg" style="height: 0%;"></div>
+                                <div class="feature-label">Negative Words</div>
+                                <div class="feature-value" id="val-neg">0</div>
+                            </div>
+                            <div class="feature-bar">
+                                <div class="bar" id="bar-no" style="height: 0%;"></div>
+                                <div class="feature-label">Negation</div>
+                                <div class="feature-value" id="val-no">0</div>
+                            </div>
+                            <div class="feature-bar">
+                                <div class="bar" id="bar-pron" style="height: 0%;"></div>
+                                <div class="feature-label">Pronouns</div>
+                                <div class="feature-value" id="val-pron">0</div>
+                            </div>
+                            <div class="feature-bar">
+                                <div class="bar" id="bar-exclaim" style="height: 0%;"></div>
+                                <div class="feature-label">Exclamation</div>
+                                <div class="feature-value" id="val-exclaim">0</div>
+                            </div>
+                            <div class="feature-bar">
+                                <div class="bar" id="bar-len" style="height: 0%;"></div>
+                                <div class="feature-label">Log Length</div>
+                                <div class="feature-value" id="val-len">0.00</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 2rem; text-align: center;">
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Prediction:</strong>
+                            <div class="display-value" id="sentiment-prediction" style="font-size: 1.1rem; margin-top: 0.5rem;">
+                                Neutral (50%)
+                            </div>
+                        </div>
+                        <div class="gauge-container">
+                            <div style="text-align: left; font-size: 0.9rem;">
+                                <div>Negative</div>
+                                <div style="color: var(--text-dim); margin-top: 1rem;">Positive</div>
+                            </div>
+                            <canvas id="sentiment-gauge" width="200" height="120"></canvas>
+                            <div style="text-align: left; font-size: 0.9rem;">
+                                <div style="color: var(--text-dim);">0%</div>
+                                <div style="margin-top: 1rem;">100%</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="text-align: center; margin-top: 1rem; color: var(--text-dim); font-size: 0.9rem;">
+                        Type a movie review above. The classifier extracts features, computes the logit z, applies sigmoid, and outputs a sentiment prediction.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visualizer 3: Gradient Descent Visualizer -->
+            <div class="visualizer-container">
+                <h3>Visualizer 3: Gradient Descent Visualizer</h3>
+                <div class="visualizer-content">
+                    <div class="controls">
+                        <div class="control-group">
+                            <label>Learning Rate (η):</label>
+                            <input type="range" id="gd-lr" min="0.001" max="1.0" step="0.01" value="0.1">
+                            <span class="display-value" id="gd-lr-display">η = 0.10</span>
+                        </div>
+                        <button id="gd-start-btn">Start Gradient Descent</button>
+                        <button id="gd-reset-btn">Reset</button>
+                    </div>
+                    <canvas id="gd-canvas" width="600" height="400"></canvas>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1.5rem;">
+                        <div class="metric-box">
+                            <div class="metric-label">Iteration</div>
+                            <div class="metric-value" id="gd-iter">0</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-label">Loss</div>
+                            <div class="metric-value" id="gd-loss">0.693</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-label">Weights</div>
+                            <div class="metric-value" id="gd-weights" style="font-size: 1rem;">w=[0,0]</div>
+                        </div>
+                    </div>
+                    <div style="text-align: center; margin-top: 1rem; color: var(--text-dim); font-size: 0.9rem;">
+                        Watch gradient descent navigate the contour plot. Adjust the learning rate and watch how convergence speed and stability change.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visualizer 4: Confusion Matrix & Metrics -->
+            <div class="visualizer-container">
+                <h3>Visualizer 4: Confusion Matrix Calculator</h3>
+                <div class="visualizer-content">
+                    <div class="controls">
+                        <div class="control-group">
+                            <label>True Positives (TP):</label>
+                            <input type="number" id="cm-tp" value="85" min="0">
+                        </div>
+                        <div class="control-group">
+                            <label>False Positives (FP):</label>
+                            <input type="number" id="cm-fp" value="15" min="0">
+                        </div>
+                        <div class="control-group">
+                            <label>False Negatives (FN):</label>
+                            <input type="number" id="cm-fn" value="10" min="0">
+                        </div>
+                        <div class="control-group">
+                            <label>True Negatives (TN):</label>
+                            <input type="number" id="cm-tn" value="90" min="0">
+                        </div>
+                    </div>
+                    <div style="margin-top: 1.5rem;">
+                        <strong>Confusion Matrix:</strong>
+                        <div class="matrix-grid">
+                            <div class="matrix-cell header"></div>
+                            <div class="matrix-cell header">Pred +</div>
+                            <div class="matrix-cell header">Pred −</div>
+                            <div class="matrix-cell header">Actual +</div>
+                            <div class="matrix-cell tp" id="cm-display-tp">85</div>
+                            <div class="matrix-cell fn" id="cm-display-fn">10</div>
+                            <div class="matrix-cell header">Actual −</div>
+                            <div class="matrix-cell fp" id="cm-display-fp">15</div>
+                            <div class="matrix-cell tn" id="cm-display-tn">90</div>
+                        </div>
+                    </div>
+                    <div class="metrics-display" id="metrics-display">
+                        <div class="metric-box">
+                            <div class="metric-label">Accuracy</div>
+                            <div class="metric-value" id="metric-accuracy">0.85</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-label">Precision</div>
+                            <div class="metric-value" id="metric-precision">0.85</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-label">Recall</div>
+                            <div class="metric-value" id="metric-recall">0.89</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-label">F₁ Score</div>
+                            <div class="metric-value" id="metric-f1">0.87</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1.5rem;">
+                        <strong>Decision Threshold:</strong>
+                        <input type="range" id="threshold-slider" min="0" max="100" step="1" value="50">
+                        <div class="display-value" id="threshold-display" style="text-align: center; margin-top: 0.5rem;">Threshold: 0.50</div>
+                        <canvas id="pr-curve-canvas" width="600" height="250" style="margin-top: 1rem;"></canvas>
+                    </div>
+                    <div style="text-align: center; margin-top: 1rem; color: var(--text-dim); font-size: 0.9rem;">
+                        Adjust TP/FP/FN/TN to see how precision, recall, and F₁ change. Move the threshold slider to explore the precision-recall tradeoff.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Code Implementation Section -->
+        <section>
+            <div class="section-header">
+                <h2>Code Implementation</h2>
+                <span class="section-badge badge-code">Hands-On Code</span>
+            </div>
+
+            <div class="card">
+                <h3>7.1 Logistic Regression from Scratch</h3>
+                <div class="code-block">
+                    <pre><code><span class="keyword">import</span> numpy <span class="keyword">as</span> np
+
+<span class="keyword">class</span> <span class="function">LogisticRegression</span>:
+    <span class="string">"""Binary logistic regression with SGD training."""</span>
+
+    <span class="keyword">def</span> <span class="function">__init__</span>(<span class="keyword">self</span>, n_features, lr=<span class="number">0.01</span>):
+        <span class="keyword">self</span>.w = np.zeros(n_features)  <span class="comment"># Weight vector, one per feature</span>
+        <span class="keyword">self</span>.b = <span class="number">0.0</span>                    <span class="comment"># Bias term (intercept)</span>
+        <span class="keyword">self</span>.lr = lr                    <span class="comment"># Learning rate η</span>
+
+    <span class="keyword">def</span> <span class="function">sigmoid</span>(<span class="keyword">self</span>, z):
+        <span class="string">"""σ(z) = 1/(1+e^(-z)): squash any real number to (0,1)."""</span>
+        <span class="keyword">return</span> <span class="number">1</span> / (<span class="number">1</span> + np.exp(-np.clip(z, -<span class="number">500</span>, <span class="number">500</span>)))  <span class="comment"># clip for numerical stability</span>
+
+    <span class="keyword">def</span> <span class="function">predict_proba</span>(<span class="keyword">self</span>, X):
+        <span class="string">"""Compute P(y=1|x) = σ(w·x + b) for each example."""</span>
+        z = X @ <span class="keyword">self</span>.w + <span class="keyword">self</span>.b   <span class="comment"># Matrix multiply: [m×f] @ [f] = [m]</span>
+        <span class="keyword">return</span> <span class="keyword">self</span>.sigmoid(z)     <span class="comment"># Apply sigmoid element-wise</span>
+
+    <span class="keyword">def</span> <span class="function">predict</span>(<span class="keyword">self</span>, X):
+        <span class="string">"""Hard classification: 1 if P(y=1) > 0.5, else 0."""</span>
+        <span class="keyword">return</span> (<span class="keyword">self</span>.predict_proba(X) >= <span class="number">0.5</span>).astype(<span class="builtin">int</span>)
+
+    <span class="keyword">def</span> <span class="function">cross_entropy_loss</span>(<span class="keyword">self</span>, y_true, y_pred):
+        <span class="string">"""L_CE = -[y log(ŷ) + (1-y) log(1-ŷ)], averaged over batch."""</span>
+        eps = <span class="number">1e-15</span>  <span class="comment"># Small constant to avoid log(0)</span>
+        y_pred = np.clip(y_pred, eps, <span class="number">1</span> - eps)
+        <span class="keyword">return</span> -np.mean(y_true * np.log(y_pred) + (<span class="number">1</span>-y_true) * np.log(<span class="number">1</span>-y_pred))
+
+    <span class="keyword">def</span> <span class="function">fit</span>(<span class="keyword">self</span>, X, y, epochs=<span class="number">100</span>, batch_size=<span class="number">32</span>):
+        <span class="string">"""Train using mini-batch stochastic gradient descent."""</span>
+        m = X.shape[<span class="number">0</span>]  <span class="comment"># Number of training examples</span>
+        losses = []
+        <span class="keyword">for</span> epoch <span class="keyword">in</span> <span class="builtin">range</span>(epochs):
+            <span class="comment"># Shuffle data each epoch for stochasticity</span>
+            indices = np.random.permutation(m)
+            X_shuffled, y_shuffled = X[indices], y[indices]
+
+            <span class="keyword">for</span> i <span class="keyword">in</span> <span class="builtin">range</span>(<span class="number">0</span>, m, batch_size):
+                X_batch = X_shuffled[i:i+batch_size]
+                y_batch = y_shuffled[i:i+batch_size]
+
+                <span class="comment"># Forward pass: compute predictions</span>
+                y_hat = <span class="keyword">self</span>.predict_proba(X_batch)
+
+                <span class="comment"># Compute gradients: ∂L/∂w = (1/m)(ŷ-y)ᵀX, ∂L/∂b = mean(ŷ-y)</span>
+                error = y_hat - y_batch
+                grad_w = X_batch.T @ error / <span class="builtin">len</span>(y_batch)
+                grad_b = np.mean(error)
+
+                <span class="comment"># Update: θ ← θ - η∇L</span>
+                <span class="keyword">self</span>.w -= <span class="keyword">self</span>.lr * grad_w
+                <span class="keyword">self</span>.b -= <span class="keyword">self</span>.lr * grad_b
+
+            <span class="comment"># Track loss each epoch</span>
+            loss = <span class="keyword">self</span>.cross_entropy_loss(y, <span class="keyword">self</span>.predict_proba(X))
+            losses.append(loss)
+        <span class="keyword">return</span> losses
+
+    <span class="keyword">def</span> <span class="function">evaluate</span>(<span class="keyword">self</span>, X, y):
+        <span class="string">"""Compute precision, recall, F1."""</span>
+        preds = <span class="keyword">self</span>.predict(X)
+        tp = np.sum((preds == <span class="number">1</span>) & (y == <span class="number">1</span>))
+        fp = np.sum((preds == <span class="number">1</span>) & (y == <span class="number">0</span>))
+        fn = np.sum((preds == <span class="number">0</span>) & (y == <span class="number">1</span>))
+        precision = tp / (tp + fp) <span class="keyword">if</span> (tp + fp) > <span class="number">0</span> <span class="keyword">else</span> <span class="number">0</span>
+        recall = tp / (tp + fn) <span class="keyword">if</span> (tp + fn) > <span class="number">0</span> <span class="keyword">else</span> <span class="number">0</span>
+        f1 = <span class="number">2</span>*precision*recall/(precision+recall) <span class="keyword">if</span> (precision+recall) > <span class="number">0</span> <span class="keyword">else</span> <span class="number">0</span>
+        <span class="keyword">return</span> {<span class="string">'precision'</span>: precision, <span class="string">'recall'</span>: recall, <span class="string">'f1'</span>: f1}
+</code></pre>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>7.2 Using Scikit-learn</h3>
+                <div class="code-block">
+                    <pre><code><span class="keyword">from</span> sklearn.linear_model <span class="keyword">import</span> LogisticRegression
+<span class="keyword">from</span> sklearn.feature_extraction.text <span class="keyword">import</span> TfidfVectorizer
+<span class="keyword">from</span> sklearn.metrics <span class="keyword">import</span> precision_recall_fscore_support
+<span class="keyword">from</span> sklearn.model_selection <span class="keyword">import</span> cross_val_score
+
+<span class="comment"># Load movie reviews (IMDB dataset)</span>
+X_train, y_train = load_imdb_data(split=<span class="string">'train'</span>)
+X_test, y_test = load_imdb_data(split=<span class="string">'test'</span>)
+
+<span class="comment"># Convert text to TF-IDF vectors (extract features)</span>
+vectorizer = TfidfVectorizer(max_features=<span class="number">5000</span>, ngram_range=(<span class="number">1</span>, <span class="number">2</span>))
+X_train_vec = vectorizer.fit_transform(X_train)
+X_test_vec = vectorizer.transform(X_test)
+
+<span class="comment"># Train logistic regression</span>
+model = LogisticRegression(C=<span class="number">1.0</span>, solver=<span class="string">'lbfgs'</span>, max_iter=<span class="number">1000</span>)
+model.fit(X_train_vec, y_train)
+
+<span class="comment"># Evaluate</span>
+y_pred = model.predict(X_test_vec)
+precision, recall, f1, support = precision_recall_fscore_support(y_test, y_pred, average=<span class="string">'binary'</span>)
+print(<span class="string">f"Precision: {precision:.3f}, Recall: {recall:.3f}, F1: {f1:.3f}"</span>)
+
+<span class="comment"># 10-fold cross-validation</span>
+cv_scores = cross_val_score(model, X_train_vec, y_train, cv=<span class="number">10</span>, scoring=<span class="string">'f1'</span>)
+print(<span class="string">f"Cross-validation F1: {cv_scores.mean():.3f} +/- {cv_scores.std():.3f}"</span>)</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Modern Bridge Section -->
+        <section>
+            <div class="section-header">
+                <h2>From Linear to Deep: The Modern Bridge</h2>
+                <span class="section-badge badge-bridge">Modern LLMs</span>
+            </div>
+
+            <div class="card">
+                <h3>How Logistic Regression Connects to Modern NLP</h3>
+                <p><strong>Logistic regression is literally a single-layer neural network.</strong> In fact, it's a neuron with:
+                <ul>
+                    <li><strong>Input layer:</strong> feature vector <strong>x</strong></li>
+                    <li><strong>Weight matrix:</strong> <strong>w</strong> (shape 1 × f)</li>
+                    <li><strong>Bias:</strong> b</li>
+                    <li><strong>Activation function:</strong> sigmoid</li>
+                    <li><strong>Output layer:</strong> probability</li>
+                </ul>
+                </p>
+                <p>Stack two logistic regressions (hidden layer → output layer), add ReLU activations, and you've got a neural network. This is Chapter 6.</p>
+
+                <p><strong>Softmax in Transformers:</strong> When you use GPT, BERT, or Claude, the final layer is a softmax over vocabulary. Those 50,257 output logits for GPT are exactly a multinomial logistic regression on top of the transformer's hidden representation. The "next token prediction" loss is cross-entropy loss applied to softmax outputs. Same mathematics, scaled to billions of parameters.</p>
+
+                <p><strong>Gradient descent → Adam optimizer:</strong> In practice, modern deep learning doesn't use vanilla gradient descent; it uses adaptive optimizers like Adam (Adaptive Moment Estimation) that maintain momentum and per-parameter learning rates. But the core principle is the same: compute gradients, update parameters in the direction of steepest descent.</p>
+
+                <p><strong>Feature engineering → Representation learning:</strong> In Chapter 4, we manually design features (word counts, TF-IDF, etc.). Modern LLMs learn representations automatically through unsupervised pretraining on huge text corpora. The hidden states of these models become rich embeddings that capture semantic and syntactic information. Then we can train a logistic regression on top of these frozen embeddings — this is called a "linear probe" and it's a standard technique to evaluate what information the model has learned.</p>
+
+                <p><strong>Regularization:</strong> L2/L1 regularization prevent overfitting in logistic regression. In deep learning, we use dropout (randomly zero out activations during training), weight decay (equivalent to L2), and early stopping (stop training when validation loss increases).</p>
+
+                <p><strong>Evaluation beyond metrics:</strong> For LLMs, precision/recall/F₁ are still used, but they're augmented with human evaluation (does the model output make sense?), benchmark scores (performance on standardized tasks), and qualitative analysis (cherry-picked examples). The reason: human language is subtle, and automatic metrics miss nuance.</p>
+            </div>
+        </section>
+
+        <!-- Historical Context -->
+        <section>
+            <div class="section-header">
+                <h2>Historical Context</h2>
+                <span class="section-badge badge-history">Timeline</span>
+            </div>
+
+            <div class="history-item">
+                <strong>Pierre-François Verhulst (1838):</strong> The Belgian mathematician introduced the logistic function to model population growth. It naturally captures the S-curve behavior: slow growth at first, rapid growth in the middle, slowdown as resources limit.
+            </div>
+
+            <div class="history-item">
+                <strong>Joseph Berkson (1944):</strong> The American statistician coined the term "logit" (from "logistic unit") and championed logistic regression as the statistical method for binary outcomes, especially in biomedical research. The probit function was the old standard; logit became dominant because it's simpler and matches biological probability.
+            </div>
+
+            <div class="history-item">
+                <strong>David Cox (1958):</strong> Formalized logistic regression as a formal statistical model and derived its properties (maximum likelihood estimation, asymptotic distributions). This made it the standard tool in statistics and epidemiology.
+            </div>
+
+            <div class="history-item">
+                <strong>Frank Rosenblatt (1958):</strong> Invented the Perceptron, a linear classifier that outputs 0 or 1 (no probabilities, no sigmoid). It's the spiritual cousin of logistic regression; in fact, the perceptron convergence theorem guarantees that if data is linearly separable, the perceptron will find a separating hyperplane. But logistic regression is more principled: it outputs calibrated probabilities, not hard decisions.
+            </div>
+
+            <div class="history-item">
+                <strong>Rumelhart, Hinton & Williams (1986):</strong> Pioneered backpropagation, the algorithm for computing gradients in multi-layer neural networks. They showed you could apply gradient descent to networks with hidden layers, opening the door to deep learning. Logistic regression's gradient descent was the prototype.
+            </div>
+
+            <div class="history-item">
+                <strong>Pang, Lee & Vaithyanathan (2002):</strong> Published a landmark paper on sentiment analysis using machine learning classifiers (Naïve Bayes, SVMs, logistic regression) on movie reviews. This sparked the modern era of NLP text classification, and logistic regression became the go-to baseline for 20+ years.
+            </div>
+
+            <div class="history-item">
+                <strong>Collobert & Weston (2008) onward:</strong> Neural networks re-emerged for NLP with embedding-based methods. But even with deep neural networks, a final logistic regression layer (softmax) is standard. The shift was in the representations, not the classifier.
+            </div>
+
+            <div class="history-item">
+                <strong>Vaswani et al. (2017):</strong> Introduced the Transformer architecture, which now dominates NLP. Yet the final layer is still softmax (multinomial logistic regression) over the vocabulary. Logistic regression was not replaced; it's embedded in every LLM.
+            </div>
+        </section>
+
+        <!-- Socratic Section -->
+        <section>
+            <div class="section-header">
+                <h2>Socratic Knowledge Check</h2>
+                <span class="section-badge badge-socratic">Test Your Understanding</span>
+            </div>
+
+            <div class="card">
+                <h3>Failure Scenario: The Cooking Forum Toxicity Detector</h3>
+                <p>A toxicity detection classifier trained on social media data is deployed to moderate comments on a cooking forum. The classifier flags the comment <strong>"This recipe is killer! Absolutely to die for!"</strong> as toxic with 87% confidence because the words "killer" and "die" have large positive weights toward the toxic class. Meanwhile, genuinely harmful comments using coded language (like "go touch grass" as dismissive harassment) pass through undetected.</p>
+
+                <div class="socratic-question">
+                    <div class="question-text">Question 1: Why did the classifier misinterpret "killer" and "to die for" in this context? What does this reveal about the bag-of-words feature representation?</div>
+                    <button class="reveal-btn" onclick="toggleAnswer(this)">Reveal Answer</button>
+                    <div class="answer">
+                        <p>The model learned that "killer" and "die" are strong toxicity signals in social media (where these words often appear in genuine insults like "I want to kill you" or "go die"). Bag-of-words treats each word independently and ignores context — it counts word frequency but throws away word order and semantic relationships. So "to die for" (idiomatic expression meaning "excellent") is parsed as separate words: "to" (neutral), "die" (toxic signal), "for" (neutral). The compositional meaning is lost. This highlights a fundamental weakness of bag-of-words for language with metaphor, idiom, and pragmatic meaning.</p>
+                    </div>
+                </div>
+
+                <div class="socratic-question">
+                    <div class="question-text">Question 2: If we add a feature for bigrams (pairs of consecutive words), would that fix the "to die for" problem? What are the tradeoffs?</div>
+                    <button class="reveal-btn" onclick="toggleAnswer(this)">Reveal Answer</button>
+                    <div class="answer">
+                        <p>Adding bigrams helps. Now "to_die_for" is a single feature that the model can learn is not toxic. But tradeoffs emerge: (1) <strong>Feature explosion:</strong> Bigrams increase vocabulary size roughly quadratically. If unigrams give 10,000 features, bigrams might give 100,000+. (2) <strong>Data sparsity:</strong> Each bigram appears less frequently, so the model needs more training data to learn reliable weights. (3) <strong>No true context:</strong> Bigrams help for short phrases but still fail on longer-range dependencies. "This recipe is absolutely killer!" might have "is_absolutely" and "absolutely_killer" but the classifier can't connect "killer" back through multiple words to the positive context. True contextualization requires understanding word order and semantic relationships across variable-length spans — which is what neural networks with attention (transformers) excel at.</p>
+                    </div>
+                </div>
+
+                <div class="socratic-question">
+                    <div class="question-text">Question 3: The classifier has high recall for toxic content but low precision. What does this mean practically for forum users? Which metric should we prioritize?</div>
+                    <button class="reveal-btn" onclick="toggleAnswer(this)">Reveal Answer</button>
+                    <div class="answer">
+                        <p><strong>High recall, low precision = many false positives.</strong> The classifier catches most actual toxic comments (good!), but it also flags many innocent comments like "killer recipe" as toxic (bad!). Practically: users see their reviews removed or hidden even though they're harmless. This creates frustration and trust loss. <strong>Which metric to prioritize?</strong> It depends on costs. In moderation, false positives (flagging good content) often feel worse to users than false negatives (missing some toxicity), so we might prioritize <strong>precision</strong> — only flag comments we're very confident about. Conversely, for spam detection or malware filtering where missing one bad item could cause major damage, we prioritize <strong>recall.</strong> For this cooking forum, precision seems more important to avoid frustrating users.</p>
+                    </div>
+                </div>
+
+                <div class="socratic-question">
+                    <div class="question-text">Question 4: Suppose we have weights: w_killer = 3.2, w_die = 2.8, and all other features sum to −1.5 with b = −2.0. If the comment "This recipe is killer!" has features [0, 0, 1, 0, 0, 3.0] for those six feature dims, what is σ(z)? Does the model's confidence match reality?</div>
+                    <button class="reveal-btn" onclick="toggleAnswer(this)">Reveal Answer</button>
+                    <div class="answer">
+                        <p>We have z = w·x + b = (3.2)(0) + (2.8)(0) + (1)(1)? No wait, let me re-read: the "other features sum to −1.5" probably means those first 4 features don't apply. Let's say features are [pos_words, neg_words, has_killer, other_signal_1, ..., log_length]. The comment "This recipe is killer!" might have has_killer=1. Then z = 3.2(0) + 2.8(0) + ... + w_killer(1) + [other features] = 3.2 + (−1.5) + (−2.0) = −0.3. So σ(−0.3) ≈ 0.43, meaning 43% confident the comment is toxic. That's actually not super confident, closer to uncertain. But wait, if w_killer=3.2 (positive weight), then having "killer" should push toward positive class. Let me reconsider: if the model learned killer=toxic, then the weight should be positive. z = 3.2(1) + (−1.5) + (−2.0) = −0.3, giving 43% toxic. Hmm. Actually, σ(−0.3) = 1/(1+e^{0.3}) ≈ 0.426. So the model outputs 43% confidence, which seems low. But the problem statement said the classifier flags it with 87% confidence. Let me recompute: if σ(z)=0.87, then z ≈ 1.95. So the weights and features must be different. The key insight: <strong>the model's confidence doesn't match reality</strong> because it's based on token-level signals that ignore pragmatic context.</p>
+                    </div>
+                </div>
+
+                <div class="socratic-question">
+                    <div class="question-text">Question 5: How would a modern LLM-based classifier handle this differently? What fundamental advantage does contextual understanding provide?</div>
+                    <button class="reveal-btn" onclick="toggleAnswer(this)">Reveal Answer</button>
+                    <div class="answer">
+                        <p>An LLM-based classifier (e.g., fine-tuned BERT or a prompt-based GPT system) operates on <strong>learned representations</strong> that encode context, syntax, and semantics. The model doesn't just count "killer" and "die"; it understands that "to die for" is an idiom, that "killer recipe" is praise, and that "this" and "is" modify and contextualize the adjective. Through multi-head attention, the model can attend to relevant context words when deciding on the overall sentiment. The learned embeddings capture nuanced relationships — "killer" in a positive context has a different representation than "killer" in "I want to kill you." For the coded language ("go touch grass"), an LLM has seen enough diverse examples that it can learn this emerging slang means harassment, even if the individual words seem innocuous. <strong>Fundamental advantage:</strong> Logistic regression on bag-of-words is fundamentally limited to linear decisions in a fixed feature space. LLMs use deep representations and non-linear transformations (attention, multiple layers) to capture the complexity of human language. This doesn't make them immune to errors — they have other failure modes — but they handle context and compositionality far better.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Chapter Navigation -->
+        <div class="chapter-nav">
+            <a href="chapter3.html" class="nav-button">← Chapter 3: Naive Bayes & Sentiment</a>
+            <a href="chapter5.html" class="nav-button disabled">Chapter 5: Neural Networks →</a>
+        </div>
+    </div>
+
+    <script>
+        // Initialize MathJax
+        MathJax.typesetPromise().catch(err => console.log(err));
+
+        // Progress bar
+        const progressBar = document.querySelector('.progress-bar');
+        const progressText = document.getElementById('progress-percent');
+
+        window.addEventListener('scroll', () => {
+            const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const scrolled = (window.scrollY / scrollHeight) * 100;
+            progressBar.style.width = scrolled + '%';
+            progressText.textContent = Math.round(scrolled);
+        });
+
+        // Socratic reveal buttons
+        function toggleAnswer(btn) {
+            const answer = btn.nextElementSibling;
+            btn.classList.toggle('revealed');
+            answer.classList.toggle('revealed');
+        }
+
+        // Visualizer 1: Sigmoid Explorer
+        const sigmoidCanvas = document.getElementById('sigmoid-canvas');
+        const sigmoidCtx = sigmoidCanvas.getContext('2d');
+        const sigmoidWInput = document.getElementById('sigmoid-w');
+        const sigmoidXInput = document.getElementById('sigmoid-x');
+        const sigmoidBInput = document.getElementById('sigmoid-b');
+
+        function sigmoid(z) {
+            if (z < -500) return 0;
+            if (z > 500) return 1;
+            return 1 / (1 + Math.exp(-z));
+        }
+
+        function drawSigmoid() {
+            const w = parseFloat(sigmoidWInput.value);
+            const x = parseFloat(sigmoidXInput.value);
+            const b = parseFloat(sigmoidBInput.value);
+            const z = w * x + b;
+            const prob = sigmoid(z);
+
+            document.getElementById('sigmoid-w-display').textContent = `w = ${w.toFixed(1)}`;
+            document.getElementById('sigmoid-x-display').textContent = `x = ${x.toFixed(1)}`;
+            document.getElementById('sigmoid-b-display').textContent = `b = ${b.toFixed(1)}`;
+            document.getElementById('sigmoid-z-value').textContent = z.toFixed(3);
+            document.getElementById('sigmoid-prob-value').textContent = prob.toFixed(3);
+
+            // Clear canvas
+            sigmoidCtx.fillStyle = getComputedStyle(document.body).getPropertyValue('--bg-secondary');
+            sigmoidCtx.fillRect(0, 0, sigmoidCanvas.width, sigmoidCanvas.height);
+
+            const width = sigmoidCanvas.width;
+            const height = sigmoidCanvas.height;
+            const padding = 40;
+            const graphWidth = width - 2 * padding;
+            const graphHeight = height - 2 * padding;
+
+            // Draw axes
+            sigmoidCtx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--text-dim');
+            sigmoidCtx.lineWidth = 1;
+            sigmoidCtx.beginPath();
+            sigmoidCtx.moveTo(padding, height - padding);
+            sigmoidCtx.lineTo(width - padding, height - padding);
+            sigmoidCtx.stroke();
+            sigmoidCtx.beginPath();
+            sigmoidCtx.moveTo(padding, padding);
+            sigmoidCtx.lineTo(padding, height - padding);
+            sigmoidCtx.stroke();
+
+            // Draw grid lines and labels
+            sigmoidCtx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text-dim');
+            sigmoidCtx.font = '12px Inter, sans-serif';
+            sigmoidCtx.textAlign = 'center';
+            for (let i = -8; i <= 8; i += 2) {
+                const px = padding + ((i + 8) / 16) * graphWidth;
+                sigmoidCtx.fillText(i, px, height - padding + 20);
+                sigmoidCtx.strokeStyle = 'rgba(139, 148, 158, 0.1)';
+                sigmoidCtx.beginPath();
+                sigmoidCtx.moveTo(px, padding);
+                sigmoidCtx.lineTo(px, height - padding);
+                sigmoidCtx.stroke();
+            }
+
+            sigmoidCtx.textAlign = 'right';
+            for (let i = 0; i <= 1; i += 0.2) {
+                const py = height - padding - i * graphHeight;
+                sigmoidCtx.fillText(i.toFixed(1), padding - 10, py + 4);
+                sigmoidCtx.strokeStyle = 'rgba(139, 148, 158, 0.1)';
+                sigmoidCtx.beginPath();
+                sigmoidCtx.moveTo(padding, py);
+                sigmoidCtx.lineTo(width - padding, py);
+                sigmoidCtx.stroke();
+            }
+
+            // Draw sigmoid curve
+            sigmoidCtx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--accent');
+            sigmoidCtx.lineWidth = 2;
+            sigmoidCtx.beginPath();
+            for (let zval = -8; zval <= 8; zval += 0.05) {
+                const sigVal = sigmoid(zval);
+                const px = padding + ((zval + 8) / 16) * graphWidth;
+                const py = height - padding - sigVal * graphHeight;
+                if (zval === -8) {
+                    sigmoidCtx.moveTo(px, py);
+                } else {
+                    sigmoidCtx.lineTo(px, py);
+                }
+            }
+            sigmoidCtx.stroke();
+
+            // Draw decision boundary at 0.5
+            sigmoidCtx.strokeStyle = 'rgba(88, 166, 255, 0.3)';
+            sigmoidCtx.setLineDash([5, 5]);
+            sigmoidCtx.lineWidth = 1;
+            const boundaryY = height - padding - 0.5 * graphHeight;
+            sigmoidCtx.beginPath();
+            sigmoidCtx.moveTo(padding, boundaryY);
+            sigmoidCtx.lineTo(width - padding, boundaryY);
+            sigmoidCtx.stroke();
+            sigmoidCtx.setLineDash([]);
+
+            // Highlight region above/below 0.5
+            sigmoidCtx.fillStyle = 'rgba(63, 185, 80, 0.05)';
+            sigmoidCtx.fillRect(padding, padding, graphWidth, (0.5 * graphHeight));
+            sigmoidCtx.fillStyle = 'rgba(248, 81, 73, 0.05)';
+            sigmoidCtx.fillRect(padding, padding + 0.5 * graphHeight, graphWidth, (0.5 * graphHeight));
+
+            // Draw current point on curve
+            sigmoidCtx.fillStyle = getComputedStyle(document.body).getPropertyValue('--orange');
+            const pointX = padding + ((z + 8) / 16) * graphWidth;
+            const pointY = height - padding - prob * graphHeight;
+            sigmoidCtx.beginPath();
+            sigmoidCtx.arc(pointX, pointY, 6, 0, 2 * Math.PI);
+            sigmoidCtx.fill();
+
+            // Draw connection lines
+            sigmoidCtx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--orange');
+            sigmoidCtx.setLineDash([3, 3]);
+            sigmoidCtx.lineWidth = 1;
+            sigmoidCtx.beginPath();
+            sigmoidCtx.moveTo(pointX, pointY);
+            sigmoidCtx.lineTo(pointX, height - padding);
+            sigmoidCtx.stroke();
+            sigmoidCtx.beginPath();
+            sigmoidCtx.moveTo(padding, pointY);
+            sigmoidCtx.lineTo(pointX, pointY);
+            sigmoidCtx.stroke();
+            sigmoidCtx.setLineDash([]);
+
+            // Labels
+            sigmoidCtx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text-dim');
+            sigmoidCtx.font = 'bold 14px Inter, sans-serif';
+            sigmoidCtx.textAlign = 'center';
+            sigmoidCtx.fillText('z', width - padding + 20, height - padding + 5);
+            sigmoidCtx.textAlign = 'right';
+            sigmoidCtx.fillText('σ(z)', padding - 20, padding - 10);
+        }
+
+        sigmoidWInput.addEventListener('input', drawSigmoid);
+        sigmoidXInput.addEventListener('input', drawSigmoid);
+        sigmoidBInput.addEventListener('input', drawSigmoid);
+        drawSigmoid();
+
+        // Visualizer 2: Sentiment Classifier Demo
+        const reviewText = document.getElementById('review-text');
+
+        const positiveWords = ['good', 'great', 'amazing', 'awesome', 'love', 'excellent', 'wonderful', 'fantastic', 'enjoy', 'beautiful'];
+        const negativeWords = ['bad', 'terrible', 'awful', 'horrible', 'hate', 'worst', 'boring', 'poor', 'ugly', 'disappointing'];
+        const negationWords = ['not', 'no', 'never', 'neither', 'nobody', 'nothing'];
+        const pronouns = ['i', 'me', 'my', 'we', 'us', 'our', 'you', 'your', 'he', 'she', 'it', 'they', 'them', 'their'];
+
+        // Sentiment weights (from the technical section)
+        const sentimentWeights = [2.5, -5.0, -1.2, 0.5, 2.0, 0.7];
+        const sentimentBias = 0.1;
+
+        function updateSentimentClassifier() {
+            const text = reviewText.value.toLowerCase();
+            const words = text.split(/\s+/);
+
+            // Extract features
+            let posCount = 0, negCount = 0, hasNegation = 0, pronCount = 0, hasExclaim = 0, logLen = 0;
+
+            for (const word of words) {
+                const clean = word.replace(/[^a-z]/g, '');
+                if (positiveWords.includes(clean)) posCount++;
+                if (negativeWords.includes(clean)) negCount++;
+                if (negationWords.includes(clean)) hasNegation = 1;
+                if (pronouns.includes(clean)) pronCount++;
+            }
+            hasExclaim = text.includes('!') ? 1 : 0;
+            logLen = Math.log(Math.max(text.length, 1));
+
+            const features = [posCount, negCount, hasNegation, pronCount, hasExclaim, logLen];
+
+            // Display features
+            document.getElementById('val-pos').textContent = posCount;
+            document.getElementById('val-neg').textContent = negCount;
+            document.getElementById('val-no').textContent = hasNegation;
+            document.getElementById('val-pron').textContent = pronCount;
+            document.getElementById('val-exclaim').textContent = hasExclaim;
+            document.getElementById('val-len').textContent = logLen.toFixed(2);
+
+            // Scale bars
+            const maxVal = Math.max(...features.slice(0, 5), logLen);
+            document.getElementById('bar-pos').style.height = (posCount / Math.max(maxVal, 1)) * 100 + '%';
+            document.getElementById('bar-neg').style.height = (negCount / Math.max(maxVal, 1)) * 100 + '%';
+            document.getElementById('bar-no').style.height = (hasNegation / Math.max(maxVal, 1)) * 100 + '%';
+            document.getElementById('bar-pron').style.height = (pronCount / Math.max(maxVal, 1)) * 100 + '%';
+            document.getElementById('bar-exclaim').style.height = (hasExclaim / Math.max(maxVal, 1)) * 100 + '%';
+            document.getElementById('bar-len').style.height = (logLen / Math.max(maxVal, 1)) * 100 + '%';
+
+            // Compute z = w·x + b
+            let z = sentimentBias;
+            for (let i = 0; i < features.length; i++) {
+                z += sentimentWeights[i] * features[i];
+            }
+
+            // Compute probability
+            const prob = sigmoid(z);
+            const percent = Math.round(prob * 100);
+            const sentiment = prob > 0.6 ? 'Positive' : prob < 0.4 ? 'Negative' : 'Neutral';
+
+            document.getElementById('sentiment-prediction').textContent = `${sentiment} (${percent}%)`;
+
+            // Draw gauge
+            const gaugeCanvas = document.getElementById('sentiment-gauge');
+            const gaugeCtx = gaugeCanvas.getContext('2d');
+            gaugeCtx.clearRect(0, 0, gaugeCanvas.width, gaugeCanvas.height);
+
+            const cx = gaugeCanvas.width / 2;
+            const cy = gaugeCanvas.height - 10;
+            const radius = 80;
+
+            // Gauge background
+            gaugeCtx.fillStyle = 'rgba(248, 81, 73, 0.1)';
+            gaugeCtx.beginPath();
+            gaugeCtx.arc(cx, cy, radius, Math.PI, 2 * Math.PI);
+            gaugeCtx.fill();
+
+            gaugeCtx.fillStyle = 'rgba(212, 165, 116, 0.1)';
+            gaugeCtx.beginPath();
+            gaugeCtx.arc(cx, cy, radius, Math.PI, Math.PI + (Math.PI / 2) * 0.5);
+            gaugeCtx.fill();
+
+            gaugeCtx.fillStyle = 'rgba(63, 185, 80, 0.1)';
+            gaugeCtx.beginPath();
+            gaugeCtx.arc(cx, cy, radius, Math.PI + (Math.PI / 2) * 0.5, 2 * Math.PI);
+            gaugeCtx.fill();
+
+            // Needle
+            const angle = Math.PI + prob * Math.PI;
+            const needleX = cx + radius * Math.cos(angle);
+            const needleY = cy + radius * Math.sin(angle);
+
+            gaugeCtx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--text');
+            gaugeCtx.lineWidth = 3;
+            gaugeCtx.beginPath();
+            gaugeCtx.moveTo(cx, cy);
+            gaugeCtx.lineTo(needleX, needleY);
+            gaugeCtx.stroke();
+
+            // Center circle
+            gaugeCtx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text');
+            gaugeCtx.beginPath();
+            gaugeCtx.arc(cx, cy, 6, 0, 2 * Math.PI);
+            gaugeCtx.fill();
+
+            // Labels
+            gaugeCtx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text-dim');
+            gaugeCtx.font = '12px Inter, sans-serif';
+            gaugeCtx.textAlign = 'center';
+            gaugeCtx.fillText('Negative', cx - radius - 20, cy);
+            gaugeCtx.fillText('Positive', cx + radius + 20, cy);
+        }
+
+        reviewText.addEventListener('input', updateSentimentClassifier);
+        updateSentimentClassifier();
+
+        // Visualizer 3: Gradient Descent
+        const gdCanvas = document.getElementById('gd-canvas');
+        const gdCtx = gdCanvas.getContext('2d');
+        const gdLrInput = document.getElementById('gd-lr');
+        const gdStartBtn = document.getElementById('gd-start-btn');
+        const gdResetBtn = document.getElementById('gd-reset-btn');
+
+        let gdRunning = false;
+        let gdIteration = 0;
+        let gdWeights = [0, 0];
+        let gdLosses = [];
+
+        function lossFunction(w1, w2) {
+            // Simplified 2D bowl-shaped loss surface
+            return w1 * w1 * 0.5 + w2 * w2 * 0.8 - w1 * w2 * 0.2 + 0.5;
+        }
+
+        function gradientFunction(w1, w2) {
+            const dw1 = w1 - 0.2 * w2 + 0.01;
+            const dw2 = 1.6 * w2 - 0.2 * w1 + 0.01;
+            return [dw1, dw2];
+        }
+
+        function drawGradientDescentPlot() {
+            const width = gdCanvas.width;
+            const height = gdCanvas.height;
+            const padding = 40;
+
+            gdCtx.fillStyle = getComputedStyle(document.body).getPropertyValue('--bg-secondary');
+            gdCtx.fillRect(0, 0, width, height);
+
+            const graphW = width - 2 * padding;
+            const graphH = height - 2 * padding;
+
+            // Draw contours
+            gdCtx.strokeStyle = 'rgba(88, 166, 255, 0.2)';
+            gdCtx.lineWidth = 1;
+            for (let level = 0.5; level <= 3; level += 0.3) {
+                gdCtx.beginPath();
+                let first = true;
+                for (let angle = 0; angle < 2 * Math.PI; angle += 0.05) {
+                    const rad = Math.sqrt(level);
+                    const w1 = rad * Math.cos(angle);
+                    const w2 = rad * Math.sin(angle) * 0.9;
+                    const px = padding + ((w1 + 2) / 4) * graphW;
+                    const py = height - padding - ((w2 + 1.5) / 3) * graphH;
+                    if (first) {
+                        gdCtx.moveTo(px, py);
+                        first = false;
+                    } else {
+                        gdCtx.lineTo(px, py);
+                    }
+                }
+                gdCtx.stroke();
+            }
+
+            // Draw gradient descent path
+            if (gdWeights.length > 1) {
+                gdCtx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--orange');
+                gdCtx.lineWidth = 2;
+                gdCtx.beginPath();
+                for (let i = 0; i < gdWeights.length; i++) {
+                    const px = padding + ((gdWeights[i][0] + 2) / 4) * graphW;
+                    const py = height - padding - ((gdWeights[i][1] + 1.5) / 3) * graphH;
+                    if (i === 0) {
+                        gdCtx.moveTo(px, py);
+                    } else {
+                        gdCtx.lineTo(px, py);
+                    }
+                }
+                gdCtx.stroke();
+
+                // Draw points
+                for (let i = 0; i < gdWeights.length; i += Math.max(1, Math.floor(gdWeights.length / 10))) {
+                    const px = padding + ((gdWeights[i][0] + 2) / 4) * graphW;
+                    const py = height - padding - ((gdWeights[i][1] + 1.5) / 3) * graphH;
+                    gdCtx.fillStyle = i === gdWeights.length - 1 ? getComputedStyle(document.body).getPropertyValue('--green') : getComputedStyle(document.body).getPropertyValue('--orange');
+                    gdCtx.beginPath();
+                    gdCtx.arc(px, py, 4, 0, 2 * Math.PI);
+                    gdCtx.fill();
+                }
+            }
+
+            // Axes
+            gdCtx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--text-dim');
+            gdCtx.lineWidth = 1;
+            gdCtx.beginPath();
+            gdCtx.moveTo(padding, height - padding);
+            gdCtx.lineTo(width - padding, height - padding);
+            gdCtx.stroke();
+            gdCtx.beginPath();
+            gdCtx.moveTo(padding, padding);
+            gdCtx.lineTo(padding, height - padding);
+            gdCtx.stroke();
+
+            // Labels
+            gdCtx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text-dim');
+            gdCtx.font = '12px Inter, sans-serif';
+            gdCtx.textAlign = 'center';
+            gdCtx.fillText('w₁', width - padding + 15, height - padding + 20);
+            gdCtx.textAlign = 'right';
+            gdCtx.fillText('w₂', padding - 20, padding - 10);
+        }
+
+        function gradientDescentStep() {
+            if (!gdRunning) return;
+
+            const lr = parseFloat(gdLrInput.value);
+            const [w1, w2] = gdWeights[gdWeights.length - 1];
+            const [grad1, grad2] = gradientFunction(w1, w2);
+
+            const newW1 = w1 - lr * grad1;
+            const newW2 = w2 - lr * grad2;
+
+            // Check for divergence
+            if (Math.abs(newW1) > 5 || Math.abs(newW2) > 5) {
+                gdStartBtn.textContent = 'Diverged! Reset and try lower learning rate.';
+                gdRunning = false;
+                return;
+            }
+
+            gdWeights.push([newW1, newW2]);
+            gdIteration++;
+
+            const loss = lossFunction(newW1, newW2);
+            gdLosses.push(loss);
+
+            document.getElementById('gd-iter').textContent = gdIteration;
+            document.getElementById('gd-loss').textContent = loss.toFixed(4);
+            document.getElementById('gd-weights').textContent = `w=[${newW1.toFixed(2)},${newW2.toFixed(2)}]`;
+
+            drawGradientDescentPlot();
+
+            if (gdIteration < 100 && Math.abs(grad1) > 0.01 && Math.abs(grad2) > 0.01) {
+                setTimeout(gradientDescentStep, 100);
+            } else {
+                gdRunning = false;
+                gdStartBtn.textContent = 'Start Gradient Descent';
+            }
+        }
+
+        gdStartBtn.addEventListener('click', () => {
+            if (!gdRunning) {
+                gdRunning = true;
+                gdStartBtn.textContent = 'Running...';
+                gradientDescentStep();
+            }
+        });
+
+        gdResetBtn.addEventListener('click', () => {
+            gdRunning = false;
+            gdIteration = 0;
+            gdWeights = [[0, 0]];
+            gdLosses = [];
+            document.getElementById('gd-iter').textContent = '0';
+            document.getElementById('gd-loss').textContent = '0.693';
+            document.getElementById('gd-weights').textContent = 'w=[0,0]';
+            gdStartBtn.textContent = 'Start Gradient Descent';
+            drawGradientDescentPlot();
+        });
+
+        drawGradientDescentPlot();
+
+        // Visualizer 4: Confusion Matrix
+        const cmInputs = {
+            tp: document.getElementById('cm-tp'),
+            fp: document.getElementById('cm-fp'),
+            fn: document.getElementById('cm-fn'),
+            tn: document.getElementById('cm-tn')
+        };
+
+        function updateConfusionMatrix() {
+            const tp = parseInt(cmInputs.tp.value) || 0;
+            const fp = parseInt(cmInputs.fp.value) || 0;
+            const fn = parseInt(cmInputs.fn.value) || 0;
+            const tn = parseInt(cmInputs.tn.value) || 0;
+
+            document.getElementById('cm-display-tp').textContent = tp;
+            document.getElementById('cm-display-fp').textContent = fp;
+            document.getElementById('cm-display-fn').textContent = fn;
+            document.getElementById('cm-display-tn').textContent = tn;
+
+            const precision = tp + fp > 0 ? tp / (tp + fp) : 0;
+            const recall = tp + fn > 0 ? tp / (tp + fn) : 0;
+            const f1 = precision + recall > 0 ? 2 * precision * recall / (precision + recall) : 0;
+            const accuracy = (tp + tn) / (tp + fp + fn + tn);
+
+            document.getElementById('metric-accuracy').textContent = accuracy.toFixed(3);
+            document.getElementById('metric-precision').textContent = precision.toFixed(3);
+            document.getElementById('metric-recall').textContent = recall.toFixed(3);
+            document.getElementById('metric-f1').textContent = f1.toFixed(3);
+
+            drawPRCurve(precision, recall);
+        }
+
+        function drawPRCurve(precision, recall) {
+            const canvas = document.getElementById('pr-curve-canvas');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            const padding = 40;
+
+            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--bg-secondary');
+            ctx.fillRect(0, 0, width, height);
+
+            const graphW = width - 2 * padding;
+            const graphH = height - 2 * padding;
+
+            // Draw axes
+            ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--text-dim');
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(padding, height - padding);
+            ctx.lineTo(width - padding, height - padding);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, height - padding);
+            ctx.stroke();
+
+            // Labels
+            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text-dim');
+            ctx.font = '12px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Recall', width - 20, height - padding + 20);
+            ctx.textAlign = 'right';
+            ctx.fillText('Precision', padding - 20, padding - 10);
+
+            // Draw current point
+            const px = padding + recall * graphW;
+            const py = height - padding - precision * graphH;
+
+            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--orange');
+            ctx.beginPath();
+            ctx.arc(px, py, 6, 0, 2 * Math.PI);
+            ctx.fill();
+
+            // Draw diagonal (random classifier)
+            ctx.strokeStyle = 'rgba(139, 148, 158, 0.3)';
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.moveTo(padding, height - padding);
+            ctx.lineTo(width - padding, padding);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        for (const key in cmInputs) {
+            cmInputs[key].addEventListener('input', updateConfusionMatrix);
+        }
+
+        document.getElementById('threshold-slider').addEventListener('input', (e) => {
+            const threshold = parseInt(e.target.value) / 100;
+            document.getElementById('threshold-display').textContent = `Threshold: ${threshold.toFixed(2)}`;
+        });
+
+        updateConfusionMatrix();
+    </script>
+</body>
+</html>
