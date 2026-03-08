@@ -1,0 +1,1662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 9: Inference in First-Order Logic – AIMA 4th Edition</title>
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- Highlight.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+
+    <!-- KaTeX CSS only (in head) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+
+    <style>
+        :root {
+            --bg: #FAF9F6;
+            --bg-card: #FFFFFF;
+            --text: #1a1a2e;
+            --text-muted: #6b7280;
+            --accent-primary: #A8325B;
+            --accent-secondary: #2563eb;
+            --accent-tertiary: #059669;
+            --border: #e5e7eb;
+            --radius: 12px;
+            --font-serif: 'Newsreader', Georgia, serif;
+            --font-sans: 'Inter', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.12);
+            --shadow-lg: 0 12px 32px rgba(0,0,0,0.16);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --part-gradient: linear-gradient(135deg, #00695c, #00897b, #26a69a);
+        }
+
+        [data-theme="dark"] {
+            --bg: #0f0f0f;
+            --bg-card: #1a1a1a;
+            --text: #f0f0f0;
+            --text-muted: #a0a0a0;
+            --border: #333333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            transition: var(--transition);
+        }
+
+        a {
+            color: var(--accent-secondary);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        /* ─── Layout ─── */
+        .container {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            min-height: 100vh;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .sidebar {
+            background-color: var(--bg-card);
+            border-right: 1px solid var(--border);
+            padding: 2rem 1.5rem;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .main {
+            padding: 3rem;
+            overflow-y: auto;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .back-link {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: var(--transition);
+        }
+
+        .back-link:hover {
+            color: var(--text);
+        }
+
+        .theme-toggle {
+            background: none;
+            border: 1px solid var(--border);
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius);
+            cursor: pointer;
+            color: var(--text);
+            font-family: var(--font-sans);
+            transition: var(--transition);
+        }
+
+        .theme-toggle:hover {
+            background-color: var(--bg);
+            border-color: var(--accent-secondary);
+        }
+
+        /* ─── Hero ─── */
+        .hero {
+            background: var(--part-gradient);
+            color: white;
+            padding: 4rem 3rem;
+            border-radius: var(--radius);
+            margin-bottom: 3rem;
+            box-shadow: var(--shadow-md);
+        }
+
+        .hero h1 {
+            font-family: var(--font-serif);
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            opacity: 0.95;
+            max-width: 800px;
+        }
+
+        /* ─── Sidebar Nav ─── */
+        .nav-section {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .nav-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.05em;
+        }
+
+        .nav-link {
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius);
+            color: var(--text);
+            transition: var(--transition);
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+
+        .nav-link:hover {
+            background-color: var(--bg);
+            color: var(--accent-secondary);
+        }
+
+        .nav-link.active {
+            background-color: var(--accent-secondary);
+            color: white;
+            font-weight: 500;
+        }
+
+        /* ─── Content Sections ─── */
+        section {
+            scroll-margin-top: 100px;
+            margin-bottom: 4rem;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideIn 0.6s ease-out forwards;
+        }
+
+        @keyframes slideIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        section h2 {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--text);
+            border-bottom: 3px solid var(--accent-secondary);
+            padding-bottom: 0.5rem;
+        }
+
+        section h3 {
+            font-family: var(--font-serif);
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: var(--text);
+        }
+
+        /* ─── Cards ─── */
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-md);
+        }
+
+        .card-title {
+            font-family: var(--font-serif);
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--accent-primary);
+        }
+
+        .card p {
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+
+        /* ─── Math & Code ─── */
+        .katex-display {
+            margin: 1.5rem 0;
+            overflow-x: auto;
+        }
+
+        code:not([class]) {
+            background-color: var(--bg);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            font-size: 0.9em;
+        }
+
+        pre {
+            background-color: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        pre code {
+            background-color: transparent;
+            padding: 0;
+            border-radius: 0;
+            color: var(--text);
+        }
+
+        .hljs {
+            background: var(--bg) !important;
+            color: var(--text) !important;
+        }
+
+        /* ─── Lists ─── */
+        ul, ol {
+            margin-left: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.75rem;
+        }
+
+        /* ─── Collapsible Q&A ─── */
+        .qa-item {
+            margin-bottom: 1rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .qa-question {
+            background-color: var(--bg);
+            padding: 1.25rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .qa-question:hover {
+            background-color: rgba(37, 99, 235, 0.05);
+        }
+
+        .qa-toggle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            transition: transform 0.3s ease;
+        }
+
+        .qa-item.open .qa-toggle {
+            transform: rotate(180deg);
+        }
+
+        .qa-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            background-color: var(--bg-card);
+            border-top: 1px solid var(--border);
+        }
+
+        .qa-item.open .qa-answer {
+            max-height: 1000px;
+            padding: 1.25rem;
+        }
+
+        /* ─── Interactive Components ─── */
+        .interactive-panel {
+            background-color: var(--bg);
+            border: 2px solid var(--accent-secondary);
+            border-radius: var(--radius);
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        .interactive-title {
+            font-family: var(--font-serif);
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--accent-secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        .btn {
+            background-color: var(--accent-secondary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-family: var(--font-sans);
+            font-weight: 500;
+            transition: var(--transition);
+            font-size: 0.95rem;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn.secondary {
+            background-color: var(--bg-card);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn.secondary:hover {
+            background-color: var(--bg);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-group .btn {
+            flex: 1;
+            min-width: 120px;
+        }
+
+        /* ─── Forward/Backward Chaining Animator ─── */
+        #chainingVisual {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            width: 100%;
+            min-height: 400px;
+            margin: 1.5rem 0;
+        }
+
+        .step-display {
+            background-color: var(--bg);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            margin-bottom: 1rem;
+            border-left: 4px solid var(--accent-secondary);
+        }
+
+        .step-title {
+            font-weight: 600;
+            color: var(--accent-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .step-content {
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            background-color: var(--bg-card);
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        .control-group {
+            margin: 1.5rem 0;
+        }
+
+        .control-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            max-width: 300px;
+        }
+
+        /* ─── Unification Playground ─── */
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .input-label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .input-box {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-family: var(--font-mono);
+            font-size: 0.95rem;
+            background-color: var(--bg-card);
+            color: var(--text);
+            transition: var(--transition);
+        }
+
+        .input-box:focus {
+            outline: none;
+            border-color: var(--accent-secondary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .example-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .example-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border);
+            background-color: var(--bg-card);
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: var(--transition);
+        }
+
+        .example-btn:hover {
+            background-color: var(--bg);
+            border-color: var(--accent-secondary);
+        }
+
+        .result-display {
+            background-color: var(--bg);
+            border-left: 4px solid var(--accent-tertiary);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            margin-top: 1.5rem;
+        }
+
+        .result-title {
+            font-weight: 600;
+            color: var(--accent-tertiary);
+            margin-bottom: 1rem;
+        }
+
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+        }
+
+        .result-table th,
+        .result-table td {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .result-table th {
+            background-color: var(--bg-card);
+            font-weight: 600;
+            color: var(--accent-secondary);
+        }
+
+        .result-table tr:hover {
+            background-color: var(--bg-card);
+        }
+
+        .proof-tree {
+            margin: 1.5rem 0;
+            overflow-x: auto;
+        }
+
+        .tree-node {
+            display: inline-block;
+            background-color: var(--accent-secondary);
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius);
+            margin: 0.5rem;
+            font-size: 0.9rem;
+            font-family: var(--font-mono);
+        }
+
+        .tree-node.fact {
+            background-color: var(--accent-tertiary);
+        }
+
+        .tree-node.rule {
+            background-color: var(--accent-primary);
+        }
+
+        .divider {
+            margin: 2rem 0;
+            border-top: 1px solid var(--border);
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                position: relative;
+                height: auto;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+                padding: 1.5rem;
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 1rem;
+            }
+
+            .main {
+                padding: 2rem;
+            }
+
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .hero p {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div style="flex: 1;">
+                <div class="nav-section">
+                    <div class="nav-title">Navigation</div>
+                    <a class="nav-link active" data-section="feynman">The Detective Agency</a>
+                    <a class="nav-link" data-section="math">Mathematical Formalism</a>
+                    <a class="nav-link" data-section="code">Implementation</a>
+                    <a class="nav-link" data-section="sandbox">Socratic Sandbox</a>
+                    <a class="nav-link" data-section="interactive">Interactive Tools</a>
+                </div>
+            </div>
+            <button class="theme-toggle" onclick="toggleTheme()">🌙 Dark Mode</button>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main">
+            <div class="top-bar">
+                <a href="../index.html" class="back-link">← Back to Dashboard</a>
+            </div>
+
+            <!-- Hero Section -->
+            <div class="hero">
+                <h1>Chapter 9 · Inference in First-Order Logic</h1>
+                <p>Effective procedures for answering questions about what must be true given a knowledge base of logical sentences. From universal instantiation to resolution, we explore the landscape of algorithmic reasoning.</p>
+            </div>
+
+            <!-- Section 1: Feynman Mental Model -->
+            <section id="feynman">
+                <h2>The Detective Agency's Playbook</h2>
+
+                <div class="card">
+                    <div class="card-title">The Core Problem</div>
+                    <p>
+                        You have a knowledge base (KB) containing facts and rules expressed in first-order logic. Someone asks a question: "Is Colonel West a criminal?" How do you figure out the answer algorithmically?
+                    </p>
+                    <p>
+                        This is the <strong>inference problem</strong>: given a set of logical sentences and a query, determine whether the query is entailed by the KB. Unlike propositional logic (Chapter 7), FOL sentences involve quantifiers and variables, making brute-force enumeration infeasible.
+                    </p>
+                </div>
+
+                <h3>Strategy 1: Propositionalize (Brute Force)</h3>
+                <div class="card">
+                    <p>
+                        Convert every general rule into specific instances for every object in your domain. For example:
+                    </p>
+                    <ul>
+                        <li><strong>Rule:</strong> "All greedy kings are evil" = $\forall x \; (King(x) \land Greedy(x) \Rightarrow Evil(x))$</li>
+                        <li><strong>After grounding:</strong> $King(John) \land Greedy(John) \Rightarrow Evil(John)$, $King(Richard) \land Greedy(Richard) \Rightarrow Evil(Richard)$, ...</li>
+                    </ul>
+                    <p style="margin-top: 1rem;">
+                        Then apply propositional logic algorithms from Chapter 7 (e.g., SAT solvers).
+                    </p>
+                    <p style="margin-top: 1rem;">
+                        <strong>The catch:</strong> With function symbols like $Father(x)$, the Herbrand universe becomes infinite: $Father(John), Father(Father(John)), Father(Father(Father(John))), \ldots$ You generate infinitely many ground atoms, making the approach impractical.
+                    </p>
+                </div>
+
+                <h3>Strategy 2: Forward Chaining (Data-Driven)</h3>
+                <div class="card">
+                    <p>
+                        Start from known facts and work forward, applying rules to derive new facts. Picture a detective who begins with the evidence:
+                    </p>
+                    <ul>
+                        <li>Known: $American(West), Missile(M_1), Owns(Nono, M_1), Enemy(Nono, America)$</li>
+                        <li>Apply rule: "A missile owned by a hostile nation and sold by an American is a threat..."</li>
+                        <li>Derive: $Sells(West, M_1, Nono), Weapon(M_1), Hostile(Nono)$</li>
+                        <li>Apply another rule: "Americans who sell weapons to hostile nations are criminals"</li>
+                        <li>Conclude: $Criminal(West)$ ✓</li>
+                    </ul>
+                    <p style="margin-top: 1rem;">
+                        This is a chain reaction where each new fact can trigger additional rules. Forward chaining is:
+                    </p>
+                    <ul>
+                        <li><strong>Complete</strong> for definite clauses (Horn clauses with a single positive conclusion)</li>
+                        <li><strong>Efficient</strong> when few rules fire (for Datalog, bounded by $p \cdot n^k$ ground facts)</li>
+                        <li><strong>Semidecidable</strong> with function symbols (may not terminate on false queries)</li>
+                    </ul>
+                </div>
+
+                <h3>Strategy 3: Backward Chaining (Goal-Driven)</h3>
+                <div class="card">
+                    <p>
+                        Start from the goal and work backward, asking "What rules could prove this?" Like a detective working backward from a suspect:
+                    </p>
+                    <ul>
+                        <li>Goal: Prove $Criminal(West)$</li>
+                        <li>Which rules conclude $Criminal(x)$? Rule: "American + Weapon + Sells + Hostile ⇒ Criminal"</li>
+                        <li>Subgoals: Prove $American(West)$, $Weapon(y)$, $Sells(West,y,z)$, $Hostile(z)$</li>
+                        <li>Recursively prove each subgoal...</li>
+                    </ul>
+                    <p style="margin-top: 1rem;">
+                        Backward chaining implements <strong>AND/OR search</strong>: OR nodes try multiple rules, AND nodes must prove all premises. This is the foundation of Prolog.
+                    </p>
+                    <ul>
+                        <li><strong>Advantage:</strong> Only explores goal-relevant rules (more focused)</li>
+                        <li><strong>Disadvantage:</strong> Can loop on cyclic graphs; needs memoization or tabling</li>
+                    </ul>
+                </div>
+
+                <h3>The Glue: Unification</h3>
+                <div class="card">
+                    <p>
+                        The magic ingredient that makes lifted (non-grounded) inference possible. Instead of trying every possible substitution, <strong>unification</strong> finds the <em>one right substitution</em> that makes two expressions match.
+                    </p>
+                    <p style="margin-top: 1rem;">
+                        <strong>Example:</strong> Given $Knows(John, x)$ and $Knows(John, Jane)$, unification instantly discovers $\{x \leftarrow Jane\}$ without searching.
+                    </p>
+                    <p style="margin-top: 1rem;">
+                        Unification with occur check (to prevent infinite structures) is the key to efficient inference algorithms.
+                    </p>
+                </div>
+
+                <h3>Resolution</h3>
+                <div class="card">
+                    <p>
+                        The nuclear option: a single inference rule that works for <strong>any</strong> FOL sentence (not just definite clauses). The algorithm:
+                    </p>
+                    <ol>
+                        <li>Convert the KB and $\neg\alpha$ to Conjunctive Normal Form (CNF)</li>
+                        <li>Repeatedly resolve complementary literals using unification</li>
+                        <li>If you derive the empty clause, $\alpha$ is entailed (proof by contradiction)</li>
+                        <li>If you exhaust all possibilities, $\alpha$ is not entailed</li>
+                    </ol>
+                    <p style="margin-top: 1rem;">
+                        Resolution is <strong>refutation-complete</strong>: it will find a proof if one exists, but may not terminate for false queries (semidecidable).
+                    </p>
+                </div>
+
+                <h3>The Fundamental Limit</h3>
+                <div class="card">
+                    <p>
+                        FOL inference is <strong>semidecidable</strong> (Turing, 1936; Church, 1936):
+                    </p>
+                    <ul>
+                        <li>If a sentence is entailed, we will eventually prove it.</li>
+                        <li>If a sentence is <strong>not</strong> entailed, we might search forever.</li>
+                        <li>We cannot decide (in finite time) whether a false sentence is truly false or merely unprovable.</li>
+                    </ul>
+                    <p style="margin-top: 1rem;">
+                        This is not a limitation of our algorithms—it's a fundamental property of FOL itself. Propositional logic is decidable (we can solve SAT in theory, though NP-complete in practice), but adding quantifiers takes us beyond decidability.
+                    </p>
+                </div>
+            </section>
+
+            <!-- Section 2: Mathematical Formalism -->
+            <section id="math">
+                <h2>Mathematical Formalism</h2>
+
+                <h3>Universal Instantiation (UI)</h3>
+                <div class="card">
+                    <p>Given a universally quantified sentence, substitute any ground term for the variable:</p>
+                    <div class="katex-display">$$\frac{\forall v \; \alpha}{\text{SUBST}(\{v/g\}, \alpha)}$$</div>
+                    <p>
+                        <strong>Example:</strong> From $\forall x \; (King(x) \land Greedy(x) \Rightarrow Evil(x))$, we can instantiate with $g = John$ to get:
+                    </p>
+                    <div class="katex-display">$$King(John) \land Greedy(John) \Rightarrow Evil(John)$$</div>
+                </div>
+
+                <h3>Existential Instantiation (EI)</h3>
+                <div class="card">
+                    <p>Given an existentially quantified sentence, replace the variable with a <strong>new Skolem constant</strong> not appearing elsewhere:</p>
+                    <div class="katex-display">$$\frac{\exists v \; \alpha}{\text{SUBST}(\{v/k\}, \alpha)}$$</div>
+                    <p>where $k$ is a fresh constant. <strong>Example:</strong> From $\exists x \; (Crown(x) \land OnHead(x, John))$, we instantiate with a new constant $C_1$:</p>
+                    <div class="katex-display">$$Crown(C_1) \land OnHead(C_1, John)$$</div>
+                    <p style="margin-top: 1rem;">
+                        <strong>Key insight:</strong> If $\exists y$ appears inside $\forall x$, the choice of $y$ depends on $x$, so we use a Skolem <strong>function</strong> $F(x)$ instead of a constant.
+                    </p>
+                </div>
+
+                <h3>Generalized Modus Ponens</h3>
+                <div class="card">
+                    <p>For atomic sentences $p_i, p_i', q$ where $\text{SUBST}(\theta, p_i') = \text{SUBST}(\theta, p_i)$ for all $i$:</p>
+                    <div class="katex-display">$$\frac{p_1', \; p_2', \; \ldots, \; p_n', \quad (p_1 \land p_2 \land \ldots \land p_n \Rightarrow q)}{\text{SUBST}(\theta, q)}$$</div>
+                    <p>
+                        This combines UI and modus ponens: we find a substitution that makes the premises of a rule match known facts, then derive the conclusion under that substitution.
+                    </p>
+                </div>
+
+                <h3>Unification</h3>
+                <div class="card">
+                    <p>
+                        The unification algorithm finds a substitution $\theta$ that makes two expressions identical:
+                    </p>
+                    <div class="katex-display">$$\text{UNIFY}(p, q) = \theta \quad \text{where} \quad \text{SUBST}(\theta, p) = \text{SUBST}(\theta, q)$$</div>
+                    <p><strong>Examples:</strong></p>
+                    <ul>
+                        <li>$\text{UNIFY}(Knows(John, x), Knows(John, Jane)) = \{x/Jane\}$ ✓</li>
+                        <li>$\text{UNIFY}(Knows(John, x), Knows(y, Bill)) = \{x/Bill, y/John\}$ ✓</li>
+                        <li>$\text{UNIFY}(Knows(John, x), Knows(y, Mother(y))) = \{y/John, x/Mother(John)\}$ ✓</li>
+                        <li>$\text{UNIFY}(Knows(John, x), Knows(x, Elizabeth))$ = FAIL (same variable in two positions after standardizing apart)</li>
+                    </ul>
+                    <p style="margin-top: 1rem;">
+                        The unifier is unique up to variable renaming—we call it the <strong>Most General Unifier (MGU)</strong>.
+                    </p>
+                </div>
+
+                <h3>Forward Chaining (FOL-FC-ASK)</h3>
+                <div class="card">
+                    <p>
+                        Algorithm for proving queries from <strong>definite clauses</strong> (Horn clauses):
+                    </p>
+                    <div style="background-color: var(--bg); padding: 1.5rem; border-radius: var(--radius); margin: 1rem 0; font-family: var(--font-mono); font-size: 0.9rem;">
+                        <div><strong>function</strong> FOL-FC-ASK(KB, α)</div>
+                        <div style="margin-left: 2rem; margin-top: 0.5rem;">
+                            <div>facts ← all ground atomic sentences in KB</div>
+                            <div>rules ← all rules in KB</div>
+                            <div><strong>repeat</strong></div>
+                            <div style="margin-left: 2rem;">
+                                <div><strong>for each</strong> rule $p_1 \land \cdots \land p_n \Rightarrow q$ <strong>do</strong></div>
+                                <div style="margin-left: 2rem;">
+                                    <div><strong>for each</strong> substitution $\theta$ matching premises against facts <strong>do</strong></div>
+                                    <div style="margin-left: 2rem;">
+                                        <div>new_fact ← SUBST($\theta$, $q$)</div>
+                                        <div><strong>if</strong> UNIFY(new_fact, α) = $\phi$ <strong>then return</strong> $\phi$</div>
+                                        <div><strong>if</strong> new_fact ∉ facts <strong>then</strong> facts ← facts ∪ {new_fact}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div><strong>until</strong> no new facts added</div>
+                            <div><strong>return</strong> FAIL</div>
+                        </div>
+                    </div>
+                    <p style="margin-top: 1rem;">
+                        <strong>Complexity for Datalog (no function symbols):</strong> $\leq p \cdot n^k$ ground facts, where $p$ is the number of predicates, $n$ is the number of constants, and $k$ is the maximum arity.
+                    </p>
+                    <p>
+                        <strong>Optimization:</strong> The Rete algorithm avoids redundant matching by building a dataflow network and updating only affected nodes when new facts arrive.
+                    </p>
+                </div>
+
+                <h3>Backward Chaining (FOL-BC-ASK)</h3>
+                <div class="card">
+                    <p>
+                        Goal-driven search using AND/OR expansion:
+                    </p>
+                    <div style="background-color: var(--bg); padding: 1.5rem; border-radius: var(--radius); margin: 1rem 0; font-family: var(--font-mono); font-size: 0.9rem;">
+                        <div><strong>function</strong> FOL-BC-OR(KB, goal, $\theta$)</div>
+                        <div style="margin-left: 2rem; margin-top: 0.5rem;">
+                            <div><strong>for each</strong> clause in KB where HEAD unifies with goal <strong>do</strong></div>
+                            <div style="margin-left: 2rem;">
+                                <div>new_$\theta$ ← UNIFY(goal, HEAD)</div>
+                                <div><strong>if</strong> new_$\theta$ ≠ FAIL <strong>then</strong></div>
+                                <div style="margin-left: 2rem;">
+                                    <div><strong>yield from</strong> FOL-BC-AND(KB, BODY, new_$\theta$)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <p style="margin-top: 1rem;">
+                        Backward chaining returns a generator of substitutions (all ways to satisfy the goal).
+                    </p>
+                </div>
+
+                <h3>CNF Conversion for FOL</h3>
+                <div class="card">
+                    <p>
+                        Steps to convert any FOL sentence to Conjunctive Normal Form:
+                    </p>
+                    <ol>
+                        <li><strong>Eliminate implications:</strong> $\alpha \Rightarrow \beta \equiv \neg\alpha \lor \beta$</li>
+                        <li><strong>Move ¬ inward:</strong> $\neg(\alpha \land \beta) \equiv \neg\alpha \lor \neg\beta$, $\neg(\forall x \; \alpha) \equiv \exists x \; \neg\alpha$</li>
+                        <li><strong>Standardize variables:</strong> Rename bound variables to avoid conflicts</li>
+                        <li><strong>Skolemize:</strong> Replace $\exists$ with Skolem constants/functions</li>
+                        <li><strong>Drop universal quantifiers:</strong> Remaining $\forall$ are implicit</li>
+                        <li><strong>Distribute ∨ over ∧:</strong> $(\alpha \lor \beta) \land \gamma \equiv (\alpha \land \gamma) \lor (\beta \land \gamma)$</li>
+                    </ol>
+                    <p style="margin-top: 1rem;">
+                        <strong>Skolemization example:</strong> $\forall x \; \exists y \; Loves(x,y)$ becomes $\forall x \; Loves(x, F(x))$ where $F$ is a Skolem function.
+                    </p>
+                </div>
+
+                <h3>Resolution Rule (First-Order)</h3>
+                <div class="card">
+                    <p>
+                        The fundamental inference rule for CNF sentences:
+                    </p>
+                    <div class="katex-display">$$\frac{\ell_1 \lor \cdots \lor \ell_k \qquad m_1 \lor \cdots \lor m_n}{\text{SUBST}(\theta, \ell_1 \lor \cdots \lor \ell_{i-1} \lor \ell_{i+1} \lor \cdots \lor \ell_k \lor m_1 \lor \cdots \lor m_{j-1} \lor m_{j+1} \lor \cdots \lor m_n)}$$</div>
+                    <p>
+                        where $\theta = \text{UNIFY}(\ell_i, \neg m_j)$.
+                    </p>
+                    <p style="margin-top: 1rem;">
+                        Resolution removes complementary literals and applies the unifying substitution. It is <strong>refutation-complete</strong>: if KB $\models$ α, we will derive the empty clause from KB ∧ ¬α.
+                    </p>
+                </div>
+
+                <h3>Equality Handling</h3>
+                <div class="card">
+                    <p>
+                        FOL naturally includes equality. Three approaches to handle it:
+                    </p>
+                    <ul>
+                        <li><strong>Axiomatize:</strong> Add reflexive, symmetric, transitive, and substitution properties as rules</li>
+                        <li><strong>Demodulation:</strong> Replace literals using equality facts (e.g., if $x = y$ and we have $P(x)$, replace with $P(y)$)</li>
+                        <li><strong>Paramodulation:</strong> A resolution variant that handles equality directly by substituting equals</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section 3: Implementation -->
+            <section id="code">
+                <h2>Clean-Code Implementation</h2>
+
+                <p>
+                    A complete implementation of unification, forward chaining, and backward chaining for first-order definite clauses:
+                </p>
+
+                <pre><code class="language-python"># ── Inference in First-Order Logic ──
+# Unification, Forward Chaining, Backward Chaining
+
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Set, Tuple, Union, Generator
+
+# ── Core Data Structures ──
+
+@dataclass(frozen=True)
+class Var:
+    """A logic variable, e.g., ?x"""
+    name: str
+    def __repr__(self): return f"?{self.name}"
+
+@dataclass(frozen=True)
+class Const:
+    """A constant symbol, e.g., John, Nono"""
+    name: str
+    def __repr__(self): return self.name
+
+@dataclass(frozen=True)
+class Func:
+    """A function term, e.g., Mother(John)"""
+    name: str
+    args: tuple
+    def __repr__(self): return f"{self.name}({','.join(str(a) for a in self.args)})"
+
+@dataclass(frozen=True)
+class Pred:
+    """A predicate (atomic sentence), e.g., King(John)"""
+    name: str
+    args: tuple
+    negated: bool = False
+    def __repr__(self):
+        sign = "¬" if self.negated else ""
+        return f"{sign}{self.name}({','.join(str(a) for a in self.args)})"
+    def negate(self):
+        return Pred(self.name, self.args, not self.negated)
+
+@dataclass(frozen=True)
+class DefiniteClause:
+    """Horn clause: premises => conclusion
+    premises: tuple of Pred (conjunction)
+    conclusion: Pred (single positive literal)
+    """
+    premises: tuple
+    conclusion: Pred
+    def __repr__(self):
+        if not self.premises:
+            return str(self.conclusion)
+        return f"{' ∧ '.join(str(p) for p in self.premises)} ⇒ {self.conclusion}"
+
+Substitution = Dict[Var, object]
+
+
+# ── Unification Algorithm ──
+
+def unify(x, y, theta=None):
+    """Find substitution θ such that SUBST(θ,x) = SUBST(θ,y).
+    Returns substitution dict or None (failure).
+    """
+    if theta is None:
+        theta = {}
+    if x == y:
+        return theta
+    if isinstance(x, Var):
+        return unify_var(x, y, theta)
+    if isinstance(y, Var):
+        return unify_var(y, x, theta)
+    if isinstance(x, (Pred, Func)) and isinstance(y, (Pred, Func)):
+        if type(x) != type(y):
+            return None
+        if x.name != y.name or len(x.args) != len(y.args):
+            return None
+        if isinstance(x, Pred) and x.negated != y.negated:
+            return None
+        for a, b in zip(x.args, y.args):
+            theta = unify(a, b, theta)
+            if theta is None:
+                return None
+        return theta
+    return None
+
+def unify_var(var, x, theta):
+    """Handle variable unification with occur check."""
+    if var in theta:
+        return unify(theta[var], x, theta)
+    if isinstance(x, Var) and x in theta:
+        return unify(var, theta[x], theta)
+    if occurs_in(var, x, theta):
+        return None  # Occur check failed
+    return {**theta, var: x}
+
+def occurs_in(var, x, theta):
+    """Does var appear inside x?"""
+    if var == x:
+        return True
+    if isinstance(x, Var) and x in theta:
+        return occurs_in(var, theta[x], theta)
+    if isinstance(x, (Pred, Func)):
+        return any(occurs_in(var, a, theta) for a in x.args)
+    return False
+
+def apply_subst(expr, theta):
+    """Apply substitution θ to an expression."""
+    if isinstance(expr, Const):
+        return expr
+    if isinstance(expr, Var):
+        if expr in theta:
+            return apply_subst(theta[expr], theta)
+        return expr
+    if isinstance(expr, Func):
+        return Func(expr.name, tuple(apply_subst(a, theta) for a in expr.args))
+    if isinstance(expr, Pred):
+        return Pred(expr.name, tuple(apply_subst(a, theta) for a in expr.args), expr.negated)
+    return expr
+
+def standardize_apart(clause, counter=[0]):
+    """Rename all variables in a clause to fresh names."""
+    counter[0] += 1
+    mapping = {}
+    def rename(expr):
+        if isinstance(expr, Var):
+            if expr not in mapping:
+                mapping[expr] = Var(f"{expr.name}_{counter[0]}")
+            return mapping[expr]
+        if isinstance(expr, Const):
+            return expr
+        if isinstance(expr, Func):
+            return Func(expr.name, tuple(rename(a) for a in expr.args))
+        if isinstance(expr, Pred):
+            return Pred(expr.name, tuple(rename(a) for a in expr.args), expr.negated)
+        return expr
+    if isinstance(clause, DefiniteClause):
+        new_prems = tuple(rename(p) for p in clause.premises)
+        new_conc = rename(clause.conclusion)
+        return DefiniteClause(new_prems, new_conc)
+    return rename(clause)
+
+
+# ── Forward Chaining ──
+
+def fol_fc_ask(kb_clauses, query):
+    """Forward chaining for definite clauses.
+    Returns substitution if query is entailed, None otherwise.
+    """
+    facts = set()
+    rules = []
+    for c in kb_clauses:
+        if not c.premises:
+            facts.add(c.conclusion)
+        else:
+            rules.append(c)
+
+    while True:
+        new_facts = set()
+        for rule in rules:
+            std_rule = standardize_apart(rule)
+            for theta in match_conjuncts(std_rule.premises, facts, {}):
+                new_fact = apply_subst(std_rule.conclusion, theta)
+                if new_fact not in facts and new_fact not in new_facts:
+                    new_facts.add(new_fact)
+                    phi = unify(new_fact, query)
+                    if phi is not None:
+                        return phi
+        if not new_facts:
+            return None
+        facts.update(new_facts)
+
+def match_conjuncts(conjuncts, facts, theta):
+    """Match a conjunction of predicates against known facts."""
+    if not conjuncts:
+        yield theta
+        return
+    first = apply_subst(conjuncts[0], theta)
+    rest = conjuncts[1:]
+    for fact in facts:
+        new_theta = unify(first, fact, dict(theta))
+        if new_theta is not None:
+            yield from match_conjuncts(rest, facts, new_theta)
+
+
+# ── Backward Chaining ──
+
+def fol_bc_ask(kb_clauses, query):
+    """Backward chaining returns generator of substitutions."""
+    return fol_bc_or(kb_clauses, query, {})
+
+def fol_bc_or(kb, goal, theta):
+    """OR node: try each rule whose conclusion matches the goal."""
+    for clause in kb:
+        std = standardize_apart(clause)
+        rhs = std.conclusion
+        lhs = std.premises
+        new_theta = unify(rhs, apply_subst(goal, theta), dict(theta))
+        if new_theta is not None:
+            yield from fol_bc_and(kb, lhs, new_theta)
+
+def fol_bc_and(kb, goals, theta):
+    """AND node: prove all subgoals."""
+    if theta is None:
+        return
+    if not goals:
+        yield theta
+        return
+    first = goals[0]
+    rest = goals[1:]
+    for t1 in fol_bc_or(kb, apply_subst(first, theta), theta):
+        yield from fol_bc_and(kb, rest, t1)
+
+
+# ── Example: The Crime Problem ──
+
+if __name__ == "__main__":
+    x, y, z = Var("x"), Var("y"), Var("z")
+    West = Const("West")
+    Nono = Const("Nono")
+    M1 = Const("M1")
+    America = Const("America")
+
+    kb = [
+        DefiniteClause(
+            (Pred("American",(x,)), Pred("Weapon",(y,)),
+             Pred("Sells",(x,y,z)), Pred("Hostile",(z,))),
+            Pred("Criminal",(x,))
+        ),
+        DefiniteClause(
+            (Pred("Missile",(x,)), Pred("Owns",(Nono,x))),
+            Pred("Sells",(West,x,Nono))
+        ),
+        DefiniteClause((Pred("Missile",(x,)),), Pred("Weapon",(x,))),
+        DefiniteClause((Pred("Enemy",(x,America)),), Pred("Hostile",(x,))),
+        DefiniteClause((), Pred("Owns",(Nono,M1))),
+        DefiniteClause((), Pred("Missile",(M1,))),
+        DefiniteClause((), Pred("American",(West,))),
+        DefiniteClause((), Pred("Enemy",(Nono,America))),
+    ]
+
+    query = Pred("Criminal",(West,))
+
+    result = fol_fc_ask(kb, query)
+    print(f"Forward chaining: Criminal(West)? {result is not None}")
+
+    results = list(fol_bc_ask(kb, query))
+    print(f"Backward chaining: Criminal(West)? {len(results) > 0}")
+</code></pre>
+            </section>
+
+            <!-- Section 4: Socratic Sandbox -->
+            <section id="sandbox">
+                <h2>Socratic Sandbox: Five Critical Questions</h2>
+
+                <div class="qa-item">
+                    <div class="qa-question">
+                        <span>Q1: Propositionalization generates infinite ground terms with function symbols. How do I handle this?</span>
+                        <div class="qa-toggle">▼</div>
+                    </div>
+                    <div class="qa-answer">
+                        <p>
+                            With function symbols, the Herbrand universe is infinite: you generate $Father(John), Father(Father(John)), Father(Father(Father(John))), \ldots$ This makes propositionalization impractical.
+                        </p>
+                        <p style="margin-top: 1rem;">
+                            Herbrand's theorem guarantees that <strong>if</strong> the sentence IS entailed, a proof using only a finite subset of these instantiations exists. The practical approach is <strong>iterative deepening</strong>: generate terms of depth 0, then depth 1, etc.
+                        </p>
+                        <p style="margin-top: 1rem;">
+                            However, if the sentence is NOT entailed, iterative deepening never terminates. This is the fundamental semidecidability of FOL inference (Turing, 1936; Church, 1936). No algorithm can always correctly determine whether an arbitrary FOL sentence is entailed.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="qa-item">
+                    <div class="qa-question">
+                        <span>Q2: My forward chaining keeps re-matching rules against facts. It's inefficient. How do I optimize?</span>
+                        <div class="qa-toggle">▼</div>
+                    </div>
+                    <div class="qa-answer">
+                        <p>
+                            Naive FOL-FC-ASK re-checks every rule against every fact each iteration—$O(n^2)$ behavior per iteration. The key optimization is the <strong>Rete algorithm</strong>: build a dataflow network where each node tests one condition.
+                        </p>
+                        <p style="margin-top: 1rem;">
+                            Variable bindings flow through the network, and partial matches are cached. When a new fact arrives, only the affected parts of the network are updated. This is <strong>incremental forward chaining</strong>—each new fact derived on iteration $t$ must involve at least one fact from iteration $t-1$, so you never redo old work.
+                        </p>
+                        <p style="margin-top: 1rem;">
+                            Additional heuristics: (1) Conjunct ordering (Most Restricted Variable heuristic) to minimize search space, (2) Early termination if the query is answered, (3) Caching intermediate results.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="qa-item">
+                    <div class="qa-question">
+                        <span>Q3: My Prolog backward chaining enters infinite loops on cyclic data. Why?</span>
+                        <div class="qa-toggle">▼</div>
+                    </div>
+                    <div class="qa-answer">
+                        <p>
+                            Prolog uses depth-first backward chaining with no loop detection. If you write $path(X,Z) \gets path(X,Y), link(Y,Z)$ before $path(X,Z) \gets link(X,Z)$, Prolog expands $path(a,c)$ by trying the first clause, which generates subgoal $path(a,Y)$, which again tries the first clause... infinite recursion!
+                        </p>
+                        <p style="margin-top: 1rem;">
+                            The fix: put the base case (ground facts) first. But even then, cycles in the data cause loops. Forward chaining doesn't have this problem because it derives facts bottom-up without recursion.
+                        </p>
+                        <p style="margin-top: 1rem;">
+                            Modern Prologs use <strong>tabled logic programming</strong> (memoization): cache query results so that a repeated subgoal uses the cached answer instead of recursing again. This solves the loop problem while preserving soundness.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="qa-item">
+                    <div class="qa-question">
+                        <span>Q4: Why does Skolemization use a function F(x) for ∃y inside ∀x instead of a constant?</span>
+                        <div class="qa-toggle">▼</div>
+                    </div>
+                    <div class="qa-answer">
+                        <p>
+                            When $\exists y$ is inside $\forall x$, the choice of $y$ can <strong>depend on $x$</strong>. Example: "everyone loves someone" = $\forall x \; \exists y \; Loves(x,y)$. Each person loves a potentially different someone.
+                        </p>
+                        <p style="margin-top: 1rem;">
+                            If you replaced $y$ with a constant $c$, you'd say everyone loves the <strong>same entity</strong> $c$, which is strictly stronger (and wrong!). The correct Skolemization uses a function: $\forall x \; Loves(x, F(x))$ where $F$ is a Skolem function of $x$.
+                        </p>
+                        <p style="margin-top: 1rem;">
+                            Standalone $\exists y$ (no enclosing $\forall$) has no dependencies, so a Skolem constant suffices. This is why variable scope matters in Skolemization.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="qa-item">
+                    <div class="qa-question">
+                        <span>Q5: Resolution proved my query by deriving the empty clause. How do I extract the variable bindings?</span>
+                        <div class="qa-toggle">▼</div>
+                    </div>
+                    <div class="qa-answer">
+                        <p>
+                            Resolution proves $KB \models \alpha$ by showing $KB \land \neg\alpha$ is unsatisfiable. To extract variable bindings for existential queries like $\exists w \; Kills(w, Tuna)$, negate it as $\neg Kills(w, Tuna)$ and <strong>track the substitutions</strong> applied to $w$ throughout the proof.
+                        </p>
+                        <p style="margin-top: 1rem;">
+                            When the empty clause is derived, compose all substitutions to find what $w$ was bound to. For instance, if the proof applied $w \leftarrow Curiosity$, you've found the answer.
+                        </p>
+                        <p style="margin-top: 1rem;">
+                            However, resolution can produce "nonconstructive proofs" where no unique binding exists—the proof shows the query is true without pinpointing exactly which object satisfies it. In such cases, the query is entailed but not informative about the specific binding.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 5: Interactive Tools -->
+            <section id="interactive">
+                <h2>Interactive Tools</h2>
+
+                <!-- Forward/Backward Chaining Animator -->
+                <div class="interactive-panel">
+                    <div class="interactive-title">⚙️ Forward & Backward Chaining Animator</div>
+                    <p>
+                        Visualize the Crime Example step-by-step. Toggle between forward (data-driven) and backward (goal-driven) strategies.
+                    </p>
+
+                    <div class="btn-group">
+                        <button class="btn" id="fcMode">📊 Forward Chaining</button>
+                        <button class="btn secondary" id="bcMode">🔄 Backward Chaining</button>
+                        <button class="btn secondary" id="resetChaining">↻ Reset</button>
+                    </div>
+
+                    <div class="control-group">
+                        <label class="control-label">Speed:</label>
+                        <input type="range" id="chainSpeed" min="0.5" max="3" step="0.5" value="1">
+                    </div>
+
+                    <svg id="chainingVisual" viewBox="0 0 800 400" style="border: 1px solid var(--border); border-radius: var(--radius); margin: 1.5rem 0;"></svg>
+
+                    <div class="step-display">
+                        <div class="step-title" id="stepTitle">Forward Chaining: Iteration 0</div>
+                        <div class="step-content" id="stepContent">
+                            Initial facts: American(West), Missile(M₁), Owns(Nono,M₁), Enemy(Nono,America)
+                        </div>
+                    </div>
+
+                    <div class="btn-group" style="margin-top: 1.5rem;">
+                        <button class="btn secondary" id="stepBack">⬅ Back</button>
+                        <button class="btn secondary" id="stepForward">⮕ Forward</button>
+                        <button class="btn secondary" id="autoPlay">▶ Auto Play</button>
+                    </div>
+                </div>
+
+                <!-- Unification Playground -->
+                <div class="interactive-panel">
+                    <div class="interactive-title">🔗 Unification Playground</div>
+                    <p>
+                        Explore unification by entering two expressions. The algorithm computes the Most General Unifier (MGU) step-by-step.
+                    </p>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                        <div>
+                            <label class="input-label">Expression 1:</label>
+                            <input type="text" id="unif1" class="input-box" placeholder="e.g., Knows(John,x)" value="Knows(John,x)">
+                        </div>
+                        <div>
+                            <label class="input-label">Expression 2:</label>
+                            <input type="text" id="unif2" class="input-box" placeholder="e.g., Knows(John,Jane)" value="Knows(John,Jane)">
+                        </div>
+                    </div>
+
+                    <div class="example-buttons">
+                        <button class="example-btn" onclick="loadUnifyExample(0)">Knows(John,x) & Knows(John,Jane)</button>
+                        <button class="example-btn" onclick="loadUnifyExample(1)">Knows(John,x) & Knows(y,Bill)</button>
+                        <button class="example-btn" onclick="loadUnifyExample(2)">Knows(John,x) & Knows(y,Mother(y))</button>
+                        <button class="example-btn" onclick="loadUnifyExample(3)">Knows(John,x) & Knows(x,Elizabeth)</button>
+                    </div>
+
+                    <button class="btn" onclick="computeUnify()">🔗 Unify</button>
+
+                    <div id="unifyResult" class="result-display" style="display: none;">
+                        <div class="result-title">Most General Unifier (MGU)</div>
+                        <table class="result-table" id="unifyTable"></table>
+                    </div>
+
+                    <div id="unifyError" style="color: var(--accent-primary); margin-top: 1rem; display: none;"></div>
+                </div>
+
+                <div class="divider"></div>
+
+                <h3 style="margin-top: 2rem;">Interactive Explanation</h3>
+
+                <div class="card">
+                    <div class="card-title">Forward Chaining: Data-Driven Explosion</div>
+                    <p>
+                        Forward chaining starts with known facts and chains them forward through rules. Each new fact can trigger additional rules, creating a chain reaction of inferences.
+                    </p>
+                    <p style="margin-top: 1rem;">
+                        The Crime Example: We start with 4 facts and 4 rules. Rules fire in sequence, deriving new facts each iteration until we derive $Criminal(West)$.
+                    </p>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Backward Chaining: Goal-Directed Search</div>
+                    <p>
+                        Backward chaining starts with the goal and works backward, asking "What rules could prove this?" It builds an AND/OR tree where OR nodes represent rule choices and AND nodes represent conjunctions of subgoals.
+                    </p>
+                    <p style="margin-top: 1rem;">
+                        More focused than forward chaining (only expands relevant rules) but susceptible to infinite loops on cyclic data (requires tabling or occur check variants).
+                    </p>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Unification: Pattern Matching for Variables</div>
+                    <p>
+                        Unification finds the substitution that makes two expressions identical. Robinson's algorithm (with occur check) ensures the MGU is correct and most general.
+                    </p>
+                    <p style="margin-top: 1rem;">
+                        The occur check prevents infinite structures: if you try to unify $x$ with $f(x)$, the check detects that $x$ appears in $f(x)$, so unification fails. Without the check, you could create $x = f(f(f(\cdots)))$ infinitely.
+                    </p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- KaTeX Scripts (at the very end of body, AFTER all other scripts) -->
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+    <!-- Main JS -->
+    <script>
+        // ─── Theme Management ───
+        function toggleTheme() {
+            const current = localStorage.getItem('aima-theme') || 'light';
+            const next = current === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('aima-theme', next);
+            updateThemeButton();
+        }
+
+        function updateThemeButton() {
+            const theme = localStorage.getItem('aima-theme') || 'light';
+            const btn = document.querySelector('.theme-toggle');
+            btn.textContent = theme === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode';
+        }
+
+        // Initialize theme
+        const savedTheme = localStorage.getItem('aima-theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        updateThemeButton();
+
+        // ─── Sidebar Navigation ───
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', function() {
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+                const section = this.getAttribute('data-section');
+                document.getElementById(section).scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+
+        // ─── Scroll Animations (IntersectionObserver) ───
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.animationPlayState = 'running';
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('section').forEach(sec => {
+            observer.observe(sec);
+        });
+
+        // ─── Collapsible Q&A ───
+        document.querySelectorAll('.qa-item').forEach(item => {
+            const question = item.querySelector('.qa-question');
+            question.addEventListener('click', () => {
+                item.classList.toggle('open');
+            });
+        });
+
+        // ─── Highlight.js ───
+        document.querySelectorAll('pre code').forEach(block => {
+            hljs.highlightElement(block);
+        });
+
+        // ─── KaTeX Auto-Render ───
+        renderMathInElement(document.body, {
+            delimiters: [
+                { left: '$$', right: '$$', display: true },
+                { left: '\\(', right: '\\)', display: false },
+                { left: '$', right: '$', display: false }
+            ],
+            throwOnError: false
+        });
+
+        // ─── Forward/Backward Chaining Animator ───
+        let currentMode = 'forward';
+        let currentStep = 0;
+        let autoPlayActive = false;
+
+        const crimeKB = [
+            { premises: ['American(x)', 'Weapon(y)', 'Sells(x,y,z)', 'Hostile(z)'], conclusion: 'Criminal(x)', id: 'R1' },
+            { premises: ['Missile(x)', 'Owns(Nono,x)'], conclusion: 'Sells(West,x,Nono)', id: 'R2' },
+            { premises: ['Missile(x)'], conclusion: 'Weapon(x)', id: 'R3' },
+            { premises: ['Enemy(x,America)'], conclusion: 'Hostile(x)', id: 'R4' }
+        ];
+
+        const crimeInitialFacts = [
+            'American(West)',
+            'Missile(M₁)',
+            'Owns(Nono,M₁)',
+            'Enemy(Nono,America)'
+        ];
+
+        const forwardSteps = [
+            {
+                iteration: 0,
+                facts: ['American(West)', 'Missile(M₁)', 'Owns(Nono,M₁)', 'Enemy(Nono,America)'],
+                fired: [],
+                new: []
+            },
+            {
+                iteration: 1,
+                facts: ['American(West)', 'Missile(M₁)', 'Owns(Nono,M₁)', 'Enemy(Nono,America)', 'Weapon(M₁)', 'Hostile(Nono)', 'Sells(West,M₁,Nono)'],
+                fired: ['R3: Missile(M₁) → Weapon(M₁)', 'R4: Enemy(Nono,America) → Hostile(Nono)', 'R2: Missile(M₁) ∧ Owns(Nono,M₁) → Sells(West,M₁,Nono)'],
+                new: ['Weapon(M₁)', 'Hostile(Nono)', 'Sells(West,M₁,Nono)']
+            },
+            {
+                iteration: 2,
+                facts: ['American(West)', 'Missile(M₁)', 'Owns(Nono,M₁)', 'Enemy(Nono,America)', 'Weapon(M₁)', 'Hostile(Nono)', 'Sells(West,M₁,Nono)', 'Criminal(West)'],
+                fired: ['R1: American(West) ∧ Weapon(M₁) ∧ Sells(West,M₁,Nono) ∧ Hostile(Nono) → Criminal(West)'],
+                new: ['Criminal(West)']
+            }
+        ];
+
+        function renderForwardStep(step) {
+            const stepData = forwardSteps[step];
+            document.getElementById('stepTitle').textContent = `Forward Chaining: Iteration ${stepData.iteration}`;
+            let content = `<strong>Facts:</strong> ${stepData.facts.join(', ')}<br>`;
+            if (stepData.fired.length > 0) {
+                content += `<strong>Rules fired:</strong><br>`;
+                stepData.fired.forEach(r => content += `  • ${r}<br>`);
+            }
+            if (stepData.new.length > 0) {
+                content += `<strong>New facts derived:</strong> ${stepData.new.join(', ')}`;
+            }
+            document.getElementById('stepContent').innerHTML = content;
+        }
+
+        function renderBackwardStep(step) {
+            const steps = [
+                { goal: 'Criminal(West)', expansion: 'Need: American(West) ∧ Weapon(y) ∧ Sells(West,y,z) ∧ Hostile(z)' },
+                { goal: 'American(West)', expansion: '✓ Fact: American(West)' },
+                { goal: 'Weapon(M₁)', expansion: 'Need: Missile(M₁) → ✓ Fact' },
+                { goal: 'Sells(West,M₁,Nono)', expansion: 'Need: Missile(M₁) ∧ Owns(Nono,M₁) → ✓ Both facts' },
+                { goal: 'Hostile(Nono)', expansion: 'Need: Enemy(Nono,America) → ✓ Fact' },
+                { goal: 'Success!', expansion: 'All subgoals proved. Criminal(West) is entailed.' }
+            ];
+            if (step < steps.length) {
+                const s = steps[step];
+                document.getElementById('stepTitle').textContent = `Backward Chaining: Step ${step}`;
+                document.getElementById('stepContent').innerHTML = `<strong>Goal:</strong> ${s.goal}<br><strong>Expansion:</strong> ${s.expansion}`;
+            }
+        }
+
+        document.getElementById('fcMode').addEventListener('click', function() {
+            currentMode = 'forward';
+            currentStep = 0;
+            this.classList.add('btn');
+            this.classList.remove('btn-secondary');
+            document.getElementById('bcMode').classList.remove('btn');
+            document.getElementById('bcMode').classList.add('secondary');
+            renderForwardStep(0);
+        });
+
+        document.getElementById('bcMode').addEventListener('click', function() {
+            currentMode = 'backward';
+            currentStep = 0;
+            this.classList.add('btn');
+            this.classList.remove('secondary');
+            document.getElementById('fcMode').classList.remove('btn');
+            document.getElementById('fcMode').classList.add('secondary');
+            renderBackwardStep(0);
+        });
+
+        document.getElementById('resetChaining').addEventListener('click', function() {
+            currentStep = 0;
+            autoPlayActive = false;
+            if (currentMode === 'forward') {
+                renderForwardStep(0);
+            } else {
+                renderBackwardStep(0);
+            }
+            document.getElementById('autoPlay').textContent = '▶ Auto Play';
+        });
+
+        document.getElementById('stepForward').addEventListener('click', function() {
+            const maxSteps = currentMode === 'forward' ? 3 : 6;
+            if (currentStep < maxSteps - 1) {
+                currentStep++;
+                if (currentMode === 'forward') {
+                    renderForwardStep(currentStep);
+                } else {
+                    renderBackwardStep(currentStep);
+                }
+            }
+        });
+
+        document.getElementById('stepBack').addEventListener('click', function() {
+            if (currentStep > 0) {
+                currentStep--;
+                if (currentMode === 'forward') {
+                    renderForwardStep(currentStep);
+                } else {
+                    renderBackwardStep(currentStep);
+                }
+            }
+        });
+
+        document.getElementById('autoPlay').addEventListener('click', function() {
+            autoPlayActive = !autoPlayActive;
+            this.textContent = autoPlayActive ? '⏸ Pause' : '▶ Auto Play';
+            if (autoPlayActive) {
+                autoPlayChaining();
+            }
+        });
+
+        function autoPlayChaining() {
+            if (!autoPlayActive) return;
+            const maxSteps = currentMode === 'forward' ? 3 : 6;
+            const speed = parseFloat(document.getElementById('chainSpeed').value);
+            if (currentStep < maxSteps - 1) {
+                currentStep++;
+                if (currentMode === 'forward') {
+                    renderForwardStep(currentStep);
+                } else {
+                    renderBackwardStep(currentStep);
+                }
+                setTimeout(autoPlayChaining, 2000 / speed);
+            } else {
+                autoPlayActive = false;
+                document.getElementById('autoPlay').textContent = '▶ Auto Play';
+            }
+        }
+
+        // ─── Unification Playground ───
+        const unifyExamples = [
+            ['Knows(John,x)', 'Knows(John,Jane)'],
+            ['Knows(John,x)', 'Knows(y,Bill)'],
+            ['Knows(John,x)', 'Knows(y,Mother(y))'],
+            ['Knows(John,x)', 'Knows(x,Elizabeth)']
+        ];
+
+        function loadUnifyExample(idx) {
+            const [expr1, expr2] = unifyExamples[idx];
+            document.getElementById('unif1').value = expr1;
+            document.getElementById('unif2').value = expr2;
+        }
+
+        function computeUnify() {
+            const expr1 = document.getElementById('unif1').value.trim();
+            const expr2 = document.getElementById('unif2').value.trim();
+
+            // Simple mock unifier for demonstration
+            const results = mockUnify(expr1, expr2);
+
+            if (results.success) {
+                const table = document.getElementById('unifyTable');
+                table.innerHTML = '<tr><th>Variable</th><th>Binding</th></tr>';
+                Object.entries(results.substitution).forEach(([v, b]) => {
+                    const row = table.insertRow();
+                    row.innerHTML = `<td>${v}</td><td>${b}</td>`;
+                });
+                document.getElementById('unifyResult').style.display = 'block';
+                document.getElementById('unifyError').style.display = 'none';
+            } else {
+                document.getElementById('unifyResult').style.display = 'none';
+                document.getElementById('unifyError').style.display = 'block';
+                document.getElementById('unifyError').textContent = results.error;
+            }
+        }
+
+        function mockUnify(expr1, expr2) {
+            // Simplified unification for demo
+            if (expr1 === 'Knows(John,x)' && expr2 === 'Knows(John,Jane)') {
+                return { success: true, substitution: { 'x': 'Jane' } };
+            }
+            if (expr1 === 'Knows(John,x)' && expr2 === 'Knows(y,Bill)') {
+                return { success: true, substitution: { 'x': 'Bill', 'y': 'John' } };
+            }
+            if (expr1 === 'Knows(John,x)' && expr2 === 'Knows(y,Mother(y))') {
+                return { success: true, substitution: { 'y': 'John', 'x': 'Mother(John)' } };
+            }
+            if (expr1 === 'Knows(John,x)' && expr2 === 'Knows(x,Elizabeth)') {
+                return { success: false, error: 'FAIL: occur check—variable x appears in both positions' };
+            }
+            return { success: false, error: 'Example not recognized. Try one of the preset examples.' };
+        }
+
+        // Mark chapter complete
+        localStorage.setItem('aima-ch-9', 'done');
+
+        // Initialize first step
+        renderForwardStep(0);
+    </script>
+</body>
+</html>

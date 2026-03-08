@@ -1,0 +1,1592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 10: Knowledge Representation | AIMA 4th Edition</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- KaTeX CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+
+    <!-- Highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+
+    <style>
+        :root {
+            --bg: #FAF9F6;
+            --bg-card: #FFFFFF;
+            --text: #1a1a2e;
+            --text-muted: #6b7280;
+            --accent-primary: #A8325B;
+            --accent-secondary: #2563eb;
+            --accent-tertiary: #059669;
+            --border: #e5e7eb;
+            --radius: 12px;
+            --font-serif: 'Newsreader', Georgia, serif;
+            --font-sans: 'Inter', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.12);
+            --shadow-lg: 0 12px 32px rgba(0,0,0,0.16);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --teal-gradient: linear-gradient(135deg, #00695c, #00897b, #26a69a);
+        }
+
+        [data-theme="dark"] {
+            --bg: #0f0f0f;
+            --bg-card: #1a1a1a;
+            --text: #f0f0f0;
+            --text-muted: #a0a0a0;
+            --border: #333333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            font-family: var(--font-sans);
+            color: var(--text);
+            background: var(--bg);
+            line-height: 1.6;
+            transition: var(--transition);
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: var(--bg-card);
+            border-right: 1px solid var(--border);
+            padding: 1.5rem 1rem;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .sidebar-nav {
+            list-style: none;
+        }
+
+        .sidebar-nav li {
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-nav a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-radius: var(--radius);
+            transition: var(--transition);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .sidebar-nav a:hover,
+        .sidebar-nav a.active {
+            background: linear-gradient(135deg, #00695c22, #00897b22);
+            color: #00897b;
+        }
+
+        .main {
+            flex: 1;
+            position: relative;
+        }
+
+        .back-link {
+            position: absolute;
+            top: 1.5rem;
+            left: 1.5rem;
+            text-decoration: none;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            z-index: 100;
+            transition: var(--transition);
+        }
+
+        .back-link:hover {
+            color: var(--text);
+        }
+
+        .hero {
+            background: var(--teal-gradient);
+            color: white;
+            padding: 4rem 2rem;
+            text-align: center;
+            min-height: 280px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 50%;
+            top: -200px;
+            right: -200px;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero h1 {
+            font-family: var(--font-serif);
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            opacity: 0.95;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .content {
+            padding: 3rem 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .section {
+            margin-bottom: 4rem;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: var(--transition);
+        }
+
+        .section.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .section h2 {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 3px solid var(--teal-gradient);
+            background: linear-gradient(90deg, #00897b, #26a69a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .section h3 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem;
+            margin: 2rem 0 1rem;
+            color: var(--accent-primary);
+        }
+
+        .section p {
+            margin-bottom: 1rem;
+            font-size: 1rem;
+        }
+
+        .section ul, .section ol {
+            margin: 1rem 0 1rem 2rem;
+        }
+
+        .section li {
+            margin-bottom: 0.5rem;
+        }
+
+        .math-block {
+            background: var(--bg-card);
+            border-left: 4px solid #00897b;
+            padding: 1rem;
+            margin: 1.5rem 0;
+            border-radius: var(--radius);
+            overflow-x: auto;
+        }
+
+        .code-block {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+        }
+
+        .code-block pre {
+            margin: 0;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .code-block code {
+            font-family: var(--font-mono);
+            color: var(--text);
+        }
+
+        .qa-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin: 1.5rem 0;
+        }
+
+        .qa-item {
+            border-bottom: 1px solid var(--border);
+        }
+
+        .qa-item:last-child {
+            border-bottom: none;
+        }
+
+        .qa-question {
+            padding: 1.25rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            color: var(--accent-primary);
+            transition: var(--transition);
+            background: var(--bg);
+            user-select: none;
+        }
+
+        .qa-question:hover {
+            background: linear-gradient(135deg, #A8325B22, #00897b22);
+        }
+
+        .qa-toggle {
+            font-size: 1.2rem;
+            transition: var(--transition);
+        }
+
+        .qa-item.open .qa-toggle {
+            transform: rotate(180deg);
+        }
+
+        .qa-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            padding: 0 1.25rem;
+        }
+
+        .qa-item.open .qa-answer {
+            max-height: 1000px;
+            padding: 1rem 1.25rem;
+        }
+
+        .qa-answer p {
+            margin: 0.5rem 0;
+        }
+
+        .interactive {
+            background: var(--bg-card);
+            border: 2px dashed #00897b;
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin: 2rem 0;
+            position: relative;
+        }
+
+        .interactive h4 {
+            color: #00897b;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .interactive svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .interactive button {
+            background: linear-gradient(135deg, #00695c, #00897b);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 600;
+            transition: var(--transition);
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .interactive button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            transition: var(--transition);
+            z-index: 200;
+        }
+
+        .theme-toggle:hover {
+            box-shadow: var(--shadow-md);
+        }
+
+        .completion-badge {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: linear-gradient(135deg, #00897b, #26a69a);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            opacity: 0;
+            transform: scale(0.8);
+            pointer-events: none;
+            transition: var(--transition);
+            z-index: 300;
+        }
+
+        .completion-badge.show {
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: auto;
+        }
+
+        .tree-node {
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .tree-node circle {
+            fill: #00897b;
+            stroke: #005a4a;
+            stroke-width: 2;
+        }
+
+        .tree-node text {
+            font-family: var(--font-sans);
+            font-size: 12px;
+            pointer-events: none;
+        }
+
+        .tree-node.selected circle {
+            fill: #A8325B;
+            r: 8;
+        }
+
+        .tree-link {
+            stroke: #00897b;
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .tree-link.highlighted {
+            stroke: #A8325B;
+            stroke-width: 3;
+        }
+
+        .property-panel {
+            background: linear-gradient(135deg, #00897b22, #00695c22);
+            padding: 1rem;
+            border-radius: var(--radius);
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .property-panel.show {
+            display: block;
+        }
+
+        .timeline-container {
+            background: var(--bg-card);
+            padding: 1rem;
+            border-radius: var(--radius);
+            margin-top: 1rem;
+            overflow-x: auto;
+        }
+
+        .timeline-control {
+            margin: 1rem 0;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .timeline-control input {
+            padding: 0.5rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-family: var(--font-mono);
+        }
+
+        .fluent-track {
+            margin: 0.75rem 0;
+        }
+
+        .fluent-label {
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 0.25rem;
+            color: var(--accent-primary);
+        }
+
+        .track-bar {
+            height: 30px;
+            background: #f0f0f0;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .track-segment {
+            height: 100%;
+            position: absolute;
+            transition: background-color 0.2s;
+        }
+
+        .track-segment.true {
+            background: linear-gradient(90deg, #00897b, #26a69a);
+        }
+
+        .track-segment.false {
+            background: #d0d0d0;
+        }
+
+        .event-marker {
+            position: absolute;
+            top: -5px;
+            width: 2px;
+            height: 40px;
+            background: #A8325B;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: static;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+                padding: 1rem;
+            }
+
+            .sidebar-nav {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 0.5rem;
+            }
+
+            .hero h1 {
+                font-size: 2.2rem;
+            }
+
+            .content {
+                padding: 2rem 1rem;
+            }
+
+            .back-link {
+                position: relative;
+                top: 0;
+                left: 0;
+                margin-bottom: 1rem;
+            }
+
+            .theme-toggle {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin-left: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <ul class="sidebar-nav">
+                <li><a href="#section1" class="nav-link active">Feynman Model</a></li>
+                <li><a href="#section2" class="nav-link">Mathematical</a></li>
+                <li><a href="#section3" class="nav-link">Code</a></li>
+                <li><a href="#section4" class="nav-link">Q&A</a></li>
+                <li><a href="#section5" class="nav-link">Interactives</a></li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="main">
+            <a href="../index.html" class="back-link">← Back to Dashboard</a>
+            <button class="theme-toggle" id="themeToggle" title="Toggle dark mode">🌙</button>
+
+            <!-- Hero Section -->
+            <div class="hero">
+                <div class="hero-content">
+                    <h1>Chapter 10</h1>
+                    <p>Knowledge Representation</p>
+                    <p style="font-size: 0.95rem; margin-top: 1rem; opacity: 0.9;">Part III: Knowledge, Reasoning, and Planning</p>
+                </div>
+            </div>
+
+            <!-- Content Sections -->
+            <div class="content">
+                <!-- Section 1: Feynman Mental Model -->
+                <section id="section1" class="section">
+                    <h2>The Encyclopedia of Everything</h2>
+                    <p>
+                        In the previous chapters, we learned <strong>how to reason</strong>—the inference engines, the rules, the resolution. Now we ask the deeper question: <strong>what do we put inside</strong> the knowledge base? How do we represent the messy, complex, contradictory real world in logic?
+                    </p>
+
+                    <h3>Ontological Engineering</h3>
+                    <p>
+                        Imagine designing a universal encyclopedia. Before you write a single entry, you need to answer: What are the major categories? How do they relate? This is <strong>ontological engineering</strong>—building the organizational skeleton that everything else hangs on.
+                    </p>
+                    <ul>
+                        <li><strong>Upper ontology:</strong> Starting from <em>Anything</em>, branch into <em>AbstractObjects</em> (numbers, sets, concepts) and <em>GeneralizedEvents</em> (actions, processes, states).</li>
+                        <li><strong>Categories and inheritance:</strong> Like a library. <em>Basketballs</em> is a subcategory of <em>Balls</em>. All balls are spherical, so basketballs inherit sphericity without needing to state it for each one.</li>
+                        <li><strong>The IsA puzzle:</strong> <em>SubsetOf</em> relates categories to categories (Dogs ⊂ DomesticAnimals). <em>MemberOf</em> relates objects to categories (Fido ∈ Dogs). Properties live at different levels—"dogs have four legs" is about members; "dogs are endangered" is about the category itself.</li>
+                    </ul>
+
+                    <h3>Physical Composition & Stuff vs. Things</h3>
+                    <p>
+                        Consider the <strong>PartOf</strong> relation: Romania is part of Europe, which is part of Earth. It's transitive—so Romania is part of Earth. But there's a crucial distinction:
+                    </p>
+                    <ul>
+                        <li><strong>Things (count nouns):</strong> If you cut an aardvark in half, you don't have two aardvarks. Things have <em>identity</em>.</li>
+                        <li><strong>Stuff (mass nouns):</strong> If you cut butter in half, you get two pieces of butter. Stuff has <em>intrinsic properties</em> (density, flavor) that survive subdivision.</li>
+                    </ul>
+
+                    <h3>Events and Time</h3>
+                    <p>
+                        The world isn't static. <strong>Event calculus</strong> represents what happens: events occur between times $t_1$ and $t_2$, and they cause fluents (facts) to become true or false. An event might <em>initiate</em> one fluent and <em>terminate</em> another. The key axiom is the <strong>persistence assumption</strong>: a fluent stays true until something explicitly makes it false.
+                    </p>
+                    <p>
+                        Allen's interval algebra goes deeper, describing temporal relationships: Meet (intervals are adjacent), Before, During, Overlap, Starts, Finishes, Equals. These relations are the atoms of temporal reasoning.
+                    </p>
+
+                    <h3>Knowledge, Belief, and Modal Logic</h3>
+                    <p>
+                        Now add agents. What does Agent A <strong>know</strong> vs. <strong>believe</strong>? Modal logic captures this with the $\mathbf{K}$ operator: $\mathbf{K}_A P$ means "A knows P." Semantically, A knows P in world $w$ if P is true in every world that is "accessible" from A's epistemic position. If A doesn't know whether it's raining, there are accessible worlds where it rains and worlds where it doesn't.
+                    </p>
+
+                    <h3>Semantic Networks & Default Reasoning</h3>
+                    <p>
+                        <strong>Semantic networks</strong> visualize knowledge as graphs: nodes for objects/categories, labeled edges for relations. Inheritance follows edges upward. But the real world is messier—birds fly, except penguins. This is <strong>default reasoning</strong>: "typically true, but with exceptions." Nonmonotonic logics (circumscription, default logic) formalize this: minimize abnormality, or use default rules with justifications.
+                    </p>
+
+                    <h3>Truth Maintenance</h3>
+                    <p>
+                        When you learn something new that contradicts an old belief, you can't just delete the old fact—other inferences might depend on it. A <strong>truth maintenance system</strong> (TMS) tracks justifications, so you can efficiently retract a belief and cascade the consequences throughout the KB.
+                    </p>
+                </section>
+
+                <!-- Section 2: Mathematical Formalism -->
+                <section id="section2" class="section">
+                    <h2>Mathematical Foundations</h2>
+
+                    <h3>Upper Ontology Structure</h3>
+                    <p>The foundational category hierarchy:</p>
+                    <div class="math-block">
+                        $$\text{Anything} \rightarrow \begin{cases}
+                        \text{AbstractObjects} \rightarrow \{\text{Sets}, \text{Numbers}, \text{Categories}\} \\
+                        \text{GeneralizedEvents} \rightarrow \{\text{Intervals}, \text{Places}, \text{PhysicalObjects}, \text{Processes}\}
+                        \end{cases}$$
+                    </div>
+
+                    <h3>Category Relations</h3>
+                    <div class="math-block">
+                        $$BB_9 \in \text{Basketballs} \quad \text{(membership)}$$
+                        $$\text{Basketballs} \subset \text{Balls} \quad \text{(subcategory)}$$
+                        $$x \in \text{Basketballs} \Rightarrow \text{Spherical}(x) \quad \text{(inherited property)}$$
+                    </div>
+
+                    <h3>Disjoint, Exhaustive, and Partition</h3>
+                    <div class="math-block">
+                        $$\text{Disjoint}(s) \Leftrightarrow \forall c_1, c_2 \in s. \; c_1 \neq c_2 \Rightarrow c_1 \cap c_2 = \emptyset$$
+                        $$\text{ExhaustiveDecomposition}(s, c) \Leftrightarrow \forall x. \; x \in c \Leftrightarrow \exists c_2 \in s. \; x \in c_2$$
+                        $$\text{Partition}(s, c) \Leftrightarrow \text{Disjoint}(s) \land \text{ExhaustiveDecomposition}(s, c)$$
+                    </div>
+
+                    <h3>Physical Composition</h3>
+                    <div class="math-block">
+                        $$\text{PartOf}(x, y) \land \text{PartOf}(y, z) \Rightarrow \text{PartOf}(x, z) \quad \text{(transitive)}$$
+                        $$\text{PartOf}(x, x) \quad \text{(reflexive)}$$
+                    </div>
+
+                    <h3>Measurements and Unit Conversion</h3>
+                    <div class="math-block">
+                        $$\text{Length}(L_1) = \text{Inches}(1.5) = \text{Centimeters}(3.81)$$
+                        $$\text{Centimeters}(2.54 \times d) = \text{Inches}(d)$$
+                    </div>
+
+                    <h3>Stuff: Mass Nouns and Intrinsic Properties</h3>
+                    <div class="math-block">
+                        $$b \in \text{Butter} \land \text{PartOf}(p, b) \Rightarrow p \in \text{Butter}$$
+                        $$b \in \text{Butter} \Rightarrow \text{MeltingPoint}(b) = \text{Centigrade}(30)$$
+                    </div>
+
+                    <h3>Event Calculus Predicates</h3>
+                    <p>Core predicates of event calculus:</p>
+                    <div class="math-block">
+                        $$T(f, t_1, t_2) \quad \text{fluent } f \text{ is true between } t_1 \text{ and } t_2$$
+                        $$\text{Happens}(e, t_1, t_2) \quad \text{event } e \text{ occurs from } t_1 \text{ to } t_2$$
+                        $$\text{Initiates}(e, f, t) \quad \text{event } e \text{ causes fluent } f \text{ to become true}$$
+                        $$\text{Terminates}(e, f, t) \quad \text{event } e \text{ causes fluent } f \text{ to become false}$$
+                    </div>
+
+                    <h3>Persistence Axiom (Core of Event Calculus)</h3>
+                    <div class="math-block">
+                        $$\text{Happens}(e, t_1, t_3) \land \text{Initiates}(e, f, t_2) \land \neg \text{Terminated}(f, t_2, t_4) \land t_1 \leq t_2 \leq t_3 \leq t_4$$
+                        $$\Rightarrow T(f, t_2, t_4)$$
+                    </div>
+
+                    <h3>Allen's Interval Relations</h3>
+                    <div class="math-block">
+                        $$\text{Meet}(i, j) \Leftrightarrow \text{End}(i) = \text{Begin}(j)$$
+                        $$\text{Before}(i, j) \Leftrightarrow \text{End}(i) < \text{Begin}(j)$$
+                        $$\text{During}(i, j) \Leftrightarrow \text{Begin}(j) < \text{Begin}(i) < \text{End}(i) < \text{End}(j)$$
+                        $$\text{Overlap}(i, j) \Leftrightarrow \text{Begin}(i) < \text{Begin}(j) < \text{End}(i) < \text{End}(j)$$
+                    </div>
+
+                    <h3>Modal Logic: Knowledge (K Operator)</h3>
+                    <div class="math-block">
+                        $$\mathbf{K}_A P \text{ is true in world } w \text{ iff } P \text{ is true in every world accessible from } w$$
+                        $$(\mathbf{K}_a P \land \mathbf{K}_a(P \Rightarrow Q)) \Rightarrow \mathbf{K}_a Q$$
+                        $$\mathbf{K}_a P \Rightarrow P \quad \text{(knowledge is true)}$$
+                        $$\mathbf{K}_a P \Rightarrow \mathbf{K}_a(\mathbf{K}_a P) \quad \text{(positive introspection)}$$
+                    </div>
+
+                    <h3>Description Logic: CLASSIC Syntax</h3>
+                    <div class="math-block">
+                        $$\text{Bachelor} = \text{And}(\text{Unmarried}, \text{Adult}, \text{Male})$$
+                        $$\text{Bachelor}(x) \Leftrightarrow \text{Unmarried}(x) \land \text{Adult}(x) \land \text{Male}(x)$$
+                    </div>
+
+                    <h3>Circumscription: Minimizing Abnormality</h3>
+                    <div class="math-block">
+                        $$\text{Bird}(x) \land \neg \text{Abnormal}_1(x) \Rightarrow \text{Flies}(x)$$
+                        \text{Minimize } \text{Abnormal}_1 \quad \text{(assume } \neg \text{Abnormal}_1(x) \text{ unless proven)}$$
+                    </div>
+
+                    <h3>Default Logic Rules</h3>
+                    <div class="math-block">
+                        $$\frac{\text{Bird}(x) : \text{Flies}(x)}{\text{Flies}(x)} \quad \text{"If Bird(x), then by default Flies(x)")}$$
+                    </div>
+                </section>
+
+                <!-- Section 3: Code Implementation -->
+                <section id="section3" class="section">
+                    <h2>Clean-Code Implementation</h2>
+                    <p>A complete ontology system with inheritance, semantic networks, and event calculus in Python:</p>
+
+                    <div class="code-block">
+                        <pre><code class="language-python"># ── Knowledge Representation: Ontology & Semantic Network ──
+
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Set, Tuple, Any
+from collections import defaultdict
+
+# ── Category System with Inheritance ──
+
+class Ontology:
+    """An ontology of categories with inheritance reasoning.
+
+    Supports:
+    - Category membership (x ∈ C)
+    - Subcategory relations (C₁ ⊂ C₂)
+    - Property inheritance along subcategory links
+    - Disjoint and partition constraints
+    - Default values with overriding
+    """
+    def __init__(self):
+        self.members: Dict[str, Set[str]] = defaultdict(set)
+        self.subcategories: Dict[str, Set[str]] = defaultdict(set)
+        self.parent_of: Dict[str, Set[str]] = defaultdict(set)
+        self.properties: Dict[str, Dict[str, Any]] = defaultdict(dict)
+        self.object_props: Dict[str, Dict[str, Any]] = defaultdict(dict)
+
+    def add_category(self, child: str, parent: str = None):
+        """Add a category, optionally as subcategory of parent."""
+        if parent:
+            self.subcategories[parent].add(child)
+            self.parent_of[child].add(parent)
+
+    def add_member(self, obj: str, category: str):
+        """Assert that obj ∈ category."""
+        self.members[category].add(obj)
+
+    def set_property(self, category: str, prop: str, value: Any):
+        """Set a default property for all members of a category."""
+        self.properties[category][prop] = value
+
+    def set_object_property(self, obj: str, prop: str, value: Any):
+        """Set a property directly on an object (overrides defaults)."""
+        self.object_props[obj][prop] = value
+
+    def is_member(self, obj: str, category: str) -> bool:
+        """Check if obj ∈ category (considering inheritance)."""
+        if obj in self.members.get(category, set()):
+            return True
+        for sub in self.subcategories.get(category, set()):
+            if self.is_member(obj, sub):
+                return True
+        return False
+
+    def is_subcategory(self, child: str, parent: str) -> bool:
+        """Check if child ⊂ parent (transitive)."""
+        if child == parent:
+            return True
+        for p in self.parent_of.get(child, set()):
+            if self.is_subcategory(p, parent):
+                return True
+        return False
+
+    def get_property(self, obj: str, prop: str) -> Optional[Any]:
+        """Get property using inheritance: most-specific-first."""
+        if prop in self.object_props.get(obj, {}):
+            return self.object_props[obj][prop]
+
+        obj_categories = self._get_categories(obj)
+        for cat in self._sort_by_specificity(obj_categories):
+            if prop in self.properties.get(cat, {}):
+                return self.properties[cat][prop]
+        return None
+
+    def _get_categories(self, obj: str) -> Set[str]:
+        """Get all categories the object belongs to."""
+        result = set()
+        for cat, members in self.members.items():
+            if obj in members:
+                result.add(cat)
+                result.update(self._get_ancestors(cat))
+        return result
+
+    def _get_ancestors(self, category: str) -> Set[str]:
+        """Get all ancestor categories (transitive parents)."""
+        ancestors = set()
+        for parent in self.parent_of.get(category, set()):
+            ancestors.add(parent)
+            ancestors.update(self._get_ancestors(parent))
+        return ancestors
+
+    def _sort_by_specificity(self, categories: Set[str]) -> List[str]:
+        """Sort categories most-specific-first for inheritance."""
+        cat_list = list(categories)
+        cat_list.sort(key=lambda c: -len(self._get_ancestors(c)))
+        return cat_list
+
+
+# ── Event Calculus ──
+
+@dataclass
+class Event:
+    """An event with initiates/terminates effects on fluents."""
+    name: str
+    start: float
+    end: float
+    initiates: List[str] = field(default_factory=list)
+    terminates: List[str] = field(default_factory=list)
+
+class EventCalculus:
+    """Simple event calculus implementation with persistence axiom."""
+    def __init__(self):
+        self.events: List[Event] = []
+        self.initial_fluents: Set[str] = set()
+
+    def add_event(self, event: Event):
+        """Record an event."""
+        self.events.append(event)
+        self.events.sort(key=lambda e: e.start)
+
+    def set_initial(self, fluent: str, value: bool = True):
+        """Set initial state of a fluent."""
+        if value:
+            self.initial_fluents.add(fluent)
+        else:
+            self.initial_fluents.discard(fluent)
+
+    def holds(self, fluent: str, time: float) -> bool:
+        """Check if fluent holds at given time (persistence axiom)."""
+        current = fluent in self.initial_fluents
+        for event in self.events:
+            if event.end > time:
+                break
+            if fluent in event.terminates:
+                current = False
+            if fluent in event.initiates:
+                current = True
+        return current
+
+    def timeline(self, fluent: str, start: float, end: float,
+                 steps: int = 20) -> List[Tuple[float, bool]]:
+        """Generate a timeline of fluent values."""
+        step_size = (end - start) / steps
+        return [(start + i * step_size,
+                 self.holds(fluent, start + i * step_size))
+                for i in range(steps + 1)]
+
+
+# ── Semantic Network ──
+
+class SemanticNetwork:
+    """A semantic network with nodes and labeled edges."""
+    def __init__(self):
+        self.nodes: Set[str] = set()
+        self.edges: List[Tuple[str, str, str]] = []
+        self.node_properties: Dict[str, Dict[str, Any]] = defaultdict(dict)
+
+    def add_node(self, name: str, **properties):
+        self.nodes.add(name)
+        self.node_properties[name].update(properties)
+
+    def add_edge(self, from_node: str, relation: str, to_node: str):
+        self.nodes.add(from_node)
+        self.nodes.add(to_node)
+        self.edges.append((from_node, relation, to_node))
+
+    def get_related(self, node: str, relation: str) -> List[str]:
+        return [to for fr, rel, to in self.edges
+                if fr == node and rel == relation]
+
+    def inherit_property(self, node: str, prop: str) -> Optional[Any]:
+        """Follow MemberOf/SubsetOf links upward."""
+        if prop in self.node_properties.get(node, {}):
+            return self.node_properties[node][prop]
+        for rel in ["MemberOf", "SubsetOf"]:
+            parents = self.get_related(node, rel)
+            for parent in parents:
+                val = self.inherit_property(parent, prop)
+                if val is not None:
+                    return val
+        return None
+
+
+# ── Example Usage ──
+
+if __name__ == "__main__":
+    ont = Ontology()
+
+    # Build hierarchy
+    ont.add_category("Balls", "PhysicalObjects")
+    ont.add_category("Basketballs", "Balls")
+    ont.add_category("Persons", "Mammals")
+    ont.add_category("OneLeggedPersons", "Persons")
+
+    # Set properties
+    ont.set_property("Balls", "shape", "spherical")
+    ont.set_property("Persons", "legs", 2)
+    ont.set_property("OneLeggedPersons", "legs", 1)
+
+    # Add members
+    ont.add_member("BB9", "Basketballs")
+    ont.add_member("John", "OneLeggedPersons")
+    ont.add_member("Mary", "Persons")
+
+    # Query
+    print(f"BB9 shape: {ont.get_property('BB9', 'shape')}")  # spherical
+    print(f"Mary legs: {ont.get_property('Mary', 'legs')}")   # 2
+    print(f"John legs: {ont.get_property('John', 'legs')}")   # 1 (overridden)
+
+    # Event calculus demo
+    ec = EventCalculus()
+    ec.set_initial("At(Shankar,SF)", True)
+    ec.add_event(Event("Fly1", 10, 15,
+                       initiates=["At(Shankar,DC)"],
+                       terminates=["At(Shankar,SF)"]))
+
+    print(f"\nAt(Shankar,SF) at t=5: {ec.holds('At(Shankar,SF)', 5)}")   # True
+    print(f"At(Shankar,SF) at t=20: {ec.holds('At(Shankar,SF)', 20)}")   # False
+    print(f"At(Shankar,DC) at t=20: {ec.holds('At(Shankar,DC)', 20)}")   # True</code></pre>
+                    </div>
+                </section>
+
+                <!-- Section 4: Socratic Q&A -->
+                <section id="section4" class="section">
+                    <h2>Socratic Questions & Answers</h2>
+
+                    <div class="qa-section">
+                        <div class="qa-item">
+                            <div class="qa-question">
+                                <span>Q1: SubsetOf vs. MemberOf confusion in inheritance</span>
+                                <span class="qa-toggle">▼</span>
+                            </div>
+                            <div class="qa-answer">
+                                <p>
+                                    <strong>The Problem:</strong> You've built an ontology with both SubsetOf and MemberOf links, but inheritance keeps returning properties from the wrong level.
+                                </p>
+                                <p>
+                                    <strong>The Answer:</strong> This is the classic "IsA" ambiguity. SubsetOf relates <em>categories to categories</em>: Basketballs ⊂ Balls. MemberOf relates <em>objects to categories</em>: BB₉ ∈ Basketballs. The critical insight: if Persons is a SubsetOf Mammals, then Mammals is not just a category, it's a <em>category of categories</em>.
+                                </p>
+                                <p>
+                                    Properties work at different levels. "Persons have two legs" describes properties of the <em>members</em> of Persons. But "Dogs is an endangered category" is a property of the <em>category itself</em>. Always ask: is this a property of the members or of the category as a whole?
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="qa-item">
+                            <div class="qa-question">
+                                <span>Q2: Default values and exceptions in inheritance</span>
+                                <span class="qa-toggle">▼</span>
+                            </div>
+                            <div class="qa-answer">
+                                <p>
+                                    <strong>The Problem:</strong> Your system says all persons have 2 legs, but John has 1 leg. The algorithm returns 2 for John because it finds the Persons category first.
+                                </p>
+                                <p>
+                                    <strong>The Answer:</strong> The inheritance search must be <em>most-specific-first</em>. If John is a member of OneLeggedPersons (a subcategory of Persons), the algorithm should check OneLeggedPersons before checking Persons. The implementation sorts categories by depth in the hierarchy and searches from deepest to shallowest. This way, more specific defaults take precedence.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="qa-item">
+                            <div class="qa-question">
+                                <span>Q3: The Nixon Diamond and nonmonotonic reasoning</span>
+                                <span class="qa-toggle">▼</span>
+                            </div>
+                            <div class="qa-answer">
+                                <p>
+                                    <strong>The Problem:</strong> Nixon is both a Quaker (pacifists by default) and a Republican (hawks by default). Your system either derives both Pacifist(Nixon) and ¬Pacifist(Nixon), or neither.
+                                </p>
+                                <p>
+                                    <strong>The Answer:</strong> This is the famous "Nixon Diamond" in nonmonotonic reasoning. The <em>correct answer is neither</em>. A properly implemented circumscriptive reasoner produces two preferred models: one where Nixon is a pacifist, one where he isn't. Default logic produces two valid "extensions." The reasoning system should reflect the ambiguity rather than forcing a choice. If you need a definitive answer, you need <em>prioritized circumscription</em>: e.g., "religious beliefs take precedence over political ones."
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="qa-item">
+                            <div class="qa-question">
+                                <span>Q4: Fluent persistence and the frame problem</span>
+                                <span class="qa-toggle">▼</span>
+                            </div>
+                            <div class="qa-answer">
+                                <p>
+                                    <strong>The Problem:</strong> Using event calculus, your fluents aren't persisting correctly. They seem to randomly become false between events.
+                                </p>
+                                <p>
+                                    <strong>The Answer:</strong> The persistence axiom requires that a fluent remains true from when it was initiated until something <em>explicitly terminates it</em>. The key condition is ¬Terminated(f, t₂, t₄)—meaning NO event terminated the fluent in the interval. A common bug: checking only the most recent event rather than scanning for ANY terminating event in the interval. Also verify your time ordering: the axiom requires $t_1 \leq t_2 \leq t_3 \leq t_4$.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="qa-item">
+                            <div class="qa-question">
+                                <span>Q5: Description Logic tractability vs. expressiveness</span>
+                                <span class="qa-toggle">▼</span>
+                            </div>
+                            <div class="qa-answer">
+                                <p>
+                                    <strong>The Problem:</strong> Your description logic implementation is slow. Subsumption checking takes exponential time even for simple problems.
+                                </p>
+                                <p>
+                                    <strong>The Answer:</strong> Description logics are designed for decidable subsumption, but complexity varies by dialect. CLASSIC (And, All, AtLeast, AtMost, Fills) allows polynomial-time subsumption. Adding negation, disjunction, or full number restrictions pushes complexity to NP-hard or EXPTIME. This is the fundamental tradeoff: restricted languages are efficient but less expressive; expressive languages are slow. Choose the DL dialect matching your needs.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 5: Interactive Components -->
+                <section id="section5" class="section">
+                    <h2>Interactive Learning Tools</h2>
+
+                    <!-- Interactive 1: Ontology Builder -->
+                    <h3>Ontology Builder & Inheritance Explorer</h3>
+                    <div class="interactive">
+                        <h4>Build your ontology and explore inheritance</h4>
+                        <div style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                            <input type="text" id="newCategory" placeholder="New category name" style="flex: 1; min-width: 150px;">
+                            <select id="parentCategory" style="flex: 1; min-width: 150px;">
+                                <option value="">Select parent category...</option>
+                            </select>
+                            <button onclick="addCategory()">Add Category</button>
+                        </div>
+
+                        <div style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                            <input type="text" id="newObject" placeholder="New object name" style="flex: 1; min-width: 150px;">
+                            <select id="objectCategory" style="flex: 1; min-width: 150px;">
+                                <option value="">Select category...</option>
+                            </select>
+                            <button onclick="addObject()">Add Object</button>
+                        </div>
+
+                        <svg id="ontologyTree" width="100%" height="400" style="border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 1rem;"></svg>
+
+                        <div style="margin-top: 1rem;">
+                            <label><strong>Query inheritance:</strong></label>
+                            <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
+                                <select id="queryObject" style="flex: 1; min-width: 150px;">
+                                    <option value="">Select object...</option>
+                                </select>
+                                <select id="queryProperty" style="flex: 1; min-width: 150px;">
+                                    <option value="">Select property...</option>
+                                    <option value="legs">legs</option>
+                                    <option value="shape">shape</option>
+                                    <option value="warmBlooded">warmBlooded</option>
+                                </select>
+                                <button onclick="queryInheritance()">Query</button>
+                            </div>
+                        </div>
+
+                        <div id="propertyPanel" class="property-panel">
+                            <p id="propertyResult"></p>
+                        </div>
+                    </div>
+
+                    <!-- Interactive 2: Event Calculus Timeline -->
+                    <h3>Event Calculus Timeline Visualization</h3>
+                    <div class="interactive">
+                        <h4>Explore fluent state changes over time</h4>
+                        <div class="timeline-control">
+                            <input type="text" id="eventName" placeholder="Event name (e.g., Fly1)" style="min-width: 100px;">
+                            <input type="number" id="eventStart" placeholder="Start time" min="0" max="50" style="min-width: 80px;">
+                            <input type="number" id="eventEnd" placeholder="End time" min="0" max="50" style="min-width: 80px;">
+                            <input type="text" id="eventInitiates" placeholder="Initiates (e.g., At(A,B))" style="min-width: 120px;">
+                            <input type="text" id="eventTerminates" placeholder="Terminates (e.g., At(A,C))" style="min-width: 120px;">
+                            <button onclick="addTimelineEvent()">Add Event</button>
+                        </div>
+
+                        <div class="timeline-container">
+                            <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                                <label>
+                                    <input type="checkbox" id="fluent1Check" checked onchange="updateTimeline()">
+                                    At(Shankar, SF)
+                                </label>
+                                <label>
+                                    <input type="checkbox" id="fluent2Check" checked onchange="updateTimeline()">
+                                    At(Shankar, DC)
+                                </label>
+                            </div>
+                            <svg id="timelineChart" width="100%" height="250" style="border: 1px solid var(--border); border-radius: var(--radius);"></svg>
+                        </div>
+
+                        <div style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-muted);">
+                            <p><strong>Tip:</strong> Hover over the timeline to see fluent states. Events are marked with red vertical lines.</p>
+                        </div>
+                    </div>
+
+                    <!-- Interactive 3: Allen's Intervals -->
+                    <h3>Allen's Interval Relations</h3>
+                    <div class="interactive">
+                        <h4>Explore temporal relationships between intervals</h4>
+                        <svg id="allenChart" width="100%" height="300" style="border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 1rem;"></svg>
+                        <div id="allenRelation" style="text-align: center; font-weight: 600; color: var(--accent-primary); margin-top: 1rem;">Current relation: --</div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- Completion Badge -->
+    <div class="completion-badge" id="completionBadge">
+        ✓ Chapter completed! Keep learning.
+    </div>
+
+    <!-- Highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+
+    <!-- Main Script -->
+    <script>
+        // ── Theme Toggle ──
+        const themeToggle = document.getElementById('themeToggle');
+        const htmlElement = document.documentElement;
+        const savedTheme = localStorage.getItem('aima-theme') || 'light';
+
+        function setTheme(theme) {
+            htmlElement.setAttribute('data-theme', theme);
+            localStorage.setItem('aima-theme', theme);
+            themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+
+        setTheme(savedTheme);
+        themeToggle.addEventListener('click', () => {
+            const current = htmlElement.getAttribute('data-theme') || 'light';
+            setTheme(current === 'dark' ? 'light' : 'dark');
+        });
+
+        // ── Scroll Animation ──
+        const observerOptions = { threshold: 0.1, rootMargin: '0px 0px -100px 0px' };
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.section').forEach(el => observer.observe(el));
+
+        // ── Sidebar Navigation ──
+        const navLinks = document.querySelectorAll('.nav-link');
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                navLinks.forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+            });
+        });
+
+        // ── Q&A Accordion ──
+        document.querySelectorAll('.qa-question').forEach(button => {
+            button.addEventListener('click', () => {
+                const item = button.parentElement;
+                item.classList.toggle('open');
+            });
+        });
+
+        // ── Highlight Code ──
+        document.querySelectorAll('code').forEach(block => {
+            hljs.highlightElement(block);
+        });
+
+        // ── Ontology Interactive ──
+        const sampleOntology = {
+            categories: {
+                'Anything': null,
+                'PhysicalObjects': 'Anything',
+                'Animals': 'PhysicalObjects',
+                'Mammals': 'Animals',
+                'Persons': 'Mammals',
+                'Dogs': 'Mammals',
+                'Balls': 'PhysicalObjects',
+                'Basketballs': 'Balls'
+            },
+            objects: {
+                'Mary': 'Persons',
+                'John': 'Persons',
+                'Fido': 'Dogs',
+                'BB9': 'Basketballs'
+            },
+            properties: {
+                'Persons': { 'legs': 2, 'warmBlooded': true },
+                'Dogs': { 'legs': 4, 'warmBlooded': true },
+                'Mammals': { 'warmBlooded': true },
+                'Balls': { 'shape': 'spherical' }
+            }
+        };
+
+        function updateCategorySelects() {
+            const parentSelect = document.getElementById('parentCategory');
+            const objectSelect = document.getElementById('objectCategory');
+            const querySelect = document.getElementById('queryObject');
+
+            const cats = Object.keys(sampleOntology.categories);
+            const objs = Object.keys(sampleOntology.objects);
+
+            [parentSelect, objectSelect].forEach(sel => {
+                sel.innerHTML = '<option value="">Select...</option>';
+                cats.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat;
+                    opt.textContent = cat;
+                    sel.appendChild(opt);
+                });
+            });
+
+            querySelect.innerHTML = '<option value="">Select object...</option>';
+            objs.forEach(obj => {
+                const opt = document.createElement('option');
+                opt.value = obj;
+                opt.textContent = obj;
+                querySelect.appendChild(opt);
+            });
+        }
+
+        function drawOntologyTree() {
+            const svg = document.getElementById('ontologyTree');
+            svg.innerHTML = '';
+
+            const cats = Object.keys(sampleOntology.categories);
+            const levels = {};
+
+            function getLevel(cat) {
+                if (cat === 'Anything') return 0;
+                if (levels[cat] !== undefined) return levels[cat];
+                const parent = sampleOntology.categories[cat];
+                levels[cat] = (parent ? getLevel(parent) + 1 : 0);
+                return levels[cat];
+            }
+
+            cats.forEach(cat => getLevel(cat));
+
+            const maxLevel = Math.max(...Object.values(levels));
+            const width = 800, height = 400;
+            const yStep = height / (maxLevel + 1);
+            const levelCounts = {};
+
+            cats.forEach(cat => {
+                const level = levels[cat];
+                levelCounts[level] = (levelCounts[level] || 0) + 1;
+            });
+
+            const positions = {};
+            const levelPos = {};
+
+            cats.forEach(cat => {
+                const level = levels[cat];
+                const count = levelCounts[level];
+                const idx = Object.keys(cats).filter(c => levels[c] === level && cats.indexOf(c) <= cats.indexOf(cat)).length;
+                const x = (width / (count + 1)) * idx;
+                const y = yStep * (level + 1);
+                positions[cat] = { x, y };
+            });
+
+            // Draw links
+            cats.forEach(cat => {
+                const parent = sampleOntology.categories[cat];
+                if (parent && positions[parent]) {
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    const p1 = positions[cat];
+                    const p2 = positions[parent];
+                    line.setAttribute('x1', p1.x);
+                    line.setAttribute('y1', p1.y);
+                    line.setAttribute('x2', p2.x);
+                    line.setAttribute('y2', p2.y);
+                    line.setAttribute('class', 'tree-link');
+                    svg.appendChild(line);
+                }
+            });
+
+            // Draw nodes
+            cats.forEach(cat => {
+                const pos = positions[cat];
+                const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                g.setAttribute('class', 'tree-node');
+
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', pos.x);
+                circle.setAttribute('cy', pos.y);
+                circle.setAttribute('r', 6);
+                g.appendChild(circle);
+
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', pos.x);
+                text.setAttribute('y', pos.y + 20);
+                text.setAttribute('text-anchor', 'middle');
+                text.textContent = cat;
+                g.appendChild(text);
+
+                g.addEventListener('click', () => {
+                    document.querySelectorAll('.tree-node').forEach(n => n.classList.remove('selected'));
+                    g.classList.add('selected');
+                });
+
+                svg.appendChild(g);
+            });
+        }
+
+        function addCategory() {
+            const name = document.getElementById('newCategory').value.trim();
+            const parent = document.getElementById('parentCategory').value;
+
+            if (!name) return;
+            if (sampleOntology.categories[name]) {
+                alert('Category already exists!');
+                return;
+            }
+
+            sampleOntology.categories[name] = parent || null;
+            document.getElementById('newCategory').value = '';
+            updateCategorySelects();
+            drawOntologyTree();
+        }
+
+        function addObject() {
+            const name = document.getElementById('newObject').value.trim();
+            const category = document.getElementById('objectCategory').value;
+
+            if (!name || !category) return;
+            if (sampleOntology.objects[name]) {
+                alert('Object already exists!');
+                return;
+            }
+
+            sampleOntology.objects[name] = category;
+            document.getElementById('newObject').value = '';
+            updateCategorySelects();
+        }
+
+        function getInheritedProperty(obj, prop) {
+            const category = sampleOntology.objects[obj];
+            if (!category) return null;
+
+            const visited = new Set();
+
+            function search(cat) {
+                if (visited.has(cat)) return null;
+                visited.add(cat);
+
+                if (sampleOntology.properties[cat] && sampleOntology.properties[cat][prop] !== undefined) {
+                    return sampleOntology.properties[cat][prop];
+                }
+
+                const parent = sampleOntology.categories[cat];
+                return parent ? search(parent) : null;
+            }
+
+            return search(category);
+        }
+
+        function queryInheritance() {
+            const obj = document.getElementById('queryObject').value;
+            const prop = document.getElementById('queryProperty').value;
+
+            if (!obj || !prop) return;
+
+            const value = getInheritedProperty(obj, prop);
+            const panel = document.getElementById('propertyPanel');
+            const result = document.getElementById('propertyResult');
+
+            if (value !== null) {
+                result.textContent = `✓ ${obj}.${prop} = ${value} (inherited from ${sampleOntology.objects[obj]})`;
+                panel.classList.add('show');
+            } else {
+                result.textContent = `✗ ${obj}.${prop} is undefined`;
+                panel.classList.add('show');
+            }
+        }
+
+        // ── Event Calculus Timeline ──
+        const timelineState = {
+            events: [
+                { name: 'Fly1', start: 10, end: 15, initiates: ['At(Shankar,DC)'], terminates: ['At(Shankar,SF)'] }
+            ],
+            initialFluents: { 'At(Shankar,SF)': true, 'At(Shankar,DC)': false }
+        };
+
+        function fluentHolds(fluent, time) {
+            let current = timelineState.initialFluents[fluent] || false;
+
+            for (const event of timelineState.events) {
+                if (event.end > time) break;
+                if (event.terminates.includes(fluent)) current = false;
+                if (event.initiates.includes(fluent)) current = true;
+            }
+
+            return current;
+        }
+
+        function updateTimeline() {
+            const svg = document.getElementById('timelineChart');
+            svg.innerHTML = '';
+
+            const width = svg.clientWidth || 800;
+            const height = 250;
+            const padding = 40;
+            const timeStart = 0, timeEnd = 50;
+
+            // Draw axis
+            const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            xAxis.setAttribute('x1', padding);
+            xAxis.setAttribute('y1', height - padding);
+            xAxis.setAttribute('x2', width - padding);
+            xAxis.setAttribute('y2', height - padding);
+            xAxis.setAttribute('stroke', '#999');
+            xAxis.setAttribute('stroke-width', 2);
+            svg.appendChild(xAxis);
+
+            // Time labels
+            for (let t = 0; t <= 50; t += 10) {
+                const x = padding + ((t - timeStart) / (timeEnd - timeStart)) * (width - 2 * padding);
+                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                label.setAttribute('x', x);
+                label.setAttribute('y', height - 10);
+                label.setAttribute('text-anchor', 'middle');
+                label.setAttribute('font-size', 12);
+                label.textContent = t;
+                svg.appendChild(label);
+            }
+
+            // Draw fluent tracks
+            const fluents = [];
+            if (document.getElementById('fluent1Check').checked) fluents.push('At(Shankar,SF)');
+            if (document.getElementById('fluent2Check').checked) fluents.push('At(Shankar,DC)');
+
+            fluents.forEach((fluent, idx) => {
+                const y = padding + idx * 60;
+
+                // Label
+                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                label.setAttribute('x', 10);
+                label.setAttribute('y', y + 15);
+                label.setAttribute('font-size', 12);
+                label.setAttribute('font-weight', 600);
+                label.textContent = fluent;
+                svg.appendChild(label);
+
+                // Track segments
+                for (let t = 0; t < 50; t += 1) {
+                    const holds = fluentHolds(fluent, t);
+                    const nextHolds = fluentHolds(fluent, t + 1);
+
+                    if (holds || nextHolds) {
+                        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                        const x1 = padding + (t / (timeEnd - timeStart)) * (width - 2 * padding);
+                        const x2 = padding + ((t + 1) / (timeEnd - timeStart)) * (width - 2 * padding);
+                        rect.setAttribute('x', x1);
+                        rect.setAttribute('y', y);
+                        rect.setAttribute('width', x2 - x1);
+                        rect.setAttribute('height', 30);
+                        rect.setAttribute('class', `track-segment ${holds ? 'true' : 'false'}`);
+                        svg.appendChild(rect);
+                    }
+                }
+
+                // Event markers
+                timelineState.events.forEach(event => {
+                    const xStart = padding + (event.start / (timeEnd - timeStart)) * (width - 2 * padding);
+                    const marker = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    marker.setAttribute('x1', xStart);
+                    marker.setAttribute('y1', y - 10);
+                    marker.setAttribute('x2', xStart);
+                    marker.setAttribute('y2', y + 40);
+                    marker.setAttribute('stroke', '#A8325B');
+                    marker.setAttribute('stroke-width', 2);
+                    svg.appendChild(marker);
+                });
+            });
+        }
+
+        function addTimelineEvent() {
+            const name = document.getElementById('eventName').value.trim();
+            const start = parseFloat(document.getElementById('eventStart').value);
+            const end = parseFloat(document.getElementById('eventEnd').value);
+            const initiates = document.getElementById('eventInitiates').value.trim().split(',').map(s => s.trim()).filter(s => s);
+            const terminates = document.getElementById('eventTerminates').value.trim().split(',').map(s => s.trim()).filter(s => s);
+
+            if (!name || isNaN(start) || isNaN(end)) return;
+
+            timelineState.events.push({ name, start, end, initiates, terminates });
+            timelineState.events.sort((a, b) => a.start - b.start);
+
+            document.getElementById('eventName').value = '';
+            document.getElementById('eventStart').value = '';
+            document.getElementById('eventEnd').value = '';
+            document.getElementById('eventInitiates').value = '';
+            document.getElementById('eventTerminates').value = '';
+
+            updateTimeline();
+        }
+
+        // ── Allen's Intervals ──
+        function updateAllenChart() {
+            const svg = document.getElementById('allenChart');
+            const width = svg.clientWidth || 800;
+            const height = 300;
+            const y1 = 80, y2 = 180;
+
+            // Draggable intervals
+            const interval1 = { start: 100, end: 250 };
+            const interval2 = { start: 280, end: 420 };
+
+            svg.innerHTML = '';
+
+            // Draw intervals
+            [
+                { data: interval1, y: y1, color: '#00897b', label: 'Interval I' },
+                { data: interval2, y: y2, color: '#A8325B', label: 'Interval J' }
+            ].forEach(({ data, y, color, label }) => {
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', data.start);
+                rect.setAttribute('y', y);
+                rect.setAttribute('width', data.end - data.start);
+                rect.setAttribute('height', 40);
+                rect.setAttribute('fill', color);
+                rect.setAttribute('opacity', 0.6);
+                svg.appendChild(rect);
+
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', (data.start + data.end) / 2);
+                text.setAttribute('y', y + 25);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('fill', 'white');
+                text.setAttribute('font-weight', 'bold');
+                text.textContent = label;
+                svg.appendChild(text);
+            });
+
+            // Determine relation
+            let relation = 'Unknown';
+            if (interval1.end === interval2.start) relation = 'Meet';
+            else if (interval1.end < interval2.start) relation = 'Before';
+            else if (interval1.start === interval2.start && interval1.end === interval2.end) relation = 'Equals';
+            else if (interval1.start < interval2.start && interval1.end < interval2.end && interval1.end > interval2.start) relation = 'Overlap';
+            else if (interval1.start > interval2.start && interval1.end < interval2.end) relation = 'During';
+
+            document.getElementById('allenRelation').textContent = `Current relation: ${relation}(I, J)`;
+        }
+
+        // ── Completion Badge ──
+        function markChapterComplete() {
+            localStorage.setItem('aima-ch-10', 'done');
+            const badge = document.getElementById('completionBadge');
+            badge.classList.add('show');
+            setTimeout(() => badge.classList.remove('show'), 3000);
+        }
+
+        // ── Initialize ──
+        updateCategorySelects();
+        drawOntologyTree();
+        updateTimeline();
+        updateAllenChart();
+
+        // Mark complete on scroll to bottom
+        window.addEventListener('scroll', () => {
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 100) {
+                markChapterComplete();
+            }
+        });
+    </script>
+
+    <!-- KaTeX (MUST be last) -->
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script>
+        renderMathInElement(document.body, {
+            delimiters: [
+                { left: '$$', right: '$$', display: true },
+                { left: '\\(', right: '\\)', display: false },
+                { left: '$', right: '$', display: false }
+            ],
+            throwOnError: false
+        });
+    </script>
+</body>
+</html>

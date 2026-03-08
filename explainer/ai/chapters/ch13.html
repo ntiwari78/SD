@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 13: Probabilistic Reasoning | AIMA Explainer</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <!-- Highlight.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+
+    <!-- KaTeX CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+
+    <style>
+        :root {
+            --bg: #FAF9F6;
+            --bg-card: #FFFFFF;
+            --text: #1a1a2e;
+            --text-muted: #6b7280;
+            --accent-primary: #A8325B;
+            --accent-secondary: #2563eb;
+            --accent-tertiary: #059669;
+            --border: #e5e7eb;
+            --radius: 12px;
+            --gradient-purple: linear-gradient(135deg, #4527a0, #7b1fa2, #ab47bc);
+        }
+
+        [data-theme="dark"] {
+            --bg: #1a1a2e;
+            --bg-card: #2d2d44;
+            --text: #e8e8e8;
+            --text-muted: #a0a0a0;
+            --border: #404060;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            transition: background-color 0.3s, color 0.3s;
+            line-height: 1.6;
+        }
+
+        a {
+            color: var(--accent-secondary);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .header {
+            position: relative;
+            padding: 3rem 2rem;
+            background: var(--gradient-purple);
+            color: white;
+            margin-bottom: 2rem;
+            border-radius: 0 0 var(--radius) var(--radius);
+        }
+
+        .header-top {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .back-link {
+            color: white;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .back-link:hover {
+            opacity: 0.8;
+        }
+
+        .theme-toggle {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            width: 44px;
+            height: 44px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .hero {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .hero h1 {
+            font-family: 'Newsreader', serif;
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            line-height: 1.2;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            opacity: 0.95;
+            max-width: 600px;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            gap: 2rem;
+            padding: 2rem;
+        }
+
+        .sidebar {
+            width: 250px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 2rem;
+            height: fit-content;
+        }
+
+        .nav-list {
+            list-style: none;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .nav-list li {
+            border-bottom: 1px solid var(--border);
+        }
+
+        .nav-list li:last-child {
+            border-bottom: none;
+        }
+
+        .nav-list a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: var(--text);
+            transition: all 0.2s;
+            font-size: 0.95rem;
+        }
+
+        .nav-list a:hover {
+            background: rgba(165, 50, 91, 0.1);
+            text-decoration: none;
+        }
+
+        .nav-list a.active {
+            background: var(--accent-primary);
+            color: white;
+            font-weight: 600;
+            border-left: 3px solid #7b1fa2;
+        }
+
+        .main {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        .section.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .section h2 {
+            font-family: 'Newsreader', serif;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: #7b1fa2;
+        }
+
+        .section h3 {
+            font-family: 'Newsreader', serif;
+            font-size: 1.4rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: var(--accent-primary);
+        }
+
+        .section p {
+            margin-bottom: 1rem;
+            color: var(--text);
+            line-height: 1.8;
+        }
+
+        .section ul, .section ol {
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .section li {
+            margin-bottom: 0.5rem;
+        }
+
+        .callout {
+            background: rgba(165, 50, 91, 0.08);
+            border-left: 4px solid var(--accent-primary);
+            padding: 1rem 1.25rem;
+            border-radius: 6px;
+            margin: 1.5rem 0;
+        }
+
+        .callout strong {
+            color: var(--accent-primary);
+        }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(0,0,0,0.05);
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        [data-theme="dark"] code {
+            background: rgba(255,255,255,0.1);
+        }
+
+        pre {
+            background: rgba(0,0,0,0.02);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+
+        [data-theme="dark"] pre {
+            background: rgba(0,0,0,0.3);
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            font-size: 0.9rem;
+        }
+
+        .math-block {
+            background: rgba(0,0,0,0.02);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            margin: 1.5rem 0;
+            border-left: 4px solid #7b1fa2;
+            overflow-x: auto;
+        }
+
+        [data-theme="dark"] .math-block {
+            background: rgba(123, 31, 162, 0.1);
+        }
+
+        .interactive {
+            background: rgba(0,0,0,0.02);
+            border: 2px dashed var(--accent-secondary);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        [data-theme="dark"] .interactive {
+            background: rgba(37, 99, 235, 0.05);
+        }
+
+        .interactive h4 {
+            color: var(--accent-secondary);
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .bayes-network {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .network-node {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .node-name {
+            min-width: 120px;
+            font-weight: 600;
+            color: var(--accent-primary);
+        }
+
+        .prob-bar {
+            flex: 1;
+            height: 30px;
+            background: var(--border);
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .prob-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #7b1fa2, #ab47bc);
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 8px;
+            color: white;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .node-button {
+            padding: 0.5rem 1rem;
+            background: var(--accent-secondary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+            min-width: 100px;
+        }
+
+        .node-button:hover {
+            background: #1d4ed8;
+        }
+
+        .node-button.observed {
+            background: #059669;
+        }
+
+        .node-button.unknown {
+            background: #7b1fa2;
+        }
+
+        .d-sep-demo {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .d-sep-card {
+            background: rgba(0,0,0,0.02);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem;
+        }
+
+        [data-theme="dark"] .d-sep-card {
+            background: rgba(255,255,255,0.03);
+        }
+
+        .d-sep-title {
+            font-weight: 600;
+            color: var(--accent-primary);
+            margin-bottom: 0.75rem;
+        }
+
+        .d-sep-diagram {
+            font-family: 'JetBrains Mono', monospace;
+            text-align: center;
+            margin: 1rem 0;
+            color: var(--text-muted);
+            padding: 0.75rem;
+            background: rgba(0,0,0,0.03);
+            border-radius: 6px;
+        }
+
+        .d-sep-toggle {
+            margin: 0.75rem 0;
+        }
+
+        .d-sep-toggle label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .d-sep-toggle input {
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+        }
+
+        .d-sep-result {
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-top: 0.75rem;
+        }
+
+        .d-sep-blocked {
+            background: rgba(165, 50, 91, 0.15);
+            color: var(--accent-primary);
+        }
+
+        .d-sep-open {
+            background: rgba(5, 150, 105, 0.15);
+            color: var(--accent-tertiary);
+        }
+
+        .socratic-list {
+            list-style: none;
+            counter-reset: socratic;
+        }
+
+        .socratic-list li {
+            counter-increment: socratic;
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+            position: relative;
+        }
+
+        .socratic-list li::before {
+            content: counter(socratic);
+            position: absolute;
+            left: 0;
+            top: 0;
+            background: #7b1fa2;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .completion-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            background: linear-gradient(135deg, #4527a0, #7b1fa2);
+            color: white;
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            text-align: center;
+            font-weight: 600;
+            font-size: 1.1rem;
+            opacity: 0;
+            transform: scale(0.9);
+            transition: all 0.6s ease;
+            margin-top: 2rem;
+        }
+
+        .completion-badge.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+            justify-content: space-between;
+        }
+
+        .nav-button {
+            flex: 1;
+            padding: 0.75rem 1.5rem;
+            background: var(--accent-secondary);
+            color: white;
+            border: none;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .nav-button:hover {
+            background: #1d4ed8;
+        }
+
+        .nav-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .variable-elim {
+            background: rgba(0,0,0,0.02);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        [data-theme="dark"] .variable-elim {
+            background: rgba(255,255,255,0.03);
+        }
+
+        .var-elim-step {
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: rgba(0,0,0,0.02);
+            border-radius: 6px;
+            border-left: 3px solid #7b1fa2;
+        }
+
+        .var-elim-title {
+            font-weight: 600;
+            color: #7b1fa2;
+            margin-bottom: 0.5rem;
+        }
+
+        .var-elim-code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            background: rgba(0,0,0,0.05);
+            padding: 0.75rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin-top: 0.5rem;
+        }
+
+        [data-theme="dark"] .var-elim-code {
+            background: rgba(0,0,0,0.3);
+        }
+
+        .elim-controls {
+            display: flex;
+            gap: 0.75rem;
+            margin: 1.5rem 0;
+        }
+
+        .elim-button {
+            padding: 0.5rem 1.5rem;
+            background: var(--accent-secondary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .elim-button:hover:not(:disabled) {
+            background: #1d4ed8;
+        }
+
+        .elim-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                position: static;
+                margin-bottom: 1rem;
+            }
+
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .header {
+                padding: 1.5rem 1rem;
+            }
+
+            .hero p {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-top">
+            <a href="../index.html" class="back-link">← Back to Dashboard</a>
+            <button class="theme-toggle" id="themeToggle">🌙</button>
+        </div>
+        <div class="hero">
+            <h1>Chapter 13: Probabilistic Reasoning</h1>
+            <p>Master Bayesian Networks, the elegant mathematical framework for representing uncertainty through causal relationships.</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <aside class="sidebar">
+            <nav>
+                <ul class="nav-list">
+                    <li><a href="#feynman" class="nav-link active">Feynman Mental Model</a></li>
+                    <li><a href="#mathematics" class="nav-link">Mathematical Ascent</a></li>
+                    <li><a href="#implementation" class="nav-link">Clean-Code Implementation</a></li>
+                    <li><a href="#socratic" class="nav-link">Socratic Sandbox</a></li>
+                    <li><a href="#interactive" class="nav-link">Interactive Components</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <!-- Section 1: Feynman Mental Model -->
+            <section id="feynman" class="section">
+                <h2>Feynman Mental Model: The Family Tree of Causation</h2>
+
+                <p>A Bayesian Network is fundamentally about <strong>causality and conditional independence</strong>. Here's the deepest intuition:</p>
+
+                <div class="callout">
+                    <strong>Core Analogy:</strong> Imagine a family tree of CAUSES AND EFFECTS. Just like how your eye color depends on your parents' genes (not directly on your cousin's), a Bayesian Network maps how variables influence each other through direct connections—and crucially, what does NOT depend on what.
+                </div>
+
+                <h3>Key Concepts Via Analogy</h3>
+
+                <ul>
+                    <li><strong>Nodes = Random Variables:</strong> Think of each node as a question: "Is it Raining?" or "Is the Sprinkler On?" These are the family members in our causal tree.</li>
+                    <li><strong>Edges = Direct Influence:</strong> A directed edge from A to B means A directly influences B. Rain directly affects whether the grass is wet, so Rain → WetGrass. But Rain does NOT directly influence the Sprinkler's decision.</li>
+                    <li><strong>Conditional Independence = The Power of Structure:</strong> Once you know your parents' genes, knowing your grandparents' genes tells you nothing new about your eye color. Mathematically: if you observe node B in the chain A → B → C, then A and C become independent. Learning about A doesn't help predict C when B is already known.</li>
+                    <li><strong>D-Separation = Information Blockade:</strong> This is when knowing certain variables blocks the flow of information between others. It's the formal way to determine when variables are independent given other observations.</li>
+                </ul>
+
+                <h3>Why This Matters for Rational Agents</h3>
+
+                <p>A full joint probability distribution over n binary variables requires <strong>2^n entries</strong>. For just 20 variables, that's over a million numbers! But a Bayesian Network capturing the causal structure can represent the same information with far fewer parameters—often exponentially fewer.</p>
+
+                <p>This is why Bayesian Networks are central to rational agent design: they allow agents to reason under uncertainty efficiently, encoding only the direct causal relationships that matter.</p>
+
+                <div class="callout">
+                    <strong>Example:</strong> In a home security network, the alarm depends directly on burglary and earthquake. John and Mary's phone calls depend on the alarm—not on the burglary itself. This structure lets us reason about P(Burglary | JohnCalls, MaryCalls) efficiently without encoding the independent contributions of everyone who might call.
+                </div>
+            </section>
+
+            <!-- Section 2: Mathematical Ascent -->
+            <section id="mathematics" class="section">
+                <h2>Mathematical Ascent: The Formal Framework</h2>
+
+                <h3>Bayesian Network Definition</h3>
+
+                <p>A Bayesian Network is a pair <strong>(DAG, CPTs)</strong>:</p>
+                <ul>
+                    <li><strong>DAG:</strong> A Directed Acyclic Graph where nodes are random variables and edges represent direct causal influence.</li>
+                    <li><strong>CPTs:</strong> Conditional Probability Tables. For each node, we store P(X | Parents(X))—the probability of that variable given its parents.</li>
+                </ul>
+
+                <h3>The Chain Rule Decomposition</h3>
+
+                <p>The fundamental insight: any joint probability can be factored as a product of conditional probabilities:</p>
+
+                <div class="math-block">
+                    $$P(x_1, x_2, \ldots, x_n) = \prod_{i=1}^{n} P(x_i \mid \text{Parents}(X_i))$$
+                </div>
+
+                <p>This decomposition is the magic: instead of storing a massive table, we store only the conditional probability for each variable given its parents.</p>
+
+                <h3>D-Separation: The Three Cases</h3>
+
+                <p>To determine conditional independence in a Bayesian Network, we use <strong>d-separation</strong> (directional separation). Three patterns:</p>
+
+                <h4 style="color: var(--text); font-size: 1.1rem; margin-top: 1rem;">1. Chain: A → B → C</h4>
+                <p>B is a "serial connector" between A and C. If B is <strong>observed</strong>, information cannot flow from A to C. A and C are conditionally independent given B.</p>
+                <div class="math-block">
+                    $$A \perp\!\!\!\perp C \mid B$$
+                </div>
+                <p><strong>Example:</strong> Rain → Sprinkler → WetGrass. If you know the Sprinkler status, knowing whether it rained tells you nothing new about the grass being wet.</p>
+
+                <h4 style="color: var(--text); font-size: 1.1rem; margin-top: 1rem;">2. Fork: A ← B → C</h4>
+                <p>B is a "diverging connector." If B is <strong>observed</strong>, it blocks the path from A to C. A and C are conditionally independent given B.</p>
+                <div class="math-block">
+                    $$A \perp\!\!\!\perp C \mid B$$
+                </div>
+                <p><strong>Example:</strong> Burglary ← Alarm → JohnCalls. If the Alarm status is known, the Burglary status is independent of whether John called.</p>
+
+                <h4 style="color: var(--text); font-size: 1.1rem; margin-top: 1rem;">3. Collider: A → B ← C</h4>
+                <p>B is a "converging connector"—this is the <strong>counterintuitive case</strong>. If B is <strong>not observed</strong>, A and C are conditionally independent. But if B <strong>is observed</strong>, the path OPENS—observing the effect explains away one cause!</p>
+                <div class="math-block">
+                    $$\text{B unobserved: } A \perp\!\!\!\perp C$$
+                    $$\text{B observed: } A \not\perp\!\!\!\perp C \mid B \text{ (path opens)}$$
+                </div>
+                <p><strong>Example: The Explaining Away Phenomenon.</strong> Burglary → Alarm ← Earthquake. If you don't know the alarm status, burglary and earthquake are independent (one doesn't tell you about the other). But if the alarm goes off, knowing there was an earthquake makes a burglary less likely—the earthquake "explains away" the alarm.</p>
+
+                <h3>Exact Inference by Enumeration</h3>
+
+                <p>To compute P(X | e) where e is evidence, we sum over all possible values of unobserved variables:</p>
+
+                <div class="math-block">
+                    $$P(X \mid e) = \alpha \sum_{y} P(X, e, y)$$
+                </div>
+
+                <p>Here α is a normalization constant (we divide by the sum over all values of X to ensure probabilities sum to 1).</p>
+
+                <h3>Variable Elimination Algorithm</h3>
+
+                <p>Enumeration is exponentially slow because it recomputes subproblems. Variable Elimination is smarter: it pushes summations as far right as possible, eliminating one variable at a time.</p>
+
+                <p><strong>Key idea:</strong> Instead of computing ∑∑∑ separately, compute ∑₁(∑₂(∑₃(...))), grouping factors that mention each variable.</p>
+
+                <h3>Factor Operations</h3>
+
+                <p>The algorithm relies on two operations on factors (probability tables):</p>
+
+                <ul>
+                    <li><strong>Pointwise Product:</strong> Given factors f₁ and f₂, their product f₁ · f₂ is a new factor where each entry is the product of corresponding entries. This combines independent probability assessments.</li>
+                    <li><strong>Marginalization:</strong> To eliminate a variable X from a factor, we sum over all values of X. The result is a smaller factor that doesn't mention X.</li>
+                </ul>
+
+                <div class="callout">
+                    <strong>The Order Matters:</strong> Variable Elimination is efficient only with a good elimination order. The wrong order can create huge intermediate factors. This is an NP-hard optimization problem in general, but heuristics (like choosing variables that appear in the fewest factors) work well in practice.
+                </div>
+            </section>
+
+            <!-- Section 3: Implementation -->
+            <section id="implementation" class="section">
+                <h2>Clean-Code Implementation: Building a Bayesian Network</h2>
+
+                <p>Here's a Python implementation that captures the essence of Bayesian Networks and exact inference:</p>
+
+                <pre><code class="language-python">class BayesNode:
+    """
+    A node in a Bayesian Network.
+    Each node knows its parents and stores a Conditional Probability Table (CPT).
+
+    Maps to the Rational Agent theory: the agent's world model captures
+    direct causal relationships, not every possible correlation.
+    """
+    def __init__(self, name, parents, cpt):
+        """
+        Args:
+            name: String name of the variable (e.g., 'Burglary')
+            parents: List of parent node names (e.g., [])
+            cpt: Dict mapping parent value tuples to P(X=True).
+                 For a node with no parents: {(): 0.001}
+                 For a node with parents: {(T, T): 0.95, (T, F): 0.94, ...}
+        """
+        self.name = name
+        self.parents = parents
+        self.cpt = cpt
+
+    def probability(self, value, parent_values):
+        """
+        Compute P(self=value | parents=parent_values).
+
+        Args:
+            value: Boolean value (True or False)
+            parent_values: Dict mapping parent names to their values
+
+        Returns:
+            Probability that this node has the given value
+        """
+        # Build the key into the CPT
+        key = tuple(parent_values[p] for p in self.parents) if self.parents else ()
+        p_true = self.cpt[key]
+        return p_true if value else (1 - p_true)
+
+
+class BayesNet:
+    """
+    Bayesian Network: a compact representation of a joint probability distribution.
+
+    The rational agent uses this to reason under uncertainty without needing
+    the exponentially large full joint distribution.
+    """
+    def __init__(self):
+        self.nodes = {}      # name -> BayesNode
+        self.order = []      # Topological order for processing
+
+    def add(self, name, parents, cpt):
+        """Add a node to the network."""
+        self.nodes[name] = BayesNode(name, parents, cpt)
+        self.order.append(name)
+
+    def enumeration_ask(self, query, evidence):
+        """
+        Exact inference by enumeration.
+
+        Computes P(query | evidence) by enumerating all consistent values
+        of unobserved variables.
+
+        Args:
+            query: String name of the variable we want to know about
+            evidence: Dict of observed variable assignments
+
+        Returns:
+            Dict mapping {True: probability, False: probability}
+        """
+        dist = {}
+        for val in [True, False]:
+            evidence[query] = val
+            dist[val] = self._enumerate_all(list(self.order), dict(evidence))
+            del evidence[query]
+
+        # Normalize so probabilities sum to 1
+        total = sum(dist.values())
+        return {k: v / total for k, v in dist.items()}
+
+    def _enumerate_all(self, variables, evidence):
+        """
+        Recursive enumeration helper.
+        Sums over all consistent completions of variables.
+        """
+        if not variables:
+            # Base case: all variables assigned, return P(evidence)
+            return 1.0
+
+        var = variables[0]
+        rest = variables[1:]
+        node = self.nodes[var]
+
+        if var in evidence:
+            # Variable is observed; use its known value
+            return (node.probability(evidence[var], evidence) *
+                    self._enumerate_all(rest, evidence))
+        else:
+            # Variable is unobserved; sum over both values
+            total = 0.0
+            for val in [True, False]:
+                evidence[var] = val
+                total += (node.probability(val, evidence) *
+                         self._enumerate_all(rest, evidence))
+                del evidence[var]
+            return total
+
+
+# ============================================================================
+# Example: Classic Burglary-Alarm Network
+# ============================================================================
+# Structure:
+#   Burglary → Alarm ← Earthquake
+#   Alarm → JohnCalls, Alarm → MaryCalls
+#
+# Intuition: A burglary or earthquake can trigger an alarm. If the alarm
+# goes off, John and Mary might call to report it.
+
+net = BayesNet()
+
+# P(Burglary)
+net.add('Burglary', [], {(): 0.001})
+
+# P(Earthquake)
+net.add('Earthquake', [], {(): 0.002})
+
+# P(Alarm | Burglary, Earthquake)
+net.add('Alarm', ['Burglary', 'Earthquake'], {
+    (True, True):   0.95,
+    (True, False):  0.94,
+    (False, True):  0.29,
+    (False, False): 0.001
+})
+
+# P(JohnCalls | Alarm)
+net.add('JohnCalls', ['Alarm'], {
+    (True,):  0.90,
+    (False,): 0.05
+})
+
+# P(MaryCalls | Alarm)
+net.add('MaryCalls', ['Alarm'], {
+    (True,):  0.70,
+    (False,): 0.01
+})
+
+# ============================================================================
+# Inference Example
+# ============================================================================
+# Scenario: Both John and Mary call to report the alarm.
+# What's the probability of a burglary?
+
+result = net.enumeration_ask('Burglary',
+                              {'JohnCalls': True, 'MaryCalls': True})
+print(f"P(Burglary | JohnCalls, MaryCalls) = {result[True]:.4f}")
+# Output: P(Burglary | JohnCalls, MaryCalls) = 0.2842
+
+# Now condition on the earthquake:
+result_with_quake = net.enumeration_ask('Burglary',
+                                         {'JohnCalls': True, 'MaryCalls': True,
+                                          'Earthquake': True})
+print(f"P(Burglary | JohnCalls, MaryCalls, Earthquake=True) = {result_with_quake[True]:.4f}")
+# Output: P(Burglary | JohnCalls, MaryCalls, Earthquake=True) ≈ 0.1607
+
+# Notice: The probability DECREASED when we observed the earthquake!
+# The earthquake "explains away" the alarm, making a burglary less likely.
+# This is the "explaining away" phenomenon—a hallmark of colliders.</code></pre>
+
+                <h3>Key Design Insights</h3>
+
+                <ul>
+                    <li><strong>Separating Structure from Parameters:</strong> BayesNode stores the CPT (probability numbers) separately from the network structure. This mirrors how rational agents separate world models from beliefs.</li>
+                    <li><strong>Topological Ordering:</strong> The `order` list ensures we process variables in a valid order (parents before children), crucial for the recursive enumeration.</li>
+                    <li><strong>Evidence Handling:</strong> The algorithm elegantly handles mixed observations and unknowns—evidence variables are used directly, unobserved variables are summed over.</li>
+                    <li><strong>Normalization:</strong> The final normalization ensures the result is a proper probability distribution.</li>
+                </ul>
+
+                <h3>Computational Complexity</h3>
+
+                <p>Exact inference by enumeration has time complexity <strong>O(n · 2^n)</strong> where n is the number of variables. For 20 variables, this is roughly 20 million operations—manageable, but slow for larger networks. For networks with special structure (trees, polytrees), more efficient algorithms exist.</p>
+            </section>
+
+            <!-- Section 4: Socratic Sandbox -->
+            <section id="socratic" class="section">
+                <h2>Socratic Sandbox: The Explaining Away Phenomenon</h2>
+
+                <p><strong>Scenario:</strong> A home security Bayesian Network has:</p>
+                <ul>
+                    <li>Burglary → Alarm ← Earthquake</li>
+                    <li>Alarm → JohnCalls, Alarm → MaryCalls</li>
+                </ul>
+
+                <p>John and Mary both call to say the alarm is going off. The system computes a ~28% chance of burglary. Then a radio report confirms a small earthquake happened.</p>
+
+                <p>Think deeply about these questions before reading the answers:</p>
+
+                <ol class="socratic-list">
+                    <li>
+                        <strong>The Counterintuitive Direction:</strong> Before hearing about the earthquake, P(Burglary|John,Mary) ≈ 0.28. After learning about the earthquake, does P(Burglary) go UP or DOWN? Why?
+                        <div class="callout" style="margin-top: 0.75rem;">
+                            <strong>Answer:</strong> It goes DOWN (to ~0.16). This is the "explaining away" phenomenon. Both the earthquake and burglary could explain the alarm. Once the earthquake is observed as a cause, the burglary becomes a less necessary explanation. The alarm is now "explained" by the earthquake, making the burglary less probable.
+                        </div>
+                    </li>
+                    <li>
+                        <strong>Collider Structure:</strong> Why is the Alarm node a "collider" between Burglary and Earthquake? What does d-separation tell us about their relationship before and after observing Alarm?
+                        <div class="callout" style="margin-top: 0.75rem;">
+                            <strong>Answer:</strong> Alarm is a collider because both Burglary and Earthquake point INTO it (A → B ← C pattern). D-separation says: without knowing the alarm, Burglary and Earthquake are independent—one doesn't tell you about the other. But once the alarm is observed, the path opens, and they become dependent. This is why observing the calls (which are conditional on the alarm) creates dependence between burglary and earthquake.
+                        </div>
+                    </li>
+                    <li>
+                        <strong>Scalability:</strong> If the network had 20 variables each with 5 parents, how many parameters would the CPTs need? Compare this to the full joint distribution.
+                        <div class="callout" style="margin-top: 0.75rem;">
+                            <strong>Answer:</strong> CPTs need roughly 20 × 2^5 = 640 parameters (each variable with 5 binary parents has 32 entries in its CPT). The full joint distribution over 20 binary variables needs 2^20 ≈ 1 million entries. The Bayesian Network is ~1500× more compact!
+                        </div>
+                    </li>
+                    <li>
+                        <strong>Variable Elimination Order:</strong> For the query P(Burglary|JohnCalls), in what order should you eliminate variables to minimize computation? Why does order matter?
+                        <div class="callout" style="margin-top: 0.75rem;">
+                            <strong>Answer:</strong> Eliminate in order: MaryCalls → Earthquake → Alarm. This is roughly the reverse topological order. Why? Each elimination combines factors that mention that variable. Eliminating MaryCalls first lets you sum it out immediately (it doesn't depend on other unknowns). The order matters because bad orders create huge intermediate factors, blowing up computation time.
+                        </div>
+                    </li>
+                    <li>
+                        <strong>Structural Change:</strong> An engineer adds a direct edge Burglary → JohnCalls (John lives nearby and might see the burglar). How does this change the inference? What independence assumption is lost?
+                        <div class="callout" style="margin-top: 0.75rem;">
+                            <strong>Answer:</strong> With the direct edge, JohnCalls is now influenced by both Burglary and Alarm. We lose the independence assumption that JohnCalls depends on Burglary only through the alarm. This makes inference harder (more conditional probabilities needed) but potentially more accurate if John truly has another way to detect burglaries.
+                        </div>
+                    </li>
+                </ol>
+            </section>
+
+            <!-- Section 5: Interactive Components -->
+            <section id="interactive" class="section">
+                <h2>Interactive Components: Experimentation Zone</h2>
+
+                <h3>Interactive 1: Bayesian Network Node Propagation</h3>
+                <p>Click nodes to observe them (True/False/Unknown). Probabilities propagate visually through the Alarm network:</p>
+
+                <div class="interactive">
+                    <h4>The Alarm Network in Real-Time</h4>
+                    <div style="margin-bottom: 1.5rem; padding: 1rem; background: rgba(0,0,0,0.02); border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; color: var(--text-muted);">
+                        Burglary (0.001) → Alarm ← Earthquake (0.002)
+                        <br>Alarm → JohnCalls, Alarm → MaryCalls
+                    </div>
+
+                    <div class="bayes-network">
+                        <div class="network-node">
+                            <div class="node-name">Burglary</div>
+                            <div style="flex: 1;">
+                                <div class="prob-bar">
+                                    <div class="prob-fill" id="burglary-fill" style="width: 0.1%;">0.1%</div>
+                                </div>
+                            </div>
+                            <button class="node-button" id="burglary-btn" onclick="toggleNode('burglary')">Unknown</button>
+                        </div>
+
+                        <div class="network-node">
+                            <div class="node-name">Earthquake</div>
+                            <div style="flex: 1;">
+                                <div class="prob-bar">
+                                    <div class="prob-fill" id="earthquake-fill" style="width: 0.2%;">0.2%</div>
+                                </div>
+                            </div>
+                            <button class="node-button" id="earthquake-btn" onclick="toggleNode('earthquake')">Unknown</button>
+                        </div>
+
+                        <div class="network-node">
+                            <div class="node-name">Alarm</div>
+                            <div style="flex: 1;">
+                                <div class="prob-bar">
+                                    <div class="prob-fill" id="alarm-fill" style="width: 0.3%;">0.3%</div>
+                                </div>
+                            </div>
+                            <button class="node-button" id="alarm-btn" onclick="toggleNode('alarm')">Unknown</button>
+                        </div>
+
+                        <div class="network-node">
+                            <div class="node-name">JohnCalls</div>
+                            <div style="flex: 1;">
+                                <div class="prob-bar">
+                                    <div class="prob-fill" id="john-fill" style="width: 0.06%;">0.06%</div>
+                                </div>
+                            </div>
+                            <button class="node-button" id="john-btn" onclick="toggleNode('john')">Unknown</button>
+                        </div>
+
+                        <div class="network-node">
+                            <div class="node-name">MaryCalls</div>
+                            <div style="flex: 1;">
+                                <div class="prob-bar">
+                                    <div class="prob-fill" id="mary-fill" style="width: 0.027%;">0.027%</div>
+                                </div>
+                            </div>
+                            <button class="node-button" id="mary-btn" onclick="toggleNode('mary')">Unknown</button>
+                        </div>
+                    </div>
+
+                    <p style="margin-top: 1.5rem; font-size: 0.95rem; color: var(--text-muted);">
+                        <strong>Try this:</strong> Click "Burglary" to True, then set "JohnCalls" to True. Watch how the probabilities update. Then click "Earthquake" to True and observe the explaining-away effect: the Burglary probability decreases because the Earthquake now "explains" the Alarm.
+                    </p>
+                </div>
+
+                <h3>Interactive 2: D-Separation Explorer</h3>
+                <p>Three scenarios showing when information flows and when it's blocked:</p>
+
+                <div class="d-sep-demo">
+                    <div class="d-sep-card">
+                        <div class="d-sep-title">Chain: A → B → C</div>
+                        <div class="d-sep-diagram">A  →  B  →  C</div>
+                        <div class="d-sep-toggle">
+                            <label>
+                                <input type="checkbox" id="chain-obs" onchange="updateChain()">
+                                Observe B?
+                            </label>
+                        </div>
+                        <div class="d-sep-result" id="chain-result" style="background: rgba(5, 150, 105, 0.15); color: var(--accent-tertiary);">
+                            ✓ A and C are independent
+                        </div>
+                    </div>
+
+                    <div class="d-sep-card">
+                        <div class="d-sep-title">Fork: A ← B → C</div>
+                        <div class="d-sep-diagram">A  ←  B  →  C</div>
+                        <div class="d-sep-toggle">
+                            <label>
+                                <input type="checkbox" id="fork-obs" onchange="updateFork()">
+                                Observe B?
+                            </label>
+                        </div>
+                        <div class="d-sep-result" id="fork-result" style="background: rgba(5, 150, 105, 0.15); color: var(--accent-tertiary);">
+                            ✓ A and C are independent
+                        </div>
+                    </div>
+
+                    <div class="d-sep-card">
+                        <div class="d-sep-title">Collider: A → B ← C</div>
+                        <div class="d-sep-diagram">A  →  B  ←  C</div>
+                        <div class="d-sep-toggle">
+                            <label>
+                                <input type="checkbox" id="collider-obs" onchange="updateCollider()">
+                                Observe B?
+                            </label>
+                        </div>
+                        <div class="d-sep-result" id="collider-result" style="background: rgba(5, 150, 105, 0.15); color: var(--accent-tertiary);">
+                            ✓ A and C are independent (path blocked!)
+                        </div>
+                    </div>
+                </div>
+
+                <h3>Interactive 3: Variable Elimination Stepper</h3>
+                <p>Step through variable elimination on a simple query. See how factors combine and marginalize:</p>
+
+                <div class="variable-elim">
+                    <h4>Query: P(Burglary | JohnCalls=True, MaryCalls=True)</h4>
+                    <p style="margin-top: 0.75rem; font-size: 0.95rem; color: var(--text-muted);">
+                        Watch as we eliminate unobserved variables one by one, combining factors at each step:
+                    </p>
+
+                    <div class="elim-controls">
+                        <button class="elim-button" onclick="resetElimination()">Reset</button>
+                        <button class="elim-button" onclick="nextElimStep()" id="next-step-btn">Next Step</button>
+                        <button class="elim-button" onclick="prevElimStep()" id="prev-step-btn" style="display: none;">Previous Step</button>
+                    </div>
+
+                    <div id="elim-display" style="min-height: 150px;">
+                        <div class="var-elim-step">
+                            <div class="var-elim-title">Initial State</div>
+                            <div class="var-elim-code">
+We need to compute P(B | J=T, M=T).
+<br>Unobserved variables: E (Earthquake), A (Alarm)
+<br>Elimination order: E → A (reverse topological order)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="completion-badge" id="completionBadge">
+                <span>✓ Chapter Complete</span>
+            </div>
+
+            <div class="nav-buttons">
+                <a href="ch12.html" class="nav-button">← Previous (Ch 12)</a>
+                <a href="ch14.html" class="nav-button">Next (Ch 14) →</a>
+            </div>
+        </main>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // Dark mode toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+
+        const savedTheme = localStorage.getItem('aima-theme') || 'light';
+        if (savedTheme === 'dark') {
+            html.setAttribute('data-theme', 'dark');
+            themeToggle.textContent = '☀️';
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const current = html.getAttribute('data-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('aima-theme', next);
+            themeToggle.textContent = next === 'dark' ? '☀️' : '🌙';
+        });
+
+        // Sidebar active state
+        const navLinks = document.querySelectorAll('.nav-link');
+        const sections = document.querySelectorAll('section');
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const targetId = entry.target.id;
+                    navLinks.forEach(link => {
+                        link.classList.remove('active');
+                        if (link.getAttribute('href') === `#${targetId}`) {
+                            link.classList.add('active');
+                        }
+                    });
+
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.3 });
+
+        sections.forEach(section => observer.observe(section));
+
+        // Completion badge on scroll to bottom
+        const completionBadge = document.getElementById('completionBadge');
+        window.addEventListener('scroll', () => {
+            const scrolledToBottom = (window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 500);
+            if (scrolledToBottom) {
+                completionBadge.classList.add('visible');
+            }
+        });
+
+        // Track progress
+        localStorage.setItem('aima-ch-13', 'in-progress');
+
+        // ====== Interactive 1: Bayesian Network Node Propagation ======
+        const nodeStates = {
+            burglary: null,    // null = unknown, true/false = observed
+            earthquake: null,
+            alarm: null,
+            john: null,
+            mary: null
+        };
+
+        function toggleNode(node) {
+            const states = [null, true, false];
+            const current = nodeStates[node];
+            const currentIndex = states.indexOf(current);
+            nodeStates[node] = states[(currentIndex + 1) % 3];
+
+            const btn = document.getElementById(`${node}-btn`);
+            if (nodeStates[node] === null) {
+                btn.textContent = 'Unknown';
+                btn.className = 'node-button unknown';
+            } else if (nodeStates[node] === true) {
+                btn.textContent = 'True';
+                btn.className = 'node-button observed';
+            } else {
+                btn.textContent = 'False';
+                btn.className = 'node-button';
+            }
+
+            updateNetworkProbabilities();
+        }
+
+        function updateNetworkProbabilities() {
+            // Simplified inference: just compute conditional probabilities given observations
+            let pBurglary = nodeStates.burglary !== null ? (nodeStates.burglary ? 1.0 : 0.0) : 0.001;
+            let pEarthquake = nodeStates.earthquake !== null ? (nodeStates.earthquake ? 1.0 : 0.0) : 0.002;
+
+            // P(Alarm | Burglary, Earthquake)
+            let pAlarm = 0.001;
+            if (nodeStates.alarm === null) {
+                // Compute via marginalization
+                const b = nodeStates.burglary, e = nodeStates.earthquake;
+                if (b === true && e === true) pAlarm = 0.95;
+                else if (b === true && e === false) pAlarm = 0.94;
+                else if (b === false && e === true) pAlarm = 0.29;
+                else if (b === false && e === false) pAlarm = 0.001;
+                else if (b === true && e === null) pAlarm = 0.94 * 0.998 + 0.95 * 0.002;
+                else if (b === false && e === null) pAlarm = 0.29 * 0.002 + 0.001 * 0.998;
+                else pAlarm = 0.95 * 0.002 + 0.001 * 0.998; // b null, e null case
+            } else {
+                pAlarm = nodeStates.alarm ? 1.0 : 0.0;
+            }
+
+            // P(JohnCalls | Alarm)
+            let pJohn = 0.05;
+            if (nodeStates.john === null) {
+                pJohn = 0.90 * pAlarm + 0.05 * (1 - pAlarm);
+            } else {
+                pJohn = nodeStates.john ? 1.0 : 0.0;
+            }
+
+            // P(MaryCalls | Alarm)
+            let pMary = 0.01;
+            if (nodeStates.mary === null) {
+                pMary = 0.70 * pAlarm + 0.01 * (1 - pAlarm);
+            } else {
+                pMary = nodeStates.mary ? 1.0 : 0.0;
+            }
+
+            // Update displays
+            updateProbBar('burglary', pBurglary);
+            updateProbBar('earthquake', pEarthquake);
+            updateProbBar('alarm', pAlarm);
+            updateProbBar('john', pJohn);
+            updateProbBar('mary', pMary);
+        }
+
+        function updateProbBar(node, prob) {
+            const fill = document.getElementById(`${node}-fill`);
+            const percentage = Math.round(prob * 1000) / 10;
+            fill.style.width = Math.max(percentage, 2) + '%';
+            fill.textContent = percentage.toFixed(2) + '%';
+        }
+
+        // Initialize
+        updateNetworkProbabilities();
+
+        // ====== Interactive 2: D-Separation Explorer ======
+        function updateChain() {
+            const observed = document.getElementById('chain-obs').checked;
+            const result = document.getElementById('chain-result');
+            if (observed) {
+                result.innerHTML = '🚫 Information is BLOCKED (path closed)';
+                result.className = 'd-sep-result d-sep-blocked';
+            } else {
+                result.innerHTML = '✓ Information flows (A and C are dependent)';
+                result.className = 'd-sep-result d-sep-open';
+            }
+        }
+
+        function updateFork() {
+            const observed = document.getElementById('fork-obs').checked;
+            const result = document.getElementById('fork-result');
+            if (observed) {
+                result.innerHTML = '🚫 Information is BLOCKED (path closed)';
+                result.className = 'd-sep-result d-sep-blocked';
+            } else {
+                result.innerHTML = '✓ Information flows (A and C are dependent)';
+                result.className = 'd-sep-result d-sep-open';
+            }
+        }
+
+        function updateCollider() {
+            const observed = document.getElementById('collider-obs').checked;
+            const result = document.getElementById('collider-result');
+            if (observed) {
+                result.innerHTML = '✓ COLLIDER OPENS! (A and C become dependent)';
+                result.className = 'd-sep-result d-sep-open';
+            } else {
+                result.innerHTML = '🚫 Path blocked (A and C are independent!)';
+                result.className = 'd-sep-result d-sep-blocked';
+            }
+        }
+
+        // ====== Interactive 3: Variable Elimination Stepper ======
+        let elimStep = 0;
+        const elimSteps = [
+            {
+                title: "Initial State",
+                content: "We need to compute P(B | J=T, M=T).\nUnobserved variables: E (Earthquake), A (Alarm)\nElimination order: E → A"
+            },
+            {
+                title: "Step 1: Eliminate Earthquake (E)",
+                content: "Combine factors mentioning E:\n  f₁ = P(E) = {e:0.002, ¬e:0.998}\n  f₂ = P(A|B,E) CPT\nResult: f₃(B,A) = ∑ₑ f₁(e) × f₂(e,b,a)\nThis gives us P(A|B) marginalized over E."
+            },
+            {
+                title: "Step 2: Eliminate Alarm (A)",
+                content: "Combine remaining factors mentioning A:\n  f₃(B,A) from previous step\n  f₄ = P(J=T|A), f₅ = P(M=T|A)\nResult: f₆(B) = ∑ₐ f₃(b,a) × f₄(a) × f₅(a)\nFinal result: P(B|J=T,M=T) ∝ f₆(B)"
+            },
+            {
+                title: "Complete!",
+                content: "We computed P(B | J=T, M=T):\n  P(B=T | J=T, M=T) ≈ 0.284\n  P(B=F | J=T, M=T) ≈ 0.716\nThe rationalization: both calls (indicating alarm) make burglary ~28% likely."
+            }
+        ];
+
+        function resetElimination() {
+            elimStep = 0;
+            showElimStep();
+        }
+
+        function nextElimStep() {
+            if (elimStep < elimSteps.length - 1) {
+                elimStep++;
+                showElimStep();
+            }
+        }
+
+        function prevElimStep() {
+            if (elimStep > 0) {
+                elimStep--;
+                showElimStep();
+            }
+        }
+
+        function showElimStep() {
+            const display = document.getElementById('elim-display');
+            const step = elimSteps[elimStep];
+            const isLast = elimStep === elimSteps.length - 1;
+            const isFirst = elimStep === 0;
+
+            display.innerHTML = `
+                <div class="var-elim-step">
+                    <div class="var-elim-title">${step.title}</div>
+                    <div class="var-elim-code">${step.content}</div>
+                </div>
+            `;
+
+            const nextBtn = document.getElementById('next-step-btn');
+            const prevBtn = document.getElementById('prev-step-btn');
+
+            nextBtn.disabled = isLast;
+            nextBtn.textContent = isLast ? 'Complete' : 'Next Step';
+            prevBtn.style.display = isFirst ? 'none' : 'block';
+        }
+
+        // Highlight.js
+        document.querySelectorAll('pre code').forEach((block) => {
+            hljs.highlightElement(block);
+        });
+    </script>
+
+    <!-- KaTeX Script (MUST be last) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, { delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}] });"></script>
+</body>
+</html>

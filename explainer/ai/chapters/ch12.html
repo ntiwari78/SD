@@ -1,0 +1,1612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 12: Quantifying Uncertainty | AIMA Interactive</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Newsreader:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+
+    <!-- Highlight.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+
+    <!-- KaTeX CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+
+    <style>
+        :root {
+            --bg: #FAF9F6;
+            --bg-card: #FFFFFF;
+            --text: #1a1a2e;
+            --text-muted: #6b7280;
+            --accent-primary: #A8325B;
+            --accent-secondary: #2563eb;
+            --accent-tertiary: #059669;
+            --border: #e5e7eb;
+            --radius: 12px;
+            --purple-gradient: linear-gradient(135deg, #4527a0, #7b1fa2, #ab47bc);
+            --purple-dark: #7b1fa2;
+        }
+
+        [data-theme="dark"] {
+            --bg: #0f0f1e;
+            --bg-card: #1a1a2e;
+            --text: #e5e5e5;
+            --text-muted: #a0a0a0;
+            --border: #333333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .back-link {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            padding: 10px 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            text-decoration: none;
+            color: var(--purple-dark);
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .back-link:hover {
+            background: var(--purple-dark);
+            color: white;
+            transform: translateX(-4px);
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .sidebar {
+            width: 280px;
+            background: var(--bg-card);
+            border-right: 1px solid var(--border);
+            padding: 100px 24px 40px;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .sidebar-nav {
+            list-style: none;
+        }
+
+        .sidebar-nav li {
+            margin-bottom: 8px;
+        }
+
+        .sidebar-nav a {
+            display: block;
+            padding: 10px 12px;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 14px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar-nav a:hover {
+            background: rgba(123, 31, 162, 0.1);
+            color: var(--purple-dark);
+            border-left-color: var(--purple-dark);
+        }
+
+        .sidebar-nav a.active {
+            background: rgba(123, 31, 162, 0.15);
+            color: var(--purple-dark);
+            border-left-color: var(--purple-dark);
+            font-weight: 600;
+        }
+
+        .main {
+            flex: 1;
+            padding: 80px 80px 60px;
+            max-width: 1000px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .hero {
+            background: var(--purple-gradient);
+            color: white;
+            padding: 60px 40px;
+            border-radius: var(--radius);
+            margin-bottom: 60px;
+            box-shadow: 0 8px 32px rgba(123, 31, 162, 0.2);
+        }
+
+        .hero h1 {
+            font-family: 'Newsreader', serif;
+            font-size: 48px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            line-height: 1.2;
+        }
+
+        .hero p {
+            font-size: 18px;
+            opacity: 0.95;
+            margin-bottom: 12px;
+        }
+
+        .hero .part-label {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 12px;
+        }
+
+        .section {
+            margin-bottom: 80px;
+            opacity: 0;
+            transition: opacity 0.6s ease-in;
+        }
+
+        .section.visible {
+            opacity: 1;
+        }
+
+        .section h2 {
+            font-family: 'Newsreader', serif;
+            font-size: 36px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            background: var(--purple-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .section h3 {
+            font-size: 22px;
+            font-weight: 600;
+            margin-top: 32px;
+            margin-bottom: 16px;
+            color: var(--text);
+        }
+
+        .section p {
+            font-size: 16px;
+            line-height: 1.8;
+            margin-bottom: 16px;
+            color: var(--text);
+        }
+
+        .section ul, .section ol {
+            margin-left: 24px;
+            margin-bottom: 16px;
+        }
+
+        .section li {
+            margin-bottom: 12px;
+            line-height: 1.8;
+        }
+
+        .math-block {
+            background: var(--bg-card);
+            border-left: 4px solid var(--purple-dark);
+            padding: 24px;
+            border-radius: 6px;
+            margin: 24px 0;
+            overflow-x: auto;
+            font-size: 16px;
+            line-height: 2;
+        }
+
+        .code-block {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 20px;
+            margin: 24px 0;
+            overflow-x: auto;
+        }
+
+        .code-block code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .code-block pre {
+            margin: 0;
+        }
+
+        .interactive {
+            background: var(--bg-card);
+            border: 2px solid var(--purple-dark);
+            border-radius: var(--radius);
+            padding: 32px;
+            margin: 32px 0;
+            box-shadow: 0 4px 16px rgba(123, 31, 162, 0.1);
+        }
+
+        .interactive h4 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--purple-dark);
+        }
+
+        .slider-group {
+            margin-bottom: 24px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .slider-label span:last-child {
+            color: var(--purple-dark);
+            font-weight: 600;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--purple-dark);
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(123, 31, 162, 0.4);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--purple-dark);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(123, 31, 162, 0.4);
+        }
+
+        .result-box {
+            background: rgba(123, 31, 162, 0.05);
+            border: 1px solid var(--purple-dark);
+            border-radius: 6px;
+            padding: 16px;
+            margin-top: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 15px;
+            color: var(--purple-dark);
+            font-weight: 600;
+        }
+
+        .qa-section {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin: 32px 0;
+        }
+
+        .qa-question {
+            background: rgba(123, 31, 162, 0.05);
+            border-left: 4px solid var(--purple-dark);
+            padding: 16px;
+            margin-bottom: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .qa-question:hover {
+            background: var(--purple-gradient);
+            color: white;
+            transform: translateX(4px);
+        }
+
+        .qa-question.hover-gradient {
+            background: var(--purple-gradient);
+            color: white;
+        }
+
+        .qa-question strong {
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .qa-answer {
+            background: var(--bg);
+            padding: 16px;
+            margin-left: 20px;
+            margin-top: 12px;
+            border-radius: 4px;
+            font-size: 15px;
+            line-height: 1.7;
+            display: none;
+        }
+
+        .qa-answer.visible {
+            display: block;
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 280px;
+            margin: 24px 0;
+            display: flex;
+            align-items: flex-end;
+            gap: 20px;
+            padding: 20px 0;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .bar {
+            flex: 1;
+            background: var(--purple-dark);
+            border-radius: 6px 6px 0 0;
+            position: relative;
+            min-height: 40px;
+            transition: all 0.3s;
+            box-shadow: 0 -4px 12px rgba(123, 31, 162, 0.2);
+        }
+
+        .bar.prior {
+            background: rgba(123, 31, 162, 0.5);
+        }
+
+        .bar.posterior {
+            background: var(--purple-dark);
+        }
+
+        .bar-label {
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .bar-value {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            color: var(--purple-dark);
+            font-size: 14px;
+        }
+
+        .icon-array {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 8px;
+            margin: 24px 0;
+            padding: 20px;
+            background: var(--bg);
+            border-radius: 6px;
+        }
+
+        .icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 20px;
+            transition: all 0.2s;
+        }
+
+        .icon.healthy {
+            background: rgba(5, 150, 105, 0.2);
+            color: var(--accent-tertiary);
+        }
+
+        .icon.sick-true {
+            background: rgba(220, 38, 38, 0.2);
+            color: #dc2626;
+        }
+
+        .icon.fp {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+        }
+
+        .icon:hover {
+            transform: scale(1.1);
+            box-shadow: 0 2px 8px rgba(123, 31, 162, 0.3);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin: 24px 0;
+        }
+
+        .stat-box {
+            background: var(--bg);
+            padding: 16px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+
+        .stat-box strong {
+            color: var(--purple-dark);
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .stat-box span {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin: 24px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-card);
+            font-size: 14px;
+        }
+
+        th {
+            background: rgba(123, 31, 162, 0.1);
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid var(--border);
+            color: var(--purple-dark);
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tr:hover {
+            background: rgba(123, 31, 162, 0.05);
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 16px;
+            margin-top: 60px;
+            justify-content: space-between;
+        }
+
+        .nav-button {
+            flex: 1;
+            padding: 16px 24px;
+            background: var(--bg-card);
+            border: 2px solid var(--purple-dark);
+            color: var(--purple-dark);
+            text-decoration: none;
+            border-radius: var(--radius);
+            font-weight: 600;
+            text-align: center;
+            transition: all 0.3s;
+            font-size: 16px;
+        }
+
+        .nav-button:hover {
+            background: var(--purple-dark);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(123, 31, 162, 0.3);
+        }
+
+        .nav-button.next {
+            background: var(--purple-dark);
+            color: white;
+        }
+
+        .nav-button.next:hover {
+            background: #4527a0;
+        }
+
+        .completion-badge {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--purple-gradient);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 50px;
+            font-weight: 600;
+            display: none;
+            z-index: 90;
+            box-shadow: 0 8px 24px rgba(123, 31, 162, 0.3);
+            animation: slideUp 0.4s ease;
+        }
+
+        .completion-badge.visible {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .hljs {
+            background: var(--bg-card) !important;
+            color: var(--text) !important;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 240px;
+                padding-left: 16px;
+                padding-right: 16px;
+            }
+            .main {
+                padding: 80px 40px 60px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 80px 20px 20px;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+            .main {
+                padding: 40px 20px 60px;
+                max-width: 100%;
+            }
+            .hero {
+                padding: 40px 20px;
+            }
+            .hero h1 {
+                font-size: 32px;
+            }
+            .section h2 {
+                font-size: 28px;
+            }
+            .icon-array {
+                grid-template-columns: repeat(5, 1fr);
+            }
+            .back-link {
+                top: 10px;
+                left: 10px;
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+                width: 44px;
+                height: 44px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="../index.html" class="back-link">← Back to Dashboard</a>
+    <button class="theme-toggle" id="themeToggle">🌙</button>
+
+    <div class="container">
+        <nav class="sidebar">
+            <ul class="sidebar-nav">
+                <li><a href="#feynman" class="nav-link active">Feynman Mental Model</a></li>
+                <li><a href="#mathematical" class="nav-link">Mathematical Axioms</a></li>
+                <li><a href="#bayes" class="nav-link">Bayes' Rule</a></li>
+                <li><a href="#implementation" class="nav-link">Clean-Code Implementation</a></li>
+                <li><a href="#sandbox" class="nav-link">Socratic Sandbox</a></li>
+                <li><a href="#interactive1" class="nav-link">Bayes Calculator</a></li>
+                <li><a href="#interactive2" class="nav-link">Base Rate Fallacy</a></li>
+                <li><a href="#interactive3" class="nav-link">Joint Distribution</a></li>
+            </ul>
+        </nav>
+
+        <main class="main">
+            <div class="hero">
+                <span class="part-label">PART IV: Uncertain Knowledge and Reasoning</span>
+                <h1>Chapter 12: Quantifying Uncertainty</h1>
+                <p>Why logic isn't enough for a toothache. Navigating the fuzzy real world with probability, Bayes' Rule, and rational belief updates.</p>
+            </div>
+
+            <!-- Section 1: Feynman Mental Model -->
+            <section id="feynman" class="section">
+                <h2>The Toothache Problem: Why Logic Breaks Down</h2>
+
+                <p>You wake up with a toothache. Does that definitely mean you have a cavity?</p>
+
+                <p>Classical logic says: "If toothache, then cavity" is either True or False. But the real world is messier.</p>
+
+                <h3>The Qualification Problem</h3>
+                <p>A cavity is ONE possible cause. But a toothache could also result from:</p>
+                <ul>
+                    <li>Gum disease</li>
+                    <li>A cracked tooth</li>
+                    <li>Sinus pressure</li>
+                    <li>Jaw tension</li>
+                    <li>Recent dental work</li>
+                    <li>Referred pain from an infected tooth elsewhere</li>
+                </ul>
+
+                <p>To write a complete logical rule, you'd need to enumerate EVERY exception and every combination of conditions. This leads to:</p>
+
+                <h3>Three Sources of Incompleteness in Logic</h3>
+                <ul>
+                    <li><strong>Laziness:</strong> Writing all the rules is tedious. We'd need thousands of clauses to capture every caveat and edge case.</li>
+                    <li><strong>Theoretical ignorance:</strong> We don't fully understand all the causes of a toothache. Medical science is incomplete.</li>
+                    <li><strong>Practical ignorance:</strong> We might not have measured all relevant variables. Is the tooth sensitive to hot? Cold? Pressure?</li>
+                </ul>
+
+                <h3>The Solution: Degrees of Belief</h3>
+                <p>Instead of True or False, assign a number between 0 and 1 representing your <em>confidence</em> that the toothache is caused by a cavity:</p>
+                <ul>
+                    <li>0 = "Definitely not a cavity"</li>
+                    <li>0.5 = "Equally likely cavity or something else"</li>
+                    <li>1 = "Definitely a cavity"</li>
+                </ul>
+
+                <p>This is the insight at the heart of Bayesian reasoning: <strong>probability is a measure of your belief given incomplete information.</strong></p>
+            </section>
+
+            <!-- Section 2: Mathematical Axioms -->
+            <section id="mathematical" class="section">
+                <h2>Mathematical Ascent: Probability Theory</h2>
+
+                <p>Before we can update beliefs, we need to formalize what "probability" means. Here are the foundations:</p>
+
+                <h3>Core Axioms</h3>
+                <div class="math-block">
+                    <strong>Axiom 1: Probabilities are non-negative</strong><br>
+                    $$0 \leq P(A) \leq 1$$
+                    <br><br>
+                    <strong>Axiom 2: Certain event has probability 1</strong><br>
+                    $$P(\Omega) = 1$$
+                    where $\Omega$ is the sample space (all possible outcomes).
+                    <br><br>
+                    <strong>Axiom 3: Probability of disjoint events</strong><br>
+                    $$P(A \cup B) = P(A) + P(B) - P(A \cap B)$$
+                </div>
+
+                <h3>Conditional Probability</h3>
+                <p>The probability of A <em>given that we know B is true:</em></p>
+
+                <div class="math-block">
+                    $$P(A|B) = \frac{P(A \cap B)}{P(B)}$$
+                </div>
+
+                <p>Read as: "P of A given B equals the probability of both A and B occurring, divided by the probability of B."</p>
+
+                <h3>The Product Rule</h3>
+                <p>A handy rearrangement:</p>
+
+                <div class="math-block">
+                    $$P(A \cap B) = P(A|B) \cdot P(B)$$
+                </div>
+
+                <h3>Independence</h3>
+                <p>Two events are independent if knowing one tells you nothing about the other:</p>
+
+                <div class="math-block">
+                    $$P(A \cap B) = P(A) \cdot P(B)$$
+                    <br>
+                    if and only if $P(A|B) = P(A)$.
+                </div>
+
+                <h3>Conditional Independence</h3>
+                <p>Sometimes, two events are independent <em>given a third:</em></p>
+
+                <div class="math-block">
+                    $$P(A \cap B | C) = P(A|C) \cdot P(B|C)$$
+                </div>
+
+                <p>For example: Given that we know the weather (C), knowing whether it rained yesterday (A) tells us nothing about whether we're eating ice cream today (B). They're conditionally independent.</p>
+            </section>
+
+            <!-- Section 3: Bayes' Rule -->
+            <section id="bayes" class="section">
+                <h2>Bayes' Rule: The Star of the Show</h2>
+
+                <p>This is the formula that powers Bayesian inference, spam filters, medical diagnosis AI, and much of modern machine learning:</p>
+
+                <div class="math-block">
+                    $$P(H|E) = \frac{P(E|H) \cdot P(H)}{P(E)}$$
+                </div>
+
+                <p><strong>Read as:</strong> "The probability of hypothesis H given evidence E equals the probability of evidence E given H, times the prior probability of H, divided by the total probability of seeing evidence E."</p>
+
+                <h3>Breaking Down Each Term</h3>
+
+                <div class="math-block">
+                    <strong>$P(H|E)$ — Posterior probability</strong><br>
+                    Your updated belief in H after observing evidence E. This is what we want to compute.
+                    <br><br>
+                    <strong>$P(E|H)$ — Likelihood</strong><br>
+                    How probable is evidence E if hypothesis H is true? "If the patient has the disease, how likely is a positive test?"
+                    <br><br>
+                    <strong>$P(H)$ — Prior probability</strong><br>
+                    Your belief in H before seeing the evidence. "What fraction of people have this disease in the general population?"
+                    <br><br>
+                    <strong>$P(E)$ — Marginal probability (evidence)</strong><br>
+                    The total probability of observing evidence E under all hypotheses. This is a normalizing constant.
+                </div>
+
+                <h3>Computing the Denominator</h3>
+
+                <p>The denominator $P(E)$ is computed by the <strong>law of total probability:</strong></p>
+
+                <div class="math-block">
+                    $$P(E) = P(E|H) \cdot P(H) + P(E|\neg H) \cdot P(\neg H)$$
+                </div>
+
+                <p>So the full expansion of Bayes' Rule is:</p>
+
+                <div class="math-block">
+                    $$P(H|E) = \frac{P(E|H) \cdot P(H)}{P(E|H) \cdot P(H) + P(E|\neg H) \cdot P(\neg H)}$$
+                </div>
+
+                <h3>Example: The Toothache Problem Revisited</h3>
+
+                <p>Let's quantify the toothache scenario with numbers:</p>
+
+                <ul>
+                    <li><strong>Prior:</strong> $P(\text{cavity}) = 0.05$ (5% of people have cavities)</li>
+                    <li><strong>Likelihood:</strong> $P(\text{toothache|cavity}) = 0.90$ (90% of cavity patients feel pain)</li>
+                    <li><strong>False positive rate:</strong> $P(\text{toothache|\neg cavity}) = 0.15$ (15% of non-cavity people still have toothaches)</li>
+                </ul>
+
+                <p>Now compute the probability of a cavity given we observe a toothache:</p>
+
+                <div class="math-block">
+                    $$P(\text{cavity|toothache}) = \frac{0.90 \times 0.05}{0.90 \times 0.05 + 0.15 \times 0.95}$$
+                    $$= \frac{0.045}{0.045 + 0.1425} = \frac{0.045}{0.1875} \approx 0.24$$
+                </div>
+
+                <p><strong>Result:</strong> Even with a toothache, there's only about a 24% chance you have a cavity! This surprises many people—the prior is very important. But intuitively, if cavities are rare (5%) but many other things cause toothaches (15%), then most toothaches aren't cavities.</p>
+            </section>
+
+            <!-- Section 4: Implementation -->
+            <section id="implementation" class="section">
+                <h2>Clean-Code Implementation</h2>
+
+                <p>Now let's translate theory into working Python. A rational agent updates its beliefs when new evidence arrives—this is exactly what we implement:</p>
+
+                <h3>Bayes' Rule Calculator</h3>
+
+                <div class="code-block">
+                    <pre><code class="language-python">def bayes_update(prior, likelihood, evidence_prob):
+    """
+    Apply Bayes' Rule to update belief.
+
+    Args:
+        prior: P(H) — initial belief in hypothesis H
+        likelihood: P(E|H) — probability of seeing evidence E if H is true
+        evidence_prob: P(E) — total probability of evidence E
+
+    Returns:
+        P(H|E) — updated (posterior) belief after seeing evidence
+    """
+    if evidence_prob == 0:
+        return 0
+    posterior = (likelihood * prior) / evidence_prob
+    return min(1, max(0, posterior))  # Clamp to [0, 1]
+
+
+# Example: The Toothache Problem
+# Prior belief: 5% of people have cavities
+prior_cavity = 0.05
+
+# Likelihood: 90% of cavity patients experience toothaches
+likelihood = 0.90
+
+# Total probability of observing a toothache:
+# = P(toothache|cavity) * P(cavity) + P(toothache|no cavity) * P(no cavity)
+p_toothache_given_cavity = 0.90
+p_toothache_given_no_cavity = 0.15
+p_toothache = (p_toothache_given_cavity * prior_cavity +
+               p_toothache_given_no_cavity * (1 - prior_cavity))
+
+# Update belief
+posterior = bayes_update(prior_cavity, likelihood, p_toothache)
+print(f"P(cavity|toothache) = {posterior:.4f}")
+# Output: P(cavity|toothache) = 0.2400
+
+# Second observation: dentist looks and doesn't see obvious cavity
+# P(no visible cavity | cavity) = 0.1 (small chance cavity isn't visible)
+# P(no visible cavity | no cavity) = 0.95
+second_likelihood = 0.1
+second_posterior_prior = posterior  # Use previous posterior as new prior
+p_no_visible = (0.1 * posterior + 0.95 * (1 - posterior))
+posterior_after_exam = bayes_update(second_posterior_prior, second_likelihood, p_no_visible)
+print(f"P(cavity|toothache AND no visible cavity) = {posterior_after_exam:.4f}")
+# Output: Much lower!</code></pre>
+                </div>
+
+                <h3>Full Joint Probability Distribution</h3>
+
+                <p>For complex problems with multiple variables, we can represent the complete probability model as a table:</p>
+
+                <div class="code-block">
+                    <pre><code class="language-python">class JointDistribution:
+    """
+    Full joint probability distribution over discrete variables.
+
+    The complete model: contains the probability of every possible
+    combination of variable values. A rational agent uses this as a
+    complete model of uncertainty.
+
+    Drawback: grows exponentially (2^n for n binary variables).
+    This motivates Bayesian Networks (Chapter 13).
+    """
+
+    def __init__(self, variables, probabilities):
+        """
+        Args:
+            variables: List of variable names, e.g., ['Toothache', 'Cavity', 'Catch']
+            probabilities: Dict mapping tuples of values to probabilities
+                          e.g., {(True, True, True): 0.05, ...}
+        """
+        self.variables = variables
+        self.table = probabilities
+        self._validate()
+
+    def _validate(self):
+        """Ensure probabilities sum to 1."""
+        total = sum(self.table.values())
+        if abs(total - 1.0) > 0.0001:
+            raise ValueError(f"Probabilities must sum to 1, got {total}")
+
+    def probability(self, assignment):
+        """Get probability of a specific assignment."""
+        return self.table.get(tuple(assignment), 0)
+
+    def query(self, query_var, evidence=None):
+        """
+        Compute P(query_var | evidence) by enumeration.
+
+        Args:
+            query_var: Name of variable to query
+            evidence: Dict of variable assignments, e.g., {'Toothache': True}
+
+        Returns:
+            Dict with probabilities for each value of query_var
+        """
+        if evidence is None:
+            evidence = {}
+
+        query_var_idx = self.variables.index(query_var)
+        results = {}
+
+        for query_value in [True, False]:
+            total = 0
+
+            # Sum probabilities of all assignments matching query and evidence
+            for assignment, prob in self.table.items():
+                row = dict(zip(self.variables, assignment))
+
+                # Check if this assignment matches evidence
+                matches_evidence = all(
+                    row[var] == value
+                    for var, value in evidence.items()
+                )
+
+                # Check if this assignment matches query value
+                matches_query = row[query_var] == query_value
+
+                if matches_evidence and matches_query:
+                    total += prob
+
+            results[query_value] = total
+
+        # Normalize to make probabilities sum to 1
+        norm = sum(results.values())
+        if norm > 0:
+            return {k: v / norm for k, v in results.items()}
+        return results
+
+    def marginalize(self, *drop_vars):
+        """
+        Remove variables by summing them out.
+        Returns a new distribution over remaining variables.
+        """
+        remaining_vars = [v for v in self.variables if v not in drop_vars]
+        new_table = {}
+
+        for assignment, prob in self.table.items():
+            row = dict(zip(self.variables, assignment))
+            remaining_assignment = tuple(
+                row[v] for v in remaining_vars
+            )
+            new_table[remaining_assignment] = new_table.get(remaining_assignment, 0) + prob
+
+        return JointDistribution(remaining_vars, new_table)
+
+
+# Example: Toothache × Cavity × Catch (dentist catches cavity)
+# Joint distribution over three binary variables = 8 possible assignments
+joint = JointDistribution(
+    ['Toothache', 'Cavity', 'Catch'],
+    {
+        (True, True, True):   0.108,
+        (True, True, False):  0.012,
+        (False, True, True):  0.072,
+        (False, True, False): 0.008,
+        (True, False, True):  0.016,
+        (True, False, False): 0.064,
+        (False, False, True): 0.144,
+        (False, False, False): 0.576,
+    }
+)
+
+# Query: P(Cavity | Toothache)
+result = joint.query('Cavity', evidence={'Toothache': True})
+print(f"P(Cavity | Toothache=True) = {result[True]:.4f}")
+# Output: 0.6000
+
+# Marginalize out 'Catch' to get 2D distribution
+marginal = joint.marginalize('Catch')
+print(f"Variables after marginalizing Catch: {marginal.variables}")
+# Output: Variables after marginalizing Catch: ['Toothache', 'Cavity']</code></pre>
+                </div>
+            </section>
+
+            <!-- Section 5: Socratic Sandbox -->
+            <section id="sandbox" class="section">
+                <h2>Socratic Sandbox: Learning Through Failure</h2>
+
+                <p>Let's examine a real failure case: medical diagnosis using Bayes' Rule.</p>
+
+                <h3>The Scenario</h3>
+
+                <p>A medical diagnosis AI uses Bayes' Rule to interpret test results. The hospital runs a screening test for a rare disease:</p>
+
+                <ul>
+                    <li><strong>Prior:</strong> 0.1% of the population has the disease (very rare)</li>
+                    <li><strong>Test sensitivity (true positive rate):</strong> 99% — if you have the disease, the test is positive 99% of the time</li>
+                    <li><strong>Test specificity (true negative rate):</strong> 95% — if you DON'T have the disease, the test is negative 95% of the time</li>
+                </ul>
+
+                <p>A patient tests positive. The AI naively reports: <strong>"99% chance you have the disease."</strong></p>
+
+                <p><strong>But this is WRONG.</strong> Here's why:</p>
+
+                <div class="qa-section">
+                    <div class="qa-question" onclick="toggleAnswer(this)">
+                        <strong>Question 1: What is the ACTUAL posterior probability?</strong>
+                        <span style="font-size: 13px; opacity: 0.7;">Show answer →</span>
+                    </div>
+                    <div class="qa-answer">
+                        <p><strong>Solution:</strong> Use Bayes' Rule with the full formula:</p>
+
+                        <div class="math-block">
+                            P(\text{disease|positive}) = \frac{P(\text{positive|disease}) \cdot P(\text{disease})}{P(\text{positive})}
+                        </div>
+
+                        <p>Where:</p>
+                        <ul>
+                            <li>$P(\text{positive|disease}) = 0.99$ (sensitivity)</li>
+                            <li>$P(\text{disease}) = 0.001$ (prior)</li>
+                            <li>$P(\text{positive|no disease}) = 0.05$ (false positive rate = 1 - specificity)</li>
+                            <li>$P(\text{no disease}) = 0.999$</li>
+                        </ul>
+
+                        <p><strong>Denominator (total probability of positive test):</strong></p>
+                        <div class="math-block">
+                            P(\text{positive}) = 0.99 \times 0.001 + 0.05 \times 0.999 = 0.00099 + 0.04995 = 0.05094
+                        </div>
+
+                        <p><strong>Posterior:</strong></p>
+                        <div class="math-block">
+                            P(\text{disease|positive}) = \frac{0.99 \times 0.001}{0.05094} = \frac{0.00099}{0.05094} \approx 0.0194 = 1.94\%
+                        </div>
+
+                        <p><strong>Wow!</strong> A positive test means only a ~2% chance of the disease, NOT 99%. Why? Because the disease is so rare that false positives vastly outnumber true positives.</p>
+                    </div>
+                </div>
+
+                <div class="qa-section">
+                    <div class="qa-question" onclick="toggleAnswer(this)">
+                        <strong>Question 2: What is the "base rate fallacy" and why is the prior so critical?</strong>
+                        <span style="font-size: 13px; opacity: 0.7;">Show answer →</span>
+                    </div>
+                    <div class="qa-answer">
+                        <p><strong>Base Rate Fallacy:</strong> Ignoring the prior probability (base rate) and relying only on the test accuracy.</p>
+
+                        <p>The AI saw "99% sensitivity" and concluded "99% chance you have the disease." But this confuses $P(\text{positive|disease})$ with $P(\text{disease|positive})$—they're very different!</p>
+
+                        <p><strong>Why the prior matters:</strong> Even a highly accurate test can be misleading if the condition is rare. When disease prevalence is 0.1% but false positives occur in 5% of healthy people, there are roughly 50 false positives for every 1 true positive in a population screening.</p>
+
+                        <p>The prior probability $P(\text{disease}) = 0.001$ is CRUCIAL. Without it, we can't interpret what a positive test means. It's not just a detail—it's half the story.</p>
+                    </div>
+                </div>
+
+                <div class="qa-section">
+                    <div class="qa-question" onclick="toggleAnswer(this)">
+                        <strong>Question 3: How does conditional independence simplify a complex model?</strong>
+                        <span style="font-size: 13px; opacity: 0.7;">Show answer →</span>
+                    </div>
+                    <div class="qa-answer">
+                        <p><strong>The Problem:</strong> Suppose we have 10 symptoms and 5 diseases. The full joint distribution has $2^{10} \times 2^5 = 32,768$ possible states. Storing and updating this table is computationally expensive.</p>
+
+                        <p><strong>The Insight:</strong> If we assume symptoms are conditionally independent given the disease, we can factor the distribution. The "naive Bayes" model assumes:</p>
+
+                        <div class="math-block">
+                            P(\text{symptoms|disease}) = P(s_1|d) \cdot P(s_2|d) \cdot \ldots \cdot P(s_{10}|d)
+                        </div>
+
+                        <p>This is only ~15 probabilities to learn instead of 32,768! And it works surprisingly well in practice—it's the foundation of spam filters, recommendation systems, and more.</p>
+
+                        <p><strong>Trade-off:</strong> We lose some representational power (we're making an assumption), but gain massive computational efficiency. This is a core theme in AI: making smart independence assumptions to escape exponential complexity.</p>
+                    </div>
+                </div>
+
+                <div class="qa-section">
+                    <div class="qa-question" onclick="toggleAnswer(this)">
+                        <strong>Question 4: How does the Bayesian approach compare to pure logic?</strong>
+                        <span style="font-size: 13px; opacity: 0.7;">Show answer →</span>
+                    </div>
+                    <div class="qa-answer">
+                        <p><strong>Logical approach:</strong> "IF positive_test THEN disease" is either true or false.</p>
+
+                        <p><strong>Problem:</strong> This rule is incorrect under uncertainty! A positive test doesn't guarantee disease (as we showed: only 2% posterior).</p>
+
+                        <p><strong>Bayesian approach:</strong> Model the relationship probabilistically. When you see a positive test, update your degree of belief from 0.1% to 2%.</p>
+
+                        <p><strong>What's lost in logic?</strong></p>
+                        <ul>
+                            <li>The magnitude of belief: "How confident are you?"</li>
+                            <li>The ability to combine evidence: sequential updates</li>
+                            <li>Quantifying trade-offs: "Is a 2% risk acceptable?"</li>
+                        </ul>
+
+                        <p>Logic gives binary answers (True/False). Bayes gives graded answers (0.02 out of 1.0). In a messy world, graded answers are more honest.</p>
+                    </div>
+                </div>
+
+                <div class="qa-section">
+                    <div class="qa-question" onclick="toggleAnswer(this)">
+                        <strong>Question 5: Sequential Bayesian updates — running two independent tests</strong>
+                        <span style="font-size: 13px; opacity: 0.7;">Show answer →</span>
+                    </div>
+                    <div class="qa-answer">
+                        <p><strong>Scenario:</strong> First test is positive (posterior = 1.94%). Then the patient runs a second independent test, which is also positive. How do we update?</p>
+
+                        <p><strong>Key insight:</strong> The posterior from the first test becomes the prior for the second test:</p>
+
+                        <div class="math-block">
+                            P(\text{disease|both positive}) = \frac{P(\text{pos}_2|\text{disease}) \cdot P(\text{disease|pos}_1)}{P(\text{pos}_2)}
+                        </div>
+
+                        <p>With $P(\text{disease|pos}_1) = 0.0194$ as the new prior:</p>
+
+                        <div class="math-block">
+                            P(\text{pos}_2) = 0.99 \times 0.0194 + 0.05 \times (1 - 0.0194) = 0.0519
+                        </div>
+
+                        <p><strong>New posterior:</strong></p>
+                        <div class="math-block">
+                            P(\text{disease|both}) = \frac{0.99 \times 0.0194}{0.0519} \approx 0.369 = 36.9\%
+                        </div>
+
+                        <p>Two independent positive tests raise belief from 1.9% to 37%! This is rational belief updating in action. Each piece of evidence shifts our confidence, but the base rate still matters—we're not at 99%.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Interactive 1: Bayes Calculator -->
+            <section id="interactive1" class="section">
+                <h2>Interactive: Bayes' Rule Calculator</h2>
+
+                <p>Drag the sliders to adjust the probabilities and watch the posterior update in real time. See how sensitive Bayes' Rule is to each input.</p>
+
+                <div class="interactive">
+                    <h4>Medical Test Scenario</h4>
+
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>P(Disease) — Prior: Disease prevalence in population</span>
+                            <span id="priorValue">0.010</span>
+                        </div>
+                        <input type="range" id="priorSlider" min="0" max="100" value="10" step="0.1" oninput="updateBayesCalculator()">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>P(Positive|Disease) — Sensitivity: Test accuracy if disease is present</span>
+                            <span id="sensitivityValue">0.990</span>
+                        </div>
+                        <input type="range" id="sensitivitySlider" min="0" max="100" value="99" step="0.1" oninput="updateBayesCalculator()">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>P(Positive|No Disease) — False Positive Rate</span>
+                            <span id="fpValue">0.050</span>
+                        </div>
+                        <input type="range" id="fpSlider" min="0" max="100" value="5" step="0.1" oninput="updateBayesCalculator()">
+                    </div>
+
+                    <div class="result-box">
+                        <div style="margin-bottom: 12px;"><strong>P(Disease | Positive Test) =</strong></div>
+                        <div style="font-size: 20px;" id="posteriorDisplay">0.1660</div>
+                        <div style="margin-top: 12px; font-size: 13px; opacity: 0.8;">This is your posterior belief after seeing a positive test.</div>
+                    </div>
+
+                    <div class="chart-container">
+                        <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+                            <div class="bar prior" id="priorBar" style="width: 100%; height: 100px; border-radius: 6px 6px 0 0;"></div>
+                            <div class="bar-label">Prior</div>
+                        </div>
+                        <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+                            <div class="bar posterior" id="posteriorBar" style="width: 100%; height: 200px; border-radius: 6px 6px 0 0;"></div>
+                            <div class="bar-label">Posterior</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Interactive 2: Base Rate Fallacy -->
+            <section id="interactive2" class="section">
+                <h2>Interactive: Base Rate Fallacy Visualizer</h2>
+
+                <p>Each circle represents 10 people. Adjust the disease prevalence and test accuracy to see WHY positive tests can be misleading when disease is rare.</p>
+
+                <div class="interactive">
+                    <h4>Population of 1,000 People</h4>
+
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>Disease Prevalence (%)</span>
+                            <span id="prevalenceValue">1.0</span>
+                        </div>
+                        <input type="range" id="prevalenceSlider" min="0.1" max="10" value="1" step="0.1" oninput="updateBaseRateFallacy()">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>Test Sensitivity: P(Positive|Disease) (%)</span>
+                            <span id="sensValue">99</span>
+                        </div>
+                        <input type="range" id="sensSlider" min="50" max="100" value="99" step="1" oninput="updateBaseRateFallacy()">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>Test Specificity: P(Negative|No Disease) (%)</span>
+                            <span id="specValue">95</span>
+                        </div>
+                        <input type="range" id="specSlider" min="50" max="100" value="95" step="1" oninput="updateBaseRateFallacy()">
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <strong>Truly Sick</strong>
+                            <span id="trulySick">10</span>
+                        </div>
+                        <div class="stat-box">
+                            <strong>Actually Healthy</strong>
+                            <span id="healthy">990</span>
+                        </div>
+                        <div class="stat-box">
+                            <strong>True Positives</strong>
+                            <span id="tp">10</span>
+                        </div>
+                        <div class="stat-box">
+                            <strong>False Positives</strong>
+                            <span id="fp">50</span>
+                        </div>
+                    </div>
+
+                    <div class="result-box">
+                        <div style="margin-bottom: 12px;"><strong>If you test positive, P(Sick) =</strong></div>
+                        <div style="font-size: 18px;" id="baseRatePosterior">16.67%</div>
+                    </div>
+
+                    <p style="font-size: 14px; color: var(--text-muted); margin-top: 20px;">
+                        <strong>Icon Array Legend:</strong> Each circle = 10 people.
+                        <span style="display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: rgba(220, 38, 38, 0.2); margin: 0 4px;"></span> = Sick,
+                        <span style="display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: rgba(245, 158, 11, 0.2); margin: 0 4px;"></span> = False Positive
+                    </p>
+
+                    <div class="icon-array" id="iconArray"></div>
+                </div>
+            </section>
+
+            <!-- Interactive 3: Joint Distribution -->
+            <section id="interactive3" class="section">
+                <h2>Interactive: Joint Distribution Explorer</h2>
+
+                <p>Click table cells to highlight which rows are being summed in a Bayesian query. This shows how marginalization and conditioning work under the hood.</p>
+
+                <div class="interactive">
+                    <h4>Joint Distribution: Toothache × Cavity × Catch</h4>
+
+                    <p style="margin-bottom: 16px; font-size: 14px; color: var(--text-muted);">
+                        All probabilities sum to 1.0. Click to select evidence and compute conditionals.
+                    </p>
+
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>Filter by Toothache:</span>
+                            <select id="toothacheFilter" onchange="updateJointDistribution()" style="background: var(--bg); border: 1px solid var(--border); padding: 6px; border-radius: 4px; cursor: pointer;">
+                                <option value="all">All</option>
+                                <option value="true">True</option>
+                                <option value="false">False</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>Filter by Cavity:</span>
+                            <select id="cavityFilter" onchange="updateJointDistribution()" style="background: var(--bg); border: 1px solid var(--border); padding: 6px; border-radius: 4px; cursor: pointer;">
+                                <option value="all">All</option>
+                                <option value="true">True</option>
+                                <option value="false">False</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Toothache</th>
+                                    <th>Cavity</th>
+                                    <th>Catch</th>
+                                    <th>Probability</th>
+                                    <th>Contribution</th>
+                                </tr>
+                            </thead>
+                            <tbody id="jointTable">
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="result-box">
+                        <div style="margin-bottom: 8px;"><strong>Query Results:</strong></div>
+                        <div id="jointResults" style="font-size: 14px;">Select filters to compute conditional probabilities.</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Navigation -->
+            <div class="nav-buttons">
+                <a href="ch11.html" class="nav-button">← Previous: Probability (Ch. 11)</a>
+                <a href="ch13.html" class="nav-button next">Next: Bayesian Networks (Ch. 13) →</a>
+            </div>
+        </main>
+    </div>
+
+    <div class="completion-badge" id="completionBadge">
+        ✓ Chapter Complete!
+    </div>
+
+    <script>
+        // Theme Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+
+        const savedTheme = localStorage.getItem('aima-theme') || 'light';
+        html.setAttribute('data-theme', savedTheme);
+        themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('aima-theme', newTheme);
+            themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+        });
+
+        // Sidebar Navigation
+        const navLinks = document.querySelectorAll('.sidebar-nav a');
+        const sections = document.querySelectorAll('.section');
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetId = link.getAttribute('href').substring(1);
+                const targetSection = document.getElementById(targetId);
+
+                if (targetSection) {
+                    targetSection.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+
+        // Intersection Observer for fade-in and active nav
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+
+                    const id = entry.target.id;
+                    navLinks.forEach(link => {
+                        link.classList.remove('active');
+                        if (link.getAttribute('href') === '#' + id) {
+                            link.classList.add('active');
+                        }
+                    });
+                }
+            });
+        }, { threshold: 0.3 });
+
+        sections.forEach(section => observer.observe(section));
+
+        // Completion tracking
+        window.addEventListener('scroll', () => {
+            const scrollPercentage = (window.scrollY + window.innerHeight) / document.documentElement.scrollHeight;
+            const badge = document.getElementById('completionBadge');
+
+            if (scrollPercentage > 0.85) {
+                badge.classList.add('visible');
+                localStorage.setItem('aima-ch-12', 'completed');
+            }
+        });
+
+        // Check if already completed
+        if (localStorage.getItem('aima-ch-12') === 'completed') {
+            document.getElementById('completionBadge').classList.add('visible');
+        }
+
+        // Code highlighting
+        document.querySelectorAll('code').forEach(el => {
+            if (el.classList.contains('language-python')) {
+                hljs.highlightElement(el);
+            }
+        });
+
+        // Toggle QA Answers
+        function toggleAnswer(element) {
+            const answer = element.nextElementSibling;
+            if (answer && answer.classList.contains('qa-answer')) {
+                answer.classList.toggle('visible');
+                element.classList.toggle('hover-gradient');
+            }
+        }
+
+        // Interactive 1: Bayes Calculator
+        function updateBayesCalculator() {
+            const prior = parseFloat(document.getElementById('priorSlider').value) / 100;
+            const sensitivity = parseFloat(document.getElementById('sensitivitySlider').value) / 100;
+            const fp = parseFloat(document.getElementById('fpSlider').value) / 100;
+
+            document.getElementById('priorValue').textContent = prior.toFixed(3);
+            document.getElementById('sensitivityValue').textContent = sensitivity.toFixed(3);
+            document.getElementById('fpValue').textContent = fp.toFixed(3);
+
+            const pEvidence = sensitivity * prior + fp * (1 - prior);
+            const posterior = (sensitivity * prior) / pEvidence;
+
+            document.getElementById('posteriorDisplay').textContent = posterior.toFixed(4);
+
+            // Update bars
+            const priorBar = document.getElementById('priorBar');
+            const posteriorBar = document.getElementById('posteriorBar');
+
+            priorBar.style.height = (prior * 200) + 'px';
+            posteriorBar.style.height = (posterior * 200) + 'px';
+        }
+
+        // Interactive 2: Base Rate Fallacy
+        function updateBaseRateFallacy() {
+            const prevalence = parseFloat(document.getElementById('prevalenceSlider').value) / 100;
+            const sensitivity = parseFloat(document.getElementById('sensSlider').value) / 100;
+            const specificity = parseFloat(document.getElementById('specSlider').value) / 100;
+
+            document.getElementById('prevalenceValue').textContent = (prevalence * 100).toFixed(1);
+            document.getElementById('sensValue').textContent = (sensitivity * 100).toFixed(0);
+            document.getElementById('specValue').textContent = (specificity * 100).toFixed(0);
+
+            const n = 1000;
+            const sick = Math.round(n * prevalence);
+            const healthy = n - sick;
+            const tp = Math.round(sick * sensitivity);
+            const fp = Math.round(healthy * (1 - specificity));
+
+            document.getElementById('trulySick').textContent = sick;
+            document.getElementById('healthy').textContent = healthy;
+            document.getElementById('tp').textContent = tp;
+            document.getElementById('fp').textContent = fp;
+
+            const posterior = tp / (tp + fp || 1);
+            document.getElementById('baseRatePosterior').textContent = (posterior * 100).toFixed(2) + '%';
+
+            // Render icon array
+            const iconArray = document.getElementById('iconArray');
+            iconArray.innerHTML = '';
+            const numIcons = Math.ceil(n / 10);
+            let sickCount = 0, fpCount = 0;
+
+            for (let i = 0; i < numIcons; i++) {
+                const icon = document.createElement('div');
+                icon.className = 'icon';
+
+                if (sickCount < sick / 10) {
+                    icon.classList.add('sick-true');
+                    icon.textContent = '🏥';
+                    sickCount++;
+                } else if (fpCount < fp / 10) {
+                    icon.classList.add('fp');
+                    icon.textContent = '⚠️';
+                    fpCount++;
+                } else {
+                    icon.classList.add('healthy');
+                    icon.textContent = '✓';
+                }
+
+                iconArray.appendChild(icon);
+            }
+        }
+
+        // Interactive 3: Joint Distribution
+        const jointData = [
+            { toothache: true, cavity: true, catch: true, prob: 0.108 },
+            { toothache: true, cavity: true, catch: false, prob: 0.012 },
+            { toothache: false, cavity: true, catch: true, prob: 0.072 },
+            { toothache: false, cavity: true, catch: false, prob: 0.008 },
+            { toothache: true, cavity: false, catch: true, prob: 0.016 },
+            { toothache: true, cavity: false, catch: false, prob: 0.064 },
+            { toothache: false, cavity: false, catch: true, prob: 0.144 },
+            { toothache: false, cavity: false, catch: false, prob: 0.576 },
+        ];
+
+        function updateJointDistribution() {
+            const toothacheFilter = document.getElementById('toothacheFilter').value;
+            const cavityFilter = document.getElementById('cavityFilter').value;
+
+            const tbody = document.getElementById('jointTable');
+            tbody.innerHTML = '';
+
+            let selectedProb = 0;
+            let selectedCount = 0;
+
+            jointData.forEach(row => {
+                const toothacheMatch = toothacheFilter === 'all' ||
+                    (toothacheFilter === 'true' && row.toothache) ||
+                    (toothacheFilter === 'false' && !row.toothache);
+                const cavityMatch = cavityFilter === 'all' ||
+                    (cavityFilter === 'true' && row.cavity) ||
+                    (cavityFilter === 'false' && !row.cavity);
+
+                const tr = document.createElement('tr');
+                const isSelected = toothacheMatch && cavityMatch;
+
+                if (isSelected) {
+                    tr.style.background = 'rgba(123, 31, 162, 0.15)';
+                    selectedProb += row.prob;
+                    selectedCount++;
+                }
+
+                tr.innerHTML = `
+                    <td>${row.toothache ? 'True' : 'False'}</td>
+                    <td>${row.cavity ? 'True' : 'False'}</td>
+                    <td>${row.catch ? 'True' : 'False'}</td>
+                    <td style="font-family: 'JetBrains Mono', monospace; font-weight: 600;">${row.prob.toFixed(3)}</td>
+                    <td>${isSelected ? '✓' : ''}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            const resultsDiv = document.getElementById('jointResults');
+            if (selectedCount > 0) {
+                resultsDiv.innerHTML = `
+                    Rows selected: ${selectedCount}<br>
+                    Total probability: ${selectedProb.toFixed(4)}<br>
+                    This is P(Toothache=${toothacheFilter} AND Cavity=${cavityFilter})
+                `;
+            } else {
+                resultsDiv.innerHTML = 'Select filters to compute conditional probabilities.';
+            }
+        }
+
+        // Initialize interactives
+        updateBayesCalculator();
+        updateBaseRateFallacy();
+        updateJointDistribution();
+    </script>
+
+    <!-- KaTeX Scripts (VERY END of body) -->
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false}
+                ]
+            });
+        });
+    </script>
+</body>
+</html>

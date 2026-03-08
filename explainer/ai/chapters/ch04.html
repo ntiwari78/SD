@@ -1,0 +1,1910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 4: Search in Complex Environments | AIMA Explainer</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #FAF9F6;
+            --bg-card: #FFFFFF;
+            --text: #1a1a2e;
+            --text-muted: #6b7280;
+            --accent-primary: #A8325B;
+            --accent-secondary: #2563eb;
+            --accent-tertiary: #059669;
+            --border: #e5e7eb;
+            --radius: 12px;
+            --font-serif: 'Newsreader', Georgia, serif;
+            --font-sans: 'Inter', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
+            --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.16);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        [data-theme="dark"] {
+            --bg: #0f0f0f;
+            --bg-card: #1a1a1a;
+            --text: #f0f0f0;
+            --text-muted: #a0a0a0;
+            --border: #333333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            color: var(--text);
+            background: var(--bg);
+            line-height: 1.6;
+            transition: var(--transition);
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+
+        /* Header & Navigation */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 1.5rem 0;
+            padding: 0.5rem 1rem;
+            color: var(--accent-primary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition);
+            border-radius: var(--radius);
+        }
+
+        .back-link:hover {
+            background: rgba(168, 50, 91, 0.1);
+            transform: translateX(-4px);
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #1565c0, #2196f3, #42a5f5);
+            color: white;
+            padding: 4rem 2rem;
+            border-radius: var(--radius);
+            margin: 2rem 0 3rem;
+            text-align: center;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .hero h1 {
+            font-family: var(--font-serif);
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .hero .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.95;
+            margin-bottom: 1rem;
+        }
+
+        .hero .overview {
+            font-size: 1rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto 1.5rem;
+            line-height: 1.5;
+        }
+
+        .hero .badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius);
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar-nav {
+            position: sticky;
+            top: 2rem;
+            float: left;
+            width: 200px;
+            margin-right: 2rem;
+        }
+
+        .sidebar-nav ul {
+            list-style: none;
+            border-left: 2px solid var(--border);
+            padding-left: 1rem;
+        }
+
+        .sidebar-nav li {
+            margin: 0.75rem 0;
+        }
+
+        .sidebar-nav a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: var(--transition);
+            display: block;
+            padding: 0.25rem 0.5rem;
+            border-left: 2px solid transparent;
+            margin-left: -0.5rem;
+        }
+
+        .sidebar-nav a:hover,
+        .sidebar-nav a.active {
+            color: var(--accent-primary);
+            border-left-color: var(--accent-primary);
+        }
+
+        /* Main Content */
+        .content {
+            overflow: auto;
+        }
+
+        section {
+            margin-bottom: 4rem;
+            opacity: 0;
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h2 {
+            font-family: var(--font-serif);
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--text);
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        h3 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 1.5rem 0 1rem;
+            color: var(--text);
+        }
+
+        h4 {
+            font-family: var(--font-serif);
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin: 1rem 0 0.75rem;
+        }
+
+        p {
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+
+        /* Cards & Containers */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-md);
+            border-color: var(--accent-secondary);
+        }
+
+        .analogy-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .analogy-card {
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            text-align: center;
+            transition: var(--transition);
+        }
+
+        .analogy-card:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .analogy-card .icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .analogy-card h4 {
+            margin-top: 0;
+        }
+
+        /* Code Blocks */
+        .code-block {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            margin: 1.5rem 0;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .code-header {
+            background: var(--text-muted);
+            color: var(--bg-card);
+            padding: 0.75rem 1rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            font-family: var(--font-mono);
+        }
+
+        .code-content {
+            padding: 1rem;
+            overflow-x: auto;
+        }
+
+        .code-content code {
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        pre {
+            margin: 0;
+        }
+
+        /* Math Cards */
+        .math-card {
+            background: var(--bg-card);
+            border-left: 4px solid var(--accent-secondary);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .math-card h4 {
+            color: var(--accent-secondary);
+            margin-top: 0;
+        }
+
+        .math-content {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: rgba(37, 99, 235, 0.05);
+            border-radius: calc(var(--radius) - 4px);
+            overflow-x: auto;
+        }
+
+        /* Socratic Q&A */
+        .qa-container {
+            margin: 2rem 0;
+        }
+
+        .qa-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+
+        .qa-question {
+            padding: 1.5rem;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            background: var(--bg-card);
+            transition: var(--transition);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .qa-question:hover {
+            background: rgba(168, 50, 91, 0.05);
+        }
+
+        .qa-question.active {
+            background: rgba(168, 50, 91, 0.1);
+            border-bottom-color: var(--accent-primary);
+        }
+
+        .qa-toggle {
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent-primary);
+            font-weight: bold;
+            margin-top: 0.2rem;
+        }
+
+        .qa-question.active .qa-toggle {
+            transform: rotate(180deg);
+        }
+
+        .qa-text {
+            flex: 1;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .qa-answer {
+            padding: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .qa-answer.active {
+            max-height: 500px;
+            transition: max-height 0.3s ease-in;
+        }
+
+        .qa-answer-content {
+            padding: 1.5rem;
+            border-top: 1px solid var(--border);
+            line-height: 1.8;
+        }
+
+        /* Interactive Containers */
+        .interactive {
+            background: var(--bg-card);
+            border: 2px solid var(--accent-secondary);
+            border-radius: var(--radius);
+            padding: 2rem;
+            margin: 2rem 0;
+            box-shadow: var(--shadow-md);
+        }
+
+        .interactive h3 {
+            color: var(--accent-secondary);
+            margin-top: 0;
+        }
+
+        .interactive-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin: 1.5rem 0;
+            align-items: center;
+        }
+
+        button {
+            background: var(--accent-primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius);
+            font-family: var(--font-sans);
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 0.95rem;
+        }
+
+        button:hover {
+            background: #922540;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.secondary {
+            background: var(--accent-secondary);
+        }
+
+        button.secondary:hover {
+            background: #1d4ed8;
+        }
+
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .button-group button {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+
+        /* Sliders */
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .control-group label {
+            font-weight: 600;
+            min-width: 120px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            min-width: 150px;
+            cursor: pointer;
+        }
+
+        .control-value {
+            background: rgba(0, 0, 0, 0.05);
+            padding: 0.5rem 1rem;
+            border-radius: calc(var(--radius) - 4px);
+            min-width: 80px;
+            text-align: center;
+            font-weight: 600;
+            font-family: var(--font-mono);
+        }
+
+        /* SVG Visualization */
+        svg {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 1.5rem 0;
+        }
+
+        .landscape-container {
+            background: rgba(37, 99, 235, 0.05);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border: 1px solid var(--border);
+        }
+
+        .chessboard {
+            display: inline-grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 0;
+            margin: 1rem 0;
+            border: 2px solid var(--text);
+            border-radius: calc(var(--radius) / 2);
+            overflow: hidden;
+        }
+
+        .chess-cell {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            border: 1px solid var(--border);
+        }
+
+        .chess-cell.white {
+            background: #f0f0f0;
+        }
+
+        [data-theme="dark"] .chess-cell.white {
+            background: #333333;
+        }
+
+        .chess-cell.black {
+            background: #d0d0d0;
+        }
+
+        [data-theme="dark"] .chess-cell.black {
+            background: #555555;
+        }
+
+        .chess-cell.queen {
+            color: var(--accent-primary);
+        }
+
+        /* Population Display */
+        .population-list {
+            display: grid;
+            gap: 1rem;
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 1.5rem 0;
+        }
+
+        .population-item {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .population-item .mini-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2px;
+        }
+
+        .population-item .mini-cell {
+            width: 20px;
+            height: 20px;
+            background: #e0e0e0;
+            border: 1px solid #999;
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+        }
+
+        .population-stats {
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .stat-item {
+            flex: 1;
+        }
+
+        .stat-value {
+            font-weight: 700;
+            color: var(--accent-primary);
+            font-size: 1.1rem;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 0.25rem;
+        }
+
+        /* Belief State Grid */
+        .belief-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .belief-state {
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .belief-state.active {
+            border-color: var(--accent-primary);
+            background: rgba(168, 50, 91, 0.1);
+            box-shadow: var(--shadow-md);
+        }
+
+        .room {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 1px solid var(--text);
+            border-radius: 4px;
+            margin: 0.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+
+        .room.clean {
+            background: #e0f7e0;
+            color: #059669;
+        }
+
+        .room.dirty {
+            background: #ffe0e0;
+            color: #dc2626;
+        }
+
+        .agent-indicator {
+            font-size: 1.2rem;
+            margin-top: 0.5rem;
+        }
+
+        /* Display Info */
+        .info-box {
+            background: rgba(37, 99, 235, 0.1);
+            border-left: 4px solid var(--accent-secondary);
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin: 1rem 0;
+            font-size: 0.95rem;
+        }
+
+        /* Dark Mode Toggle */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.5rem;
+            transition: var(--transition);
+            box-shadow: var(--shadow-md);
+        }
+
+        .theme-toggle:hover {
+            transform: rotate(20deg);
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar-nav {
+                position: static;
+                float: none;
+                width: 100%;
+                margin-right: 0;
+                margin-bottom: 2rem;
+            }
+
+            .sidebar-nav ul {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 1rem;
+                border-left: none;
+                padding-left: 0;
+                border-bottom: 2px solid var(--border);
+                padding-bottom: 1rem;
+            }
+
+            .sidebar-nav li {
+                margin: 0;
+            }
+
+            h2 {
+                font-size: 1.75rem;
+            }
+
+            .hero h1 {
+                font-size: 1.75rem;
+            }
+
+            .analogy-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .belief-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .population-item {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="../index.html" class="back-link">← Back to Command Center</a>
+
+    <div class="container">
+        <div class="hero">
+            <h1>Chapter 4: Search in Complex Environments</h1>
+            <div class="subtitle">Part II — Problem-Solving</div>
+            <div class="overview">
+                Relaxing the assumptions of Chapter 3. Local search and optimization, nondeterministic actions, partial observability, and online search in unknown environments.
+            </div>
+            <span class="badge">pp. 110–145</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 200px 1fr; gap: 2rem; margin-bottom: 3rem;">
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="#feynman" class="nav-link">Mountain Climbing</a></li>
+                    <li><a href="#math" class="nav-link">Mathematical Ascent</a></li>
+                    <li><a href="#code" class="nav-link">Code Implementation</a></li>
+                    <li><a href="#socratic" class="nav-link">Socratic Sandbox</a></li>
+                    <li><a href="#interactive" class="nav-link">Interactive Labs</a></li>
+                </ul>
+            </nav>
+
+            <div class="content">
+                <!-- Section 1: Feynman Mental Model -->
+                <section id="feynman">
+                    <h2>Mountain Climbing in the Fog</h2>
+                    <p>
+                        Imagine you're trying to find the highest peak in a mountain range, but you're lost in thick fog and can only feel the ground right beneath your feet. You have no map. You can't see the overall landscape. All you know is: which direction is uphill right now?
+                    </p>
+
+                    <div class="analogy-cards">
+                        <div class="analogy-card">
+                            <div class="icon">⛰️</div>
+                            <h4>Hill Climbing</h4>
+                            <p>Always step uphill. Simple! But you might get stuck at a small peak and think you've reached Everest.</p>
+                        </div>
+
+                        <div class="analogy-card">
+                            <div class="icon">🎲</div>
+                            <h4>Random Restart</h4>
+                            <p>"If at first you don't succeed, teleport to a random spot and try again." Surprisingly effective — 94% of 8-queens problems solved.</p>
+                        </div>
+
+                        <div class="analogy-card">
+                            <div class="icon">🔥❄️</div>
+                            <h4>Simulated Annealing</h4>
+                            <p>Start by shaking vigorously (accept bad moves), then gradually calm down. Like cooling hot metal into a low-energy crystal.</p>
+                        </div>
+
+                        <div class="analogy-card">
+                            <div class="icon">🧬</div>
+                            <h4>Genetic Algorithms</h4>
+                            <p>Nature's optimizer! A population breeds — fittest survive, crossover combines parents, mutations introduce novelty.</p>
+                        </div>
+
+                        <div class="analogy-card">
+                            <div class="icon">↓📉</div>
+                            <h4>Gradient Descent</h4>
+                            <p>Continuous spaces. Follow the slope using calculus. The gradient shows you the steepest direction down.</p>
+                        </div>
+
+                        <div class="analogy-card">
+                            <div class="icon">🧩</div>
+                            <h4>Belief States</h4>
+                            <p>When you can't see the world clearly, track which states are still possible. Narrow it down with observations.</p>
+                        </div>
+                    </div>
+
+                    <h3>The Three Problems of Hill Climbing</h3>
+                    <div class="card">
+                        <h4>1. Local Maxima</h4>
+                        <p>You reach a small hill (local maximum) and every direction goes down. You're stuck. On the 8-queens problem without sideways moves: <strong>86% failure rate</strong>.</p>
+
+                        <h4>2. Ridges & Shoulders</h4>
+                        <p>The landscape is like a knife-edge ridge. Moving in any cardinal direction goes down, but the ridge itself leads somewhere good. Hill climbing can't walk the ridge.</p>
+
+                        <h4>3. Plateaus</h4>
+                        <p>A flat area where the value doesn't change. Hill climbing refuses to move because no neighbor is strictly better. You're paralyzed on flatland.</p>
+                    </div>
+
+                    <h3>Solution: Sideways Moves</h3>
+                    <p>
+                        Add one line of code: allow moves that don't improve the value, up to a limit (e.g., 100 sideways steps). Why does this help so much? Many "stuck" cases are actually plateaus. Sideways moves let you traverse them and find an edge where you can ascend again.
+                    </p>
+                    <div class="info-box">
+                        <strong>Result:</strong> With sideways moves, 8-queens success rate jumps from 14% to 94%. A tiny change, dramatic improvement.
+                    </div>
+
+                    <h3>The Cooling Schedule in Simulated Annealing</h3>
+                    <p>
+                        Acceptance probability for a worse move: <span style="font-family: var(--font-mono);">P = e^(ΔE/T)</span>
+                    </p>
+                    <ul style="margin: 1rem 0 1rem 2rem;">
+                        <li><strong>High T:</strong> Probability ≈ 1 (accept almost anything, explore wildly)</li>
+                        <li><strong>Low T:</strong> Probability ≈ 0 (accept almost nothing, greedy like hill climbing)</li>
+                        <li><strong>T → 0:</strong> Becomes pure hill climbing (exploitation)</li>
+                    </ul>
+                    <p>
+                        The <strong>cooling schedule</strong> determines everything. Too fast: freezes in local minimum. Too slow: wastes time. Theoretical schedules like <span style="font-family: var(--font-mono);">T = C / log(t)</span> guarantee convergence but are impractically slow. Practical schedules use geometric cooling: <span style="font-family: var(--font-mono);">T(t) = T₀ · α^t</span> with <span style="font-family: var(--font-mono);">α ≈ 0.95–0.99</span>.
+                    </p>
+
+                    <h3>Genetic Algorithms: Evolution in Action</h3>
+                    <p>
+                        A population of candidate solutions "breeds." Each generation:
+                    </p>
+                    <ol style="margin: 1rem 0 1rem 2rem;">
+                        <li><strong>Selection:</strong> Pick parents proportional to fitness (fittest reproduce more)</li>
+                        <li><strong>Crossover:</strong> Combine parent genes at a random point</li>
+                        <li><strong>Mutation:</strong> Flip bits randomly (introduce novelty)</li>
+                        <li><strong>Repeat:</strong> Build new generation</li>
+                    </ol>
+                    <p>
+                        For the 8-queens problem, this is like beam search with sexual reproduction. Crossover can combine good ideas from two parents. Mutation prevents stagnation when the population converges.
+                    </p>
+
+                    <h3>Gradient Descent: Calculus for Optimization</h3>
+                    <p>
+                        In continuous spaces, forget neighbors. Instead, use calculus. The gradient <span style="font-family: var(--font-mono);">∇f</span> points in the steepest direction. Follow it downhill (or uphill if maximizing).
+                    </p>
+                    <p>
+                        Update rule: <span style="font-family: var(--font-mono);">x ← x + α∇f(x)</span>
+                    </p>
+                    <p>
+                        The <strong>step size</strong> <span style="font-family: var(--font-mono);">α</span> is critical:
+                    </p>
+                    <ul style="margin: 1rem 0 1rem 2rem;">
+                        <li>Too small: convergence is glacially slow</li>
+                        <li>Too big: you overshoot and oscillate</li>
+                        <li><strong>Adaptive step sizes:</strong> Start big, shrink as you approach optimum</li>
+                    </ul>
+                    <p>
+                        <strong>Newton-Raphson</strong> uses second derivatives (the Hessian matrix) to choose the step size automatically. Faster convergence, but expensive to compute.
+                    </p>
+                </section>
+
+                <!-- Section 2: Mathematical Ascent -->
+                <section id="math">
+                    <h2>Mathematical Ascent</h2>
+
+                    <div class="math-card">
+                        <h4>State-Space Landscape</h4>
+                        <div class="math-content">
+                            Goal: Find $\text{argmax}_s f(s)$ where $f: \text{States} \to \mathbb{R}$
+                            <br><br>
+                            The "landscape" is high-dimensional: $f(s)$ plotted against all possible states $s$.
+                        </div>
+                    </div>
+
+                    <div class="math-card">
+                        <h4>Simulated Annealing (Core Equations)</h4>
+                        <div class="math-content">
+                            Temperature schedule: $T(t) = \text{schedule}(t)$
+                            <br><br>
+                            Acceptance probability for worse move:
+                            $$P(\text{accept}) = e^{\Delta E / T}$$
+                            where $\Delta E = \text{Value}(\text{next}) - \text{Value}(\text{current}) < 0$
+                            <br><br>
+                            As $T \to 0$, probability $\to 0$ (pure exploitation).
+                            <br><br>
+                            <strong>Boltzmann Distribution:</strong> If cooling schedule is slow enough, the probability of being in state $s$ approaches:
+                            $$P(s) = \frac{e^{f(s)/T}}{Z}$$
+                            where $Z = \sum_s e^{f(s)/T}$ (partition function).
+                        </div>
+                    </div>
+
+                    <div class="math-card">
+                        <h4>Genetic Algorithms: Selection & Crossover</h4>
+                        <div class="math-content">
+                            Population of $k$ individuals.
+                            <br><br>
+                            <strong>Fitness-Proportionate Selection:</strong>
+                            $$P(\text{select } i) = \frac{f(i)}{\sum_j f(j)}$$
+                            <br><br>
+                            <strong>Crossover at point $c$:</strong>
+                            $$\text{child} = \text{parent1}[1:c] + \text{parent2}[c+1:n]$$
+                            <br><br>
+                            <strong>Mutation:</strong> Each position flipped with probability $\mu$ (typically 0.01).
+                        </div>
+                    </div>
+
+                    <div class="math-card">
+                        <h4>Gradient-Based Optimization</h4>
+                        <div class="math-content">
+                            <strong>Gradient (direction of steepest ascent):</strong>
+                            $$\nabla f = \left(\frac{\partial f}{\partial x_1}, \frac{\partial f}{\partial x_2}, \ldots, \frac{\partial f}{\partial x_n}\right)$$
+                            <br><br>
+                            <strong>Gradient Ascent Update:</strong>
+                            $$\mathbf{x} \leftarrow \mathbf{x} + \alpha \nabla f(\mathbf{x})$$
+                            where $\alpha$ is the step size (learning rate).
+                            <br><br>
+                            <strong>Newton-Raphson (2nd-order):</strong>
+                            $$\mathbf{x} \leftarrow \mathbf{x} - \mathbf{H}_f^{-1}(\mathbf{x}) \nabla f(\mathbf{x})$$
+                            where $\mathbf{H}_f$ is the Hessian matrix of second derivatives.
+                        </div>
+                    </div>
+
+                    <div class="math-card">
+                        <h4>Belief-State Search (Partial Observability)</h4>
+                        <div class="math-content">
+                            Physical state space has $N$ states → Belief-state space has $2^N$ possible belief states.
+                            <br><br>
+                            <strong>Nondeterministic Transition:</strong>
+                            $$b' = \bigcup_{s \in b} \text{RESULTS}_P(s, a)$$
+                            <br><br>
+                            <strong>Percept Update (filtering):</strong>
+                            $$b_o = \{s : o = \text{PERCEPT}(s) \text{ and } s \in \hat{b}\}$$
+                            <br><br>
+                            Search is in belief-space, not physical state space. Solutions are conditional plans (AND-OR trees).
+                        </div>
+                    </div>
+
+                    <div class="math-card">
+                        <h4>LRTA* (Learning Real-Time A*)</h4>
+                        <div class="math-content">
+                            Update heuristic estimate after visiting states:
+                            $$H[s] \leftarrow \min_{a \in \text{Actions}(s)} \text{LRTA*-COST}(s, a, \text{result}[s,a], H)$$
+                            <br><br>
+                            where
+                            $$\text{LRTA*-COST}(s, a, s', H) = c(s, a, s') + H[s']$$
+                            if $s'$ is known, otherwise $h(s)$ (optimistic: assume direct path to goal).
+                            <br><br>
+                            <strong>Key insight:</strong> Optimism under uncertainty. Every time you get stuck, raise the estimate for that area, making it less attractive next time.
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 3: Code Implementation -->
+                <section id="code">
+                    <h2>Clean-Code Implementation</h2>
+
+                    <div class="code-block">
+                        <div class="code-header">python | hill_climbing.py</div>
+                        <div class="code-content">
+                            <pre><code class="language-python">import random
+import math
+
+def hill_climbing(problem):
+    """Steepest-ascent hill climbing.
+    Returns a state that is a local maximum.
+    Gets stuck 86% of the time on 8-queens without sideways moves."""
+    current = problem.initial
+    while True:
+        neighbor = max(problem.successors(current),
+                      key=problem.value, default=None)
+        if neighbor is None or problem.value(neighbor) <= problem.value(current):
+            return current  # Stuck at local max or plateau
+        current = neighbor
+
+def hill_climbing_with_sideways(problem, max_sideways=100):
+    """Hill climbing that allows sideways moves on plateaus.
+    Raises 8-queens success rate from 14% to 94%."""
+    current = problem.initial
+    sideways_count = 0
+    while True:
+        neighbor = max(problem.successors(current),
+                      key=problem.value, default=None)
+        if neighbor is None:
+            return current
+        delta = problem.value(neighbor) - problem.value(current)
+        if delta > 0:
+            current = neighbor
+            sideways_count = 0
+        elif delta == 0 and sideways_count < max_sideways:
+            current = neighbor
+            sideways_count += 1
+        else:
+            return current
+
+def random_restart_hill_climbing(problem, max_restarts=100):
+    """Random-restart wrapper. Expected restarts = 1/p where p = success rate.
+    For 8-queens: ~7 restarts without sideways, ~1.06 with sideways."""
+    best = None
+    for _ in range(max_restarts):
+        result = hill_climbing_with_sideways(problem)
+        if best is None or problem.value(result) > problem.value(best):
+            best = result
+        if problem.is_goal(result):
+            return result
+    return best</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="code-block">
+                        <div class="code-header">python | simulated_annealing.py</div>
+                        <div class="code-content">
+                            <pre><code class="language-python">def simulated_annealing(problem, schedule):
+    """Simulated annealing: accepts bad moves with decreasing probability.
+    schedule(t) returns temperature T at time t.
+    If T=0, return current. If schedule is slow enough, finds global optimum."""
+    current = problem.initial
+    for t in range(1, 1000000):
+        T = schedule(t)
+        if T == 0:
+            return current
+        next_state = random.choice(problem.successors(current))
+        delta_e = problem.value(next_state) - problem.value(current)
+        if delta_e > 0:
+            current = next_state  # Always accept improvements
+        elif random.random() < math.exp(delta_e / T):
+            current = next_state  # Accept bad moves with probability e^(ΔE/T)
+    return current
+
+# Example cooling schedules
+def exp_schedule(k=20, lam=0.005):
+    """Exponential cooling: T(t) = k * exp(-λt)"""
+    return lambda t: k * math.exp(-lam * t)
+
+def geometric_schedule(T0=100, alpha=0.95):
+    """Geometric cooling: T(t) = T₀ * α^t (practical, fast)"""
+    return lambda t: T0 * (alpha ** t)</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="code-block">
+                        <div class="code-header">python | genetic_algorithm.py</div>
+                        <div class="code-content">
+                            <pre><code class="language-python">def genetic_algorithm(population, fitness_fn, mutate_fn, crossover_fn,
+                      generations=1000, mutation_rate=0.01):
+    """Genetic algorithm: evolve a population using selection, crossover, mutation.
+    Mimics natural selection — fittest individuals reproduce more often."""
+    for gen in range(generations):
+        # Calculate fitness-proportionate selection weights
+        weights = [fitness_fn(individual) for individual in population]
+        total = sum(weights)
+        if total == 0:
+            probs = [1/len(population)] * len(population)
+        else:
+            probs = [w/total for w in weights]
+
+        new_population = []
+        for _ in range(len(population)):
+            # Select two parents (fitness-proportionate)
+            parent1 = random.choices(population, weights=probs)[0]
+            parent2 = random.choices(population, weights=probs)[0]
+            # Crossover to produce child
+            child = crossover_fn(parent1, parent2)
+            # Mutate with small probability
+            if random.random() < mutation_rate:
+                child = mutate_fn(child)
+            new_population.append(child)
+        population = new_population
+
+        # Check for solution
+        best = max(population, key=fitness_fn)
+        if fitness_fn(best) == 28:  # Perfect for 8-queens
+            return best
+    return max(population, key=fitness_fn)</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="code-block">
+                        <div class="code-header">python | gradient_descent.py</div>
+                        <div class="code-content">
+                            <pre><code class="language-python">def gradient_descent(f, grad_f, x0, alpha=0.01, iterations=1000):
+    """Gradient descent for continuous optimization.
+    f: objective function, grad_f: gradient function.
+    alpha (step size) is critical: too small = slow, too big = overshoot."""
+    x = x0
+    for _ in range(iterations):
+        gradient = grad_f(x)
+        x = [xi + alpha * gi for xi, gi in zip(x, gradient)]  # Ascent
+    return x
+
+def newton_raphson(f, grad_f, hessian_f, x0, iterations=100):
+    """Newton-Raphson for continuous optimization.
+    Uses 2nd derivatives (Hessian) to compute optimal step size.
+    Faster convergence, but more expensive."""
+    import numpy as np
+    x = np.array(x0)
+    for _ in range(iterations):
+        gradient = np.array(grad_f(x))
+        hess = np.array(hessian_f(x))
+        # x ← x - H^(-1) * ∇f
+        x = x - np.linalg.solve(hess, gradient)
+    return x.tolist()</code></pre>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 4: Socratic Sandbox -->
+                <section id="socratic">
+                    <h2>Socratic Sandbox</h2>
+                    <p>Click questions to reveal insights. Think before you peek!</p>
+
+                    <div class="qa-container">
+                        <div class="qa-item">
+                            <div class="qa-question" data-qa="1">
+                                <div class="qa-toggle">▼</div>
+                                <div class="qa-text">A hill-climbing agent solving 8-queens gets stuck 86% of the time. You add sideways moves (limit 100) and suddenly success jumps to 94%. Why?</div>
+                            </div>
+                            <div class="qa-answer">
+                                <div class="qa-answer-content">
+                                    <p>
+                                        Many "local maxima" in 8-queens are actually <strong>plateaus</strong> — flat areas where the objective function (number of non-attacking queens) stays constant across many states.
+                                    </p>
+                                    <p>
+                                        Pure steepest-ascent refuses to move on a plateau because no neighbor is strictly better. The agent freezes, thinking it's stuck, when actually a few steps sideways would lead to an edge where it can ascend again.
+                                    </p>
+                                    <p>
+                                        Sideways moves let the agent traverse the plateau. The limit of 100 prevents infinite wandering on truly flat local maxima. This single modification transforms most "stuck" cases into solvable ones.
+                                    </p>
+                                    <p style="color: var(--accent-tertiary); font-weight: 600; margin-top: 1rem;">
+                                        Lesson: Small implementation changes can have dramatic effects when the problem structure matches the fix.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="qa-item">
+                            <div class="qa-question" data-qa="2">
+                                <div class="qa-toggle">▼</div>
+                                <div class="qa-text">A simulated annealing agent optimizing circuit layouts accepts terrible designs early but gets trapped in bad local minima later. The engineer says it's no better than random search. What went wrong?</div>
+                            </div>
+                            <div class="qa-answer">
+                                <div class="qa-answer-content">
+                                    <p>
+                                        The <strong>cooling schedule</strong> is wrong. This is the most common mistake in simulated annealing.
+                                    </p>
+                                    <p>
+                                        If temperature drops too fast, the algorithm doesn't have enough time to escape local minima before it "freezes" into pure hill climbing. If temperature stays too high too long, it's just random walking without improvement.
+                                    </p>
+                                    <p>
+                                        The key insight: the schedule must be "slow enough" for the Boltzmann distribution $P(s) \propto e^{f(s)/T}$ to sample increasingly good states as T decreases.
+                                    </p>
+                                    <ul style="margin: 1rem 0 1rem 2rem;">
+                                        <li><strong>Theoretical schedule:</strong> $T(t) = C / \log(t)$ (slow, guaranteed convergence)</li>
+                                        <li><strong>Practical schedule:</strong> $T(t) = T_0 \cdot \alpha^t$ with $\alpha \approx 0.95–0.99$ (geometric cooling)</li>
+                                    </ul>
+                                    <p style="color: var(--accent-tertiary); font-weight: 600; margin-top: 1rem;">
+                                        Lesson: Cooling schedule is the control knob. Tune it as carefully as learning rate in neural networks.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="qa-item">
+                            <div class="qa-question" data-qa="3">
+                                <div class="qa-toggle">▼</div>
+                                <div class="qa-text">A genetic algorithm for antenna design keeps converging to mediocre solutions. After 50 generations, all individuals look nearly identical. What's happening?</div>
+                            </div>
+                            <div class="qa-answer">
+                                <div class="qa-answer-content">
+                                    <p>
+                                        <strong>Loss of diversity</strong> — the population has converged prematurely to a local optimum. Everyone has the same genes, so crossover can't create novelty.
+                                    </p>
+                                    <p>
+                                        Likely causes:
+                                    </p>
+                                    <ol style="margin: 1rem 0 1rem 2rem;">
+                                        <li>Selection pressure too high (only top 10% breed)</li>
+                                        <li>Mutation rate too low (no new genetic material)</li>
+                                        <li>Population too small (not enough variation to begin with)</li>
+                                    </ol>
+                                    <p>
+                                        <strong>Fixes:</strong>
+                                    </p>
+                                    <ul style="margin: 1rem 0 1rem 2rem;">
+                                        <li>Increase mutation rate from 0.01 to 0.05–0.1</li>
+                                        <li>Use tournament selection (weaker than fitness-proportionate)</li>
+                                        <li>Introduce <strong>elitism</strong> (keep top 2 individuals) while allowing more random ones</li>
+                                        <li>Double population size</li>
+                                    </ul>
+                                    <p style="color: var(--accent-tertiary); font-weight: 600; margin-top: 1rem;">
+                                        Lesson: Exploration vs. exploitation trade-off is fundamental. You need diversity for innovation.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="qa-item">
+                            <div class="qa-question" data-qa="4">
+                                <div class="qa-toggle">▼</div>
+                                <div class="qa-text">An agent in the erratic vacuum world executes [Suck, Right, Suck]. Sometimes it works; sometimes dirt reappears. Why can't we use a standard search algorithm?</div>
+                            </div>
+                            <div class="qa-answer">
+                                <div class="qa-answer-content">
+                                    <p>
+                                        In a <strong>nondeterministic</strong> environment, the same action can produce different outcomes. Suck might clean the square AND the adjacent square, or deposit dirt on a clean square, depending on environment whims.
+                                    </p>
+                                    <p>
+                                        A simple action sequence assumes deterministic outcomes: "do A, then B, then C, and I'll be done." Not true here.
+                                    </p>
+                                    <p>
+                                        <strong>Solution: Conditional Plans (AND-OR Trees)</strong>
+                                    </p>
+                                    <ul style="margin: 1rem 0 1rem 2rem;">
+                                        <li>OR nodes = agent's choices (which action to execute)</li>
+                                        <li>AND nodes = environment's possible responses (which outcome occurred)</li>
+                                        <li>The plan branches on observations</li>
+                                    </ul>
+                                    <p>
+                                        Example: [Suck, if Status=5 then [Right, Suck] else []] — handle both cases.
+                                    </p>
+                                    <p style="color: var(--accent-tertiary); font-weight: 600; margin-top: 1rem;">
+                                        Lesson: Contingency planning is required when nature can surprise you.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="qa-item">
+                            <div class="qa-question" data-qa="5">
+                                <div class="qa-toggle">▼</div>
+                                <div class="qa-text">A robot in an unknown maze uses heuristic search (Manhattan distance) but after 500 steps is still circling the start. What should it use?</div>
+                            </div>
+                            <div class="qa-answer">
+                                <div class="qa-answer-content">
+                                    <p>
+                                        The robot needs <strong>LRTA* (Learning Real-Time A*)</strong>. Standard A* assumes a complete map; the robot doesn't have one.
+                                    </p>
+                                    <p>
+                                        The key insight: <strong>Optimism under uncertainty.</strong> Assume untried actions lead directly to the goal (cost = $h(s)$, the heuristic estimate). After actually trying actions, update your cost estimate:
+                                    </p>
+                                    <p style="text-align: center; margin: 1rem 0; font-family: var(--font-mono);">
+                                        H[s] ← min<sub>a</sub> [c(s,a,s') + H[s']]
+                                    </p>
+                                    <p>
+                                        This "flattens out" local minima over time. Each time you get stuck in the same area, you raise its cost estimate, making it less attractive. Eventually, all estimates converge to true costs, and the robot finds the exit.
+                                    </p>
+                                    <p>
+                                        The circling problem happens because a naive online DFS has no memory of past cost estimates. LRTA* learns from failure.
+                                    </p>
+                                    <p style="color: var(--accent-tertiary); font-weight: 600; margin-top: 1rem;">
+                                        Lesson: Real-time agents learn by interacting with their environment. Past mistakes inform future plans.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 5: Interactive Labs -->
+                <section id="interactive">
+                    <h2>Interactive Labs</h2>
+
+                    <!-- Interactive 1: Landscape Visualizer -->
+                    <div class="interactive">
+                        <h3>Lab 1: Hill Climbing vs. Simulated Annealing</h3>
+                        <p>
+                            Explore a 1D landscape with multiple peaks. Watch the agent struggle with local maxima, accept bad moves, or teleport randomly.
+                        </p>
+
+                        <div class="interactive-controls">
+                            <div class="button-group">
+                                <button onclick="initLandscape('hillClimbing')">Hill Climbing</button>
+                                <button onclick="initLandscape('simAnnealing')">Simulated Annealing</button>
+                                <button onclick="initLandscape('randomRestart')">Random Restart</button>
+                                <button onclick="resetLandscape()">Reset</button>
+                            </div>
+                        </div>
+
+                        <div class="control-group">
+                            <label for="saTemp">Initial Temperature (SA):</label>
+                            <input type="range" id="saTemp" min="1" max="100" value="50" onchange="updateSATemp()">
+                            <span class="control-value" id="tempValue">50</span>
+                        </div>
+
+                        <div class="landscape-container">
+                            <svg id="landscape" width="100%" height="300" viewBox="0 0 800 300"></svg>
+                        </div>
+
+                        <div class="info-box" id="landscapeInfo">
+                            Select a search strategy and click Animate to watch the agent explore the landscape.
+                        </div>
+                    </div>
+
+                    <!-- Interactive 2: N-Queens with GA -->
+                    <div class="interactive">
+                        <h3>Lab 2: Genetic Algorithm for 8-Queens</h3>
+                        <p>
+                            A population of candidate solutions evolves. Watch selection favor fit individuals, crossover combine good genes, and mutations introduce variety. How many generations to solve?
+                        </p>
+
+                        <div class="interactive-controls">
+                            <button onclick="initGA()">Initialize Population</button>
+                            <button onclick="evolveOneGen()">Evolve One Generation</button>
+                            <button onclick="toggleAutoEvolve()">Auto-Evolve</button>
+                            <button onclick="resetGA()">Reset</button>
+                        </div>
+
+                        <div class="control-group">
+                            <label for="mutRate">Mutation Rate:</label>
+                            <input type="range" id="mutRate" min="0.01" max="0.1" step="0.01" value="0.01">
+                            <span class="control-value" id="mutValue">0.01</span>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0;">
+                            <div>
+                                <div style="text-align: center; font-weight: 700; margin-bottom: 1rem;">
+                                    Generation: <span id="gaGen">0</span>
+                                </div>
+                                <div class="chessboard" id="bestBoard"></div>
+                                <div style="text-align: center; margin-top: 1rem;">
+                                    <div class="stat-value" id="bestFitness">0</div>
+                                    <div class="stat-label">Best Fitness</div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="font-weight: 700; margin-bottom: 1rem;">Population (Top 4)</div>
+                                <div class="population-list" id="populationList"></div>
+                            </div>
+                        </div>
+
+                        <div class="info-box" id="gaInfo">
+                            Population initialized. Click "Evolve One Generation" to see crossover and mutation in action.
+                        </div>
+                    </div>
+
+                    <!-- Interactive 3: Belief State Explorer -->
+                    <div class="interactive">
+                        <h3>Lab 3: Belief States in Partially Observable Worlds</h3>
+                        <p>
+                            The vacuum world has 8 possible states (left/right room, clean/dirty, agent position). You start in full ignorance—all states possible. Observe and act to narrow down reality.
+                        </p>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0;">
+                            <div>
+                                <div style="font-weight: 700; margin-bottom: 1rem;">Environment Mode:</div>
+                                <div class="button-group">
+                                    <button onclick="setBeliefMode('det')" class="secondary">Deterministic</button>
+                                    <button onclick="setBeliefMode('nondet')" class="secondary">Nondeterministic</button>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="font-weight: 700; margin-bottom: 1rem;">Actions:</div>
+                                <div class="button-group">
+                                    <button onclick="beliefAction('Left')">Left</button>
+                                    <button onclick="beliefAction('Right')">Right</button>
+                                    <button onclick="beliefAction('Suck')">Suck</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin: 1.5rem 0;">
+                            <div style="font-weight: 700; margin-bottom: 1rem;">Belief States (highlighted = possible):</div>
+                            <div class="belief-grid" id="beliefGrid"></div>
+                        </div>
+
+                        <div class="info-box" id="beliefInfo">
+                            All 8 states are currently possible (full ignorance). Take actions and observe to narrow down which state you're really in.
+                        </div>
+
+                        <button onclick="resetBelief()" style="margin-top: 1rem;">Reset</button>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dark Mode Toggle -->
+    <div class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">
+        <span id="themeIcon">🌙</span>
+    </div>
+
+    <script>
+        // Dark Mode Toggle
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon();
+        }
+
+        function updateThemeIcon() {
+            const theme = document.documentElement.getAttribute('data-theme');
+            document.getElementById('themeIcon').textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+
+        // Load theme preference
+        function loadTheme() {
+            const saved = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', saved);
+            updateThemeIcon();
+        }
+
+        // Sidebar Navigation Scroll Spy
+        function initScrollSpy() {
+            const navLinks = document.querySelectorAll('.nav-link');
+            const sections = document.querySelectorAll('section');
+
+            window.addEventListener('scroll', () => {
+                let current = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    if (pageYOffset >= sectionTop - 200) {
+                        current = section.getAttribute('id');
+                    }
+                });
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href') === '#' + current) {
+                        link.classList.add('active');
+                    }
+                });
+            });
+        }
+
+        // Socratic Q&A
+        function initQA() {
+            document.querySelectorAll('.qa-question').forEach(q => {
+                q.addEventListener('click', function() {
+                    const answer = this.nextElementSibling;
+                    this.classList.toggle('active');
+                    answer.classList.toggle('active');
+                });
+            });
+        }
+
+        // Scroll animations
+        function initScrollAnimations() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.animationDelay = '0s';
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            document.querySelectorAll('section').forEach(s => observer.observe(s));
+        }
+
+        // ===== LANDSCAPE VISUALIZER =====
+        let currentMode = null;
+        let agentX = 0;
+        let temperature = 50;
+        let animationId = null;
+
+        function drawLandscape() {
+            const svg = document.getElementById('landscape');
+            svg.innerHTML = '';
+            const width = svg.clientWidth;
+            const height = svg.clientHeight;
+
+            // Draw landscape curve (1D function with multiple peaks)
+            let path = 'M 0,300';
+            for (let x = 0; x < width; x += 5) {
+                const t = x / width;
+                // Multiple peaks: sin + cos functions
+                const y = 100 * Math.sin(3 * Math.PI * t) + 60 * Math.cos(6 * Math.PI * t) + 80;
+                path += ` L ${x},${300 - y}`;
+            }
+            path += ' L ' + width + ',300 Z';
+
+            const landscape = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            landscape.setAttribute('d', path);
+            landscape.setAttribute('fill', 'rgba(37, 99, 235, 0.2)');
+            landscape.setAttribute('stroke', '#2563eb');
+            landscape.setAttribute('stroke-width', '2');
+            svg.appendChild(landscape);
+
+            // Draw agent
+            agentX = Math.min(agentX, width - 10);
+            const agentY = getYForX(agentX, width, height);
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', agentX);
+            circle.setAttribute('cy', agentY);
+            circle.setAttribute('r', '8');
+            circle.setAttribute('fill', '#A8325B');
+            circle.setAttribute('stroke', 'white');
+            circle.setAttribute('stroke-width', '2');
+            svg.appendChild(circle);
+        }
+
+        function getYForX(x, width, height) {
+            const t = x / width;
+            const y = 100 * Math.sin(3 * Math.PI * t) + 60 * Math.cos(6 * Math.PI * t) + 80;
+            return height - y;
+        }
+
+        function getValueForX(x, width) {
+            const t = x / width;
+            return 100 * Math.sin(3 * Math.PI * t) + 60 * Math.cos(6 * Math.PI * t) + 80;
+        }
+
+        function initLandscape(mode) {
+            currentMode = mode;
+            agentX = Math.random() * 500;
+            if (mode === 'simAnnealing') {
+                temperature = parseFloat(document.getElementById('saTemp').value);
+            }
+            animateLandscape();
+        }
+
+        function resetLandscape() {
+            if (animationId) cancelAnimationFrame(animationId);
+            agentX = Math.random() * 500;
+            currentMode = null;
+            drawLandscape();
+            document.getElementById('landscapeInfo').textContent = 'Ready to explore.';
+        }
+
+        function updateSATemp() {
+            temperature = parseFloat(document.getElementById('saTemp').value);
+            document.getElementById('tempValue').textContent = temperature.toFixed(1);
+        }
+
+        function animateLandscape() {
+            const svg = document.getElementById('landscape');
+            const width = svg.clientWidth;
+            const stepSize = 20;
+            let stuck = false;
+            let temp = temperature;
+            let step = 0;
+
+            function animate() {
+                drawLandscape();
+
+                if (currentMode === 'hillClimbing') {
+                    // Hill climbing: only move uphill
+                    const currentValue = getValueForX(agentX, width);
+                    const rightValue = getValueForX(agentX + stepSize, width);
+                    const leftValue = getValueForX(agentX - stepSize, width);
+
+                    const bestOption = Math.max(
+                        { val: currentValue, move: 0 },
+                        { val: rightValue, move: stepSize },
+                        { val: leftValue, move: -stepSize },
+                        (a, b) => a.val > b.val ? a : b
+                    );
+
+                    if (bestOption.move === 0) {
+                        stuck = true;
+                        document.getElementById('landscapeInfo').innerHTML = `<strong>Stuck at local maximum!</strong> Value: ${currentValue.toFixed(0)}`;
+                    } else {
+                        agentX += bestOption.move;
+                        agentX = Math.max(10, Math.min(width - 10, agentX));
+                        animationId = requestAnimationFrame(animate);
+                    }
+                } else if (currentMode === 'simAnnealing') {
+                    // Simulated annealing
+                    if (temp > 0.1) {
+                        const nextX = agentX + (Math.random() - 0.5) * 40;
+                        const currentValue = getValueForX(agentX, width);
+                        const nextValue = getValueForX(nextX, width);
+                        const deltaE = nextValue - currentValue;
+
+                        if (deltaE > 0 || Math.random() < Math.exp(deltaE / temp)) {
+                            agentX = Math.max(10, Math.min(width - 10, nextX));
+                        }
+                        temp *= 0.98;
+                        step++;
+                        document.getElementById('landscapeInfo').innerHTML = `<strong>Temperature:</strong> ${temp.toFixed(1)} | <strong>Value:</strong> ${getValueForX(agentX, width).toFixed(0)}`;
+                        animationId = requestAnimationFrame(animate);
+                    } else {
+                        document.getElementById('landscapeInfo').innerHTML = `<strong>Cooled! Final value:</strong> ${getValueForX(agentX, width).toFixed(0)}`;
+                    }
+                } else if (currentMode === 'randomRestart') {
+                    // Random restart
+                    if (step < 3) {
+                        const currentValue = getValueForX(agentX, width);
+                        const rightValue = getValueForX(agentX + stepSize, width);
+                        const leftValue = getValueForX(agentX - stepSize, width);
+
+                        const bestOption = Math.max(
+                            { val: currentValue, move: 0 },
+                            { val: rightValue, move: stepSize },
+                            { val: leftValue, move: -stepSize },
+                            (a, b) => a.val > b.val ? a : b
+                        );
+
+                        if (bestOption.move === 0) {
+                            step++;
+                            document.getElementById('landscapeInfo').innerHTML = `<strong>Restart ${step + 1}:</strong> Trying again from random position...`;
+                            agentX = Math.random() * width;
+                        } else {
+                            agentX += bestOption.move;
+                            agentX = Math.max(10, Math.min(width - 10, agentX));
+                        }
+                        animationId = requestAnimationFrame(animate);
+                    } else {
+                        document.getElementById('landscapeInfo').innerHTML = `<strong>After 3 restarts, best value found:</strong> ${getValueForX(agentX, width).toFixed(0)}`;
+                    }
+                }
+            }
+
+            animate();
+        }
+
+        // ===== GENETIC ALGORITHM FOR 8-QUEENS =====
+        let gaPopulation = [];
+        let gaGeneration = 0;
+        let gaAutoRunning = false;
+
+        function createBoard(queens) {
+            let board = '';
+            for (let i = 0; i < 8; i++) {
+                for (let j = 0; j < 8; j++) {
+                    const isWhite = (i + j) % 2 === 0;
+                    const hasQueen = queens[i] === j;
+                    board += `<div class="chess-cell ${isWhite ? 'white' : 'black'} ${hasQueen ? 'queen' : ''}">
+                        ${hasQueen ? '♛' : ''}
+                    </div>`;
+                }
+            }
+            return board;
+        }
+
+        function fitnessQueens(queens) {
+            // Number of non-attacking pairs (max 28 for 8 queens)
+            let fitness = 28;
+            for (let i = 0; i < 8; i++) {
+                for (let j = i + 1; j < 8; j++) {
+                    // Check if queens i and j attack each other
+                    if (queens[i] === queens[j] ||
+                        Math.abs(queens[i] - queens[j]) === Math.abs(i - j)) {
+                        fitness--;
+                    }
+                }
+            }
+            return fitness;
+        }
+
+        function initGA() {
+            gaPopulation = [];
+            for (let i = 0; i < 6; i++) {
+                const queens = [];
+                for (let j = 0; j < 8; j++) {
+                    queens.push(Math.floor(Math.random() * 8));
+                }
+                gaPopulation.push(queens);
+            }
+            gaGeneration = 0;
+            renderGA();
+            document.getElementById('gaInfo').textContent = 'Population initialized. Click "Evolve One Generation" to start.';
+        }
+
+        function evolveOneGen() {
+            if (gaPopulation.length === 0) {
+                document.getElementById('gaInfo').textContent = 'Initialize population first!';
+                return;
+            }
+
+            // Calculate fitness
+            const fitnesses = gaPopulation.map(fitnessQueens);
+            const totalFitness = fitnesses.reduce((a, b) => a + b, 0);
+
+            // Check for solution
+            if (fitnesses.some(f => f === 28)) {
+                document.getElementById('gaInfo').innerHTML = '<strong style="color: #059669;">✓ Solution found! All 8 queens placed without conflicts!</strong>';
+                return;
+            }
+
+            // Selection & reproduction
+            const newPop = [];
+            for (let i = 0; i < gaPopulation.length; i++) {
+                const p1Idx = selectProportionate(fitnesses, totalFitness);
+                const p2Idx = selectProportionate(fitnesses, totalFitness);
+                const parent1 = gaPopulation[p1Idx];
+                const parent2 = gaPopulation[p2Idx];
+
+                // Crossover
+                const crossoverPoint = Math.floor(Math.random() * 8);
+                const child = [...parent1.slice(0, crossoverPoint), ...parent2.slice(crossoverPoint)];
+
+                // Mutation
+                const mutRate = parseFloat(document.getElementById('mutRate').value);
+                for (let j = 0; j < 8; j++) {
+                    if (Math.random() < mutRate) {
+                        child[j] = Math.floor(Math.random() * 8);
+                    }
+                }
+                newPop.push(child);
+            }
+
+            gaPopulation = newPop;
+            gaGeneration++;
+            renderGA();
+            document.getElementById('gaInfo').innerHTML = `<strong>Generation ${gaGeneration}:</strong> Best fitness: ${Math.max(...gaPopulation.map(fitnessQueens))}/28`;
+        }
+
+        function selectProportionate(fitnesses, total) {
+            let random = Math.random() * total;
+            for (let i = 0; i < fitnesses.length; i++) {
+                random -= fitnesses[i];
+                if (random <= 0) return i;
+            }
+            return fitnesses.length - 1;
+        }
+
+        function renderGA() {
+            const fitnesses = gaPopulation.map(fitnessQueens);
+            const best = gaPopulation.reduce((a, b, idx) =>
+                fitnessQueens(b) > fitnessQueens(a) ? b : a);
+            const bestFit = fitnessQueens(best);
+
+            document.getElementById('gaGen').textContent = gaGeneration;
+            document.getElementById('bestBoard').innerHTML = createBoard(best);
+            document.getElementById('bestFitness').textContent = bestFit;
+
+            // Render top 4
+            const sorted = gaPopulation
+                .map((q, i) => ({ queens: q, fitness: fitnesses[i] }))
+                .sort((a, b) => b.fitness - a.fitness)
+                .slice(0, 4);
+
+            const html = sorted.map((item, i) => `
+                <div class="population-item">
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 0.5rem;">Individual ${i + 1}</div>
+                        <div class="mini-board">
+                            ${item.queens.map((col, row) =>
+                                `<div class="mini-cell">${col}</div>`
+                            ).join('')}
+                        </div>
+                    </div>
+                    <div class="population-stats">
+                        <div class="stat-item">
+                            <div class="stat-value">${item.fitness}</div>
+                            <div class="stat-label">Fitness</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${(item.fitness / 28 * 100).toFixed(0)}%</div>
+                            <div class="stat-label">Select Prob</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('populationList').innerHTML = html;
+        }
+
+        function toggleAutoEvolve() {
+            gaAutoRunning = !gaAutoRunning;
+            if (gaAutoRunning) {
+                const interval = setInterval(() => {
+                    evolveOneGen();
+                    const fitnesses = gaPopulation.map(fitnessQueens);
+                    if (fitnesses.some(f => f === 28)) {
+                        gaAutoRunning = false;
+                        clearInterval(interval);
+                    }
+                }, 300);
+            }
+        }
+
+        function resetGA() {
+            gaPopulation = [];
+            gaGeneration = 0;
+            gaAutoRunning = false;
+            document.getElementById('gaGen').textContent = '0';
+            document.getElementById('bestBoard').innerHTML = '';
+            document.getElementById('bestFitness').textContent = '0';
+            document.getElementById('populationList').innerHTML = '';
+            document.getElementById('gaInfo').textContent = 'Click "Initialize Population" to begin.';
+        }
+
+        // ===== BELIEF STATE EXPLORER =====
+        let beliefStates = new Set(Array.from({ length: 8 }, (_, i) => i));
+        let beliefMode = 'det';
+
+        function initBeliefStates() {
+            // 8 states: (L_clean, R_clean, agent_pos)
+            // 0: L-clean, R-clean, L
+            // 1: L-clean, R-clean, R
+            // 2: L-clean, R-dirty, L
+            // 3: L-clean, R-dirty, R
+            // 4: L-dirty, R-clean, L
+            // 5: L-dirty, R-clean, R
+            // 6: L-dirty, R-dirty, L
+            // 7: L-dirty, R-dirty, R
+
+            beliefStates = new Set([0, 1, 2, 3, 4, 5, 6, 7]);
+            renderBelief();
+        }
+
+        function setBeliefMode(mode) {
+            beliefMode = mode;
+            document.getElementById('beliefInfo').textContent = `Mode: ${mode === 'det' ? 'Deterministic' : 'Nondeterministic (Erratic)'}. Actions take effect as expected.`;
+        }
+
+        function beliefAction(action) {
+            const newBelief = new Set();
+
+            for (const state of beliefStates) {
+                const lClean = state < 4;
+                const rClean = (state % 4) < 2;
+                const agentLeft = (state % 2) === 0;
+
+                if (action === 'Left') {
+                    // Move left
+                    const newState = agentLeft ? state : state - 1;
+                    newBelief.add(newState);
+                } else if (action === 'Right') {
+                    // Move right
+                    const newState = !agentLeft ? state : state + 1;
+                    newBelief.add(newState);
+                } else if (action === 'Suck') {
+                    // Deterministic suck: clean current room
+                    let newState = state;
+                    if (agentLeft && !lClean) {
+                        newState = state + 4; // Mark left clean
+                    } else if (!agentLeft && !rClean) {
+                        newState = state - 2; // Mark right clean
+                    }
+
+                    if (beliefMode === 'nondet' && Math.random() < 0.3) {
+                        // Erratic: sometimes deposits dirt elsewhere
+                        const other = !agentLeft ? state + 2 : state - 4;
+                        if (other >= 0 && other < 8) newBelief.add(other);
+                    }
+                    newBelief.add(newState);
+                }
+            }
+
+            beliefStates = newBelief;
+            renderBelief();
+            document.getElementById('beliefInfo').innerHTML = `<strong>Action: ${action}</strong> | Possible states now: ${beliefStates.size}/8`;
+        }
+
+        function renderBelief() {
+            const stateNames = [
+                'L-clean, R-clean, Agent-L',
+                'L-clean, R-clean, Agent-R',
+                'L-clean, R-dirty, Agent-L',
+                'L-clean, R-dirty, Agent-R',
+                'L-dirty, R-clean, Agent-L',
+                'L-dirty, R-clean, Agent-R',
+                'L-dirty, R-dirty, Agent-L',
+                'L-dirty, R-dirty, Agent-R'
+            ];
+
+            let html = '';
+            for (let i = 0; i < 8; i++) {
+                const active = beliefStates.has(i);
+                const [rest, agentPos] = stateNames[i].split(', Agent-');
+                const [lRoom, rRoom] = rest.split(', ');
+
+                html += `<div class="belief-state ${active ? 'active' : ''}">
+                    <div style="font-weight: 600; margin-bottom: 0.5rem;">State ${i}</div>
+                    <div style="display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 0.5rem;">
+                        <span class="room ${lRoom.includes('clean') ? 'clean' : 'dirty'}">L</span>
+                        <span class="room ${rRoom.includes('clean') ? 'clean' : 'dirty'}">R</span>
+                    </div>
+                    <div class="agent-indicator">${agentPos === 'L' ? '👤←' : '→👤'}</div>
+                </div>`;
+            }
+
+            document.getElementById('beliefGrid').innerHTML = html;
+        }
+
+        function resetBelief() {
+            initBeliefStates();
+            document.getElementById('beliefInfo').textContent = 'All 8 states are possible (full ignorance). Take actions and observe.';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTheme();
+            initScrollSpy();
+            initQA();
+            initScrollAnimations();
+            drawLandscape();
+            initBeliefStates();
+        });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script>
+        renderMathInElement(document.body, {
+            delimiters: [
+                { left: '$$', right: '$$', display: true },
+                { left: '\\(', right: '\\)', display: false },
+                { left: '$', right: '$', display: false }
+            ],
+            throwOnError: false
+        });
+    </script>
+</body>
+</html>

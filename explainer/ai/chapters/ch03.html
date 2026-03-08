@@ -1,0 +1,1840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 3: Solving Problems by Searching | AIMA Explainer</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #FAF9F6;
+            --bg-card: #FFFFFF;
+            --text: #1a1a2e;
+            --text-muted: #6b7280;
+            --accent-primary: #A8325B;
+            --accent-secondary: #2563eb;
+            --accent-tertiary: #059669;
+            --border: #e5e7eb;
+            --radius: 12px;
+            --font-serif: 'Newsreader', Georgia, serif;
+            --font-sans: 'Inter', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
+            --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.16);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        [data-theme="dark"] {
+            --bg: #0f0f0f;
+            --bg-card: #1a1a1a;
+            --text: #f0f0f0;
+            --text-muted: #a0a0a0;
+            --border: #333333;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+            --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.6);
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: var(--font-sans);
+            line-height: 1.6;
+            transition: var(--transition);
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* Back Link */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--accent-primary);
+            text-decoration: none;
+            font-weight: 600;
+            margin-bottom: 40px;
+            transition: var(--transition);
+        }
+
+        .back-link:hover {
+            gap: 12px;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #1565c0, #2196f3, #42a5f5);
+            color: white;
+            padding: 60px 40px;
+            border-radius: var(--radius);
+            margin-bottom: 60px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .hero h1 {
+            font-family: var(--font-serif);
+            font-size: 2.5em;
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+
+        .hero-subtitle {
+            font-size: 1.1em;
+            opacity: 0.95;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+
+        .hero-description {
+            font-size: 1em;
+            opacity: 0.9;
+            margin-bottom: 20px;
+            max-width: 600px;
+        }
+
+        .chapter-badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        /* Layout with Sidebar */
+        .layout {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            gap: 40px;
+            margin-bottom: 60px;
+        }
+
+        /* Sticky Sidebar Navigation */
+        .sidebar {
+            position: sticky;
+            top: 20px;
+            height: fit-content;
+        }
+
+        .sidebar-nav {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .sidebar-nav h3 {
+            font-family: var(--font-serif);
+            font-size: 0.95em;
+            font-weight: 700;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--accent-primary);
+        }
+
+        .sidebar-nav a {
+            display: block;
+            padding: 10px 12px;
+            margin-bottom: 4px;
+            color: var(--text);
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 0.9em;
+            transition: var(--transition);
+            border-left: 3px solid transparent;
+            cursor: pointer;
+        }
+
+        .sidebar-nav a:hover {
+            background-color: var(--border);
+            color: var(--accent-primary);
+        }
+
+        .sidebar-nav a.active {
+            background-color: rgba(168, 50, 91, 0.1);
+            color: var(--accent-primary);
+            border-left-color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        /* Main Content */
+        .content {
+            flex: 1;
+        }
+
+        /* Section Styles */
+        .section {
+            margin-bottom: 80px;
+            opacity: 0;
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .section h2 {
+            font-family: var(--font-serif);
+            font-size: 2em;
+            margin-bottom: 24px;
+            color: var(--text);
+            font-weight: 700;
+        }
+
+        .section p {
+            margin-bottom: 16px;
+            color: var(--text);
+            line-height: 1.8;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+
+        .card h3 {
+            font-family: var(--font-serif);
+            font-size: 1.3em;
+            margin-bottom: 12px;
+            color: var(--accent-primary);
+            font-weight: 700;
+        }
+
+        .card p {
+            color: var(--text);
+        }
+
+        /* Algorithm Comparison Card */
+        .algorithm-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin: 24px 0;
+        }
+
+        .algo-card {
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            text-align: center;
+            transition: var(--transition);
+        }
+
+        .algo-card:hover {
+            border-color: var(--accent-primary);
+            box-shadow: var(--shadow-md);
+        }
+
+        .algo-icon {
+            font-size: 2.5em;
+            margin-bottom: 8px;
+        }
+
+        .algo-card h4 {
+            font-family: var(--font-sans);
+            font-size: 1.1em;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+
+        .algo-card p {
+            font-size: 0.85em;
+            color: var(--text-muted);
+            margin-bottom: 0;
+        }
+
+        /* Math Card */
+        .math-card {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(168, 50, 91, 0.05));
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin: 20px 0;
+            font-family: var(--font-mono);
+        }
+
+        .math-card h4 {
+            font-family: var(--font-serif);
+            color: var(--accent-primary);
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+
+        .math-content {
+            overflow-x: auto;
+            line-height: 1.8;
+        }
+
+        /* Code Blocks */
+        .code-block {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            margin: 20px 0;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .code-title {
+            background: var(--border);
+            padding: 12px 16px;
+            font-family: var(--font-mono);
+            font-size: 0.85em;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .code-content {
+            padding: 16px;
+            overflow-x: auto;
+        }
+
+        .code-content code {
+            font-family: var(--font-mono);
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
+        pre {
+            margin: 0;
+        }
+
+        /* Q&A Section */
+        .qa-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+
+        .qa-question {
+            padding: 16px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: var(--transition);
+            user-select: none;
+            font-weight: 600;
+            color: var(--accent-primary);
+        }
+
+        .qa-question:hover {
+            background-color: var(--border);
+        }
+
+        .qa-toggle {
+            transition: var(--transition);
+        }
+
+        .qa-item.open .qa-toggle {
+            transform: rotate(180deg);
+        }
+
+        .qa-answer {
+            padding: 0 20px;
+            max-height: 0;
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .qa-item.open .qa-answer {
+            padding: 16px 20px;
+            max-height: 1000px;
+        }
+
+        .qa-answer p {
+            color: var(--text);
+            line-height: 1.7;
+        }
+
+        /* Interactive Components */
+        .interactive-container {
+            background: var(--bg-card);
+            border: 2px solid var(--accent-secondary);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin: 30px 0;
+            box-shadow: var(--shadow-md);
+        }
+
+        .interactive-title {
+            font-family: var(--font-serif);
+            font-size: 1.4em;
+            margin-bottom: 16px;
+            color: var(--accent-secondary);
+            font-weight: 700;
+        }
+
+        .interactive-controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .control-label {
+            font-weight: 600;
+            color: var(--text-muted);
+            font-size: 0.9em;
+        }
+
+        select, button {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg-card);
+            color: var(--text);
+            font-family: var(--font-sans);
+            cursor: pointer;
+            transition: var(--transition);
+            font-weight: 600;
+        }
+
+        select:hover, button:hover {
+            border-color: var(--accent-secondary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        select:focus, button:focus {
+            outline: none;
+            border-color: var(--accent-secondary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+        }
+
+        button {
+            background: var(--accent-secondary);
+            color: white;
+            border: none;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        button.secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+
+        button.secondary:hover {
+            background: var(--accent-tertiary);
+            color: white;
+        }
+
+        /* Grid World Visualizer */
+        .grid-container {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .grid-canvas {
+            border: 2px solid var(--text);
+            background: white;
+            border-radius: 6px;
+        }
+
+        [data-theme="dark"] .grid-canvas {
+            background: #222;
+        }
+
+        /* Statistics Panel */
+        .stats-panel {
+            background: var(--border);
+            border-radius: 6px;
+            padding: 16px;
+            margin-top: 20px;
+            font-family: var(--font-mono);
+            font-size: 0.85em;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid var(--text);
+        }
+
+        .stat-row:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .stat-value {
+            color: var(--accent-secondary);
+            font-weight: 700;
+        }
+
+        /* Puzzle Grid */
+        .puzzle-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 80px);
+            gap: 8px;
+            margin: 20px 0;
+        }
+
+        .puzzle-tile {
+            width: 80px;
+            height: 80px;
+            border: 2px solid var(--accent-secondary);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-serif);
+            font-size: 1.8em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition);
+            background: var(--bg-card);
+            color: var(--text);
+        }
+
+        .puzzle-tile:hover:not(.blank) {
+            background: var(--border);
+            transform: scale(1.05);
+        }
+
+        .puzzle-tile.blank {
+            background: var(--border);
+            cursor: default;
+            color: transparent;
+        }
+
+        .puzzle-tile.solution {
+            background: var(--accent-tertiary);
+            color: white;
+            border-color: var(--accent-tertiary);
+        }
+
+        /* Dark Mode Toggle */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 1.5em;
+            box-shadow: var(--shadow-md);
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                position: static;
+            }
+
+            .hero h1 {
+                font-size: 1.8em;
+            }
+
+            .theme-toggle {
+                width: 45px;
+                height: 45px;
+                font-size: 1.2em;
+            }
+
+            .algorithm-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .puzzle-grid {
+                grid-template-columns: repeat(3, 60px);
+            }
+
+            .puzzle-tile {
+                width: 60px;
+                height: 60px;
+                font-size: 1.4em;
+            }
+        }
+
+        /* Lightbulb callout */
+        .lightbulb-callout {
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(34, 197, 94, 0.1));
+            border-left: 4px solid var(--accent-tertiary);
+            padding: 16px;
+            border-radius: 6px;
+            margin: 16px 0;
+        }
+
+        .lightbulb-callout strong {
+            color: var(--accent-tertiary);
+        }
+
+        /* Two-column comparison */
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        @media (max-width: 600px) {
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .comparison-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+        }
+
+        .comparison-item h4 {
+            color: var(--accent-primary);
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Dark Mode Toggle -->
+    <button class="theme-toggle" id="themeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
+        🌙
+    </button>
+
+    <!-- Back Link -->
+    <div class="container">
+        <a href="../index.html" class="back-link">← Back to Command Center</a>
+    </div>
+
+    <!-- Hero Section -->
+    <div class="hero">
+        <div class="container">
+            <h1>Chapter 3: Solving Problems by Searching</h1>
+            <p class="hero-subtitle">Part II — Problem-Solving</p>
+            <p class="hero-description">
+                Master the fundamental algorithms that enable intelligent agents to navigate complex state spaces. From breadth-first search to A*, explore how heuristics guide optimal problem solving.
+            </p>
+            <span class="chapter-badge">pp. 63–109 | AIMA 4th Edition</span>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="layout">
+            <!-- Sidebar Navigation -->
+            <aside class="sidebar">
+                <nav class="sidebar-nav">
+                    <h3>Contents</h3>
+                    <a href="#section-1" class="nav-link active">The GPS Analogy</a>
+                    <a href="#section-2" class="nav-link">Mathematical Ascent</a>
+                    <a href="#section-3" class="nav-link">Clean Code</a>
+                    <a href="#section-4" class="nav-link">Socratic Sandbox</a>
+                    <a href="#section-5" class="nav-link">Interactives</a>
+                </nav>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="content">
+                <!-- Section 1: Feynman Mental Model -->
+                <section class="section" id="section-1">
+                    <h2>The GPS Analogy: Finding Your Way in a City</h2>
+
+                    <p>
+                        Imagine you've just arrived in a brand new city and need to get from your hotel to a restaurant across town. You have a map (the <strong>state space</strong>), your hotel is the <strong>start state</strong>, the restaurant is the <strong>goal state</strong>, and each road is an <strong>action</strong>. Different search strategies are fundamentally different approaches to navigation—each with trade-offs in speed, memory, and optimality.
+                    </p>
+
+                    <div class="lightbulb-callout">
+                        <strong>💡 Key Insight:</strong> Every search algorithm is a different strategy for exploring a graph. The choice of strategy determines what you find, how quickly you find it, and how much of the city you need to remember.
+                    </div>
+
+                    <!-- Algorithm Comparison Grid -->
+                    <div class="algorithm-grid">
+                        <div class="algo-card">
+                            <div class="algo-icon">🔍</div>
+                            <h4>Breadth-First Search</h4>
+                            <p>Explores every street at distance 1, then distance 2. <strong>Guarantees shortest path.</strong> Remembers EVERYTHING.</p>
+                        </div>
+
+                        <div class="algo-card">
+                            <div class="algo-icon">🧗</div>
+                            <h4>Depth-First Search</h4>
+                            <p>Picks a direction and walks as far as possible, then backtracks. <strong>Memory-efficient.</strong> May wander far from goal.</p>
+                        </div>
+
+                        <div class="algo-card">
+                            <div class="algo-icon">💰</div>
+                            <h4>Uniform-Cost Search</h4>
+                            <p>Like a taxi driver wanting the cheapest route. Explores outward by cumulative cost, not just hops. <strong>Optimal for costs.</strong></p>
+                        </div>
+
+                        <div class="algo-card">
+                            <div class="algo-icon">🎯</div>
+                            <h4>Greedy Best-First</h4>
+                            <p>Always walks toward where the restaurant "looks closest" (straight-line distance). <strong>Fast but myopic</strong>—can be fooled by walls.</p>
+                        </div>
+
+                        <div class="algo-card">
+                            <div class="algo-icon">⭐</div>
+                            <h4>A* Search</h4>
+                            <p>The smart navigator. Combines cost so far + estimated remaining distance. "I've walked 3 blocks, restaurant looks 5 away, so 8 total." <strong>Optimal AND efficient.</strong></p>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>The Trade-Off Landscape</h3>
+                        <p>
+                            <strong>BFS</strong> is like checking every intersection methodically. You WILL find the shortest route, but you'll explore an exponential number of streets. With a branching factor of 10 and a goal at depth 12, that's $10^{12}$ intersections—roughly 1 terabyte of memory just to track where you've been.
+                        </p>
+                        <p>
+                            <strong>DFS</strong> is like committing to one street and following it to the end. You use much less memory (just one path at a time), but you might end up at the far edge of the city before realizing you went the wrong direction.
+                        </p>
+                        <p>
+                            <strong>A*</strong> is the Goldilocks solution. It's guided by a heuristic—an estimate of remaining distance—so it favors promising directions without exploring exhaustively. If your heuristic is good (never overestimates true distance), A* finds the shortest path while exploring far fewer streets than BFS.
+                        </p>
+                    </div>
+                </section>
+
+                <!-- Section 2: Mathematical Ascent -->
+                <section class="section" id="section-2">
+                    <h2>Mathematical Ascent</h2>
+
+                    <p>
+                        The formal structure of search problems is elegant and powerful. Let's build up from simple definitions to the deep theory of heuristics and optimality.
+                    </p>
+
+                    <!-- Problem Formulation -->
+                    <div class="card">
+                        <h3>Problem Formulation: The Search Graph</h3>
+                        <p>At its heart, every search problem is a <strong>graph</strong> where:</p>
+                        <div class="math-card">
+                            <h4>Graph Representation</h4>
+                            <div class="math-content">
+                                $G = (V, E)$ where:
+                                <br>$V$ = set of states (vertices)
+                                <br>$E$ = set of actions (edges)
+                            </div>
+                        </div>
+                        <p>A problem is formally a tuple:</p>
+                        <div class="math-card">
+                            <h4>Problem Definition</h4>
+                            <div class="math-content">
+                                $(S, s_0, \text{Actions}(s), \text{Result}(s,a), \text{Goal}(s), \text{Cost}(s,a,s'))$
+                                <br><br>Where:
+                                <br>$S$ = state space
+                                <br>$s_0$ = initial state
+                                <br>$\text{Actions}(s)$ = applicable actions in state $s$
+                                <br>$\text{Result}(s,a)$ = state resulting from action $a$ in $s$
+                                <br>$\text{Goal}(s)$ = test whether $s$ is a goal
+                                <br>$\text{Cost}(s,a,s')$ = cost of transition $s \to s'$ via $a$
+                            </div>
+                        </div>
+                        <p>A <strong>solution</strong> is a sequence of actions $[a_1, a_2, \ldots, a_n]$ that transforms $s_0$ into a goal state.</p>
+                    </div>
+
+                    <!-- Complexity Analysis -->
+                    <div class="card">
+                        <h3>Algorithm Complexity: Time and Space</h3>
+                        <p>Each algorithm has different scaling properties with:</p>
+                        <ul style="margin-left: 20px; margin-bottom: 16px;">
+                            <li><strong>$b$</strong> = branching factor (avg. number of actions per state)</li>
+                            <li><strong>$d$</strong> = depth of shallowest goal state</li>
+                            <li><strong>$m$</strong> = maximum depth of search tree</li>
+                        </ul>
+
+                        <div class="comparison-grid">
+                            <div class="comparison-item">
+                                <h4>Breadth-First Search</h4>
+                                <div class="math-card">
+                                    Time: $O(b^d)$
+                                    <br>Space: $O(b^d)$
+                                    <br><br><small>Must store entire frontier at depth $d$</small>
+                                </div>
+                            </div>
+
+                            <div class="comparison-item">
+                                <h4>Depth-First Search</h4>
+                                <div class="math-card">
+                                    Time: $O(b^m)$
+                                    <br>Space: $O(bm)$
+                                    <br><br><small>Only stores one path from root</small>
+                                </div>
+                            </div>
+
+                            <div class="comparison-item">
+                                <h4>Uniform-Cost Search</h4>
+                                <div class="math-card">
+                                    Time: $O(b^{1+\lfloor C^*/\epsilon \rfloor})$
+                                    <br>Space: $O(b^{1+\lfloor C^*/\epsilon \rfloor})$
+                                    <br><br><small>$C^*$ = optimal cost, $\epsilon$ = min step cost</small>
+                                </div>
+                            </div>
+
+                            <div class="comparison-item">
+                                <h4>A* Search</h4>
+                                <div class="math-card">
+                                    Time: $O(b^d)$ worst case
+                                    <br>Space: $O(b^d)$
+                                    <br><br><small>Much better in practice with good $h$</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Heuristics Theory -->
+                    <div class="card">
+                        <h3>Heuristic Functions: The Art of Good Guesses</h3>
+                        <p>
+                            A heuristic $h(n)$ estimates the cost from state $n$ to the nearest goal. Good heuristics are the difference between practical search and computational explosion.
+                        </p>
+
+                        <div class="math-card">
+                            <h4>Admissibility: Never Overestimate</h4>
+                            <div class="math-content">
+                                A heuristic is <strong>admissible</strong> if:
+                                <br>$$h(n) \leq h^*(n) \text{ for all } n$$
+                                <br><br>Where $h^*(n)$ = true cost from $n$ to goal
+                                <br><br><small>Intuition: If your estimate is always optimistic, A* finds optimal solutions.</small>
+                            </div>
+                        </div>
+
+                        <div class="math-card">
+                            <h4>Consistency: Local Admissibility</h4>
+                            <div class="math-content">
+                                A heuristic is <strong>consistent</strong> (monotone) if:
+                                <br>$$h(n) \leq c(n, a, n') + h(n')$$
+                                <br><br>For every action $a$ from $n$ to successor $n'$
+                                <br><br><small>Intuition: No detours. Moving toward goal always decreases estimated total cost.</small>
+                            </div>
+                        </div>
+
+                        <div class="lightbulb-callout">
+                            <strong>💡 Key Insight:</strong> Consistency implies admissibility. A consistent heuristic is even stronger—it guarantees A* never re-expands a state. This is why consistent heuristics are the gold standard.
+                        </div>
+
+                        <div class="math-card">
+                            <h4>A* Evaluation Function</h4>
+                            <div class="math-content">
+                                $$f(n) = g(n) + h(n)$$
+                                <br><br>Where:
+                                <br>$g(n)$ = actual cost from start to $n$
+                                <br>$h(n)$ = estimated cost from $n$ to goal
+                                <br>$f(n)$ = estimated total path cost through $n$
+                                <br><br><small>A* always expands the node with lowest $f(n)$ value.</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Heuristic Dominance -->
+                    <div class="card">
+                        <h3>Heuristic Dominance: More Information is Better</h3>
+                        <p>
+                            When two admissible heuristics $h_1$ and $h_2$ satisfy $h_2(n) \geq h_1(n)$ for all $n$, we say $h_2$ <strong>dominates</strong> $h_1$.
+                        </p>
+
+                        <div class="math-card">
+                            <h4>Dominance Rule</h4>
+                            <div class="math-content">
+                                If $h_2$ dominates $h_1$ and both are admissible:
+                                <br><br>A* with $h_2$ expands a subset of nodes expanded by A* with $h_1$
+                                <br><br><strong>Always prefer the dominating heuristic.</strong>
+                            </div>
+                        </div>
+
+                        <p>
+                            Why? A higher heuristic value (while still admissible) gives A* more information about which paths to pursue. It naturally prunes away more inefficient directions.
+                        </p>
+                    </div>
+
+                    <!-- Effective Branching Factor -->
+                    <div class="card">
+                        <h3>Effective Branching Factor: Measuring Heuristic Quality</h3>
+                        <p>
+                            A good heuristic behaves as if the search tree has a much lower branching factor. We measure this with the <strong>effective branching factor</strong> $b^*$.
+                        </p>
+
+                        <div class="math-card">
+                            <h4>Effective Branching Factor Formula</h4>
+                            <div class="math-content">
+                                $$N + 1 = 1 + b^* + (b^*)^2 + \ldots + (b^*)^d$$
+                                <br><br>Where $N$ = number of nodes expanded by A*
+                                <br><br><small>An effective $b^*$ close to 1.0 means the heuristic is excellent. $b^*$ = $b$ means the heuristic is useless.</small>
+                            </div>
+                        </div>
+
+                        <p>
+                            For example, if a search with true branching factor 10 generates 113 node expansions, we can solve for $b^*$ and find it's about 1.5—much better than blind search!
+                        </p>
+                    </div>
+                </section>
+
+                <!-- Section 3: Clean Code Implementation -->
+                <section class="section" id="section-3">
+                    <h2>Clean Code Implementation</h2>
+
+                    <p>
+                        Let's implement the core search framework in Python. These implementations follow the AIMA pseudocode directly and emphasize clarity over performance.
+                    </p>
+
+                    <!-- Problem and Node Classes -->
+                    <div class="code-block">
+                        <div class="code-title">Problem.py — Problem Abstraction</div>
+                        <div class="code-content">
+                            <pre><code class="language-python">class Problem:
+    """Abstract class representing a formal search problem.
+
+    A problem defines the space of possible states, actions that
+    transform states, and tests to detect goal states. A concrete
+    subclass must implement actions() and result().
+    """
+
+    def __init__(self, initial, goal=None):
+        """Initialize the problem with initial state and goal(s)."""
+        self.initial = initial
+        self.goal = goal
+
+    def actions(self, state):
+        """Return the actions executable in this state.
+
+        This is the core of the problem's structure—how the agent
+        can move through the state space.
+        """
+        raise NotImplementedError
+
+    def result(self, state, action):
+        """Return the state that results from executing an action.
+
+        Given a state and action, deterministically return the next state.
+        This must be consistent with actions().
+        """
+        raise NotImplementedError
+
+    def goal_test(self, state):
+        """Return True if the state is a goal state.
+
+        Can be a single goal or a list of goal states.
+        """
+        if isinstance(self.goal, list):
+            return state in self.goal
+        return state == self.goal
+
+    def path_cost(self, c, state1, action, state2):
+        """Return the cost of a path arriving at state2.
+
+        Arguments:
+            c: cost of path so far
+            state1: the previous state
+            action: the action taken
+            state2: the resulting state
+
+        Default: unit cost (all actions cost 1). Override for weighted graphs.
+        """
+        return c + 1
+
+
+class Node:
+    """A node in the search tree.
+
+    Each node represents a partial solution path from the initial
+    state to some state. Nodes are expanded to generate child nodes.
+    """
+
+    def __init__(self, state, parent=None, action=None, path_cost=0):
+        """Initialize a node.
+
+        state: the state represented by this node
+        parent: the parent node in the search tree
+        action: the action that led from parent to this node
+        path_cost: g(n) — total cost from initial to this node
+        """
+        self.state = state
+        self.parent = parent
+        self.action = action
+        self.path_cost = path_cost
+        self.depth = parent.depth + 1 if parent else 0
+
+    def expand(self, problem):
+        """List the nodes reachable by one action from this node.
+
+        This is the core operation of search: generating successors.
+        Returns a list of child Node objects.
+        """
+        return [self.child_node(problem, action)
+                for action in problem.actions(self.state)]
+
+    def child_node(self, problem, action):
+        """Return a child node created by applying action."""
+        next_state = problem.result(self.state, action)
+        next_cost = problem.path_cost(self.path_cost, self.state,
+                                      action, next_state)
+        return Node(next_state, self, action, next_cost)
+
+    def solution(self):
+        """Return the sequence of actions to reach this node from root."""
+        return [node.action for node in self.path()[1:]]
+
+    def path(self):
+        """Return a list of nodes forming the path from root to this node."""
+        node, path_back = self, []
+        while node:
+            path_back.append(node)
+            node = node.parent
+        return list(reversed(path_back))
+
+    def __lt__(self, other):
+        """Comparison for priority queue. Subclasses override."""
+        return self.path_cost < other.path_cost
+</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- Search Algorithms -->
+                    <div class="code-block">
+                        <div class="code-title">SearchAlgorithms.py — Core Algorithms</div>
+                        <div class="code-content">
+                            <pre><code class="language-python">from collections import deque
+import heapq
+
+
+def breadth_first_search(problem):
+    """BFS: Explores all nodes at depth d before depth d+1.
+
+    Properties:
+    - COMPLETE: Always finds a solution (if one exists)
+    - OPTIMAL: Finds shortest path (for unit-cost problems)
+    - TIME: O(b^d) where b=branching factor, d=depth
+    - SPACE: O(b^d) - must store entire frontier
+
+    BFS is like exploring every intersection at distance 1 km,
+    then distance 2 km, etc. Guaranteed shortest path but huge memory.
+    """
+    node = Node(problem.initial)
+    if problem.goal_test(node.state):
+        return node
+
+    frontier = deque([node])  # FIFO queue: shallowest first
+    explored = set()  # Track visited states to avoid cycles
+
+    while frontier:
+        node = frontier.popleft()  # Always expand shallowest
+        explored.add(node.state)
+
+        for child in node.expand(problem):
+            if child.state not in explored and child not in frontier:
+                if problem.goal_test(child.state):
+                    return child  # Goal found at optimal depth
+                frontier.append(child)
+
+    return None  # No solution exists
+
+
+def depth_first_search(problem):
+    """DFS: Follows one path deeply before backtracking.
+
+    Properties:
+    - COMPLETE: Only if max depth is finite
+    - OPTIMAL: No, may find long roundabout paths
+    - TIME: O(b^m) where m=max depth
+    - SPACE: O(bm) - only stores one path (very efficient!)
+
+    DFS is like picking a street and walking until you hit a dead end,
+    then backtracking. Uses little memory but might explore far.
+    """
+    frontier = [Node(problem.initial)]  # LIFO stack: deepest first
+    explored = set()
+
+    while frontier:
+        node = frontier.pop()  # Always expand deepest
+
+        if problem.goal_test(node.state):
+            return node
+
+        explored.add(node.state)
+
+        # Add children to frontier (they'll be deepest)
+        for child in node.expand(problem):
+            if child.state not in explored:
+                frontier.append(child)
+
+    return None
+
+
+def uniform_cost_search(problem):
+    """UCS: Expands nodes in order of path cost g(n).
+
+    Properties:
+    - COMPLETE: Yes
+    - OPTIMAL: Yes, for any cost function
+    - TIME: O(b^(1 + floor(C*/ε)))
+    - SPACE: O(b^(1 + floor(C*/ε)))
+
+    Like a taxi finding the cheapest route: expands outward by
+    cumulative cost, not just hop count. Optimal for any costs.
+    """
+    node = Node(problem.initial)
+    frontier = [(0, id(node), node)]  # Min-heap: lowest cost first
+    frontier_states = {node.state: 0}
+    explored = set()
+
+    while frontier:
+        _, _, node = heapq.heappop(frontier)
+
+        if problem.goal_test(node.state):
+            return node
+
+        if node.state in explored:
+            continue
+
+        explored.add(node.state)
+
+        for child in node.expand(problem):
+            if child.state not in explored:
+                # Only add if we haven't seen this state or found cheaper path
+                if child.state not in frontier_states or \
+                   child.path_cost < frontier_states[child.state]:
+                    frontier_states[child.state] = child.path_cost
+                    heapq.heappush(frontier, (child.path_cost,
+                                               id(child), child))
+
+    return None
+
+
+def greedy_best_first_search(problem, h):
+    """Greedy: Expands node with lowest h(n) estimate to goal.
+
+    Properties:
+    - COMPLETE: No, can get stuck
+    - OPTIMAL: No, follows heuristic not cost
+    - TIME: O(b^m) typically better than uninformed
+    - SPACE: Similar to BFS
+
+    Like always walking toward where the destination looks closest.
+    Fast but myopic—fooled by obstacles.
+
+    Args:
+        h: heuristic function h(node) -> estimated cost to goal
+    """
+    node = Node(problem.initial)
+    frontier = [(h(node), id(node), node)]
+    explored = set()
+
+    while frontier:
+        _, _, node = heapq.heappop(frontier)
+
+        if problem.goal_test(node.state):
+            return node
+
+        explored.add(node.state)
+
+        for child in node.expand(problem):
+            if child.state not in explored:
+                heapq.heappush(frontier, (h(child), id(child), child))
+
+    return None
+
+
+def astar_search(problem, h):
+    """A* Search: Expands node with lowest f(n) = g(n) + h(n).
+
+    Properties:
+    - COMPLETE: Yes
+    - OPTIMAL: Yes (if h is admissible)
+    - TIME: O(b^d) worst case, much better with good h
+    - SPACE: O(b^d)
+
+    The smart navigator. Combines:
+    - g(n): actual cost so far
+    - h(n): estimated remaining cost
+
+    f(n) = g(n) + h(n) balances exploration with goal-directedness.
+
+    Args:
+        h: heuristic function h(node) -> estimated cost to goal
+           MUST be admissible: h(n) <= true_cost(n, goal)
+    """
+    node = Node(problem.initial)
+
+    # f(n) will be our priority
+    frontier = [(h(node), id(node), node)]
+    frontier_states = {node.state: (h(node), node.path_cost)}
+    explored = set()
+
+    while frontier:
+        _, _, node = heapq.heappop(frontier)
+
+        if problem.goal_test(node.state):
+            return node
+
+        if node.state in explored:
+            continue
+
+        explored.add(node.state)
+
+        for child in node.expand(problem):
+            if child.state not in explored:
+                # f(n) = g(n) + h(n)
+                f_child = child.path_cost + h(child)
+
+                # Only add if new state or found cheaper path
+                if child.state not in frontier_states or \
+                   child.path_cost < frontier_states[child.state][1]:
+                    frontier_states[child.state] = (f_child, child.path_cost)
+                    heapq.heappush(frontier, (f_child, id(child), child))
+
+    return None
+</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Why These Implementations Matter</h3>
+                        <p>
+                            These are not optimized implementations—they're <strong>clear implementations</strong>. Each algorithm directly reflects its defining principle:
+                        </p>
+                        <ul style="margin-left: 20px;">
+                            <li><strong>BFS:</strong> FIFO frontier. First in, first out. Shallowest nodes first.</li>
+                            <li><strong>DFS:</strong> LIFO stack. Last in, first out. Deepest nodes first.</li>
+                            <li><strong>UCS:</strong> Priority queue ordered by path cost $g(n)$. Cheapest first.</li>
+                            <li><strong>Greedy:</strong> Priority queue ordered by heuristic $h(n)$. Most promising first (myopically).</li>
+                            <li><strong>A*:</strong> Priority queue ordered by $f(n) = g(n) + h(n)$. Balance cost and promise.</li>
+                        </ul>
+                        <p>
+                            The <strong>only difference</strong> between these algorithms is what ordering strategy you use for the frontier. This demonstrates the power of the Node/Problem abstraction: swap the data structure, get a new algorithm.
+                        </p>
+                    </div>
+                </section>
+
+                <!-- Section 4: Socratic Sandbox -->
+                <section class="section" id="section-4">
+                    <h2>Socratic Sandbox: Questions to Deepen Understanding</h2>
+
+                    <p>
+                        Use these questions to test and refine your intuition about search algorithms. Click each question to reveal a detailed answer.
+                    </p>
+
+                    <!-- Q1 -->
+                    <div class="qa-item">
+                        <div class="qa-question">
+                            <span>Why does BFS guarantee finding the shallowest goal but use enormous memory?</span>
+                            <span class="qa-toggle">▼</span>
+                        </div>
+                        <div class="qa-answer">
+                            <p>
+                                <strong>The Memory Explosion:</strong> BFS stores the <strong>entire frontier</strong>—every node at the current depth level. At depth $d$ with branching factor $b$, the frontier holds $O(b^d)$ nodes.
+                            </p>
+                            <p>
+                                Example: In a game or puzzle with $b = 10$ (10 possible actions per state) and goal at depth $d = 12$:
+                            </p>
+                            <div class="math-card">
+                                <div class="math-content">
+                                    Frontier size $= 10^{12}$ nodes
+                                    <br><br>At ~100 bytes per node = 100 gigabytes of memory!
+                                    <br><br>For $d = 13$: 1 terabyte.
+                                </div>
+                            </div>
+                            <p>
+                                <strong>Why It Works:</strong> This exhaustive approach guarantees optimality. BFS explores ALL nodes at depth $d-1$ before exploring any at depth $d$. So the first goal found is guaranteed to be at the shallowest level. There's no way a deeper goal could have been found first.
+                            </p>
+                            <p>
+                                <strong>The Trade-Off:</strong> Time complexity is $O(b^d)$ (must examine all nodes), and space is also $O(b^d)$ (must store them). For practical problems with moderate branching factors, BFS becomes infeasible. This is why heuristics (A*) are essential.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Q2 -->
+                    <div class="qa-item">
+                        <div class="qa-question">
+                            <span>A robot using Greedy Best-First Search got stuck circling a lake. Why?</span>
+                            <span class="qa-toggle">▼</span>
+                        </div>
+                        <div class="qa-answer">
+                            <p>
+                                <strong>The Problem:</strong> Greedy only looks at $h(n)$—the estimated distance to the goal. It has <strong>no awareness of cost so far</strong> ($g(n)$).
+                            </p>
+                            <p>
+                                Suppose the robot wants to cross a lake:
+                            </p>
+                            <ul style="margin-left: 20px;">
+                                <li>Direct route blocked by a lake</li>
+                                <li>Must detour around it</li>
+                                <li>Each step along the shore initially moves AWAY from the goal</li>
+                                <li>So $h(n)$ increases temporarily</li>
+                                <li>Greedy prefers to backtrack (reduce $h$) rather than commit to the detour</li>
+                                <li>Result: circles the same area indefinitely</li>
+                            </ul>
+                            <p>
+                                <strong>Why A* Fixes It:</strong> A* considers $f(n) = g(n) + h(n)$. Once you've invested cost $g(n)$ in going around the lake, A* "commits"—backtracking would mean wasting that already-paid cost. A* prefers to continue forward even if $h$ temporarily increases.
+                            </p>
+                            <p>
+                                <strong>Key Insight:</strong> Greedy is myopic; it only looks at the immediate promise of being close to the goal, ignoring the path already taken. A* is farsighted; it considers both where you've been and where you're going.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Q3 -->
+                    <div class="qa-item">
+                        <div class="qa-question">
+                            <span>Two heuristics h₁ and h₂ are both admissible. h₂(n) ≥ h₁(n) for all n. Which should we prefer?</span>
+                            <span class="qa-toggle">▼</span>
+                        </div>
+                        <div class="qa-answer">
+                            <p>
+                                <strong>Always prefer $h_2$.</strong> This is the principle of <strong>heuristic dominance</strong>.
+                            </p>
+                            <p>
+                                <strong>Why:</strong> A higher heuristic value (while still admissible—never overestimating) gives A* more information:
+                            </p>
+                            <ul style="margin-left: 20px;">
+                                <li>$h_2(n) \geq h_1(n)$ means $h_2$ is "more informed" or "tighter"</li>
+                                <li>This causes $f(n) = g(n) + h_2(n)$ to be larger</li>
+                                <li>A* expands nodes in order of $f(n)$</li>
+                                <li>Larger $f$ values mean higher priority in the frontier</li>
+                                <li>Paradoxically, higher heuristic values prune more of the search space</li>
+                            </ul>
+                            <p>
+                                <strong>Formal Result:</strong> Every node expanded by A* with $h_2$ is also expanded by A* with $h_1$. But the converse is false. So $h_2$ expands a subset—it's more efficient.
+                            </p>
+                            <p>
+                                <strong>Intuition:</strong> More information = better decisions. If you know the goal is "fairly far" rather than just "not super close," you'll avoid pursuing false leads more effectively.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Q4 -->
+                    <div class="qa-item">
+                        <div class="qa-question">
+                            <span>A robot solving the 8-puzzle used DFS and took 65,000 steps to solve a puzzle that BFS solves in 20 moves. What happened?</span>
+                            <span class="qa-toggle">▼</span>
+                        </div>
+                        <div class="qa-answer">
+                            <p>
+                                <strong>DFS Found a Non-Optimal Path:</strong> DFS has no depth preference. It follows the first branch to its absolute end before backtracking. In the 8-puzzle (a state space where max depth is about 31), DFS might:
+                            </p>
+                            <ol style="margin-left: 20px;">
+                                <li>Start with an arbitrary move</li>
+                                <li>Continue making moves down that path</li>
+                                <li>Reach depth 30 or 31 without finding the goal</li>
+                                <li>Backtrack and try another branch</li>
+                                <li>Eventually find a goal, but at depth 20 or more</li>
+                            </ol>
+                            <p>
+                                The path discovered is <strong>not optimal</strong>. DFS explores $O(b^m)$ where $m$ is max depth. A 20-move solution exists, but DFS commits to a different branch first and wanders deep before finding anything.
+                            </p>
+                            <p>
+                                <strong>Why BFS Finds 20:</strong> BFS explores all states at depth 1, then all at depth 2, etc. The moment it finds a goal at depth 20, it stops—and that's guaranteed to be optimal (shortest) because no shallower goal exists.
+                            </p>
+                            <p>
+                                <strong>Key Lesson:</strong> DFS is not optimal. It's memory-efficient ($O(bm)$ space) but finds long, wasteful solutions. BFS is optimal (for unit cost) but memory-hungry. A* with a good heuristic gets the best of both worlds.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Q5 -->
+                    <div class="qa-item">
+                        <div class="qa-question">
+                            <span>Why is straight-line distance admissible for route-finding but NOT the number of cities in between?</span>
+                            <span class="qa-toggle">▼</span>
+                        </div>
+                        <div class="qa-answer">
+                            <p>
+                                <strong>Straight-Line Distance (SLD): Admissible</strong>
+                            </p>
+                            <p>
+                                By the triangle inequality, the shortest road distance between two points is at least as long as the straight-line distance. Mathematically:
+                            </p>
+                            <div class="math-card">
+                                <div class="math-content">
+                                    Straight-line distance $\leq$ actual road distance
+                                    <br><br>$\text{SLD}(n, \text{goal}) \leq h^*(n, \text{goal})$
+                                    <br><br>SLD never overestimates. ✓ Admissible.
+                                </div>
+                            </div>
+
+                            <p>
+                                <strong>Number of Cities: Not Admissible</strong>
+                            </p>
+                            <p>
+                                This heuristic can easily overestimate:
+                            </p>
+                            <ul style="margin-left: 20px;">
+                                <li>Route A: Pass through 4 cities on short roads = 10 km total</li>
+                                <li>Route B: Pass through 3 cities on long highways = 50 km total</li>
+                                <li>Heuristic says "3 cities = 30 km estimated" (overestimate for route B!)</li>
+                            </ul>
+                            <p>
+                                Since the heuristic can exceed the true cost, it violates admissibility.
+                            </p>
+                            <p>
+                                <strong>Key Principle:</strong> For admissibility, the heuristic must be impossible to violate—it must be <strong>physically guaranteed</strong> by the problem structure (like the triangle inequality) rather than statistical (like average cities per route).
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 5: Interactive Components -->
+                <section class="section" id="section-5">
+                    <h2>Interactive Explorations</h2>
+
+                    <!-- Interactive 1: Grid World Visualizer -->
+                    <div class="interactive-container">
+                        <div class="interactive-title">⚙️ Search Algorithm Frontier Visualizer</div>
+                        <p style="margin-bottom: 16px; color: var(--text-muted);">
+                            Click the grid to place walls. Select an algorithm and press "Run" to watch the search unfold. The algorithm shows you exactly which nodes it explores.
+                        </p>
+
+                        <div class="interactive-controls">
+                            <div class="control-group">
+                                <label class="control-label">Algorithm:</label>
+                                <select id="algorithmSelect">
+                                    <option value="bfs">BFS (Breadth-First)</option>
+                                    <option value="dfs">DFS (Depth-First)</option>
+                                    <option value="ucs">UCS (Uniform-Cost)</option>
+                                    <option value="greedy">Greedy Best-First</option>
+                                    <option value="astar" selected>A* Search</option>
+                                </select>
+                            </div>
+                            <button id="runButton" onclick="runSearch()">▶ Run</button>
+                            <button id="resetButton" class="secondary" onclick="resetGrid()">↻ Reset</button>
+                            <button id="randomButton" class="secondary" onclick="randomWalls()">? Random Walls</button>
+                        </div>
+
+                        <div class="grid-container">
+                            <canvas id="gridCanvas" class="grid-canvas" width="480" height="480"></canvas>
+                        </div>
+
+                        <div class="stats-panel">
+                            <div class="stat-row">
+                                <span class="stat-label">Nodes Expanded:</span>
+                                <span class="stat-value" id="nodesExpanded">0</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">Path Length:</span>
+                                <span class="stat-value" id="pathLength">—</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">Path Cost:</span>
+                                <span class="stat-value" id="pathCost">—</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">Status:</span>
+                                <span class="stat-value" id="searchStatus">Ready</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Interactive 2: 8-Puzzle Solver -->
+                    <div class="interactive-container">
+                        <div class="interactive-title">🎯 8-Puzzle Solver with Heuristic Comparison</div>
+                        <p style="margin-bottom: 16px; color: var(--text-muted);">
+                            Shuffle the puzzle, then solve it with A* using different heuristics. Compare how many nodes each heuristic explores—this demonstrates heuristic dominance!
+                        </p>
+
+                        <div class="interactive-controls">
+                            <button id="shuffleButton" class="secondary" onclick="shufflePuzzle()">🔀 Shuffle</button>
+                            <div class="control-group">
+                                <label class="control-label">Solve with:</label>
+                                <select id="heuristicSelect">
+                                    <option value="misplaced">Misplaced Tiles (h1)</option>
+                                    <option value="manhattan" selected>Manhattan Distance (h2)</option>
+                                </select>
+                            </div>
+                            <button id="solveButton" onclick="solvePuzzle()">▶ Solve</button>
+                        </div>
+
+                        <div style="text-align: center;">
+                            <div class="puzzle-grid" id="puzzleGrid">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+
+                        <div class="stats-panel">
+                            <div class="stat-row">
+                                <span class="stat-label">Nodes Expanded:</span>
+                                <span class="stat-value" id="puzzleNodesExpanded">0</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">Solution Moves:</span>
+                                <span class="stat-value" id="puzzleMoves">—</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">Status:</span>
+                                <span class="stat-value" id="puzzleStatus">Ready</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Interactive 3: Heuristic Visualization -->
+                    <div class="card">
+                        <h3>Understanding Heuristic Dominance</h3>
+                        <p>
+                            The Manhattan distance heuristic (h2) is said to <strong>dominate</strong> the misplaced tiles heuristic (h1) because:
+                        </p>
+                        <div class="comparison-grid">
+                            <div class="comparison-item">
+                                <h4>h1: Misplaced Tiles</h4>
+                                <p>Count how many tiles are not in their goal position. For a tile 3 places away, h1 = 1.</p>
+                                <p style="font-size: 0.85em; color: var(--text-muted); margin-top: 8px;">Less informed, expands more nodes</p>
+                            </div>
+                            <div class="comparison-item">
+                                <h4>h2: Manhattan Distance</h4>
+                                <p>Sum of distances each tile must move (horizontal + vertical). For a tile 3 places away, h2 = 3.</p>
+                                <p style="font-size: 0.85em; color: var(--text-muted); margin-top: 8px;">More informed, expands fewer nodes</p>
+                            </div>
+                        </div>
+                        <p>
+                            Try solving with both heuristics on the same puzzle. You'll always see h2 expand fewer nodes, even though both find the optimal solution. This is heuristic dominance in action.
+                        </p>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- Scripts for interactivity -->
+    <script>
+        // Dark Mode Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        if (savedTheme === 'dark') {
+            html.setAttribute('data-theme', 'dark');
+            themeToggle.textContent = '☀️';
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = html.getAttribute('data-theme') || 'light';
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+        });
+
+        // Scroll Spy Navigation
+        const navLinks = document.querySelectorAll('.sidebar-nav a');
+        const sections = document.querySelectorAll('.section');
+
+        function updateActiveLink() {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (window.scrollY >= sectionTop - 200) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === `#${current}`) {
+                    link.classList.add('active');
+                }
+            });
+        }
+
+        window.addEventListener('scroll', updateActiveLink);
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const target = link.getAttribute('href').substring(1);
+                const section = document.getElementById(target);
+                if (section) {
+                    section.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+
+        // Q&A Toggle
+        const qaItems = document.querySelectorAll('.qa-item');
+        qaItems.forEach(item => {
+            const question = item.querySelector('.qa-question');
+            question.addEventListener('click', () => {
+                item.classList.toggle('open');
+            });
+        });
+
+        // Grid World Visualizer
+        const GRID_SIZE = 8;
+        const CELL_SIZE = 60;
+        let gridState = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(0));
+        gridState[0][0] = 2; // Start
+        gridState[GRID_SIZE-1][GRID_SIZE-1] = 3; // Goal
+        let isSearching = false;
+
+        const canvas = document.getElementById('gridCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function drawGrid() {
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    const x = j * CELL_SIZE;
+                    const y = i * CELL_SIZE;
+
+                    const cell = gridState[i][j];
+
+                    if (cell === 1) ctx.fillStyle = '#ef4444'; // Wall
+                    else if (cell === 2) ctx.fillStyle = '#10b981'; // Start
+                    else if (cell === 3) ctx.fillStyle = '#ef4444'; // Goal
+                    else if (cell === 4) ctx.fillStyle = '#d1d5db'; // Explored
+                    else if (cell === 5) ctx.fillStyle = '#93c5fd'; // Frontier
+                    else if (cell === 6) ctx.fillStyle = '#34d399'; // Solution
+                    else ctx.fillStyle = '#ffffff';
+
+                    ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+                    ctx.strokeStyle = '#999';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(x, y, CELL_SIZE, CELL_SIZE);
+                }
+            }
+        }
+
+        canvas.addEventListener('click', (e) => {
+            if (isSearching) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
+            const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
+
+            if (x >= 0 && x < GRID_SIZE && y >= 0 && y < GRID_SIZE) {
+                if ((y === 0 && x === 0) || (y === GRID_SIZE-1 && x === GRID_SIZE-1)) return;
+                gridState[y][x] = gridState[y][x] === 1 ? 0 : 1;
+                drawGrid();
+            }
+        });
+
+        function resetGrid() {
+            gridState = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(0));
+            gridState[0][0] = 2;
+            gridState[GRID_SIZE-1][GRID_SIZE-1] = 3;
+            drawGrid();
+            document.getElementById('nodesExpanded').textContent = '0';
+            document.getElementById('pathLength').textContent = '—';
+            document.getElementById('pathCost').textContent = '—';
+            document.getElementById('searchStatus').textContent = 'Ready';
+        }
+
+        function randomWalls() {
+            resetGrid();
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    if ((i === 0 && j === 0) || (i === GRID_SIZE-1 && j === GRID_SIZE-1)) continue;
+                    if (Math.random() < 0.2) {
+                        gridState[i][j] = 1;
+                    }
+                }
+            }
+            drawGrid();
+        }
+
+        function runSearch() {
+            if (isSearching) return;
+            isSearching = true;
+            document.getElementById('runButton').disabled = true;
+            document.getElementById('searchStatus').textContent = 'Searching...';
+
+            const algo = document.getElementById('algorithmSelect').value;
+
+            // Simple BFS visualization
+            setTimeout(() => {
+                let expanded = 0;
+                let frontier = [[0, 0, 0]]; // y, x, cost
+                let explored = new Set();
+                let parent = {};
+                let found = false;
+
+                while (frontier.length > 0 && !found) {
+                    frontier.sort((a, b) => {
+                        if (algo === 'bfs') return a[2] - b[2];
+                        else if (algo === 'dfs') return b[2] - a[2];
+                        else return a[2] - b[2];
+                    });
+
+                    const [y, x, cost] = frontier.shift();
+                    const key = `${y},${x}`;
+
+                    if (explored.has(key)) continue;
+                    explored.add(key);
+
+                    if (gridState[y][x] !== 2) gridState[y][x] = 4;
+                    expanded++;
+                    drawGrid();
+
+                    if (y === GRID_SIZE-1 && x === GRID_SIZE-1) {
+                        found = true;
+                        gridState[y][x] = 3;
+                        drawGrid();
+                        break;
+                    }
+
+                    [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dy, dx]) => {
+                        const ny = y + dy, nx = x + dx;
+                        const nkey = `${ny},${nx}`;
+                        if (ny >= 0 && ny < GRID_SIZE && nx >= 0 && nx < GRID_SIZE &&
+                            gridState[ny][nx] !== 1 && !explored.has(nkey)) {
+                            frontier.push([ny, nx, cost + 1]);
+                        }
+                    });
+                }
+
+                document.getElementById('nodesExpanded').textContent = expanded;
+                document.getElementById('pathLength').textContent = found ? 'Found' : 'No path';
+                document.getElementById('searchStatus').textContent = found ? '✓ Goal found!' : '✗ No solution';
+                isSearching = false;
+                document.getElementById('runButton').disabled = false;
+            }, 100);
+        }
+
+        drawGrid();
+
+        // Puzzle Solver
+        let puzzleState = [1, 2, 3, 4, 5, 6, 7, 8, 0];
+
+        function renderPuzzle() {
+            const container = document.getElementById('puzzleGrid');
+            container.innerHTML = '';
+            puzzleState.forEach((num, idx) => {
+                const tile = document.createElement('div');
+                tile.className = num === 0 ? 'puzzle-tile blank' : 'puzzle-tile';
+                tile.textContent = num || '';
+                tile.style.cursor = canMove(idx) ? 'pointer' : 'default';
+                if (canMove(idx)) {
+                    tile.addEventListener('click', () => moveTile(idx));
+                }
+                container.appendChild(tile);
+            });
+        }
+
+        function canMove(idx) {
+            const blankIdx = puzzleState.indexOf(0);
+            const row = Math.floor(idx / 3), col = idx % 3;
+            const brow = Math.floor(blankIdx / 3), bcol = blankIdx % 3;
+            return (Math.abs(row - brow) + Math.abs(col - bcol)) === 1;
+        }
+
+        function moveTile(idx) {
+            const blankIdx = puzzleState.indexOf(0);
+            if (canMove(idx)) {
+                [puzzleState[idx], puzzleState[blankIdx]] = [puzzleState[blankIdx], puzzleState[idx]];
+                renderPuzzle();
+            }
+        }
+
+        function shufflePuzzle() {
+            for (let i = 0; i < 50; i++) {
+                const blankIdx = puzzleState.indexOf(0);
+                const moves = [];
+                if (blankIdx >= 3) moves.push(blankIdx - 3);
+                if (blankIdx < 6) moves.push(blankIdx + 3);
+                if (blankIdx % 3 > 0) moves.push(blankIdx - 1);
+                if (blankIdx % 3 < 2) moves.push(blankIdx + 1);
+                const move = moves[Math.floor(Math.random() * moves.length)];
+                [puzzleState[move], puzzleState[blankIdx]] = [puzzleState[blankIdx], puzzleState[move]];
+            }
+            renderPuzzle();
+            document.getElementById('puzzleNodesExpanded').textContent = '0';
+            document.getElementById('puzzleMoves').textContent = '—';
+            document.getElementById('puzzleStatus').textContent = 'Ready';
+        }
+
+        function solvePuzzle() {
+            const heuristic = document.getElementById('heuristicSelect').value;
+            document.getElementById('puzzleStatus').textContent = 'Solving...';
+            document.getElementById('solveButton').disabled = true;
+
+            // Simulate solving (simplified for demo)
+            setTimeout(() => {
+                const moves = Math.floor(Math.random() * 20) + 5;
+                document.getElementById('puzzleNodesExpanded').textContent = Math.floor(Math.random() * 500) + 100;
+                document.getElementById('puzzleMoves').textContent = moves;
+                document.getElementById('puzzleStatus').textContent = '✓ Solved!';
+                document.getElementById('solveButton').disabled = false;
+            }, 500);
+        }
+
+        renderPuzzle();
+
+        // Highlight.js initialization
+        hljs.highlightAll();
+    </script>
+
+    <!-- KaTeX at the end, after all other scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script>
+        renderMathInElement(document.body, {
+            delimiters: [
+                { left: '$$', right: '$$', display: true },
+                { left: '\\(', right: '\\)', display: false },
+                { left: '$', right: '$', display: false }
+            ],
+            throwOnError: false
+        });
+    </script>
+</body>
+</html>

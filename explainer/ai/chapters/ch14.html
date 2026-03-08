@@ -1,0 +1,1433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 14: Probabilistic Reasoning over Time - AIMA Textbook Explainer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:wght@400;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.0/katex.min.css">
+    <style>
+        :root {
+            --bg: #FAF9F6;
+            --bg-card: #FFFFFF;
+            --text: #1a1a2e;
+            --text-muted: #6b7280;
+            --accent-primary: #A8325B;
+            --accent-secondary: #2563eb;
+            --accent-tertiary: #059669;
+            --border: #e5e7eb;
+            --radius: 12px;
+            --purple-gradient: linear-gradient(135deg, #4527a0, #7b1fa2, #ab47bc);
+        }
+
+        [data-theme="dark"] {
+            --bg: #1a1a2e;
+            --bg-card: #2d2d44;
+            --text: #f0f0f0;
+            --text-muted: #a0a0b0;
+            --border: #404050;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            color: var(--accent-secondary);
+            font-weight: 500;
+            transition: gap 0.2s;
+        }
+
+        .back-link:hover {
+            gap: 0.75rem;
+        }
+
+        .theme-toggle {
+            background: none;
+            border: 1px solid var(--border);
+            padding: 0.5rem 0.75rem;
+            border-radius: var(--radius);
+            cursor: pointer;
+            color: var(--text);
+            font-size: 1.2rem;
+            transition: background 0.2s;
+        }
+
+        .theme-toggle:hover {
+            background: var(--bg);
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: var(--bg-card);
+            border-right: 1px solid var(--border);
+            padding: 2rem 0;
+            position: sticky;
+            top: 73px;
+            height: calc(100vh - 73px);
+            overflow-y: auto;
+        }
+
+        .sidebar nav {
+            list-style: none;
+        }
+
+        .sidebar nav li {
+            border-left: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .sidebar nav li.active {
+            border-left-color: #7b1fa2;
+        }
+
+        .sidebar nav li a {
+            display: block;
+            padding: 0.75rem 1.5rem;
+            text-decoration: none;
+            color: var(--text);
+            font-size: 0.95rem;
+            transition: padding-left 0.3s;
+        }
+
+        .sidebar nav li a:hover {
+            padding-left: 2rem;
+        }
+
+        .sidebar nav li.active a {
+            color: #7b1fa2;
+            font-weight: 600;
+        }
+
+        .main {
+            flex: 1;
+            padding: 3rem 4rem;
+        }
+
+        .hero {
+            background: var(--purple-gradient);
+            color: white;
+            padding: 4rem 2rem;
+            border-radius: var(--radius);
+            margin-bottom: 3rem;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-family: 'Newsreader', serif;
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .hero .chapter-number {
+            font-size: 1.5rem;
+            opacity: 0.9;
+            margin-bottom: 1rem;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            opacity: 0.95;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .completion-badge {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--accent-tertiary);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 50px;
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s;
+            z-index: 90;
+            pointer-events: none;
+        }
+
+        .completion-badge.visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .section {
+            margin-bottom: 4rem;
+            opacity: 0;
+            animation: slideInUp 0.6s ease forwards;
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .section h2 {
+            font-family: 'Newsreader', serif;
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: var(--text);
+        }
+
+        .section h3 {
+            font-family: 'Newsreader', serif;
+            font-size: 1.3rem;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: #7b1fa2;
+        }
+
+        .section p, .section li {
+            margin-bottom: 1rem;
+            font-size: 1.05rem;
+            color: var(--text);
+        }
+
+        .section ul {
+            margin-left: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .feynman-box {
+            background: linear-gradient(135deg, rgba(123, 31, 162, 0.05), rgba(165, 71, 188, 0.05));
+            border-left: 4px solid #7b1fa2;
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            margin: 2rem 0;
+            font-style: italic;
+            color: var(--text);
+        }
+
+        .math-block {
+            background: var(--bg-card);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            margin: 1.5rem 0;
+            border: 1px solid var(--border);
+            overflow-x: auto;
+        }
+
+        .code-block {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            margin: 1.5rem 0;
+        }
+
+        .code-block pre {
+            padding: 1.5rem;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+        }
+
+        .code-block code {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .interactive-section {
+            background: var(--bg-card);
+            border: 2px solid #7b1fa2;
+            border-radius: var(--radius);
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        .interactive-title {
+            font-weight: 700;
+            color: #7b1fa2;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .hmm-visualizer {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .grid-positions {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .position-cell {
+            aspect-ratio: 1;
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: var(--bg);
+        }
+
+        .position-cell.wall {
+            background: #94a3b8;
+        }
+
+        .position-cell.open {
+            background: #cbd5e1;
+        }
+
+        .probability-bar {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-around;
+            height: 200px;
+            gap: 0.5rem;
+            padding: 1rem;
+            background: var(--bg);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+        }
+
+        .bar {
+            flex: 1;
+            background: linear-gradient(180deg, #7b1fa2, #ab47bc);
+            border-radius: 4px 4px 0 0;
+            transition: height 0.3s;
+            min-height: 2px;
+            position: relative;
+        }
+
+        .bar-label {
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.8rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: var(--radius);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1rem;
+        }
+
+        .btn-primary {
+            background: #7b1fa2;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #6a1691;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(123, 31, 162, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+
+        .btn-secondary:hover {
+            background: #d1d5db;
+        }
+
+        .canvas-container {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 400px;
+            margin: 1rem 0;
+        }
+
+        canvas {
+            max-width: 100%;
+            max-height: 400px;
+        }
+
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .slider-group label {
+            font-weight: 600;
+            min-width: 150px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+        }
+
+        .slider-value {
+            font-weight: 600;
+            min-width: 80px;
+            text-align: right;
+        }
+
+        .socratic-box {
+            background: var(--bg);
+            border: 2px solid #2563eb;
+            border-radius: var(--radius);
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        .socratic-box h4 {
+            color: #2563eb;
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .socratic-questions {
+            list-style: none;
+        }
+
+        .socratic-questions li {
+            margin-bottom: 1.5rem;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .socratic-questions li:before {
+            content: "Q";
+            position: absolute;
+            left: 0;
+            color: #2563eb;
+            font-weight: 700;
+            font-style: italic;
+        }
+
+        .trellis-diagram {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        .footer {
+            border-top: 1px solid var(--border);
+            padding-top: 2rem;
+            margin-top: 3rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-link {
+            text-decoration: none;
+            color: #7b1fa2;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: gap 0.2s;
+        }
+
+        .nav-link:hover {
+            gap: 0.75rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                top: 0;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+                padding: 1rem 0;
+            }
+
+            .main {
+                padding: 2rem 1.5rem;
+            }
+
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .hero p {
+                font-size: 1rem;
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #7b1fa2;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6a1691;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-top">
+        <a href="../index.html" class="back-link">← Back to Dashboard</a>
+        <button class="theme-toggle" id="themeToggle">🌙</button>
+    </div>
+
+    <div class="container">
+        <aside class="sidebar">
+            <nav id="sidebarNav">
+                <li><a href="#section-1">Feynman Model</a></li>
+                <li><a href="#section-2">Math Ascent</a></li>
+                <li><a href="#section-3">Implementation</a></li>
+                <li><a href="#section-4">Sandbox</a></li>
+                <li><a href="#section-5">Interactives</a></li>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <div class="hero">
+                <div class="chapter-number">Part IV — Learning and Reasoning</div>
+                <h1>Chapter 14: Probabilistic Reasoning over Time</h1>
+                <p>Tracking hidden state through noisy observations using Hidden Markov Models, Kalman Filters, and temporal inference.</p>
+            </div>
+
+            <section class="section" id="section-1">
+                <h2>Feynman Mental Model: Tracking a Robot</h2>
+
+                <p>Imagine you're tracking a friend's location using only noisy GPS readings. Each reading is slightly off — maybe by 10 meters in any direction. But you know two things:</p>
+
+                <ul>
+                    <li><strong>Prior belief:</strong> Your friend was somewhere before (you have prior knowledge)</li>
+                    <li><strong>Physics:</strong> Your friend moves at walking speed (transition model)</li>
+                    <li><strong>Noisy sensor:</strong> GPS reading ± 10 meters (sensor model)</li>
+                </ul>
+
+                <p>By combining these three pieces of information, you can estimate a <strong>much better position</strong> than any single GPS reading. This is what Hidden Markov Models and Kalman Filters do — they separate signal from noise by reasoning about how the world changes over time.</p>
+
+                <div class="feynman-box">
+                    <strong>The core insight:</strong> The future doesn't depend on the entire history — only on the present state. This is the <em>Markov assumption</em>. If you know where your friend is right now (X<sub>t</sub>), their location 5 steps from now depends only on X<sub>t</sub>, not on where they were 20 minutes ago.
+                </div>
+
+                <h3>Key Concepts in Temporal Models</h3>
+
+                <p><strong>Time slices:</strong> We represent the world at discrete time points t = 0, 1, 2, ... Each time slice has variables (position, velocity, etc.) that evolve according to rules.</p>
+
+                <p><strong>Hidden state (X<sub>t</sub>):</strong> The true position of the robot — what we want to infer but can't observe directly.</p>
+
+                <p><strong>Observable evidence (E<sub>t</sub>):</strong> The noisy sensor readings. We observe E<sub>1</sub>, E<sub>2</sub>, ..., E<sub>t</sub> and want to infer X<sub>t</sub>.</p>
+
+                <p><strong>Transition model P(X<sub>t</sub> | X<sub>t-1</sub>):</strong> Describes how the hidden state evolves. For a robot, this might say: "If at position 5, you're 80% likely to move to position 6, 20% likely to stay at 5."</p>
+
+                <p><strong>Sensor model P(E<sub>t</sub> | X<sub>t</sub>):</strong> Describes how observations depend on true state. "If you're actually at position 5, the sensor reads 5 with 80% probability, reads 4 or 6 with 10% each."</p>
+
+                <h3>Four Inference Tasks</h3>
+
+                <ul>
+                    <li><strong>Filtering:</strong> What is X<sub>t</sub> right now, given observations so far? (P(X<sub>t</sub> | e<sub>1:t</sub>)) — Used in real-time applications like GPS tracking.</li>
+                    <li><strong>Prediction:</strong> What will X<sub>t+k</sub> be? (P(X<sub>t+k</sub> | e<sub>1:t</sub>)) — Weather forecasts, traffic prediction.</li>
+                    <li><strong>Smoothing:</strong> What was X<sub>k</sub> in the past, given all observations? (P(X<sub>k</sub> | e<sub>1:t</sub>) where k &lt; t) — Movie stabilization, medical imaging.</li>
+                    <li><strong>Most likely sequence (Viterbi):</strong> What is the most probable sequence of hidden states x<sub>1:t</sub> that explains the observations? — Speech recognition, sequence alignment.</li>
+                </ul>
+
+                <h3>Discrete vs. Continuous: HMM to Kalman Filter</h3>
+
+                <p><strong>Hidden Markov Model (HMM):</strong> Discrete hidden state space (5 positions in a hallway) and discrete time steps. Exact inference using matrix algebra.</p>
+
+                <p><strong>Kalman Filter:</strong> Continuous hidden state space (position is a real number) and Gaussian noise. Optimal solution when everything is linear-Gaussian. The Kalman Filter maintains mean and covariance of the belief state.</p>
+            </section>
+
+            <section class="section" id="section-2">
+                <h2>Mathematical Ascent</h2>
+
+                <h3>The Markov Property</h3>
+                <div class="math-block">
+                    $$P(X_t | X_{0:t-1}) = P(X_t | X_{t-1})$$
+                </div>
+                <p>The future is conditionally independent of the past given the present. This assumption allows us to avoid tracking the entire history.</p>
+
+                <h3>Sensor Independence</h3>
+                <div class="math-block">
+                    $$P(E_t | X_{0:t}, E_{0:t-1}) = P(E_t | X_t)$$
+                </div>
+                <p>Observations depend only on the current hidden state, not on history or previous observations.</p>
+
+                <h3>Forward Algorithm (Filtering)</h3>
+                <p>To compute P(X<sub>t</sub> | e<sub>1:t</sub>), we use a forward recursion that alternates between prediction and update:</p>
+
+                <div class="math-block">
+                    $$P(X_t | e_{1:t}) = \alpha \cdot P(e_t | X_t) \sum_{x_{t-1}} P(X_t | x_{t-1}) P(x_{t-1} | e_{1:t-1})$$
+                </div>
+
+                <p>Breaking this down:</p>
+                <ul>
+                    <li>The <strong>sum</strong> averages over all possible previous states (prediction)</li>
+                    <li><strong>P(X<sub>t</sub> | x<sub>t-1</sub>)</strong> comes from the transition model</li>
+                    <li><strong>P(e<sub>t</sub> | X<sub>t</sub>)</strong> is the sensor model, reweighting by the new observation (update)</li>
+                    <li><strong>α</strong> is a normalizing constant</li>
+                </ul>
+
+                <p>In matrix form:</p>
+                <div class="math-block">
+                    $$\mathbf{f}_{1:t} = \alpha \cdot \mathbf{O}_t \mathbf{T}^T \mathbf{f}_{1:t-1}$$
+                </div>
+
+                <p>Where <strong>f</strong> is the belief state vector, <strong>T</strong> is the transition matrix, and <strong>O<sub>t</sub></strong> is the diagonal matrix of sensor likelihoods.</p>
+
+                <h3>Forward-Backward (Smoothing)</h3>
+                <p>To compute P(X<sub>k</sub> | e<sub>1:t</sub>) where k &lt; t, we combine forward and backward messages:</p>
+
+                <div class="math-block">
+                    $$P(X_k | e_{1:t}) = \alpha \cdot \mathbf{f}_{1:k} \times \mathbf{b}_{k+1:t}$$
+                </div>
+
+                <p><strong>Forward message:</strong> belief built from observations 1 to k<br/>
+                <strong>Backward message:</strong> likelihood of observations k+1 to t given each state at k</p>
+
+                <p>Backward recursion:</p>
+                <div class="math-block">
+                    $$\mathbf{b}_{k+1:t} = \mathbf{T} \mathbf{O}_{k+1} \mathbf{b}_{k+2:t}$$
+                </div>
+
+                <h3>Viterbi Algorithm (Most Likely Sequence)</h3>
+                <p>Find the sequence of states x<sub>1:t</sub> that maximizes P(x<sub>1:t</sub> | e<sub>1:t</sub>):</p>
+
+                <div class="math-block">
+                    $$m_{1:t}(x_t) = P(e_t | x_t) \max_{x_{t-1}} \left( P(x_t | x_{t-1}) \cdot m_{1:t-1}(x_{t-1}) \right)$$
+                </div>
+
+                <p>We compute the max probability of reaching each state, then backtrack to recover the path. This is dynamic programming on the trellis of states × time.</p>
+
+                <h3>Kalman Filter for Continuous State</h3>
+                <p>For systems with Gaussian noise and linear dynamics:</p>
+
+                <div class="math-block">
+                    $$\hat{x}_t = F \hat{x}_{t-1} + K_t(z_t - HF\hat{x}_{t-1})$$
+                </div>
+
+                <p>Where:</p>
+                <ul>
+                    <li><strong>F:</strong> State transition matrix (how does state evolve?)</li>
+                    <li><strong>H:</strong> Observation matrix (how is state observed?)</li>
+                    <li><strong>K<sub>t</sub>:</strong> Kalman gain — how much to trust the new observation</li>
+                    <li><strong>z<sub>t</sub>:</strong> Actual observation</li>
+                    <li><strong>HF x̂<sub>t-1</sub>:</strong> Predicted observation based on prior belief</li>
+                </ul>
+
+                <p>The Kalman gain adapts: if sensor noise is low (K large), trust the observation; if process noise is low (K small), trust the prediction.</p>
+            </section>
+
+            <section class="section" id="section-3">
+                <h2>Clean-Code Implementation</h2>
+
+                <h3>Hidden Markov Model in Python</h3>
+                <div class="code-block">
+                    <pre><code class="language-python">import numpy as np
+
+class HiddenMarkovModel:
+    """
+    Hidden Markov Model for temporal reasoning.
+    The rational agent maintains a BELIEF STATE that evolves over time,
+    combining predictions from a transition model with observations
+    from a sensor model.
+    """
+    def __init__(self, transition, sensor, prior):
+        self.T = np.array(transition)  # Transition matrix P(X_t | X_{t-1})
+        self.sensor = sensor            # dict: observation -> likelihoods
+        self.prior = np.array(prior)    # Initial belief state
+
+    def forward(self, observations):
+        """
+        Filtering: compute P(X_t | e_{1:t}) for each time step.
+        Like updating your GPS estimate with each new reading.
+
+        Returns: list of belief states over time
+        """
+        f = self.prior.copy()
+        beliefs = [f.copy()]
+
+        for obs in observations:
+            # PREDICT: where might the robot be now?
+            f = self.T.T @ f
+
+            # UPDATE: incorporate sensor reading
+            # Multiply by likelihood of observation in each state
+            f = f * np.array(self.sensor[obs])
+
+            # NORMALIZE: ensure probabilities sum to 1
+            f = f / (f.sum() + 1e-10)
+            beliefs.append(f.copy())
+
+        return beliefs
+
+    def viterbi(self, observations):
+        """
+        Find most likely sequence of hidden states.
+        Like reconstructing the actual path your friend walked,
+        given all the noisy GPS readings.
+
+        Returns: array of state indices, one per time step
+        """
+        n_states = len(self.prior)
+        T = len(observations)
+
+        # Track max log-probabilities and back pointers
+        delta = np.log(self.prior + 1e-10)
+        psi = np.zeros((T, n_states), dtype=int)
+
+        for t, obs in enumerate(observations):
+            new_delta = np.zeros(n_states)
+            likelihoods = np.array(self.sensor[obs])
+
+            for j in range(n_states):
+                # For each state j at time t, find the best
+                # previous state that led to it
+                candidates = delta + np.log(self.T[:, j] + 1e-10)
+                psi[t, j] = np.argmax(candidates)
+                new_delta[j] = candidates[psi[t, j]] + np.log(likelihoods[j] + 1e-10)
+
+            delta = new_delta
+
+        # Backtrack from final state to recover path
+        path = np.zeros(T, dtype=int)
+        path[-1] = np.argmax(delta)
+        for t in range(T - 2, -1, -1):
+            path[t] = psi[t + 1, path[t + 1]]
+
+        return path
+
+    def forward_backward(self, observations):
+        """
+        Smoothing: compute P(X_k | e_{1:t}) for all k <= t.
+        Uses forward and backward messages.
+        """
+        n_states = len(self.prior)
+        T = len(observations)
+
+        # Forward pass
+        forward_msgs = []
+        f = self.prior.copy()
+        forward_msgs.append(f.copy())
+
+        for obs in observations:
+            f = self.T.T @ f
+            f = f * np.array(self.sensor[obs])
+            f = f / (f.sum() + 1e-10)
+            forward_msgs.append(f.copy())
+
+        # Backward pass
+        backward_msgs = [np.ones(n_states)]
+        b = np.ones(n_states)
+
+        for t in range(T - 1, -1, -1):
+            obs = observations[t]
+            likelihoods = np.array(self.sensor[obs])
+            b = self.T @ (likelihoods * b)
+            b = b / (b.sum() + 1e-10)
+            backward_msgs.append(b.copy())
+
+        backward_msgs.reverse()
+
+        # Combine forward and backward
+        smoothed = []
+        for f, b in zip(forward_msgs[:-1], backward_msgs[1:]):
+            s = f * b
+            s = s / (s.sum() + 1e-10)
+            smoothed.append(s)
+
+        return smoothed
+
+
+class KalmanFilter:
+    """
+    Kalman Filter for continuous state estimation.
+    The rational agent models position and velocity as Gaussians,
+    achieving optimal estimation for linear-Gaussian systems.
+    """
+    def __init__(self, F, H, Q, R, x0, P0):
+        self.F = np.array(F)   # State transition matrix
+        self.H = np.array(H)   # Observation matrix
+        self.Q = np.array(Q)   # Process noise covariance
+        self.R = np.array(R)   # Observation noise covariance
+        self.x = np.array(x0)  # State estimate
+        self.P = np.array(P0)  # State covariance
+
+    def predict(self):
+        """
+        Prediction step: move forward in time.
+        x_pred = F @ x_prev
+        P_pred = F @ P_prev @ F.T + Q
+        """
+        self.x = self.F @ self.x
+        self.P = self.F @ self.P @ self.F.T + self.Q
+        return self.x.copy(), self.P.copy()
+
+    def update(self, z):
+        """
+        Update step: incorporate new observation.
+        Returns new state estimate and Kalman gain.
+        """
+        z = np.array(z).reshape(-1, 1)
+
+        # Kalman gain: how much to trust the observation
+        S = self.H @ self.P @ self.H.T + self.R
+        K = self.P @ self.H.T @ np.linalg.inv(S)
+
+        # Update state estimate
+        y = z - self.H @ self.x.reshape(-1, 1)
+        self.x = self.x + (K @ y).flatten()
+
+        # Update covariance
+        I = np.eye(len(self.x))
+        self.P = (I - K @ self.H) @ self.P
+
+        return self.x.copy(), K
+
+    def filter(self, observations):
+        """
+        Run filter over a sequence of observations.
+        Returns list of state estimates.
+        """
+        estimates = [self.x.copy()]
+        for z in observations:
+            self.predict()
+            self.update(z)
+            estimates.append(self.x.copy())
+        return estimates</code></pre>
+                </div>
+            </section>
+
+            <section class="section" id="section-4">
+                <h2>Socratic Sandbox</h2>
+
+                <div class="socratic-box">
+                    <h4>Scenario: The Hallway Robot</h4>
+                    <p>A robot navigates a hallway with 5 positions arranged left-to-right. The hallway has a repeating pattern: wall, wall, open, open, wall. The robot's sensor detects "wall" or "open" at its current position, but with 20% error rate. The transition model says the robot moves forward one step with 80% probability and stays put with 20% probability. After observing the sequence ['wall', 'open', 'wall'], the forward filter converges to a nearly uniform belief — the filter can't tell where the robot is!</p>
+
+                    <ol class="socratic-questions">
+                        <li><strong>Why did the filter converge to near-uniform belief?</strong> What property of this specific hallway layout might cause the filter to be unable to disambiguate? (Hint: the wall/open/wall pattern repeats.)</li>
+
+                        <li><strong>If the robot's sensor had 5% error instead of 20%,</strong> how would the belief evolution differ? What does this tell us about the relationship between sensor accuracy and our ability to localize?</li>
+
+                        <li><strong>The Markov assumption says the future depends only on the present.</strong> Give a real-world example where this assumption fails. (Hint: think about a person's motion.) How would you extend the model to handle this?</li>
+
+                        <li><strong>How does Viterbi differ from filtering?</strong> If filtering says "probably position 3 at time t" but Viterbi says "position 2 at time t," which is correct? What different questions do they answer?</li>
+
+                        <li><strong>A Kalman Filter assumes Gaussian noise.</strong> What happens if a sensor occasionally gives wildly wrong readings—e.g., a "heavy-tailed" distribution with occasional outliers? How does this break the optimality guarantee? What robust alternative exists?</li>
+                    </ol>
+                </div>
+
+                <h3>Discussion Points</h3>
+
+                <p><strong>On uniform beliefs:</strong> When the environment is symmetric and observations are weak (noisy), the filter genuinely cannot distinguish between multiple states. This is an inherent limitation, not a flaw. With stronger sensors or more informative observations, the belief sharpens.</p>
+
+                <p><strong>On sensor accuracy:</strong> Sensor quality is exponentially valuable. A 5% error sensor provides much more information than a 20% error sensor, allowing the filter to narrow beliefs faster. In practice, sensor fusion (combining multiple sensors) is often more cost-effective than improving one sensor.</p>
+
+                <p><strong>On the Markov assumption:</strong> Real agents often have momentum, habits, or long-term goals. A person's next position depends not just on current position, but on where they were 5 steps ago. To fix this, expand the state to include velocity or abstract goals. The cost is a larger state space, but the model becomes more accurate.</p>
+
+                <p><strong>On Viterbi vs. filtering:</strong> Filtering asks "what is the most probable current state?" Viterbi asks "what is the most probable entire sequence?" For time t, they can give different answers because Viterbi commits to a consistent path, while filtering considers each time independently. Viterbi is useful when the path matters (speech recognition), filtering when only the current state matters (GPS tracking).</p>
+
+                <p><strong>On robust filtering:</strong> Outliers violate Gaussian assumptions. Robust alternatives include particle filters (samples states from a distribution, resamples based on observations) and Huber filtering (blends least-squares with robust loss). These trade optimality for resilience.</p>
+            </section>
+
+            <section class="section" id="section-5">
+                <h2>Interactive Explorations</h2>
+
+                <h3>Interactive 1: HMM Forward Algorithm Visualizer</h3>
+                <div class="interactive-section">
+                    <div class="interactive-title">Hallway Localization</div>
+                    <p>A robot moves in a 7-position hallway (alternating wall/open pattern). Click "Observe" to add sensor readings. Watch the belief state update in real-time.</p>
+
+                    <div class="grid-positions" id="gridPositions"></div>
+
+                    <div class="control-buttons">
+                        <button class="btn btn-primary" onclick="hmmObserve('wall')">Observe: Wall</button>
+                        <button class="btn btn-primary" onclick="hmmObserve('open')">Observe: Open</button>
+                        <button class="btn btn-secondary" onclick="hmmReset()">Reset</button>
+                    </div>
+
+                    <p style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 1rem;"><strong>Belief State over Time:</strong></p>
+                    <div class="probability-bar" id="probabilityBar"></div>
+                    <p style="font-size: 0.9rem; margin-top: 1.5rem; padding: 1rem; background: var(--bg); border-radius: var(--radius);"><strong>Last observation:</strong> <span id="lastObsDisplay">None</span> | <strong>Most likely position:</strong> <span id="mostLikelyDisplay">—</span> | <strong>Entropy:</strong> <span id="entropyDisplay">—</span></p>
+                </div>
+
+                <h3>Interactive 2: Kalman Filter 2D Tracker</h3>
+                <div class="interactive-section">
+                    <div class="interactive-title">Smoothing Noisy Observations</div>
+                    <p>Watch a Kalman Filter smooth noisy observations of a moving object. The dashed line is the true path, dots are noisy observations, and the solid line is the filter's estimate.</p>
+
+                    <div class="slider-group">
+                        <label for="noiseSlider">Observation Noise:</label>
+                        <input type="range" id="noiseSlider" min="0.5" max="5" step="0.5" value="2" onchange="updateKalmanNoise(this.value)">
+                        <span class="slider-value" id="noiseValue">2.0</span>
+                    </div>
+
+                    <div class="control-buttons">
+                        <button class="btn btn-primary" onclick="runKalmanFilter()">Run Filter</button>
+                        <button class="btn btn-secondary" onclick="resetKalmanCanvas()">Clear</button>
+                    </div>
+
+                    <div class="canvas-container">
+                        <canvas id="kalmanCanvas" width="600" height="400"></canvas>
+                    </div>
+
+                    <p style="font-size: 0.9rem; margin-top: 1rem; padding: 1rem; background: var(--bg); border-radius: var(--radius);"><strong>Legend:</strong> <span style="color: #666;">━━ True path</span> | <span style="color: #ff6b6b;">● Observations</span> | <span style="color: #7b1fa2;">━━ Filter estimate</span> | <span style="color: #999;">⬚ Uncertainty</span></p>
+                </div>
+
+                <h3>Interactive 3: Viterbi Path Decoder</h3>
+                <div class="interactive-section">
+                    <div class="interactive-title">Finding the Most Likely Sequence</div>
+                    <p>Compare filtering (marginal probabilities) with Viterbi (most likely path). Enter observations one by one and see how the most likely path changes.</p>
+
+                    <div class="control-buttons">
+                        <button class="btn btn-primary" onclick="viterbiObserve('A')">Observe: A</button>
+                        <button class="btn btn-primary" onclick="viterbiObserve('B')">Observe: B</button>
+                        <button class="btn btn-primary" onclick="viterbiObserve('C')">Observe: C</button>
+                        <button class="btn btn-secondary" onclick="viterbiReset()">Reset</button>
+                    </div>
+
+                    <p style="font-size: 0.95rem; color: var(--text-muted); margin: 1rem 0;"><strong>Trellis Diagram (States × Time):</strong></p>
+                    <div class="trellis-diagram">
+                        <canvas id="trellisCanvas" width="800" height="300"></canvas>
+                    </div>
+
+                    <p style="font-size: 0.9rem; margin-top: 1rem; padding: 1rem; background: var(--bg); border-radius: var(--radius);"><strong>Most likely path:</strong> <span id="viterbiPathDisplay" style="font-weight: 600; color: #7b1fa2;">—</span></p>
+                </div>
+            </section>
+
+            <footer class="footer">
+                <a href="ch13.html" class="nav-link">← Ch 13: Probabilistic Inference</a>
+                <span style="color: var(--text-muted);">Chapter 14 of 20</span>
+                <a href="ch15.html" class="nav-link">Ch 15: Knowledge Learning →</a>
+            </footer>
+        </main>
+    </div>
+
+    <div class="completion-badge" id="completionBadge">✓ Chapter 80% complete</div>
+
+    <script>
+        // ============ THEME TOGGLE ============
+        const themeToggle = document.getElementById('themeToggle');
+        const htmlElement = document.documentElement;
+
+        function initTheme() {
+            const saved = localStorage.getItem('aima-ch-14-theme') || 'light';
+            htmlElement.setAttribute('data-theme', saved);
+            themeToggle.textContent = saved === 'dark' ? '☀️' : '🌙';
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const current = htmlElement.getAttribute('data-theme') || 'light';
+            const next = current === 'light' ? 'dark' : 'light';
+            htmlElement.setAttribute('data-theme', next);
+            localStorage.setItem('aima-ch-14-theme', next);
+            themeToggle.textContent = next === 'dark' ? '☀️' : '🌙';
+        });
+
+        initTheme();
+
+        // ============ SIDEBAR NAVIGATION ============
+        const sidebarNav = document.getElementById('sidebarNav');
+        const navLinks = sidebarNav.querySelectorAll('a');
+
+        function updateActiveNav() {
+            let current = '';
+            navLinks.forEach(link => {
+                const section = document.querySelector(link.getAttribute('href'));
+                if (section && section.getBoundingClientRect().top <= 200) {
+                    current = link.getAttribute('href');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.parentElement.classList.toggle('active', link.getAttribute('href') === current);
+            });
+        }
+
+        window.addEventListener('scroll', updateActiveNav);
+        updateActiveNav();
+
+        // ============ SECTION ANIMATIONS ============
+        const sections = document.querySelectorAll('.section');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.animationDelay = '0s';
+                }
+            });
+        }, { threshold: 0.1 });
+
+        sections.forEach(section => observer.observe(section));
+
+        // ============ COMPLETION BADGE ============
+        const completionBadge = document.getElementById('completionBadge');
+        window.addEventListener('scroll', () => {
+            const scrollPercent = (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100;
+            if (scrollPercent > 50) {
+                completionBadge.classList.add('visible');
+            }
+        });
+
+        // ============ HMM INTERACTIVE ============
+        const hmmState = {
+            beliefs: null,
+            observations: [],
+            transition: null,
+            sensor: null,
+            prior: null
+        };
+
+        function initHMM() {
+            // 7 positions: wall, wall, open, open, wall, wall, open
+            const pattern = [1, 1, 0, 0, 1, 1, 0];
+            const n = 7;
+
+            // Transition: move forward with 80% prob, stay with 20%
+            const T = Array(n).fill(0).map(() => Array(n).fill(0));
+            for (let i = 0; i < n; i++) {
+                T[i][(i + 1) % n] = 0.8;
+                T[i][i] = 0.2;
+            }
+            hmmState.transition = T;
+
+            // Sensor: 80% correct, 20% error
+            hmmState.sensor = {
+                wall: pattern.map(p => p === 1 ? 0.8 : 0.2),
+                open: pattern.map(p => p === 0 ? 0.8 : 0.2)
+            };
+
+            // Uniform prior
+            hmmState.prior = Array(n).fill(1 / n);
+            hmmState.beliefs = [hmmState.prior.slice()];
+
+            // Draw grid
+            const grid = document.getElementById('gridPositions');
+            grid.innerHTML = '';
+            pattern.forEach((p, i) => {
+                const cell = document.createElement('div');
+                cell.className = `position-cell ${p === 1 ? 'wall' : 'open'}`;
+                cell.textContent = i;
+                grid.appendChild(cell);
+            });
+
+            drawProbabilityBar();
+        }
+
+        function hmmForward(obs) {
+            const f = hmmState.beliefs[hmmState.beliefs.length - 1].slice();
+            const n = f.length;
+            const T = hmmState.transition;
+
+            // Predict
+            const predicted = Array(n).fill(0);
+            for (let j = 0; j < n; j++) {
+                for (let i = 0; i < n; i++) {
+                    predicted[j] += T[i][j] * f[i];
+                }
+            }
+
+            // Update
+            const likelihoods = hmmState.sensor[obs];
+            for (let j = 0; j < n; j++) {
+                predicted[j] *= likelihoods[j];
+            }
+
+            // Normalize
+            const sum = predicted.reduce((a, b) => a + b, 0);
+            for (let j = 0; j < n; j++) {
+                predicted[j] /= sum || 1;
+            }
+
+            hmmState.beliefs.push(predicted);
+            hmmState.observations.push(obs);
+        }
+
+        function hmmObserve(obs) {
+            hmmForward(obs);
+            updateHMMDisplay();
+        }
+
+        function updateHMMDisplay() {
+            drawProbabilityBar();
+
+            const belief = hmmState.beliefs[hmmState.beliefs.length - 1];
+            const maxIdx = belief.indexOf(Math.max(...belief));
+            const entropy = -belief.reduce((sum, p) => sum + (p > 0 ? p * Math.log2(p) : 0), 0);
+
+            document.getElementById('lastObsDisplay').textContent = hmmState.observations.length > 0 ? hmmState.observations[hmmState.observations.length - 1] : 'None';
+            document.getElementById('mostLikelyDisplay').textContent = maxIdx;
+            document.getElementById('entropyDisplay').textContent = entropy.toFixed(2) + ' bits';
+        }
+
+        function drawProbabilityBar() {
+            const belief = hmmState.beliefs[hmmState.beliefs.length - 1];
+            const bar = document.getElementById('probabilityBar');
+            bar.innerHTML = '';
+
+            belief.forEach((prob, i) => {
+                const barDiv = document.createElement('div');
+                barDiv.className = 'bar';
+                barDiv.style.height = (prob * 100) + '%';
+                barDiv.innerHTML = `<div class="bar-label">${i}</div>`;
+                bar.appendChild(barDiv);
+            });
+        }
+
+        function hmmReset() {
+            hmmState.beliefs = [hmmState.prior.slice()];
+            hmmState.observations = [];
+            updateHMMDisplay();
+        }
+
+        // ============ KALMAN FILTER ============
+        let kalmanNoise = 2;
+
+        function updateKalmanNoise(val) {
+            kalmanNoise = parseFloat(val);
+            document.getElementById('noiseValue').textContent = val;
+        }
+
+        function runKalmanFilter() {
+            const canvas = document.getElementById('kalmanCanvas');
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, w, h);
+
+            // Simulate a circular trajectory
+            const T = 40;
+            const truePath = [];
+            const observations = [];
+
+            for (let t = 0; t < T; t++) {
+                const angle = (t / T) * 2 * Math.PI;
+                const x = w / 2 + 80 * Math.cos(angle);
+                const y = h / 2 + 80 * Math.sin(angle);
+                truePath.push([x, y]);
+
+                const noiseX = (Math.random() - 0.5) * kalmanNoise * 10;
+                const noiseY = (Math.random() - 0.5) * kalmanNoise * 10;
+                observations.push([x + noiseX, y + noiseY]);
+            }
+
+            // Kalman filter: state = [x, y, vx, vy]
+            let x = [observations[0][0], observations[0][1], 0, 0];
+            const F = [[1, 0, 1, 0], [0, 1, 0, 1], [0, 0, 0.9, 0], [0, 0, 0, 0.9]];
+            const H = [[1, 0, 0, 0], [0, 1, 0, 0]];
+            const Q = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0.1, 0], [0, 0, 0, 0.1]];
+            const R = [[kalmanNoise * kalmanNoise, 0], [0, kalmanNoise * kalmanNoise]];
+            let P = [[100, 0, 0, 0], [0, 100, 0, 0], [0, 0, 10, 0], [0, 0, 0, 10]];
+
+            const estimates = [];
+
+            for (let t = 0; t < T; t++) {
+                // Predict
+                x = matmul(F, x);
+                P = matadd(matmul(matmul(F, P), transpose(F)), Q);
+
+                // Update
+                const z = observations[t];
+                const zPred = [x[0], x[1]];
+                const S = matadd(matmul(matmul(H, P), transpose(H)), R);
+                const K = matmul(matmul(P, transpose(H)), matinv(S));
+
+                const innovation = [z[0] - zPred[0], z[1] - zPred[1]];
+                const correction = matmul(K, innovation);
+                x = matadd(x, correction);
+
+                const I = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]];
+                P = matmul(matadd(I, scalmul(-1, matmul(K, H))), P);
+
+                estimates.push([x[0], x[1]]);
+            }
+
+            // Draw
+            ctx.strokeStyle = '#999';
+            ctx.setLineDash([5, 5]);
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(truePath[0][0], truePath[0][1]);
+            truePath.forEach(p => ctx.lineTo(p[0], p[1]));
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            ctx.fillStyle = '#ff6b6b';
+            observations.forEach(p => {
+                ctx.fillRect(p[0] - 3, p[1] - 3, 6, 6);
+            });
+
+            ctx.strokeStyle = '#7b1fa2';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(estimates[0][0], estimates[0][1]);
+            estimates.forEach(p => ctx.lineTo(p[0], p[1]));
+            ctx.stroke();
+        }
+
+        function resetKalmanCanvas() {
+            const canvas = document.getElementById('kalmanCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // Matrix utilities
+        function matmul(A, b) {
+            if (Array.isArray(b[0])) {
+                const result = Array(A.length).fill(0).map(() => Array(b[0].length).fill(0));
+                for (let i = 0; i < A.length; i++) {
+                    for (let j = 0; j < b[0].length; j++) {
+                        for (let k = 0; k < b.length; k++) {
+                            result[i][j] += A[i][k] * b[k][j];
+                        }
+                    }
+                }
+                return result;
+            } else {
+                return A.map(row => row.reduce((sum, val, i) => sum + val * b[i], 0));
+            }
+        }
+
+        function matadd(A, B) {
+            return A.map((row, i) => Array.isArray(row) ? row.map((val, j) => val + B[i][j]) : row + B[i]);
+        }
+
+        function scalmul(s, A) {
+            return A.map(row => Array.isArray(row) ? row.map(v => s * v) : s * row);
+        }
+
+        function transpose(A) {
+            return A[0].map((_, i) => A.map(row => row[i]));
+        }
+
+        function matinv(A) {
+            const n = A.length;
+            let det = A[0][0] * A[1][1] - A[0][1] * A[1][0];
+            return [[A[1][1] / det, -A[0][1] / det], [-A[1][0] / det, A[0][0] / det]];
+        }
+
+        // ============ VITERBI ============
+        const viterbiState = {
+            observations: [],
+            states: ['S1', 'S2', 'S3'],
+            T: [[0.6, 0.3, 0.1], [0.2, 0.5, 0.3], [0.3, 0.3, 0.4]],
+            sensor: {
+                A: [0.7, 0.2, 0.1],
+                B: [0.1, 0.7, 0.2],
+                C: [0.2, 0.1, 0.7]
+            },
+            path: []
+        };
+
+        function viterbiObserve(obs) {
+            viterbiState.observations.push(obs);
+            computeViterbi();
+            drawTrellis();
+        }
+
+        function computeViterbi() {
+            const n = viterbiState.states.length;
+            const T = viterbiState.observations.length;
+            const delta = [];
+            const psi = [];
+
+            // Initialize
+            const d0 = viterbiState.sensor[viterbiState.observations[0]].slice();
+            delta.push(d0);
+
+            for (let t = 1; t < T; t++) {
+                const obs = viterbiState.observations[t];
+                const likelihoods = viterbiState.sensor[obs];
+                const dt = [];
+                const pt = [];
+
+                for (let j = 0; j < n; j++) {
+                    let maxProb = -Infinity;
+                    let maxState = 0;
+                    for (let i = 0; i < n; i++) {
+                        const prob = delta[t - 1][i] * viterbiState.T[i][j] * likelihoods[j];
+                        if (prob > maxProb) {
+                            maxProb = prob;
+                            maxState = i;
+                        }
+                    }
+                    dt.push(maxProb);
+                    pt.push(maxState);
+                }
+                delta.push(dt);
+                psi.push(pt);
+            }
+
+            // Backtrack
+            const path = [delta[T - 1].indexOf(Math.max(...delta[T - 1]))];
+            for (let t = T - 2; t >= 0; t--) {
+                path.unshift(psi[t][path[0]]);
+            }
+
+            viterbiState.path = path;
+            document.getElementById('viterbiPathDisplay').textContent = path.map(i => viterbiState.states[i]).join(' → ');
+        }
+
+        function drawTrellis() {
+            const canvas = document.getElementById('trellisCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+            const n = viterbiState.states.length;
+            const T = viterbiState.observations.length;
+
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, w, h);
+
+            const marginLeft = 60, marginRight = 20;
+            const stateSpacing = (h - 40) / (n - 1);
+            const timeSpacing = (w - marginLeft - marginRight) / Math.max(T - 1, 1);
+
+            ctx.fillStyle = '#999';
+            ctx.font = '12px Inter';
+            viterbiState.states.forEach((state, i) => {
+                ctx.fillText(state, 10, 30 + i * stateSpacing);
+            });
+
+            for (let t = 0; t < T; t++) {
+                ctx.fillStyle = '#ccc';
+                ctx.fillText(`t=${t}`, marginLeft + t * timeSpacing - 10, h - 10);
+            }
+
+            for (let t = 0; t < T; t++) {
+                for (let i = 0; i < n; i++) {
+                    const x = marginLeft + t * timeSpacing;
+                    const y = 30 + i * stateSpacing;
+                    ctx.fillStyle = '#7b1fa2';
+                    ctx.fillRect(x - 4, y - 4, 8, 8);
+
+                    if (t < T - 1) {
+                        for (let j = 0; j < n; j++) {
+                            const x2 = marginLeft + (t + 1) * timeSpacing;
+                            const y2 = 30 + j * stateSpacing;
+                            ctx.strokeStyle = '#ddd';
+                            ctx.lineWidth = 1;
+                            ctx.beginPath();
+                            ctx.moveTo(x, y);
+                            ctx.lineTo(x2, y2);
+                            ctx.stroke();
+                        }
+                    }
+                }
+            }
+
+            // Draw path
+            if (viterbiState.path.length > 0) {
+                ctx.strokeStyle = '#059669';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(marginLeft, 30 + viterbiState.path[0] * stateSpacing);
+                for (let t = 1; t < T; t++) {
+                    ctx.lineTo(marginLeft + t * timeSpacing, 30 + viterbiState.path[t] * stateSpacing);
+                }
+                ctx.stroke();
+            }
+        }
+
+        function viterbiReset() {
+            viterbiState.observations = [];
+            viterbiState.path = [];
+            document.getElementById('viterbiPathDisplay').textContent = '—';
+            const canvas = document.getElementById('trellisCanvas');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+
+        // Initialize
+        initHMM();
+        hljs.highlightAll();
+    </script>
+
+    <!-- KaTeX at END of body -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.0/katex.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.0/contrib/auto-render.min.js"></script>
+    <script>
+        renderMathInElement(document.body, {
+            delimiters: [
+                { left: '$$', right: '$$', display: true },
+                { left: '$', right: '$', display: false }
+            ]
+        });
+    </script>
+</body>
+</html>

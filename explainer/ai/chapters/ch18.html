@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 18: Multiagent Decision Making - AIMA Textbook Explainer</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz@0,8..72;1,8..72&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <!-- Highlight.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+
+    <!-- KaTeX CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+
+    <style>
+        :root {
+            --bg: #FAF9F6;
+            --bg-card: #FFFFFF;
+            --text: #1a1a2e;
+            --text-muted: #6b7280;
+            --accent-primary: #A8325B;
+            --border: #e5e7eb;
+            --radius: 12px;
+        }
+
+        [data-theme="dark"] {
+            --bg: #0f0f0f;
+            --bg-card: #1a1a1a;
+            --text: #f0f0f0;
+            --text-muted: #a0a0a0;
+            --border: #333333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background-color: var(--bg-card);
+            border-right: 1px solid var(--border);
+            padding: 2rem 1.5rem;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sidebar-header h3 {
+            font-family: 'Newsreader', serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #4527a0, #7b1fa2, #ab47bc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .theme-toggle {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+
+        .sidebar-nav {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-bottom: 2rem;
+        }
+
+        .sidebar-nav li {
+            display: flex;
+            align-items: center;
+        }
+
+        .sidebar-nav a {
+            color: var(--text);
+            text-decoration: none;
+            padding: 0.75rem;
+            border-radius: var(--radius);
+            transition: background-color 0.2s;
+            font-size: 0.95rem;
+        }
+
+        .sidebar-nav a:hover {
+            background-color: var(--border);
+        }
+
+        .sidebar-nav a.active {
+            color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        .completion-badge {
+            background-color: #10b981;
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius);
+            text-align: center;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-top: auto;
+        }
+
+        /* Main content */
+        .main {
+            flex: 1;
+            padding: 3rem;
+            max-width: 900px;
+        }
+
+        .hero {
+            margin-bottom: 3rem;
+            opacity: 0;
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        .hero h1 {
+            font-family: 'Newsreader', serif;
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #4527a0, #7b1fa2, #ab47bc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            line-height: 1.8;
+        }
+
+        .section {
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background-color: var(--bg-card);
+            border-radius: var(--radius);
+            border-left: 4px solid var(--accent-primary);
+            opacity: 0;
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        .section:nth-child(2) { animation-delay: 0.1s; }
+        .section:nth-child(3) { animation-delay: 0.2s; }
+        .section:nth-child(4) { animation-delay: 0.3s; }
+        .section:nth-child(5) { animation-delay: 0.4s; }
+        .section:nth-child(6) { animation-delay: 0.5s; }
+        .section:nth-child(7) { animation-delay: 0.6s; }
+        .section:nth-child(8) { animation-delay: 0.7s; }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h2 {
+            font-family: 'Newsreader', serif;
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: var(--accent-primary);
+        }
+
+        h3 {
+            font-family: 'Newsreader', serif;
+            font-size: 1.5rem;
+            margin: 1.5rem 0 1rem;
+            color: var(--text);
+        }
+
+        h4 {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.1rem;
+            margin: 1.2rem 0 0.8rem;
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        p {
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+
+        .analogy-box {
+            background-color: var(--bg);
+            border-left: 4px solid var(--accent-primary);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            margin: 1.5rem 0;
+            font-style: italic;
+            color: var(--text-muted);
+        }
+
+        .math-box {
+            background-color: var(--bg);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            margin: 1.5rem 0;
+            overflow-x: auto;
+        }
+
+        .code-block {
+            background-color: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+        }
+
+        .code-block code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+        }
+
+        .hljs {
+            background-color: var(--bg) !important;
+        }
+
+        ul, ol {
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.75rem;
+        }
+
+        .interactive-container {
+            background-color: var(--bg);
+            border: 2px solid var(--accent-primary);
+            border-radius: var(--radius);
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        .interactive-title {
+            font-family: 'Newsreader', serif;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--accent-primary);
+            margin-bottom: 1.5rem;
+        }
+
+        .game-matrix {
+            display: grid;
+            grid-template-columns: auto 1fr 1fr;
+            gap: 0.5rem;
+            margin: 1rem 0;
+            width: fit-content;
+        }
+
+        .matrix-cell {
+            border: 1px solid var(--border);
+            padding: 1rem;
+            text-align: center;
+            background-color: var(--bg-card);
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .matrix-header {
+            background-color: var(--accent-primary);
+            color: white;
+            font-weight: 700;
+        }
+
+        .matrix-label {
+            background-color: var(--border);
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .nash-highlight {
+            background-color: #fef3c7;
+            box-shadow: inset 0 0 0 2px #f59e0b;
+            border-radius: 4px;
+        }
+
+        [data-theme="dark"] .nash-highlight {
+            background-color: #78350f;
+            box-shadow: inset 0 0 0 2px #b45309;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .slider {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent-primary);
+            cursor: pointer;
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent-primary);
+            cursor: pointer;
+            border: none;
+        }
+
+        .slider-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            color: var(--accent-primary);
+            min-width: 60px;
+        }
+
+        input[type="number"] {
+            padding: 0.5rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background-color: var(--bg-card);
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin: 1.5rem 0;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: var(--radius);
+            background-color: var(--accent-primary);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        button:hover {
+            background-color: #8a2844;
+        }
+
+        button.secondary {
+            background-color: var(--border);
+            color: var(--text);
+        }
+
+        button.secondary:hover {
+            background-color: #d1d5db;
+        }
+
+        .select-wrapper {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        select {
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background-color: var(--bg-card);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+        }
+
+        .matrix-input-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .matrix-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .matrix-input-group label {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .matrix-input-group input {
+            padding: 0.5rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background-color: var(--bg-card);
+            color: var(--text);
+        }
+
+        .chart-container {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 2rem;
+            margin: 2rem 0;
+            min-height: 300px;
+        }
+
+        .strategy-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .strategy-btn {
+            padding: 1rem;
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            background-color: var(--bg-card);
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+
+        .strategy-btn.selected {
+            border-color: var(--accent-primary);
+            background-color: var(--accent-primary);
+            color: white;
+        }
+
+        .strategy-btn:hover {
+            border-color: var(--accent-primary);
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+        }
+
+        .results-table th,
+        .results-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .results-table th {
+            background-color: var(--border);
+            font-weight: 600;
+        }
+
+        .results-table tr:hover {
+            background-color: var(--bg);
+        }
+
+        .question-box {
+            background-color: var(--bg);
+            border-left: 4px solid #3b82f6;
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            margin: 1.5rem 0;
+        }
+
+        .question-box strong {
+            color: #3b82f6;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 3rem;
+            gap: 1rem;
+        }
+
+        .nav-button {
+            padding: 1rem 1.5rem;
+            border: 2px solid var(--accent-primary);
+            background-color: transparent;
+            color: var(--accent-primary);
+            font-weight: 600;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .nav-button:hover {
+            background-color: var(--accent-primary);
+            color: white;
+        }
+
+        .nav-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                padding: 1.5rem;
+            }
+
+            .main {
+                padding: 1.5rem;
+            }
+
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            .strategy-buttons {
+                grid-template-columns: 1fr;
+            }
+
+            .matrix-input-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3>Part IV</h3>
+                <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
+            </div>
+
+            <nav>
+                <ul class="sidebar-nav">
+                    <li><a href="ch16.html">Chapter 16: Learning</a></li>
+                    <li><a href="ch17.html">Chapter 17: Uncertainty</a></li>
+                    <li><a href="ch18.html" class="active">Chapter 18: Multiagent</a></li>
+                    <li><a href="ch19.html">Chapter 19: NLP</a></li>
+                </ul>
+            </nav>
+
+            <div class="completion-badge" id="completionBadge" style="display: none;">
+                ✓ Completed
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main">
+            <!-- Hero Section -->
+            <div class="hero">
+                <h1>Chapter 18: Multiagent Decision Making</h1>
+                <p>When multiple independent agents interact, each choosing actions that affect the others' outcomes, game theory provides the mathematical framework for understanding their strategic behavior. From traffic intersections to business competition to climate negotiations, multiagent decision making is everywhere.</p>
+            </div>
+
+            <!-- Section 1: Feynman Mental Model -->
+            <div class="section">
+                <h2>1. The Feynman Mental Model: Traffic as Game Theory</h2>
+                <p>Imagine you're driving in heavy traffic. Here's what makes it a game theory problem:</p>
+
+                <div class="analogy-box">
+                    "Think about driving in traffic. You're not the only decision-maker — every other driver is also choosing their speed, lane, and route. Your best action depends on what THEY do, and their best action depends on what YOU do. This circular dependency is the core challenge of game theory. Sometimes you cooperate (letting someone merge), sometimes you compete (racing for a parking spot), and sometimes you get stuck in a 'traffic jam equilibrium' where everyone would be better off if they could coordinate, but no individual has incentive to change."
+                </div>
+
+                <h3>Why This Matters</h3>
+                <p>The traffic analogy reveals three fundamental insights:</p>
+                <ul>
+                    <li><strong>Interdependence:</strong> Your payoff (time to destination) depends on others' actions</li>
+                    <li><strong>Strategic reasoning:</strong> Each driver must anticipate what others will do</li>
+                    <li><strong>Equilibrium vs. Optimality:</strong> The outcome where no one wants to change (equilibrium) might be worse than if everyone coordinated (Pareto optimal)</li>
+                </ul>
+
+                <h3>Key Concepts Covered</h3>
+                <ul>
+                    <li>Game theory basics: players, strategies, and payoffs</li>
+                    <li>Normal-form games represented as payoff matrices</li>
+                    <li>Dominant strategies (always best, regardless of others' actions)</li>
+                    <li><strong>Nash Equilibrium:</strong> no player benefits from unilaterally deviating</li>
+                    <li>Mixed strategies: playing different actions with specific probabilities</li>
+                    <li>Mechanism design: designing the rules to incentivize good outcomes</li>
+                    <li>Cooperation, coalition formation, and voting</li>
+                </ul>
+            </div>
+
+            <!-- Section 2: Mathematical Ascent -->
+            <div class="section">
+                <h2>2. Mathematical Ascent: Formalism of Strategic Interaction</h2>
+
+                <h3>Normal-Form Game Definition</h3>
+                <p>A normal-form game is a tuple <span class="math">G = (N, A, u)</span> where:</p>
+                <div class="math-box">
+                    <p><strong>N</strong> = set of players {1, 2, ..., n}</p>
+                    <p><strong>A</strong> = set of action profiles; each agent i chooses from action set <span class="math">A_i</span>, so <span class="math">A = A_1 \times A_2 \times \cdots \times A_n</span></p>
+                    <p><strong>u</strong> = utility functions; <span class="math">u_i: A \to \mathbb{R}</span> gives agent i's payoff for each outcome</p>
+                </div>
+
+                <h3>Nash Equilibrium</h3>
+                <p>An action profile <span class="math">a^* = (a_1^*, a_2^*, \ldots, a_n^*)</span> is a <strong>Nash Equilibrium</strong> if no player can improve their payoff by unilaterally changing their action:</p>
+                <div class="math-box">
+                    $$\forall i, \forall a_i' \in A_i: \quad u_i(a_i^*, a_{-i}^*) \geq u_i(a_i', a_{-i}^*)$$
+                    <p style="margin-top: 1rem; font-size: 0.95rem; color: var(--text-muted);">Here, <span class="math">a_{-i}^*</span> means everyone else's equilibrium actions.</p>
+                </div>
+
+                <h3>Dominant Strategy</h3>
+                <p>A strategy <span class="math">a_i^d</span> is <strong>dominant</strong> for player i if it's best regardless of what others do:</p>
+                <div class="math-box">
+                    $$\forall a_{-i} \in A_{-i}: \quad u_i(a_i^d, a_{-i}) \geq u_i(a_i', a_{-i}) \quad \text{for all } a_i' \in A_i$$
+                </div>
+
+                <h3>Mixed Strategy Nash Equilibrium</h3>
+                <p>A <strong>mixed strategy</strong> for player i is a probability distribution over actions: <span class="math">\sigma_i \in \Delta(A_i)</span>. The <strong>expected utility</strong> under a mixed strategy profile is:</p>
+                <div class="math-box">
+                    $$EU_i(\sigma) = \sum_{a \in A} \left(\prod_{j=1}^{n} \sigma_j(a_j)\right) \cdot u_i(a)$$
+                    <p style="margin-top: 1rem; font-size: 0.95rem; color: var(--text-muted);">The product term is the probability of action profile a occurring.</p>
+                </div>
+
+                <h3>Minimax Theorem (Zero-Sum Games)</h3>
+                <p>In a two-player zero-sum game (one's gain is the other's loss), the minimax value equals the maximin value:</p>
+                <div class="math-box">
+                    $$\max_{\sigma_1 \in \Delta(A_1)} \min_{\sigma_2 \in \Delta(A_2)} EU_1(\sigma_1, \sigma_2) = \min_{\sigma_2 \in \Delta(A_2)} \max_{\sigma_1 \in \Delta(A_1)} EU_1(\sigma_1, \sigma_2)$$
+                    <p style="margin-top: 1rem; font-size: 0.95rem; color: var(--text-muted);">This means each player can guarantee themselves the value of the game, even without knowing the opponent's strategy.</p>
+                </div>
+
+                <h3>Pareto Optimality</h3>
+                <p>An outcome is <strong>Pareto optimal</strong> if there is no other outcome where at least one player is better off and no player is worse off. Many Nash Equilibria are NOT Pareto optimal (the famous insight of the Prisoner's Dilemma).</p>
+            </div>
+
+            <!-- Section 3: Implementation -->
+            <div class="section">
+                <h2>3. Clean-Code Implementation: Game Theory Solver</h2>
+                <div class="code-block">
+<pre><code class="language-python">import numpy as np
+from itertools import product
+
+class NormalFormGame:
+    """
+    A game where multiple rational agents choose actions simultaneously.
+    Each agent's payoff depends on ALL agents' choices — the core
+    challenge of multiagent systems.
+    """
+    def __init__(self, n_players, actions_per_player, payoff_matrices):
+        """
+        Initialize a normal-form game.
+
+        Args:
+            n_players: Number of players
+            actions_per_player: List of action lists for each player
+            payoff_matrices: Dict mapping player index to payoff matrix
+                            (indexed by action profile tuple)
+        """
+        self.n_players = n_players
+        self.actions = actions_per_player
+        self.payoffs = payoff_matrices
+
+    def is_nash_equilibrium(self, profile):
+        """
+        Check if an action profile is a Nash Equilibrium.
+
+        A profile is NE if no player can unilaterally improve
+        by changing their action.
+        """
+        for player in range(self.n_players):
+            current_payoff = self.payoffs[player][profile]
+
+            # Check all alternative actions for this player
+            for alt_action in range(len(self.actions[player])):
+                if alt_action == profile[player]:
+                    continue
+
+                alt_profile = list(profile)
+                alt_profile[player] = alt_action
+                alt_profile = tuple(alt_profile)
+
+                # If we find a profitable deviation, not NE
+                if self.payoffs[player][alt_profile] > current_payoff:
+                    return False
+
+        return True
+
+    def find_pure_nash(self):
+        """Find all pure-strategy Nash Equilibria by brute force."""
+        all_profiles = list(product(*[range(len(a)) for a in self.actions]))
+        nash_eq = [p for p in all_profiles if self.is_nash_equilibrium(p)]
+        return nash_eq
+
+    def dominant_strategy(self, player):
+        """
+        Find dominant strategy for a player, if one exists.
+
+        A strategy is dominant if it's best against ALL possible
+        action profiles of other players.
+        """
+        # Generate all possible action profiles for other players
+        other_indices = [i for i in range(self.n_players) if i != player]
+        other_actions = [self.actions[i] for i in other_indices]
+        other_profiles = list(product(*[range(len(a)) for a in other_actions]))
+
+        for action in range(len(self.actions[player])):
+            is_dominant = True
+
+            # Check against all other players' strategies
+            for other_profile in other_profiles:
+                # Construct full profile with our action
+                full_profile = list(other_profile)
+                full_profile.insert(player, action)
+                my_payoff = self.payoffs[player][tuple(full_profile)]
+
+                # Check all alternative actions
+                for alt_action in range(len(self.actions[player])):
+                    if alt_action == action:
+                        continue
+
+                    alt_full = list(other_profile)
+                    alt_full.insert(player, alt_action)
+
+                    if self.payoffs[player][tuple(alt_full)] > my_payoff:
+                        is_dominant = False
+                        break
+
+                if not is_dominant:
+                    break
+
+            if is_dominant:
+                return action
+
+        return None
+
+    def is_pareto_optimal(self, profile):
+        """
+        Check if an outcome is Pareto optimal.
+
+        No other outcome exists where someone is better off
+        and no one is worse off.
+        """
+        all_profiles = list(product(*[range(len(a)) for a in self.actions]))
+
+        for other_profile in all_profiles:
+            if other_profile == profile:
+                continue
+
+            # Check if other_profile Pareto dominates profile
+            someone_better = False
+            no_one_worse = True
+
+            for player in range(self.n_players):
+                if self.payoffs[player][other_profile] > self.payoffs[player][profile]:
+                    someone_better = True
+                if self.payoffs[player][other_profile] < self.payoffs[player][profile]:
+                    no_one_worse = False
+                    break
+
+            if someone_better and no_one_worse:
+                return False  # Dominated by other_profile
+
+        return True
+
+
+# Example: The Prisoner's Dilemma
+# Actions: 0=Cooperate, 1=Defect
+# Payoffs: CC=-1, CD=-3, DC=0, DD=-2 (mutual detection highest utility)
+
+pd_game = NormalFormGame(
+    n_players=2,
+    actions_per_player=[['Cooperate', 'Defect'], ['Cooperate', 'Defect']],
+    payoff_matrices={
+        0: {(0,0): -1, (0,1): -3, (1,0): 0, (1,1): -2},
+        1: {(0,0): -1, (0,1): 0, (1,0): -3, (1,1): -2}
+    }
+)
+
+nash_eq = pd_game.find_pure_nash()
+print(f"Nash Equilibria: {nash_eq}")  # [(1,1)] = both defect
+print(f"Dominant strategy for player 0: {pd_game.dominant_strategy(0)}")  # 1 (Defect)
+print(f"Is (0,0) Pareto optimal? {pd_game.is_pareto_optimal((0,0))}")  # True
+print(f"Is (1,1) Pareto optimal? {pd_game.is_pareto_optimal((1,1))}")  # False
+</code></pre>
+                </div>
+            </div>
+
+            <!-- Section 4: Socratic Sandbox -->
+            <div class="section">
+                <h2>4. Socratic Sandbox: The Self-Driving Car Intersection</h2>
+
+                <h3>Scenario</h3>
+                <p>Two self-driving cars approach an intersection simultaneously. Each can choose to <strong>Go</strong> or <strong>Wait</strong>.</p>
+                <ul>
+                    <li>If both Go: collision risk → both get -100 (catastrophic)</li>
+                    <li>If both Wait: both stuck in traffic → both get -5 (minor delay)</li>
+                    <li>If one Goes and one Waits: goer gets +10 (free passage), waiter gets -2 (brief wait)</li>
+                </ul>
+
+                <h3>Payoff Matrix</h3>
+                <div class="game-matrix">
+                    <div class="matrix-cell matrix-label"></div>
+                    <div class="matrix-cell matrix-header">Car 2: Go</div>
+                    <div class="matrix-cell matrix-header">Car 2: Wait</div>
+                    <div class="matrix-cell matrix-label">Car 1: Go</div>
+                    <div class="matrix-cell">-100, -100</div>
+                    <div class="matrix-cell">+10, -2</div>
+                    <div class="matrix-cell matrix-label">Car 1: Wait</div>
+                    <div class="matrix-cell">-2, +10</div>
+                    <div class="matrix-cell">-5, -5</div>
+                </div>
+
+                <h3>Discussion Questions</h3>
+
+                <div class="question-box">
+                    <strong>Q1: Game Analysis</strong><br>
+                    Write out the payoff matrix (done above). Find all Nash Equilibria. Is there a dominant strategy for either player?
+                    <p style="margin-top: 1rem; color: var(--text); font-style: normal;">
+                        <strong>Answer:</strong> The two pure Nash Equilibria are (Go, Wait) and (Wait, Go). There is NO dominant strategy — what's best depends on what the other car does. This is a "coordination game" where the cars need to somehow decide who goes.
+                    </p>
+                </div>
+
+                <div class="question-box">
+                    <strong>Q2: Coordination Problem</strong><br>
+                    This game has two pure-strategy Nash Equilibria. How do the cars "choose" which one? What happens in practice?
+                    <p style="margin-top: 1rem; color: var(--text); font-style: normal;">
+                        <strong>Answer:</strong> Without communication, they might both try to be polite (both Wait, stuck at -5) or both try to assert priority (crash at -100). This is why traffic lights exist—they break the symmetry by saying "Car 1's direction goes now, Car 2 waits."
+                    </p>
+                </div>
+
+                <div class="question-box">
+                    <strong>Q3: Mechanism Design</strong><br>
+                    A traffic light is a "mechanism" that solves this coordination problem. How does it change the game? What other mechanisms could work?
+                    <p style="margin-top: 1rem; color: var(--text); font-style: normal;">
+                        <strong>Answer:</strong> The traffic light removes one player's choice (forces them to Wait). Other mechanisms: (1) a rule "turn right has priority" (break symmetry), (2) a randomized signal (each car goes 50% of the time), (3) communication protocols (cars exchange intended actions).
+                    </p>
+                </div>
+
+                <div class="question-box">
+                    <strong>Q4: Repeated Interaction</strong><br>
+                    If this game is played repeatedly (same cars meet at the same intersection daily), how does strategy change? Can cooperation emerge?
+                    <p style="margin-top: 1rem; color: var(--text); font-style: normal;">
+                        <strong>Answer:</strong> In repeated play, reputation matters. A car might learn: "If I always go, the other car waits, and I get +10 repeatedly." But this depends on the other car's learning strategy. With sufficiently many rounds and proper discounting, cooperative patterns can emerge through reciprocal play.
+                    </p>
+                </div>
+
+                <div class="question-box">
+                    <strong>Q5: Prisoner's Dilemma Comparison</strong><br>
+                    The Prisoner's Dilemma has a different structure. Explain why the intersection game is fundamentally different.
+                    <p style="margin-top: 1rem; color: var(--text); font-style: normal;">
+                        <strong>Answer:</strong> In the Prisoner's Dilemma, both players have a DOMINANT strategy to defect. In the intersection game, there is NO dominant strategy — the best move depends on the other's choice. PD is purely about exploitation; the intersection game is about coordination.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Interactive 1: Payoff Matrix Explorer -->
+            <div class="section">
+                <h2>5. Interactive 1: Payoff Matrix Explorer</h2>
+                <p>Below, explore classic 2×2 games. Choose a game type, and the tool will highlight Nash Equilibria and dominant strategies.</p>
+
+                <div class="interactive-container">
+                    <div class="interactive-title">Game Selector</div>
+
+                    <div class="select-wrapper">
+                        <select id="gameSelector" onchange="loadGamePreset(this.value)">
+                            <option value="custom">Custom Game</option>
+                            <option value="pd">Prisoner's Dilemma</option>
+                            <option value="chicken">Chicken</option>
+                            <option value="stag_hunt">Stag Hunt</option>
+                            <option value="battle_sexes">Battle of the Sexes</option>
+                            <option value="intersection">Intersection Game</option>
+                        </select>
+                    </div>
+
+                    <div class="interactive-title" style="margin-top: 2rem;">Edit Payoffs (Player 1 payoff, Player 2 payoff)</div>
+
+                    <div class="matrix-input-grid">
+                        <div class="matrix-input-group">
+                            <label>Both Cooperate (0,0)</label>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="number" id="payoff00_1" value="-1" step="1">
+                                <input type="number" id="payoff00_2" value="-1" step="1">
+                            </div>
+                        </div>
+                        <div class="matrix-input-group">
+                            <label>P1 Cooperate, P2 Defect (0,1)</label>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="number" id="payoff01_1" value="-3" step="1">
+                                <input type="number" id="payoff01_2" value="0" step="1">
+                            </div>
+                        </div>
+                        <div class="matrix-input-group">
+                            <label>P1 Defect, P2 Cooperate (1,0)</label>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="number" id="payoff10_1" value="0" step="1">
+                                <input type="number" id="payoff10_2" value="-3" step="1">
+                            </div>
+                        </div>
+                        <div class="matrix-input-group">
+                            <label>Both Defect (1,1)</label>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="number" id="payoff11_1" value="-2" step="1">
+                                <input type="number" id="payoff11_2" value="-2" step="1">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onclick="analyzeGame()">Analyze Game</button>
+
+                    <div style="margin-top: 2rem;">
+                        <h4>Game Matrix</h4>
+                        <div class="game-matrix">
+                            <div class="matrix-cell matrix-label"></div>
+                            <div class="matrix-cell matrix-header">Player 2: Defect</div>
+                            <div class="matrix-cell matrix-header">Player 2: Coop</div>
+                            <div class="matrix-cell matrix-label">Player 1: Defect</div>
+                            <div class="matrix-cell" id="cell00"></div>
+                            <div class="matrix-cell" id="cell01"></div>
+                            <div class="matrix-cell matrix-label">Player 1: Coop</div>
+                            <div class="matrix-cell" id="cell10"></div>
+                            <div class="matrix-cell" id="cell11"></div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 2rem;">
+                        <h4>Analysis Results</h4>
+                        <div id="analysisResults" style="color: var(--text-muted);">Results will appear here</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive 2: Mixed Strategy Calculator -->
+            <div class="section">
+                <h2>6. Interactive 2: Mixed Strategy Nash Equilibrium</h2>
+                <p>For a 2×2 game, we can compute the mixed strategy Nash Equilibrium where each player randomizes. Adjust Player 1's mixing probability and see how expected utilities change.</p>
+
+                <div class="interactive-container">
+                    <div class="interactive-title">Mixed Strategy Slider</div>
+
+                    <p style="margin-bottom: 1rem;">Player 1 probability of playing Defect:</p>
+                    <div class="slider-container">
+                        <input type="range" id="mixSlider" min="0" max="100" value="50" class="slider" oninput="updateMixedStrategy(this.value)">
+                        <span class="slider-value" id="mixValue">p = 0.50</span>
+                    </div>
+
+                    <div id="euChart" class="chart-container">
+                        <p style="text-align: center; color: var(--text-muted);">Chart will render here</p>
+                    </div>
+
+                    <div id="mixedResults" style="margin-top: 1.5rem; padding: 1rem; background-color: var(--bg); border-radius: var(--radius);">
+                        <p><strong>Player 1 EU (Defect):</strong> <span id="eu1d">—</span></p>
+                        <p><strong>Player 1 EU (Coop):</strong> <span id="eu1c">—</span></p>
+                        <p><strong>Player 2's best response:</strong> <span id="p2br">—</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive 3: Repeated Game Simulator -->
+            <div class="section">
+                <h2>7. Interactive 3: Repeated Game Simulator</h2>
+                <p>The Prisoner's Dilemma takes on new meaning when repeated. See how different strategies accumulate payoffs over rounds.</p>
+
+                <div class="interactive-container">
+                    <div class="interactive-title">Strategy Selection</div>
+
+                    <p style="margin-bottom: 1rem;">Choose strategies for both players:</p>
+
+                    <h4>Player 1 Strategy</h4>
+                    <div class="strategy-buttons">
+                        <button class="strategy-btn" id="p1-always-coop" onclick="selectP1Strategy('always_coop')" data-strategy="always_coop">Always Cooperate</button>
+                        <button class="strategy-btn" id="p1-always-defect" onclick="selectP1Strategy('always_defect')" data-strategy="always_defect">Always Defect</button>
+                        <button class="strategy-btn" id="p1-tit-for-tat" onclick="selectP1Strategy('tit_for_tat')" data-strategy="tit_for_tat">Tit-for-Tat</button>
+                        <button class="strategy-btn" id="p1-random" onclick="selectP1Strategy('random')" data-strategy="random">Random</button>
+                    </div>
+
+                    <h4>Player 2 Strategy</h4>
+                    <div class="strategy-buttons">
+                        <button class="strategy-btn" id="p2-always-coop" onclick="selectP2Strategy('always_coop')" data-strategy="always_coop">Always Cooperate</button>
+                        <button class="strategy-btn" id="p2-always-defect" onclick="selectP2Strategy('always_defect')" data-strategy="always_defect">Always Defect</button>
+                        <button class="strategy-btn" id="p2-tit-for-tat" onclick="selectP2Strategy('tit_for_tat')" data-strategy="tit_for_tat">Tit-for-Tat</button>
+                        <button class="strategy-btn" id="p2-random" onclick="selectP2Strategy('random')" data-strategy="random">Random</button>
+                    </div>
+
+                    <div style="margin-top: 1.5rem;">
+                        <label for="numRounds">Number of rounds:</label>
+                        <div style="display: flex; gap: 1rem; align-items: center;">
+                            <input type="number" id="numRounds" value="20" min="1" max="100">
+                            <button onclick="runSimulation()">Run Simulation</button>
+                        </div>
+                    </div>
+
+                    <div id="simResults" style="margin-top: 2rem;">
+                        <h4>Results</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                            <div style="padding: 1rem; background-color: var(--bg); border-radius: var(--radius); border-left: 4px solid var(--accent-primary);">
+                                <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">Player 1 Total Score</p>
+                                <p style="margin: 0.5rem 0 0 0; font-size: 1.5rem; font-weight: 700; color: var(--accent-primary);" id="p1Score">—</p>
+                            </div>
+                            <div style="padding: 1rem; background-color: var(--bg); border-radius: var(--radius); border-left: 4px solid #3b82f6;">
+                                <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">Player 2 Total Score</p>
+                                <p style="margin: 0.5rem 0 0 0; font-size: 1.5rem; font-weight: 700; color: #3b82f6;" id="p2Score">—</p>
+                            </div>
+                        </div>
+
+                        <table class="results-table" id="simTable">
+                            <thead>
+                                <tr>
+                                    <th>Round</th>
+                                    <th>Player 1</th>
+                                    <th>Player 2</th>
+                                    <th>P1 Payoff</th>
+                                    <th>P2 Payoff</th>
+                                    <th>P1 Cumulative</th>
+                                    <th>P2 Cumulative</th>
+                                </tr>
+                            </thead>
+                            <tbody id="simTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="nav-buttons">
+                <button class="nav-button" onclick="navigateTo('ch17.html')">← Chapter 17: Uncertainty</button>
+                <button class="nav-button" onclick="navigateTo('ch19.html')">Chapter 19: NLP →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Dark mode toggle
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('aima-theme', newTheme);
+        }
+
+        // Load theme on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('aima-theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+
+            // Check completion
+            if (localStorage.getItem('aima-ch-18')) {
+                document.getElementById('completionBadge').style.display = 'block';
+            }
+
+            // Initialize games
+            analyzeGame();
+            updateMixedStrategy(50);
+            hljs.highlightAll();
+        });
+
+        // Mark chapter as complete
+        function markComplete() {
+            localStorage.setItem('aima-ch-18', 'true');
+            document.getElementById('completionBadge').style.display = 'block';
+        }
+
+        // Navigation
+        function navigateTo(url) {
+            markComplete();
+            window.location.href = url;
+        }
+
+        // ========== Interactive 1: Game Analyzer ==========
+        const gamePresets = {
+            pd: {
+                name: "Prisoner's Dilemma",
+                payoffs: { 00: [-1, -1], 01: [-3, 0], 10: [0, -3], 11: [-2, -2] }
+            },
+            chicken: {
+                name: "Chicken",
+                payoffs: { 00: [0, 0], 01: [-1, 1], 10: [1, -1], 11: [-10, -10] }
+            },
+            stag_hunt: {
+                name: "Stag Hunt",
+                payoffs: { 00: [4, 4], 01: [0, 3], 10: [3, 0], 11: [3, 3] }
+            },
+            battle_sexes: {
+                name: "Battle of the Sexes",
+                payoffs: { 00: [2, 1], 01: [0, 0], 10: [0, 0], 11: [1, 2] }
+            },
+            intersection: {
+                name: "Intersection Game",
+                payoffs: { 00: [-100, -100], 01: [10, -2], 10: [-2, 10], 11: [-5, -5] }
+            }
+        };
+
+        function loadGamePreset(preset) {
+            if (preset === 'custom') return;
+            const game = gamePresets[preset];
+            if (!game) return;
+
+            document.getElementById('payoff00_1').value = game.payoffs['00'][0];
+            document.getElementById('payoff00_2').value = game.payoffs['00'][1];
+            document.getElementById('payoff01_1').value = game.payoffs['01'][0];
+            document.getElementById('payoff01_2').value = game.payoffs['01'][1];
+            document.getElementById('payoff10_1').value = game.payoffs['10'][0];
+            document.getElementById('payoff10_2').value = game.payoffs['10'][1];
+            document.getElementById('payoff11_1').value = game.payoffs['11'][0];
+            document.getElementById('payoff11_2').value = game.payoffs['11'][1];
+
+            analyzeGame();
+        }
+
+        function analyzeGame() {
+            // Get payoffs
+            const payoffs = {
+                '00': [parseInt(document.getElementById('payoff00_1').value), parseInt(document.getElementById('payoff00_2').value)],
+                '01': [parseInt(document.getElementById('payoff01_1').value), parseInt(document.getElementById('payoff01_2').value)],
+                '10': [parseInt(document.getElementById('payoff10_1').value), parseInt(document.getElementById('payoff10_2').value)],
+                '11': [parseInt(document.getElementById('payoff11_1').value), parseInt(document.getElementById('payoff11_2').value)]
+            };
+
+            // Update matrix display
+            document.getElementById('cell00').textContent = `${payoffs['00'][0]}, ${payoffs['00'][1]}`;
+            document.getElementById('cell01').textContent = `${payoffs['01'][0]}, ${payoffs['01'][1]}`;
+            document.getElementById('cell10').textContent = `${payoffs['10'][0]}, ${payoffs['10'][1]}`;
+            document.getElementById('cell11').textContent = `${payoffs['11'][0]}, ${payoffs['11'][1]}`;
+
+            // Find Nash Equilibria
+            let nashEq = [];
+            const profiles = ['00', '01', '10', '11'];
+
+            for (const profile of profiles) {
+                let isNash = true;
+
+                // Check player 1
+                if (profile[0] === '0') {
+                    if (payoffs['10'][0] > payoffs['00'][0]) isNash = false;
+                    if (payoffs['11'][0] > payoffs['01'][0]) isNash = false;
+                } else {
+                    if (payoffs['00'][0] > payoffs['10'][0]) isNash = false;
+                    if (payoffs['01'][0] > payoffs['11'][0]) isNash = false;
+                }
+
+                // Check player 2
+                if (profile[1] === '0') {
+                    if (payoffs['00'][1] > payoffs['01'][1]) isNash = false;
+                    if (payoffs['10'][1] > payoffs['11'][1]) isNash = false;
+                } else {
+                    if (payoffs['01'][1] > payoffs['00'][1]) isNash = false;
+                    if (payoffs['11'][1] > payoffs['10'][1]) isNash = false;
+                }
+
+                if (isNash) nashEq.push(profile);
+            }
+
+            // Highlight Nash Equilibria
+            for (const profile of profiles) {
+                const cellId = `cell${profile}`;
+                const cell = document.getElementById(cellId);
+                if (nashEq.includes(profile)) {
+                    cell.classList.add('nash-highlight');
+                } else {
+                    cell.classList.remove('nash-highlight');
+                }
+            }
+
+            // Find dominant strategies
+            let dom1 = null, dom2 = null;
+
+            // Player 1 dominant strategy
+            if ((payoffs['10'][0] > payoffs['00'][0]) && (payoffs['11'][0] > payoffs['01'][0])) {
+                dom1 = 'Defect';
+            } else if ((payoffs['00'][0] > payoffs['10'][0]) && (payoffs['01'][0] > payoffs['11'][0])) {
+                dom1 = 'Cooperate';
+            }
+
+            // Player 2 dominant strategy
+            if ((payoffs['00'][1] > payoffs['01'][1]) && (payoffs['10'][1] > payoffs['11'][1])) {
+                dom2 = 'Cooperate';
+            } else if ((payoffs['01'][1] > payoffs['00'][1]) && (payoffs['11'][1] > payoffs['10'][1])) {
+                dom2 = 'Defect';
+            }
+
+            // Update results
+            let resultsHTML = `<p><strong>Nash Equilibria:</strong> ${nashEq.length > 0 ? nashEq.map(p => {
+                const p1 = p[0] === '0' ? 'Defect' : 'Coop';
+                const p2 = p[1] === '0' ? 'Defect' : 'Coop';
+                return `(${p1}, ${p2})`;
+            }).join(', ') : 'None in pure strategies'}</p>`;
+
+            resultsHTML += `<p><strong>Dominant Strategies:</strong> Player 1: ${dom1 || 'None'}, Player 2: ${dom2 || 'None'}</p>`;
+
+            // Check Pareto optimality
+            let paretoOptimal = [];
+            for (const p of profiles) {
+                let isPareto = true;
+                for (const q of profiles) {
+                    if (p === q) continue;
+                    if ((payoffs[q][0] > payoffs[p][0]) && (payoffs[q][1] >= payoffs[p][1])) {
+                        isPareto = false;
+                        break;
+                    }
+                    if ((payoffs[q][0] >= payoffs[p][0]) && (payoffs[q][1] > payoffs[p][1])) {
+                        isPareto = false;
+                        break;
+                    }
+                }
+                if (isPareto) paretoOptimal.push(p);
+            }
+
+            resultsHTML += `<p><strong>Pareto Optimal Outcomes:</strong> ${paretoOptimal.map(p => {
+                const p1 = p[0] === '0' ? 'Defect' : 'Coop';
+                const p2 = p[1] === '0' ? 'Defect' : 'Coop';
+                return `(${p1}, ${p2})`;
+            }).join(', ')}</p>`;
+
+            document.getElementById('analysisResults').innerHTML = resultsHTML;
+        }
+
+        // ========== Interactive 2: Mixed Strategy ==========
+        function updateMixedStrategy(value) {
+            const p = value / 100;
+            document.getElementById('mixValue').textContent = `p = ${p.toFixed(2)}`;
+
+            // Get current payoffs
+            const payoffs = {
+                '00': [parseInt(document.getElementById('payoff00_1').value), parseInt(document.getElementById('payoff00_2').value)],
+                '01': [parseInt(document.getElementById('payoff01_1').value), parseInt(document.getElementById('payoff01_2').value)],
+                '10': [parseInt(document.getElementById('payoff10_1').value), parseInt(document.getElementById('payoff10_2').value)],
+                '11': [parseInt(document.getElementById('payoff11_1').value), parseInt(document.getElementById('payoff11_2').value)]
+            };
+
+            // Expected utility for Player 1 when Player 2 mixes 50-50
+            const q = 0.5;
+            const eu1d = q * payoffs['00'][0] + (1 - q) * payoffs['01'][0];
+            const eu1c = q * payoffs['10'][0] + (1 - q) * payoffs['11'][0];
+
+            document.getElementById('eu1d').textContent = eu1d.toFixed(2);
+            document.getElementById('eu1c').textContent = eu1c.toFixed(2);
+
+            // Best response for Player 2
+            const eu2c = p * payoffs['00'][1] + (1 - p) * payoffs['10'][1];
+            const eu2d = p * payoffs['01'][1] + (1 - p) * payoffs['11'][1];
+
+            let br = eu2c > eu2d ? 'Coop' : eu2d > eu2c ? 'Defect' : 'Indifferent';
+            document.getElementById('p2br').textContent = br;
+        }
+
+        // ========== Interactive 3: Repeated Game Simulator ==========
+        let p1Strategy = null, p2Strategy = null;
+
+        function selectP1Strategy(strat) {
+            p1Strategy = strat;
+            document.querySelectorAll('#p1-always-coop, #p1-always-defect, #p1-tit-for-tat, #p1-random').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            document.getElementById('p1-' + strat.replace(/_/g, '-')).classList.add('selected');
+        }
+
+        function selectP2Strategy(strat) {
+            p2Strategy = strat;
+            document.querySelectorAll('#p2-always-coop, #p2-always-defect, #p2-tit-for-tat, #p2-random').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            document.getElementById('p2-' + strat.replace(/_/g, '-')).classList.add('selected');
+        }
+
+        function playRound(p1Last, p2Last) {
+            let p1Action, p2Action;
+
+            // Player 1 action
+            switch (p1Strategy) {
+                case 'always_coop': p1Action = 0; break;
+                case 'always_defect': p1Action = 1; break;
+                case 'tit_for_tat': p1Action = p2Last !== null ? p2Last : 0; break;
+                case 'random': p1Action = Math.random() < 0.5 ? 0 : 1; break;
+                default: p1Action = 0;
+            }
+
+            // Player 2 action
+            switch (p2Strategy) {
+                case 'always_coop': p2Action = 0; break;
+                case 'always_defect': p2Action = 1; break;
+                case 'tit_for_tat': p2Action = p1Last !== null ? p1Last : 0; break;
+                case 'random': p2Action = Math.random() < 0.5 ? 0 : 1; break;
+                default: p2Action = 0;
+            }
+
+            // Payoffs (PD: CC=-1, CD=-3, DC=0, DD=-2)
+            const payoffMap = {
+                '00': [-1, -1],
+                '01': [-3, 0],
+                '10': [0, -3],
+                '11': [-2, -2]
+            };
+
+            const key = String(p1Action) + String(p2Action);
+            const payoffs = payoffMap[key];
+
+            return {
+                p1Action: p1Action,
+                p2Action: p2Action,
+                p1Payoff: payoffs[0],
+                p2Payoff: payoffs[1]
+            };
+        }
+
+        function runSimulation() {
+            if (!p1Strategy || !p2Strategy) {
+                alert('Please select strategies for both players');
+                return;
+            }
+
+            const rounds = parseInt(document.getElementById('numRounds').value);
+            const results = [];
+            let p1Last = null, p2Last = null;
+            let p1Total = 0, p2Total = 0;
+
+            for (let round = 1; round <= rounds; round++) {
+                const {p1Action, p2Action, p1Payoff, p2Payoff} = playRound(p1Last, p2Last);
+                p1Total += p1Payoff;
+                p2Total += p2Payoff;
+
+                results.push({
+                    round,
+                    p1Action: p1Action === 0 ? 'Coop' : 'Defect',
+                    p2Action: p2Action === 0 ? 'Coop' : 'Defect',
+                    p1Payoff,
+                    p2Payoff,
+                    p1Total,
+                    p2Total
+                });
+
+                p1Last = p1Action;
+                p2Last = p2Action;
+            }
+
+            // Update display
+            document.getElementById('p1Score').textContent = p1Total;
+            document.getElementById('p2Score').textContent = p2Total;
+
+            const tbody = document.getElementById('simTableBody');
+            tbody.innerHTML = results.map(r => `
+                <tr>
+                    <td>${r.round}</td>
+                    <td>${r.p1Action}</td>
+                    <td>${r.p2Action}</td>
+                    <td>${r.p1Payoff}</td>
+                    <td>${r.p2Payoff}</td>
+                    <td>${r.p1Total}</td>
+                    <td>${r.p2Total}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Set up default selections
+        window.addEventListener('DOMContentLoaded', () => {
+            selectP1Strategy('tit_for_tat');
+            selectP2Strategy('tit_for_tat');
+        });
+    </script>
+
+    <!-- KaTeX (LAST in body, no defer) -->
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false}
+                ]
+            });
+        });
+    </script>
+</body>
+</html>

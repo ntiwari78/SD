@@ -1,0 +1,1594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 6: Constraint Satisfaction Problems | AIMA 4th Edition</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #FAF9F6;
+            --bg-card: #FFFFFF;
+            --text: #1a1a2e;
+            --text-muted: #6b7280;
+            --accent-primary: #A8325B;
+            --accent-secondary: #2563eb;
+            --accent-tertiary: #059669;
+            --border: #e5e7eb;
+            --radius: 12px;
+            --font-serif: 'Newsreader', Georgia, serif;
+            --font-sans: 'Inter', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
+            --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.16);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        [data-theme="dark"] {
+            --bg: #0f0f0f;
+            --bg-card: #1a1a1a;
+            --text: #f0f0f0;
+            --text-muted: #a0a0a0;
+            --border: #333333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            color: var(--text);
+            background-color: var(--bg);
+            line-height: 1.6;
+            transition: var(--transition);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Back link */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--accent-primary);
+            text-decoration: none;
+            font-weight: 500;
+            margin: 20px 0;
+            transition: var(--transition);
+        }
+
+        .back-link:hover {
+            transform: translateX(-4px);
+        }
+
+        /* Chapter hero */
+        .chapter-hero {
+            background: linear-gradient(135deg, #1565c0, #2196f3, #42a5f5);
+            color: white;
+            padding: 80px 20px;
+            border-radius: var(--radius);
+            margin: 40px 0;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .chapter-hero-content {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .chapter-number {
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            opacity: 0.9;
+        }
+
+        .chapter-title {
+            font-family: var(--font-serif);
+            font-size: 3.5em;
+            font-weight: 700;
+            margin: 20px 0;
+            line-height: 1.1;
+        }
+
+        .chapter-meta {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+            font-size: 14px;
+            opacity: 0.95;
+        }
+
+        .badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        /* Theme toggle */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: var(--transition);
+            box-shadow: var(--shadow-md);
+            z-index: 100;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        /* Sticky sidebar */
+        .sidebar-nav {
+            position: sticky;
+            top: 80px;
+            float: left;
+            width: 220px;
+            padding: 20px;
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            max-height: calc(100vh - 100px);
+            overflow-y: auto;
+        }
+
+        .sidebar-nav ul {
+            list-style: none;
+        }
+
+        .sidebar-nav li {
+            margin: 8px 0;
+        }
+
+        .sidebar-nav a {
+            display: block;
+            padding: 8px 12px;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-left: 3px solid transparent;
+            transition: var(--transition);
+            font-size: 14px;
+        }
+
+        .sidebar-nav a:hover {
+            color: var(--accent-primary);
+            border-left-color: var(--accent-primary);
+        }
+
+        .sidebar-nav a.active {
+            color: var(--accent-primary);
+            border-left-color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        /* Main content layout */
+        .content-wrapper {
+            margin-left: 260px;
+            padding: 40px 0;
+        }
+
+        @media (max-width: 768px) {
+            .content-wrapper {
+                margin-left: 0;
+            }
+            .sidebar-nav {
+                position: static;
+                width: 100%;
+                margin-bottom: 30px;
+                max-height: none;
+            }
+            .chapter-title {
+                font-size: 2em;
+            }
+        }
+
+        /* Section cards */
+        .section-card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 40px;
+            margin-bottom: 40px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+            animation: slideInUp 0.6s ease-out forwards;
+            opacity: 0;
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .section-card h2 {
+            font-family: var(--font-serif);
+            font-size: 2em;
+            margin-bottom: 30px;
+            color: var(--accent-primary);
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 15px;
+        }
+
+        .section-card h3 {
+            font-family: var(--font-serif);
+            font-size: 1.4em;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            color: var(--text);
+        }
+
+        .section-card p {
+            margin-bottom: 15px;
+            color: var(--text);
+            line-height: 1.8;
+        }
+
+        .insight-box {
+            background: linear-gradient(135deg, rgba(168, 50, 91, 0.08), rgba(37, 99, 235, 0.08));
+            border-left: 4px solid var(--accent-primary);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 25px 0;
+            font-style: italic;
+        }
+
+        /* Math blocks */
+        .math-block {
+            background: var(--bg);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+        }
+
+        .math-block .katex-display {
+            margin: 0;
+        }
+
+        .math-inline {
+            background: var(--bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* Code blocks */
+        .code-block {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        .code-block code {
+            font-family: var(--font-mono);
+            font-size: 14px;
+            padding: 20px;
+            display: block;
+            overflow-x: auto;
+        }
+
+        .hljs {
+            background: transparent !important;
+            padding: 0 !important;
+        }
+
+        /* QA Cards */
+        .qa-item {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+
+        .qa-question {
+            padding: 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-card);
+            transition: var(--transition);
+            font-weight: 600;
+            color: var(--accent-primary);
+        }
+
+        .qa-question:hover {
+            background: var(--bg);
+        }
+
+        .qa-toggle {
+            font-size: 20px;
+            transition: var(--transition);
+        }
+
+        .qa-item.open .qa-toggle {
+            transform: rotate(180deg);
+        }
+
+        .qa-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            padding: 0 20px;
+        }
+
+        .qa-item.open .qa-answer {
+            max-height: 1000px;
+            padding: 20px;
+        }
+
+        .qa-answer p {
+            color: var(--text);
+            margin-bottom: 10px;
+        }
+
+        /* Interactive visualizers */
+        .interactive-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: var(--bg);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .interactive-title {
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--accent-secondary);
+            font-size: 1.1em;
+        }
+
+        .interactive-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .interactive-button {
+            background: var(--accent-secondary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: var(--transition);
+            font-family: var(--font-sans);
+        }
+
+        .interactive-button:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        .interactive-button.secondary {
+            background: var(--accent-tertiary);
+        }
+
+        .interactive-button.reset {
+            background: var(--text-muted);
+        }
+
+        .graph-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .state-display {
+            background: var(--bg);
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            color: var(--text-muted);
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        /* SVG styles */
+        svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .node {
+            fill: var(--bg-card);
+            stroke: var(--accent-secondary);
+            stroke-width: 2;
+            transition: var(--transition);
+        }
+
+        .node.active {
+            stroke: var(--accent-primary);
+            stroke-width: 3;
+        }
+
+        .node-label {
+            font-family: var(--font-sans);
+            font-size: 14px;
+            font-weight: 600;
+            text-anchor: middle;
+            dominant-baseline: central;
+            fill: var(--text);
+            pointer-events: none;
+        }
+
+        .edge {
+            stroke: var(--border);
+            stroke-width: 1.5;
+            fill: none;
+        }
+
+        .edge.active {
+            stroke: var(--accent-primary);
+            stroke-width: 2.5;
+        }
+
+        .domain-display {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+            padding: 8px;
+            background: rgba(37, 99, 235, 0.05);
+            border-radius: 4px;
+        }
+
+        .color-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid var(--text);
+            transition: var(--transition);
+        }
+
+        .color-dot.removed {
+            opacity: 0.2;
+            text-decoration: line-through;
+        }
+
+        .queue-display {
+            background: var(--bg);
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .section-card {
+                padding: 20px;
+            }
+            .chapter-title {
+                font-size: 2em;
+            }
+            .interactive-controls {
+                flex-direction: column;
+            }
+            .interactive-button {
+                width: 100%;
+            }
+        }
+
+        /* Utility classes */
+        .text-muted {
+            color: var(--text-muted);
+        }
+
+        .mt-20 {
+            margin-top: 20px;
+        }
+
+        .mb-20 {
+            margin-bottom: 20px;
+        }
+
+        ul, ol {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" id="themeToggle">🌙</button>
+
+    <div class="container">
+        <a href="../index.html" class="back-link">← Back to Dashboard</a>
+
+        <div class="chapter-hero">
+            <div class="chapter-hero-content">
+                <div class="chapter-number">Chapter 6</div>
+                <h1 class="chapter-title">Constraint Satisfaction Problems</h1>
+                <div class="chapter-meta">
+                    <span class="badge">Part II: Problem Solving</span>
+                    <span class="badge">Pages 180–207</span>
+                    <span class="badge">~25 min read</span>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 30px; position: relative;">
+            <nav class="sidebar-nav" id="sidebarNav">
+                <ul>
+                    <li><a href="#feynman" class="nav-link">1. Feynman Model</a></li>
+                    <li><a href="#math" class="nav-link">2. Mathematical Ascent</a></li>
+                    <li><a href="#code" class="nav-link">3. Implementation</a></li>
+                    <li><a href="#socratic" class="nav-link">4. Socratic Sandbox</a></li>
+                    <li><a href="#interactive" class="nav-link">5. Interactive Demos</a></li>
+                </ul>
+            </nav>
+
+            <div class="content-wrapper">
+                <!-- Section 1: Feynman Model -->
+                <section id="feynman" class="section-card">
+                    <h2>1. Solving a Sudoku Puzzle by Thinking Ahead</h2>
+
+                    <p>Imagine you're solving a Sudoku puzzle. You stare at a grid with some numbers already filled in, and many empty cells waiting for digits 1–9. Each empty cell is a <strong>variable</strong> that needs a value. The rules—no repeats in any row, column, or 3×3 box—are <strong>constraints</strong>.</p>
+
+                    <p>Here's the key insight: you don't just guess randomly. You look at what's already placed and figure out what's still <strong>possible</strong> for each cell. If a cell in row 5 can only be 7 (because 1–6 and 8–9 are already in that row), you know its value immediately. That process—propagating constraints to eliminate impossible values—is called <strong>constraint propagation</strong>.</p>
+
+                    <p>But propagation alone isn't always enough. Sometimes you still can't determine a cell's value uniquely. So you make an educated guess: "Let's try 3 here." You explore what follows from that choice. If you later discover a contradiction (e.g., a cell with no legal values), you <strong>backtrack</strong>—undo your guess and try something else.</p>
+
+                    <p>Smart solvers don't just undo the last guess blindly. They ask: "Which earlier guess actually caused this failure?" That's <strong>intelligent backjumping</strong>. Instead of unwinding step by step, you jump back to the guilty decision, saving enormous work.</p>
+
+                    <h3>The Australia Map Coloring Example</h3>
+
+                    <p>Here's another classic example. Imagine a map of Australia divided into regions: Western Australia (WA), Northern Territory (NT), South Australia (SA), Queensland (Q), New South Wales (NSW), Victoria (V), and Tasmania (T). Your task: color each region with one of three colors (red, green, blue) such that no two neighboring regions share the same color.</p>
+
+                    <p>Each region is a variable. Each region's domain is {red, green, blue}. The constraints are: if two regions are adjacent, their colors must differ. The constraint graph shows which regions touch—an edge between WA and NT means they can't share a color.</p>
+
+                    <p>You assign WA = red. Instantly, constraint propagation tells you that NT and SA cannot be red. Their domains shrink: NT ∈ {green, blue}, SA ∈ {green, blue}. Assign NT = green. Now SA cannot be green (they're neighbors), so SA must be blue. Propagation solved it!</p>
+
+                    <div class="insight-box">
+                        <strong>Key Insight:</strong> CSP solving is a balancing act. Propagation is fast—it's like "looking ahead" in Sudoku—but incomplete. Search explores possibilities systematically. The art is combining them: propagate before guessing, guess smartly (choosing variables with fewest options), and backtrack intelligently when you detect failures early.
+                    </div>
+
+                    <h3>Why CSP Matters</h3>
+
+                    <p>CSPs aren't just puzzles. They model real-world problems: scheduling (assign tasks to time slots with resource constraints), planning (order actions to achieve goals without conflicts), circuit design (assign components to positions without overlap), and many more. Mastering CSP solving unlocks solutions to these practical challenges.</p>
+                </section>
+
+                <!-- Section 2: Mathematical Ascent -->
+                <section id="math" class="section-card">
+                    <h2>2. Mathematical Ascent</h2>
+
+                    <h3>Defining CSPs Formally</h3>
+
+                    <p>A Constraint Satisfaction Problem is a tuple $(X, D, C)$:</p>
+
+                    <div class="math-block">
+                        $$\text{CSP} = (X, D, C)$$
+                        $$X = \{X_1, X_2, \ldots, X_n\}  \quad \text{(variables)}$$
+                        $$D = \{D_1, D_2, \ldots, D_n\}  \quad \text{(domains: set of values for each variable)}$$
+                        $$C = \text{set of constraints on subsets of } X$$
+                    </div>
+
+                    <p>Each constraint specifies which combinations of values are allowed. A <strong>binary constraint</strong> involves two variables. A <strong>unary constraint</strong> restricts a single variable (e.g., "X₁ ≠ red"). A <strong>global constraint</strong> involves many variables (e.g., "all different").</p>
+
+                    <p>A solution is an assignment of values to all variables such that all constraints are satisfied. A CSP is <strong>satisfiable</strong> if a solution exists; <strong>unsatisfiable</strong> otherwise.</p>
+
+                    <h3>Local Consistency and Arc Consistency</h3>
+
+                    <p>Not all solutions are reachable by mere backtracking. We can prune the search space with <strong>local consistency</strong>—properties that eliminate impossible values locally.</p>
+
+                    <p><strong>Node Consistency:</strong> $X_i$ is node-consistent if every value in $D_i$ satisfies all unary constraints on $X_i$.</p>
+
+                    <p><strong>Arc Consistency:</strong> $X_i$ is arc-consistent with respect to $X_j$ if for every value $x \in D_i$, there exists a value $y \in D_j$ satisfying the binary constraint $(X_i, X_j)$. In other words, $X_i$ doesn't have a "dead-end" value that can never match anything in $X_j$'s domain.</p>
+
+                    <div class="math-block">
+                        $$\text{AC}(X_i, X_j): \forall x \in D_i, \exists y \in D_j \text{ s.t. } (x, y) \text{ satisfies constraint}(X_i, X_j)$$
+                    </div>
+
+                    <p>The <strong>AC-3 algorithm</strong> enforces arc consistency on all binary constraints. It maintains a queue of arcs $(X_i, X_j)$. For each arc, it removes values from $D_i$ that have no support in $D_j$. If $D_i$ shrinks, all arcs pointing back to $X_i$ are re-examined.</p>
+
+                    <div class="math-block">
+                        $$\text{Time complexity of AC-3: } O(cd^3)$$
+                        $$\text{where } c = \text{number of binary constraints, } d = \text{max domain size}$$
+                    </div>
+
+                    <h3>Backtracking Search with Inference</h3>
+
+                    <p>Naive backtracking tries all $n! \cdot d^n$ possible orderings of variable assignments (permutations of variables, times domain choices). But CSP solving is commutative: the order of assignments doesn't matter, only which values are assigned. This reduces the search space to $d^n$ leaves in the search tree.</p>
+
+                    <div class="math-block">
+                        $$\text{Naive search: } n! \cdot d^n \text{ leaf nodes}$$
+                        $$\text{CSP backtracking: } d^n \text{ leaf nodes} \quad \text{(by commutativity)}$$
+                    </div>
+
+                    <p>The backtracking search algorithm:</p>
+                    <ol>
+                        <li>SELECT-UNASSIGNED-VARIABLE: pick next variable (smart: use MRV heuristic—minimum remaining values)</li>
+                        <li>ORDER-DOMAIN-VALUES: order its values to try (smart: use LCV heuristic—least constraining value first)</li>
+                        <li>Try each value; if consistent, assign it, run INFERENCE, recurse</li>
+                        <li>If inference detects failure (empty domain), backtrack</li>
+                    </ol>
+
+                    <p><strong>Forward Checking:</strong> After assigning $X_i = x$, check all unassigned neighbors $X_j$. Remove any value from $D_j$ that violates a constraint with $X_i = x$.</p>
+
+                    <p><strong>MAC (Maintaining Arc Consistency):</strong> After assigning $X_i = x$, run full AC-3 on remaining constraints. More expensive than forward checking but detects more failures early.</p>
+
+                    <h3>Intelligent Backtracking</h3>
+
+                    <p>When search fails, a simple backtracker undoes the last assignment. Smarter approaches:</p>
+
+                    <p><strong>Conflict Set:</strong> Track which variables caused the failure. If $X_k$ is found to have an empty domain, its conflict set contains all variables whose assignments directly or indirectly constrain $X_k$.</p>
+
+                    <div class="math-block">
+                        $$\text{conf}(X_i) \leftarrow \text{conf}(X_i) \cup \text{conf}(X_j) - \{X_i\}$$
+                    </div>
+
+                    <p><strong>Conflict-Directed Backjumping:</strong> Jump back not to the previous assignment, but to the most recent variable in the conflict set. This can skip many irrelevant backtracking steps.</p>
+
+                    <h3>Tree-Structured CSPs</h3>
+
+                    <p>If the constraint graph is a tree (no cycles), CSPs become tractable. Topologically sort variables, then make arc-consistent from leaves to root, then assign values from root to leaves. This runs in linear time:</p>
+
+                    <div class="math-block">
+                        $$\text{Time complexity: } O(nd^2) \quad \text{(Tree-CSP-Solver)}$$
+                    </div>
+
+                    <h3>Cutset Conditioning and Tree Decomposition</h3>
+
+                    <p>For graphs with cycles, identify a <strong>cycle cutset</strong>—a small set of variables whose removal leaves a tree. Try all $d^c$ assignments for cutset variables (where $c$ = cutset size), then solve the remaining tree in $O((n-c)d^2)$ time each.</p>
+
+                    <div class="math-block">
+                        $$\text{Cutset conditioning time: } O(d^c \cdot (n-c)d^2)$$
+                    </div>
+
+                    <p><strong>Tree Decomposition:</strong> Decompose the constraint graph into overlapping tree-structured clusters. Solve each cluster, respecting the tree structure. Complexity depends on tree width $w$:</p>
+
+                    <div class="math-block">
+                        $$\text{Tree decomposition time: } O(nd^{w+1})$$
+                    </div>
+
+                    <h3>Local Search: Min-Conflicts</h3>
+
+                    <p>Start with a complete (possibly inconsistent) assignment. Repeatedly pick a conflicted variable and reassign it to the value minimizing conflicts. Often finds solutions in linear time even for large CSPs.</p>
+
+                    <p>For $n$-Queens, min-conflicts solves the million-queens problem in ~50 steps. But local search can get stuck on plateaus. Solutions: tabu search (forbid recent states), constraint weighting (dynamically increase weights of violated constraints), or random restarts.</p>
+                </section>
+
+                <!-- Section 3: Implementation -->
+                <section id="code" class="section-card">
+                    <h2>3. Clean-Code Implementation</h2>
+
+                    <h3>AC-3: Enforcing Arc Consistency</h3>
+
+                    <div class="code-block">
+                        <code class="language-python">def ac3(csp):
+    """
+    Enforce arc consistency on a CSP using the AC-3 algorithm.
+    Returns False if any domain becomes empty (inconsistency detected).
+    """
+    # Initialize queue with all arcs
+    queue = deque()
+    for xi in csp.variables:
+        for xj in csp.neighbors[xi]:
+            queue.append((xi, xj))
+
+    while queue:
+        xi, xj = queue.popleft()
+
+        # REVISE: remove values from D_i that have no support in D_j
+        if revise(csp, xi, xj):
+            # If D_i changed, check if it's empty
+            if not csp.domains[xi]:
+                return False  # Domain wipeout: CSP unsatisfiable
+
+            # Add all neighbors of X_i (except X_j) back to queue
+            for xk in csp.neighbors[xi]:
+                if xk != xj:
+                    queue.append((xk, xi))
+
+    return True
+
+def revise(csp, xi, xj):
+    """
+    Remove values from D_i that have no support in D_j.
+    Return True if D_i was revised.
+    """
+    revised = False
+    for x in list(csp.domains[xi]):
+        # Check if x has a value y in D_j that satisfies constraint(X_i, X_j)
+        if not any(csp.satisfies(xi, x, xj, y)
+                   for y in csp.domains[xj]):
+            csp.domains[xi].remove(x)
+            revised = True
+    return revised</code>
+                    </code>
+                    </div>
+
+                    <p><strong>Complexity:</strong> AC-3 runs in $O(cd^3)$ time, where $c$ is the number of constraints and $d$ is domain size. Each arc can be added to the queue $O(d)$ times (once per value removed), and REVISE itself is $O(d^2)$ (checking all pairs of domain values).</p>
+
+                    <h3>Backtracking Search with Forward Checking</h3>
+
+                    <div class="code-block">
+                        <code class="language-python">def backtracking_search(csp):
+    """
+    Solve a CSP using backtracking search with forward checking.
+    """
+    return backtrack({}, csp)
+
+def backtrack(assignment, csp):
+    """
+    Recursive backtracking with forward checking.
+    """
+    # Success: all variables assigned
+    if len(assignment) == len(csp.variables):
+        return assignment
+
+    # Select unassigned variable (MRV heuristic: fewest remaining values)
+    xi = select_unassigned_variable(assignment, csp)
+
+    # Try values in order of least-constraining-value heuristic
+    for value in order_domain_values(xi, assignment, csp):
+        if csp.is_consistent(xi, value, assignment):
+            assignment[xi] = value
+
+            # Inference: forward checking
+            inferences = forward_check(xi, value, assignment, csp)
+            if inferences is not None:
+                # Add inferences to assignment
+                assignment.update(inferences)
+
+                # Recurse
+                result = backtrack(assignment, csp)
+                if result is not None:
+                    return result
+
+                # Remove inferences on backtrack
+                for var in inferences:
+                    del assignment[var]
+
+            # Remove assignment on backtrack
+            del assignment[xi]
+
+    return None
+
+def select_unassigned_variable(assignment, csp):
+    """
+    MRV heuristic: select variable with fewest legal values remaining.
+    """
+    unassigned = [v for v in csp.variables if v not in assignment]
+    return min(unassigned,
+               key=lambda var: len(csp.domains[var]))
+
+def order_domain_values(var, assignment, csp):
+    """
+    LCV heuristic: return values in order of least-constraining-value.
+    A value is least constraining if it rules out fewest choices for neighbors.
+    """
+    def count_conflicts(value):
+        conflicts = 0
+        for neighbor in csp.neighbors[var]:
+            if neighbor not in assignment:
+                for neighbor_value in csp.domains[neighbor]:
+                    if not csp.satisfies(var, value, neighbor, neighbor_value):
+                        conflicts += 1
+        return conflicts
+
+    return sorted(csp.domains[var], key=count_conflicts)
+
+def forward_check(var, value, assignment, csp):
+    """
+    Forward checking: remove values from neighbors that conflict with (var, value).
+    Return dict of inferences (removed values), or None if inconsistency detected.
+    """
+    inferences = {}
+    for neighbor in csp.neighbors[var]:
+        if neighbor not in assignment:
+            for neighbor_value in list(csp.domains[neighbor]):
+                if not csp.satisfies(var, value, neighbor, neighbor_value):
+                    inferences[neighbor] = neighbor_value
+                    csp.domains[neighbor].discard(neighbor_value)
+
+                    if not csp.domains[neighbor]:
+                        return None  # Wipeout: backtrack immediately
+
+    return inferences</code>
+                    </code>
+                    </div>
+
+                    <h3>Local Search: Min-Conflicts</h3>
+
+                    <div class="code-block">
+                        <code class="language-python">def min_conflicts(csp, max_steps=1000000):
+    """
+    Local search using min-conflicts heuristic.
+    Start with complete random assignment, improve by reassigning conflicted variables.
+    """
+    # Initialize: random complete assignment
+    current = {}
+    for var in csp.variables:
+        current[var] = random.choice(list(csp.domains[var]))
+
+    for step in range(max_steps):
+        # Find conflicted variables (those violating some constraint)
+        conflicted = [var for var in csp.variables
+                     if csp.num_conflicts(var, current[var], current) > 0]
+
+        if not conflicted:
+            return current  # Solution found!
+
+        # Pick random conflicted variable
+        var = random.choice(conflicted)
+
+        # Reassign to value minimizing conflicts
+        min_conflict_count = float('inf')
+        best_value = None
+        for value in csp.domains[var]:
+            conflicts = csp.num_conflicts(var, value, current)
+            if conflicts < min_conflict_count:
+                min_conflict_count = conflicts
+                best_value = value
+
+        current[var] = best_value
+
+    return None  # Timeout: didn't find solution in max_steps</code>
+                    </code>
+                    </div>
+
+                    <h3>Tree-CSP Solver</h3>
+
+                    <div class="code-block">
+                        <code class="language-python">def tree_csp_solver(csp):
+    """
+    Solve a tree-structured CSP in linear time O(n*d^2).
+    1. Topologically sort variables
+    2. Make directed arc-consistent from leaves to root
+    3. Assign values from root to leaves
+    """
+    # 1. Topological sort: tree has root; compute order
+    order = topological_sort(csp)  # Returns list of variables
+
+    # 2. Make directed arc-consistent: parent ← child for each arc
+    for xi in reversed(order[:-1]):  # All but last (root)
+        for xj in csp.neighbors[xi]:
+            if order.index(xj) > order.index(xi):  # xj is child of xi
+                revise(csp, xi, xj)
+
+    # 3. Assign values: root to leaves
+    assignment = {}
+    for var in order:
+        # Pick a value from domain consistent with parent's assignment
+        for value in csp.domains[var]:
+            parent_consistent = True
+            for parent in csp.neighbors[var]:
+                if parent in assignment:
+                    if not csp.satisfies(var, value, parent, assignment[parent]):
+                        parent_consistent = False
+                        break
+            if parent_consistent:
+                assignment[var] = value
+                break
+
+    return assignment</code>
+                    </code>
+                    </div>
+
+                </section>
+
+                <!-- Section 4: Socratic Sandbox -->
+                <section id="socratic" class="section-card">
+                    <h2>4. Socratic Sandbox</h2>
+                    <p>Expand each question to explore common misconceptions and deepen your understanding.</p>
+
+                    <div class="qa-item">
+                        <div class="qa-question">
+                            <span>Q1: You ran AC-3 as preprocessing and it didn't reduce any domains. Does that mean the CSP has no solution?</span>
+                            <span class="qa-toggle">▼</span>
+                        </div>
+                        <div class="qa-answer">
+                            <p><strong>Answer: No, absolutely not.</strong> Arc consistency only guarantees pairwise consistency—it ensures every value in one variable's domain has at least one match in a neighbor's domain. But that's not enough to solve the entire problem.</p>
+                            <p><strong>Counterexample:</strong> Consider coloring Australia with only 2 colors (red, green). The constraint graph has a triangle: WA—NT—SA form a cycle where all three are pairwise neighbors. AC-3 won't help:</p>
+                            <ul>
+                                <li>WA's domain = {red, green}. Both values have matches in neighbors (NT and SA both have red and green). No pruning.</li>
+                                <li>Same for NT and SA. All domains stay unchanged.</li>
+                            </ul>
+                            <p>But the CSP is unsatisfiable! You can't 2-color a triangle. AC-3 detected no conflicts because it only checks pairs. You need either path consistency (checks 3-variable relationships), k-consistency for higher k, or search to discover the failure.</p>
+                            <p><strong>Moral:</strong> AC-3 is a sound inference procedure—it never causes a false negative (removing values that could be part of a solution). But it's not complete—it won't find all necessary eliminations. Always pair it with search.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-question">
+                            <span>Q2: Your backtracking search takes forever on a large CSP with 100 variables. You're using a fixed variable ordering. What should you change?</span>
+                            <span class="qa-toggle">▼</span>
+                        </div>
+                        <div class="qa-answer">
+                            <p><strong>Answer: Use the MRV (Minimum Remaining Values) heuristic.</strong></p>
+                            <p>Fixed variable orderings are disastrous. Imagine assigning $X_1$ first, but it doesn't interact much with other variables. You'll waste work exploring irrelevant branches. Instead, use MRV: always pick the unassigned variable with the fewest legal values left in its domain.</p>
+                            <p><strong>Why it works:</strong> MRV is a "fail-first" strategy. If a variable has only 1 value remaining, assign it immediately—you've gained information. If it has 0 values, backtrack instantly rather than exploring useless branches. This can reduce search time by exponential factors.</p>
+                            <p><strong>Combination boost:</strong> Pair MRV with the degree heuristic (pick the variable with the most unassigned neighbors—it's most constrained) and forward checking or MAC. Forward checking immediately prunes neighbors' domains after each assignment, revealing failures early.</p>
+                            <p><strong>Empirical note:</strong> On 4-Queens, MRV + forward checking finds a solution without any backtrack at all. On harder problems, it cuts the search tree dramatically.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-question">
+                            <span>Q3: Your forward checking detects a failure after exploring many branches. What's stronger than forward checking?</span>
+                            <span class="qa-toggle">▼</span>
+                        </div>
+                        <div class="qa-answer">
+                            <p><strong>Answer: Use MAC (Maintaining Arc Consistency) instead.</strong></p>
+                            <p>Forward checking is limited. After assigning $X_i = x$, it checks only direct constraints between $X_i$ and unassigned neighbors, removing unsupported values from their domains. But it doesn't propagate further.</p>
+                            <p><strong>Example where forward checking misses failures:</strong> Suppose after assigning some variables, you have three unassigned variables: Y, Z, W. The constraint graph has edges Y—Z and Z—W (linear chain). Forward checking prunes values from Y and W based on your recent assignment, but it never checks the constraint between Y and Z, or between Z and W directly. If Y and W end up with disjoint domains that conflict through Z, forward checking didn't catch it!</p>
+                            <p><strong>MAC (Maintaining Arc Consistency) solves this:</strong> After each assignment, run full AC-3 on the remaining constraint graph. This propagates constraints transitively. If Y's value eliminates all of Z's matches, and Z still has no match for W, AC-3 detects it immediately.</p>
+                            <p><strong>Trade-off:</strong> MAC is more expensive (AC-3 is $O(cd^3)$ per assignment), but it catches failures exponentially earlier, often more than paying for itself in reduced search.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-question">
+                            <span>Q4: Your CSP has a large constraint graph, but removing 3 variables leaves a tree. How can you exploit this?</span>
+                            <span class="qa-toggle">▼</span>
+                        </div>
+                        <div class="qa-answer">
+                            <p><strong>Answer: Use cutset conditioning.</strong></p>
+                            <p>You've identified a cycle cutset of size 3. Instead of general backtracking ($d^n$ worst-case), do this:</p>
+                            <ol>
+                                <li>Try all $d^3$ assignments for the 3 cutset variables.</li>
+                                <li>For each assignment, the remaining constraint graph is a tree (no cycles).</li>
+                                <li>Solve the tree using Tree-CSP-Solver in $O((n-3)d^2)$ linear time.</li>
+                            </ol>
+                            <p><strong>Total complexity:</strong> $O(d^3 \cdot (n-3)d^2)$ instead of exponential backtracking.</p>
+                            <p><strong>When does this win?</strong> If the cutset is small (e.g., $c \ll n$), then $d^c$ is manageable, and you avoid the exponential $d^n$ blowup. For sparse networks with few cycles, cutset conditioning is powerful.</p>
+                            <p><strong>Generalization—Tree Decomposition:</strong> If no small cutset exists, decompose the graph into overlapping tree-structured clusters. Solve each cluster, respecting the inter-cluster tree structure. The complexity depends on tree width $w$: $O(nd^{w+1})$. For sparse graphs, tree width is small, making this tractable.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-question">
+                            <span>Q5: Your min-conflicts solver oscillates between two states, never improving. Why?</span>
+                            <span class="qa-toggle">▼</span>
+                        </div>
+                        <div class="qa-answer">
+                            <p><strong>Answer: You're trapped on a plateau—a region where many states have the same number of conflicts.</strong></p>
+                            <p>Min-conflicts is a greedy local search: always move to the value minimizing conflicts. But this gets stuck on plateaus. Imagine a landscape where 100 states all have 5 conflicts (no valley to descend). The solver bounces between them, never escaping.</p>
+                            <p><strong>Solution 1: Tabu Search</strong>—Forbid revisiting the last $k$ states. If the solver tries to return to a recent state, pick a different conflicted variable or value. This breaks cycles.</p>
+                            <p><strong>Solution 2: Constraint Weighting</strong>—Dynamically increase the weight of violated constraints. If a constraint has been violated for many steps, increase its penalty. Now assignments violating it become less attractive, creating "valleys" that guide search away from plateaus.</p>
+                            <div class="math-block">
+                                $$w_c \leftarrow w_c + 1 \quad \text{for violated constraints } c$$
+                            </div>
+                            <p><strong>Solution 3: Random Restarts</strong>—If plateau-trapped, restart from a new random assignment. Often faster than oscillating forever. Many CSP solvers use random restarts in their outer loop.</p>
+                            <p><strong>Empirical fact:</strong> Min-conflicts with constraint weighting solves $n$-Queens up to $n = 1,000,000$ in ~50 steps on average, far better than pure local search.</p>
+                        </div>
+                    </div>
+
+                </section>
+
+                <!-- Section 5: Interactive -->
+                <section id="interactive" class="section-card">
+                    <h2>5. Interactive Demos</h2>
+
+                    <h3>Interactive Demo 1: Backtracking with Forward Checking (Australia Coloring)</h3>
+
+                    <div class="interactive-section">
+                        <div class="interactive-title">CSP Backtracking Visualizer</div>
+                        <p>Watch the algorithm assign colors to Australian regions while forward checking prunes impossible values. Step through the algorithm or run it automatically.</p>
+
+                        <div class="interactive-controls">
+                            <button class="interactive-button secondary" id="stepBtn">Step</button>
+                            <button class="interactive-button" id="autoBtn">Auto Run</button>
+                            <button class="interactive-button reset" id="resetBtn">Reset</button>
+                        </div>
+
+                        <div class="graph-container" id="graphContainer1">
+                            <svg id="australiaSvg" width="100%" height="450" viewBox="0 0 600 500">
+                                <defs>
+                                    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                                        <polygon points="0 0, 10 3, 0 6" fill="#666"/>
+                                    </marker>
+                                </defs>
+                                <!-- Edges (constraints) -->
+                                <line class="edge" x1="150" y1="150" x2="250" y2="150" data-edge="WA-NT"/>
+                                <line class="edge" x1="250" y1="150" x2="300" y2="250" data-edge="NT-Q"/>
+                                <line class="edge" x1="150" y1="150" x2="200" y2="300" data-edge="WA-SA"/>
+                                <line class="edge" x1="200" y1="300" x2="250" y2="150" data-edge="SA-NT"/>
+                                <line class="edge" x1="200" y1="300" x2="300" y2="250" data-edge="SA-Q"/>
+                                <line class="edge" x1="200" y1="300" x2="350" y2="350" data-edge="SA-NSW"/>
+                                <line class="edge" x1="300" y1="250" x2="350" y2="350" data-edge="Q-NSW"/>
+                                <line class="edge" x1="350" y1="350" x2="400" y2="380" data-edge="NSW-V"/>
+                                <line class="edge" x1="200" y1="300" x2="380" y2="420" data-edge="SA-V"/>
+                                <line class="edge" x1="480" y1="450" x2="420" y2="400" data-edge="T-V"/>
+
+                                <!-- Nodes -->
+                                <circle class="node" cx="150" cy="150" r="30" data-var="WA" id="node-WA"/>
+                                <text class="node-label" x="150" y="155">WA</text>
+
+                                <circle class="node" cx="250" cy="150" r="30" data-var="NT" id="node-NT"/>
+                                <text class="node-label" x="250" y="155">NT</text>
+
+                                <circle class="node" cx="300" cy="250" r="30" data-var="Q" id="node-Q"/>
+                                <text class="node-label" x="300" y="255">Q</text>
+
+                                <circle class="node" cx="200" cy="300" r="30" data-var="SA" id="node-SA"/>
+                                <text class="node-label" x="200" y="305">SA</text>
+
+                                <circle class="node" cx="350" cy="350" r="30" data-var="NSW" id="node-NSW"/>
+                                <text class="node-label" x="350" y="355">NSW</text>
+
+                                <circle class="node" cx="400" cy="380" r="30" data-var="V" id="node-V"/>
+                                <text class="node-label" x="400" y="385">V</text>
+
+                                <circle class="node" cx="480" cy="450" r="30" data-var="T" id="node-T"/>
+                                <text class="node-label" x="480" y="455">T</text>
+                            </svg>
+                        </div>
+
+                        <div class="state-display" id="stateDisplay1">
+                            <strong>Step 0:</strong> Initializing...<br>
+                            <strong>Domains:</strong> All {red, green, blue}<br>
+                            <strong>Backtracks:</strong> 0
+                        </div>
+                    </div>
+
+                    <h3>Interactive Demo 2: Arc Consistency (AC-3)</h3>
+
+                    <div class="interactive-section">
+                        <div class="interactive-title">AC-3 Constraint Propagation Visualizer</div>
+                        <p>Observe how AC-3 iteratively removes inconsistent values from domains. Watch the queue process arcs and see domains shrink as inconsistencies are discovered.</p>
+
+                        <div class="interactive-controls">
+                            <button class="interactive-button secondary" id="stepBtn2">Step</button>
+                            <button class="interactive-button" id="autoBtn2">Auto Run</button>
+                            <button class="interactive-button reset" id="resetBtn2">Reset</button>
+                            <select id="exampleSelect" style="padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-card);">
+                                <option value="australia">Australia (3 colors)</option>
+                                <option value="mapcoloring">Map Coloring (4 colors)</option>
+                            </select>
+                        </div>
+
+                        <div class="graph-container" id="graphContainer2">
+                            <svg id="ac3Svg" width="100%" height="400" viewBox="0 0 600 450">
+                                <!-- Will be drawn by JS -->
+                            </svg>
+                        </div>
+
+                        <div class="state-display" id="stateDisplay2">
+                            <strong>AC-3 Queue:</strong><br>
+                            <div class="queue-display" id="queueDisplay">(empty)</div>
+                            <strong>Step 0</strong> — Initializing queue...
+                        </div>
+                    </div>
+
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Theme toggle
+        function initTheme() {
+            const toggle = document.getElementById('themeToggle');
+            const savedTheme = localStorage.getItem('aima-theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            toggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+
+            toggle.addEventListener('click', () => {
+                const currentTheme = document.documentElement.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', newTheme);
+                localStorage.setItem('aima-theme', newTheme);
+                toggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+            });
+        }
+
+        // Scrollspy for sidebar
+        function initScrollspy() {
+            const navLinks = document.querySelectorAll('.sidebar-nav a');
+            const sections = document.querySelectorAll('[id]');
+
+            window.addEventListener('scroll', () => {
+                let current = '';
+                for (const section of sections) {
+                    const sectionTop = section.offsetTop;
+                    if (pageYOffset >= sectionTop - 200) {
+                        current = section.getAttribute('id');
+                    }
+                }
+
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href').slice(1) === current) {
+                        link.classList.add('active');
+                    }
+                });
+            });
+        }
+
+        // Scroll-in animations with IntersectionObserver
+        function initScrollAnimations() {
+            const cards = document.querySelectorAll('.section-card');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.animationPlayState = 'running';
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            cards.forEach(card => {
+                observer.observe(card);
+            });
+        }
+
+        // QA Card toggle
+        function initQACards() {
+            const qaItems = document.querySelectorAll('.qa-item');
+            qaItems.forEach(item => {
+                const question = item.querySelector('.qa-question');
+                question.addEventListener('click', () => {
+                    item.classList.toggle('open');
+                });
+            });
+        }
+
+        // Code highlighting
+        function highlightCode() {
+            document.querySelectorAll('code.language-python').forEach(block => {
+                hljs.highlightElement(block);
+            });
+        }
+
+        // ===== INTERACTIVE 1: Australia Backtracking =====
+        class AustraliaBacktrackingVisualizer {
+            constructor() {
+                this.variables = ['WA', 'NT', 'Q', 'SA', 'NSW', 'V', 'T'];
+                this.colors = ['red', 'green', 'blue'];
+                this.neighbors = {
+                    'WA': ['NT', 'SA'],
+                    'NT': ['WA', 'Q', 'SA'],
+                    'Q': ['NT', 'SA', 'NSW'],
+                    'SA': ['WA', 'NT', 'Q', 'NSW', 'V'],
+                    'NSW': ['Q', 'SA', 'V'],
+                    'V': ['SA', 'NSW', 'T'],
+                    'T': ['V']
+                };
+                this.reset();
+            }
+
+            reset() {
+                this.domains = {};
+                this.assignment = {};
+                this.step = 0;
+                this.backtracks = 0;
+                this.history = [];
+                this.isRunning = false;
+
+                for (let v of this.variables) {
+                    this.domains[v] = new Set(this.colors);
+                }
+            }
+
+            isConsistent(var_name, value) {
+                for (let neighbor of this.neighbors[var_name]) {
+                    if (neighbor in this.assignment && this.assignment[neighbor] === value) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            forwardCheck(var_name, value) {
+                const removed = {};
+                for (let neighbor of this.neighbors[var_name]) {
+                    if (!(neighbor in this.assignment)) {
+                        removed[neighbor] = [];
+                        const toRemove = [];
+                        for (let v of this.domains[neighbor]) {
+                            if (!this.isCompatible(var_name, value, neighbor, v)) {
+                                toRemove.push(v);
+                            }
+                        }
+                        for (let v of toRemove) {
+                            this.domains[neighbor].delete(v);
+                            removed[neighbor].push(v);
+                        }
+                    }
+                }
+                return removed;
+            }
+
+            isCompatible(v1, val1, v2, val2) {
+                // Constraint: neighbors must have different colors
+                return val1 !== val2;
+            }
+
+            selectUnassignedVariable() {
+                let minDomain = 4;
+                let minVar = null;
+                for (let v of this.variables) {
+                    if (!(v in this.assignment) && this.domains[v].size < minDomain) {
+                        minDomain = this.domains[v].size;
+                        minVar = v;
+                    }
+                }
+                return minVar;
+            }
+
+            stepForward() {
+                if (Object.keys(this.assignment).length === this.variables.length) {
+                    return { status: 'solved', message: 'CSP solved!' };
+                }
+
+                if (Object.keys(this.assignment).length === 0) {
+                    // First step: pick first variable
+                    const var_name = 'WA';
+                    const value = [...this.domains[var_name]][0];
+                    this.assignment[var_name] = value;
+                    this.step++;
+                    this.history.push({ step: this.step, action: `Assign ${var_name} = ${value}`, assignment: {...this.assignment} });
+                    return { status: 'assigned', var: var_name, value: value };
+                }
+
+                const var_name = this.selectUnassignedVariable();
+                if (var_name === null) return { status: 'solved' };
+
+                if (this.domains[var_name].size === 0) {
+                    // Backtrack
+                    const lastVar = Object.keys(this.assignment).pop();
+                    delete this.assignment[lastVar];
+                    this.backtracks++;
+                    this.step++;
+                    this.history.push({ step: this.step, action: `Backtrack from ${lastVar}`, assignment: {...this.assignment} });
+                    return { status: 'backtrack', var: lastVar };
+                }
+
+                // Try first value in domain
+                const value = [...this.domains[var_name]][0];
+                if (this.isConsistent(var_name, value)) {
+                    this.assignment[var_name] = value;
+                    const removed = this.forwardCheck(var_name, value);
+                    this.step++;
+                    this.history.push({ step: this.step, action: `Assign ${var_name} = ${value}`, assignment: {...this.assignment}, removed });
+                    return { status: 'assigned', var: var_name, value: value };
+                }
+
+                return { status: 'continue' };
+            }
+        }
+
+        let viz1;
+
+        function initInteractive1() {
+            viz1 = new AustraliaBacktrackingVisualizer();
+
+            document.getElementById('stepBtn').addEventListener('click', () => {
+                if (!viz1.isRunning) {
+                    const result = viz1.stepForward();
+                    updateVisualization1(result);
+                }
+            });
+
+            document.getElementById('autoBtn').addEventListener('click', () => {
+                viz1.isRunning = !viz1.isRunning;
+                if (viz1.isRunning) {
+                    const autoStep = setInterval(() => {
+                        if (viz1.isRunning) {
+                            const result = viz1.stepForward();
+                            updateVisualization1(result);
+                            if (result.status === 'solved') {
+                                viz1.isRunning = false;
+                                clearInterval(autoStep);
+                            }
+                        }
+                    }, 800);
+                }
+            });
+
+            document.getElementById('resetBtn').addEventListener('click', () => {
+                viz1.isRunning = false;
+                viz1.reset();
+                updateVisualization1({ status: 'reset' });
+            });
+
+            updateVisualization1({ status: 'reset' });
+        }
+
+        function updateVisualization1(result) {
+            // Update domain displays
+            for (let v of viz1.variables) {
+                const domainDisplay = document.querySelector(`[data-var="${v}"] ~ .domain-display`);
+                if (!domainDisplay) {
+                    const nodeEl = document.getElementById(`node-${v}`);
+                    const display = document.createElement('div');
+                    display.className = 'domain-display';
+                    display.style.position = 'absolute';
+                    // Just show in state display instead
+                }
+            }
+
+            // Highlight assigned nodes
+            for (let v of viz1.variables) {
+                const node = document.getElementById(`node-${v}`);
+                if (v in viz1.assignment) {
+                    node.style.fill = viz1.assignment[v];
+                    node.classList.add('active');
+                } else {
+                    node.style.fill = 'white';
+                    node.classList.remove('active');
+                }
+            }
+
+            // Update state display
+            const stateDisplay = document.getElementById('stateDisplay1');
+            let assignmentText = '';
+            for (let [v, color] of Object.entries(viz1.assignment)) {
+                assignmentText += `${v}=${color}, `;
+            }
+            assignmentText = assignmentText.slice(0, -2) || 'None';
+
+            const domainText = Object.entries(viz1.domains)
+                .map(([v, d]) => `${v}:{${[...d].join(',')}}`)
+                .join(' | ');
+
+            stateDisplay.innerHTML = `
+                <strong>Step ${viz1.step}:</strong> ${result.message || result.action || 'Ready'}<br>
+                <strong>Assignment:</strong> ${assignmentText}<br>
+                <strong>Backtracks:</strong> ${viz1.backtracks}
+            `;
+        }
+
+        // ===== INTERACTIVE 2: AC-3 =====
+        class AC3Visualizer {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                // Simple 4-node CSP
+                this.variables = ['A', 'B', 'C', 'D'];
+                this.domains = {
+                    'A': new Set(['1', '2', '3']),
+                    'B': new Set(['1', '2']),
+                    'C': new Set(['2', '3']),
+                    'D': new Set(['1', '2', '3'])
+                };
+                this.constraints = {
+                    'A-B': (a, b) => a !== b,
+                    'B-C': (b, c) => b !== c,
+                    'C-D': (c, d) => c !== d,
+                    'A-D': (a, d) => a !== d
+                };
+                this.edges = [['A', 'B'], ['B', 'A'], ['B', 'C'], ['C', 'B'], ['C', 'D'], ['D', 'C'], ['A', 'D'], ['D', 'A']];
+                this.queue = this.edges.map(e => [...e]);
+                this.step = 0;
+                this.history = [];
+            }
+
+            stepAC3() {
+                if (this.queue.length === 0) {
+                    return { status: 'complete', message: 'AC-3 complete!' };
+                }
+
+                const [xi, xj] = this.queue.shift();
+                this.step++;
+
+                const beforeSize = this.domains[xi].size;
+                const toRemove = [];
+
+                for (let x of this.domains[xi]) {
+                    let hasSupport = false;
+                    for (let y of this.domains[xj]) {
+                        const constraint = this.constraints[`${xi}-${xj}`] || this.constraints[`${xi}-${xj}`.split('-').reverse().join('-')];
+                        if (constraint(x, y)) {
+                            hasSupport = true;
+                            break;
+                        }
+                    }
+                    if (!hasSupport) {
+                        toRemove.push(x);
+                    }
+                }
+
+                for (let x of toRemove) {
+                    this.domains[xi].delete(x);
+                }
+
+                const revised = beforeSize !== this.domains[xi].size;
+
+                if (revised) {
+                    if (this.domains[xi].size === 0) {
+                        return { status: 'failure', message: `Domain of ${xi} is empty! CSP unsatisfiable.` };
+                    }
+                    // Re-add arcs
+                    for (let xk of this.variables) {
+                        if (xk !== xi && xk !== xj) {
+                            this.queue.push([xk, xi]);
+                        }
+                    }
+                }
+
+                return { status: 'continue', removed: toRemove, xi, xj, revised };
+            }
+        }
+
+        let viz2;
+
+        function initInteractive2() {
+            viz2 = new AC3Visualizer();
+            let autoRunning = false;
+
+            document.getElementById('stepBtn2').addEventListener('click', () => {
+                const result = viz2.stepAC3();
+                updateVisualization2(result);
+            });
+
+            document.getElementById('autoBtn2').addEventListener('click', () => {
+                autoRunning = !autoRunning;
+                if (autoRunning) {
+                    const autoStep = setInterval(() => {
+                        if (autoRunning) {
+                            const result = viz2.stepAC3();
+                            updateVisualization2(result);
+                            if (result.status !== 'continue') {
+                                autoRunning = false;
+                                clearInterval(autoStep);
+                            }
+                        }
+                    }, 600);
+                }
+            });
+
+            document.getElementById('resetBtn2').addEventListener('click', () => {
+                autoRunning = false;
+                viz2.reset();
+                updateVisualization2({ status: 'reset' });
+            });
+
+            updateVisualization2({ status: 'reset' });
+        }
+
+        function updateVisualization2(result) {
+            const svg = document.getElementById('ac3Svg');
+            svg.innerHTML = '';
+
+            // Draw nodes
+            const positions = { 'A': [100, 150], 'B': [300, 100], 'C': [300, 250], 'D': [500, 150] };
+            const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#ffa07a'];
+
+            viz2.variables.forEach((v, i) => {
+                const [x, y] = positions[v];
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', x);
+                circle.setAttribute('cy', y);
+                circle.setAttribute('r', 30);
+                circle.setAttribute('fill', colors[i]);
+                circle.setAttribute('opacity', '0.7');
+                svg.appendChild(circle);
+
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', x);
+                text.setAttribute('y', y);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('dy', '0.3em');
+                text.setAttribute('font-weight', 'bold');
+                text.setAttribute('fill', 'white');
+                text.textContent = v;
+                svg.appendChild(text);
+
+                // Domain display below node
+                const domainText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                domainText.setAttribute('x', x);
+                domainText.setAttribute('y', y + 60);
+                domainText.setAttribute('text-anchor', 'middle');
+                domainText.setAttribute('font-size', '12');
+                domainText.setAttribute('fill', '#333');
+                domainText.textContent = `{${[...viz2.domains[v]].join(',')}}`;
+                svg.appendChild(domainText);
+            });
+
+            // Draw edges
+            const edges = [['A', 'B'], ['B', 'C'], ['C', 'D'], ['A', 'D']];
+            edges.forEach(([u, v]) => {
+                const [x1, y1] = positions[u];
+                const [x2, y2] = positions[v];
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', x1);
+                line.setAttribute('y1', y1);
+                line.setAttribute('x2', x2);
+                line.setAttribute('y2', y2);
+                line.setAttribute('stroke', '#999');
+                line.setAttribute('stroke-width', '2');
+                svg.appendChild(line);
+            });
+
+            // Update queue display
+            const queueDisplay = document.getElementById('queueDisplay');
+            if (viz2.queue.length === 0) {
+                queueDisplay.textContent = '(empty)';
+            } else {
+                queueDisplay.textContent = viz2.queue.map(([u, v]) => `(${u},${v})`).join(', ');
+            }
+
+            // Update state
+            const stateDisplay = document.getElementById('stateDisplay2');
+            stateDisplay.innerHTML = `
+                <strong>AC-3 Queue:</strong><br>
+                <div class="queue-display" id="queueDisplay">${viz2.queue.length === 0 ? '(empty)' : viz2.queue.map(([u, v]) => `(${u},${v})`).join(', ')}</div>
+                <strong>Step ${viz2.step}:</strong> ${result.message || (result.revised ? `Revised ${result.xi}` : `No change`)}
+            `;
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            highlightCode();
+            initScrollspy();
+            initScrollAnimations();
+            initQACards();
+            initInteractive1();
+            initInteractive2();
+        });
+    </script>
+
+    <!-- KaTeX - MUST be at the very end, AFTER all other scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script>
+        renderMathInElement(document.body, {
+            delimiters: [
+                { left: '$$', right: '$$', display: true },
+                { left: '\\(', right: '\\)', display: false },
+                { left: '$', right: '$', display: false }
+            ],
+            throwOnError: false
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 17: Making Complex Decisions | AIMA Interactive Textbook</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,8..72,200..800;1,8..72,200..800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Highlight.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+
+    <!-- KaTeX CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+
+    <style>
+        :root {
+            --bg: #FAF9F6;
+            --bg-card: #FFFFFF;
+            --text: #1a1a2e;
+            --text-muted: #6b7280;
+            --accent-primary: #A8325B;
+            --accent-secondary: #2563eb;
+            --accent-tertiary: #059669;
+            --border: #e5e7eb;
+            --radius: 12px;
+            --part-iv-gradient: linear-gradient(135deg, #4527a0, #7b1fa2, #ab47bc);
+        }
+
+        [data-theme="dark"] {
+            --bg: #0f0f0f;
+            --bg-card: #1a1a1a;
+            --text: #f0f0f0;
+            --text-muted: #a0a0a0;
+            --border: #333333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* Back to Dashboard Link */
+        .back-link {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            text-decoration: none;
+            color: var(--accent-secondary);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: gap 0.3s;
+        }
+
+        .back-link:hover {
+            gap: 12px;
+        }
+
+        /* Dark Mode Toggle */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        .theme-toggle:hover {
+            background-color: var(--accent-primary);
+            color: white;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: var(--part-iv-gradient);
+            color: white;
+            padding: 80px 40px;
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .hero h1 {
+            font-family: 'Newsreader', serif;
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            line-height: 1.2;
+        }
+
+        .hero .subtitle {
+            font-size: 1.5rem;
+            font-weight: 300;
+            opacity: 0.95;
+        }
+
+        /* Layout */
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            gap: 40px;
+            padding: 0 40px 80px 40px;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            position: sticky;
+            top: 40px;
+            height: fit-content;
+        }
+
+        .sidebar nav ul {
+            list-style: none;
+            border-left: 2px solid var(--border);
+        }
+
+        .sidebar nav li {
+            margin: 0;
+        }
+
+        .sidebar nav a {
+            display: block;
+            padding: 12px 16px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+            border-left: 2px solid transparent;
+            margin-left: -2px;
+            transition: color 0.3s, border-color 0.3s, background-color 0.3s;
+        }
+
+        .sidebar nav a:hover {
+            color: var(--text);
+            background-color: var(--bg-card);
+        }
+
+        .sidebar nav a.active {
+            color: var(--accent-primary);
+            border-left-color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        /* Main Content */
+        .main {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .content {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 40px;
+            margin-bottom: 40px;
+            border: 1px solid var(--border);
+            opacity: 0;
+            transition: opacity 0.6s ease-out;
+        }
+
+        .content.visible {
+            opacity: 1;
+        }
+
+        .content h2 {
+            font-family: 'Newsreader', serif;
+            font-size: 2.2rem;
+            margin-bottom: 24px;
+            color: var(--text);
+        }
+
+        .content h3 {
+            font-family: 'Newsreader', serif;
+            font-size: 1.5rem;
+            margin-top: 32px;
+            margin-bottom: 16px;
+            color: var(--text);
+        }
+
+        .content h4 {
+            font-size: 1.1rem;
+            margin-top: 24px;
+            margin-bottom: 12px;
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .content p {
+            margin-bottom: 16px;
+            color: var(--text);
+            line-height: 1.8;
+        }
+
+        .content ul, .content ol {
+            margin-bottom: 16px;
+            margin-left: 24px;
+        }
+
+        .content li {
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+
+        .content strong {
+            font-weight: 600;
+            color: var(--accent-primary);
+        }
+
+        .content em {
+            font-style: italic;
+            color: var(--text-muted);
+        }
+
+        /* Code Blocks */
+        .content pre {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .content code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            background: var(--bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: var(--accent-secondary);
+        }
+
+        .content pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+        }
+
+        /* Callout Boxes */
+        .callout {
+            background: linear-gradient(135deg, rgba(165, 50, 91, 0.1), rgba(37, 99, 235, 0.1));
+            border-left: 4px solid var(--accent-primary);
+            padding: 20px;
+            border-radius: var(--radius);
+            margin: 20px 0;
+        }
+
+        .callout strong {
+            color: var(--accent-primary);
+        }
+
+        /* Math Display */
+        .math-display {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin: 20px 0;
+            overflow-x: auto;
+            text-align: center;
+        }
+
+        .math-inline {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Interactive Components */
+        .interactive {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(5, 150, 105, 0.05));
+            border: 2px solid var(--accent-secondary);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin: 24px 0;
+        }
+
+        .interactive h4 {
+            color: var(--accent-secondary);
+            margin-bottom: 16px;
+        }
+
+        .interactive-title {
+            font-weight: 600;
+            color: var(--accent-secondary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .grid-world {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin: 20px 0;
+            max-width: 400px;
+        }
+
+        .grid-cell {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            padding: 8px;
+            text-align: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            transition: background-color 0.3s, transform 0.2s;
+            cursor: pointer;
+        }
+
+        .grid-cell:hover {
+            transform: scale(1.05);
+        }
+
+        .grid-cell.goal {
+            background: linear-gradient(135deg, rgba(5, 150, 105, 0.3), rgba(5, 150, 105, 0.1));
+            border-color: var(--accent-tertiary);
+        }
+
+        .grid-cell.pit {
+            background: linear-gradient(135deg, rgba(220, 38, 38, 0.3), rgba(220, 38, 38, 0.1));
+            border-color: #dc2626;
+        }
+
+        .grid-cell.normal {
+            background: var(--bg);
+        }
+
+        .grid-cell .utility {
+            font-weight: 600;
+            color: var(--accent-secondary);
+            margin-bottom: 4px;
+        }
+
+        .grid-cell .policy {
+            font-size: 1.2rem;
+            color: var(--accent-primary);
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: 2px solid var(--accent-secondary);
+            background: transparent;
+            color: var(--accent-secondary);
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.3s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn:hover {
+            background: var(--accent-secondary);
+            color: white;
+        }
+
+        .btn.primary {
+            background: var(--accent-secondary);
+            color: white;
+            border-color: var(--accent-secondary);
+        }
+
+        .btn.primary:hover {
+            background: #1d4ed8;
+            border-color: #1d4ed8;
+        }
+
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 16px 0;
+        }
+
+        .slider-group label {
+            font-weight: 600;
+            min-width: 120px;
+            color: var(--text);
+        }
+
+        .slider-group input[type="range"] {
+            flex: 1;
+            max-width: 200px;
+        }
+
+        .slider-group .value {
+            font-family: 'JetBrains Mono', monospace;
+            min-width: 60px;
+            text-align: right;
+            color: var(--accent-secondary);
+            font-weight: 600;
+        }
+
+        /* Navigation Footer */
+        .nav-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 40px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin-bottom: 40px;
+        }
+
+        .nav-footer a {
+            text-decoration: none;
+            color: var(--accent-secondary);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: gap 0.3s;
+        }
+
+        .nav-footer a:hover {
+            gap: 12px;
+        }
+
+        .nav-footer a.disabled {
+            color: var(--text-muted);
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        /* Completion Badge */
+        .completion-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--accent-tertiary);
+            color: white;
+            border-radius: var(--radius);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .completion-badge.incomplete {
+            background: var(--text-muted);
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .completion-badge.incomplete:hover {
+            background: var(--accent-primary);
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .sidebar {
+                width: 100%;
+                position: static;
+            }
+
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .back-link, .theme-toggle {
+                display: none;
+            }
+
+            .hero {
+                padding: 40px 20px;
+            }
+
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .hero .subtitle {
+                font-size: 1.1rem;
+            }
+
+            .container {
+                padding: 0 20px 40px 20px;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .grid-world {
+                grid-template-columns: repeat(4, 1fr);
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+
+        /* Highlight.js Dark Mode */
+        [data-theme="dark"] .hljs {
+            background: #1a1a1a;
+            color: #f0f0f0;
+        }
+
+        [data-theme="dark"] .hljs-string {
+            color: #86efac;
+        }
+
+        [data-theme="dark"] .hljs-function {
+            color: #60a5fa;
+        }
+
+        [data-theme="dark"] .hljs-attr {
+            color: #f87171;
+        }
+
+        /* Question List */
+        .question {
+            background: var(--bg);
+            border-left: 4px solid var(--accent-secondary);
+            padding: 16px;
+            margin: 16px 0;
+            border-radius: var(--radius);
+        }
+
+        .question strong {
+            color: var(--accent-secondary);
+        }
+    </style>
+</head>
+<body>
+    <!-- Back to Dashboard -->
+    <a href="../index.html" class="back-link">
+        <span>←</span> Back to Dashboard
+    </a>
+
+    <!-- Dark Mode Toggle -->
+    <button class="theme-toggle" id="themeToggle" title="Toggle dark mode">🌙</button>
+
+    <!-- Hero Section -->
+    <div class="hero">
+        <h1>Chapter 17: Making Complex Decisions</h1>
+        <p class="subtitle">Sequential Decision Problems, MDPs, and POMDPs</p>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <nav>
+                <ul>
+                    <li><a href="#feynman" class="nav-link">Feynman Mental Model</a></li>
+                    <li><a href="#ascent" class="nav-link">Mathematical Ascent</a></li>
+                    <li><a href="#implementation" class="nav-link">Clean-Code Implementation</a></li>
+                    <li><a href="#sandbox" class="nav-link">Socratic Sandbox</a></li>
+                    <li><a href="#interactive" class="nav-link">Interactive Components</a></li>
+                    <li><a href="#summary" class="nav-link">Summary & Next Steps</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Section 1: Feynman Mental Model -->
+            <section id="feynman" class="content">
+                <h2>Feynman Mental Model: The Board Game Analogy</h2>
+
+                <p>Imagine you're playing a board game where every turn you roll dice and move. Unlike chess (where you plan one fixed sequence of moves), here you need a <strong>STRATEGY</strong> — a rule that tells you what to do in <strong>every possible situation</strong> you might find yourself in. That's a <strong>policy</strong>.</p>
+
+                <p>A <strong>Markov Decision Process (MDP)</strong> is the mathematical framework for finding the best strategy when outcomes are uncertain and you make decisions over time. Chapter 16 taught you how to make single decisions. This chapter teaches you how to make sequences of decisions where:</p>
+
+                <ul>
+                    <li>The world is uncertain (outcomes depend on chance)</li>
+                    <li>Your decisions today affect your options tomorrow</li>
+                    <li>You want to maximize total reward over time</li>
+                </ul>
+
+                <div class="callout">
+                    <strong>The Key Insight:</strong> Instead of computing "what should I do now?", we compute "what should I do in EVERY situation?" This is the policy π(s) → a: given a state s, it prescribes an action a. Once you have the policy, decisions become automatic.
+                </div>
+
+                <h3>From Single Decisions to Sequential Decisions</h3>
+
+                <p>In Chapter 16, we solved decision problems with a single choice: should you accept this medical test? Should you buy this stock? These are one-off decisions. But real life is sequential:</p>
+
+                <ul>
+                    <li><strong>Robot navigation:</strong> At each cell, move closer to the goal — but take into account that the move might fail, and you'll face decisions again tomorrow.</li>
+                    <li><strong>Portfolio management:</strong> Allocate funds today, get returns next month, then re-allocate based on new information.</li>
+                    <li><strong>Game playing:</strong> Move a piece, opponent responds, you move again. Each move affects future possibilities.</li>
+                </ul>
+
+                <p>In all these cases, the rational agent must look ahead and ask: "If I take action A now, I'll be in state S' next. From S', what's the best I can do?" This recursion is the heart of MDPs.</p>
+
+                <h3>Components of an MDP</h3>
+
+                <p>Every MDP has five components:</p>
+
+                <ul>
+                    <li><strong>States (S):</strong> The set of all possible situations the agent can be in. In robot navigation, states are grid cells.</li>
+                    <li><strong>Actions (A):</strong> The moves available to the agent. In navigation: Up, Down, Left, Right.</li>
+                    <li><strong>Transition Model T(s, a, s'):</strong> The probability of ending up in state s' if you take action a in state s. In a stochastic world, the same action from the same state can lead to different outcomes.</li>
+                    <li><strong>Reward R(s):</strong> The immediate reward you get for being in state s. This could be +1 for reaching a goal, -1 for falling into a pit, or -0.04 for each step taken.</li>
+                    <li><strong>Discount Factor γ (gamma):</strong> A number between 0 and 1 that says "a reward now is worth more than the same reward later." For example, γ=0.9 means a $1 reward next year is worth $0.90 today.</li>
+                </ul>
+
+                <h3>The Policy and Utility</h3>
+
+                <p>A <strong>policy π(s)</strong> is a function that maps each state to an action. It's the agent's complete strategy: "if you're in state s, do action π(s)." Given a policy, the agent's behavior is deterministic — no more deliberation needed.</p>
+
+                <p>The <strong>utility U(s)</strong> is the expected total discounted reward the agent will receive starting from state s and following the optimal policy. High-utility states are good to be in; low-utility states are bad.</p>
+
+                <h3>Why Discount Future Rewards?</h3>
+
+                <p>Why is γ less than 1? Several reasons:</p>
+
+                <ul>
+                    <li><strong>Time value of money:</strong> $1 today is worth more than $1 tomorrow because you can invest it and earn returns.</li>
+                    <li><strong>Uncertainty:</strong> The farther in the future, the less certain we are about outcomes.</li>
+                    <li><strong>Impatience:</strong> Humans naturally prefer sooner rewards.</li>
+                    <li><strong>Mathematical convenience:</strong> Discounting ensures that the total reward doesn't become infinite in infinite-horizon problems.</li>
+                </ul>
+
+                <p>With γ close to 1 (like 0.99), the agent thinks long-term and is willing to take short-term pain for long-term gain. With γ close to 0 (like 0.1), the agent is myopic — it mostly cares about immediate rewards.</p>
+
+                <h3>The Bellman Equation: Recursion Made Concrete</h3>
+
+                <p>The <strong>Bellman equation</strong> is the recursive definition of utility. It says:</p>
+
+                <div class="math-display">
+                    U(s) = R(s) + γ max<sub>a</sub> Σ<sub>s'</sub> T(s, a, s') U(s')
+                </div>
+
+                <p>Breaking this down:</p>
+
+                <ul>
+                    <li><strong>R(s):</strong> The immediate reward for being in state s.</li>
+                    <li><strong>max<sub>a</sub>:</strong> We choose the action that maximizes expected future reward.</li>
+                    <li><strong>Σ<sub>s'</sub> T(s, a, s') U(s'):</strong> The expected utility of the resulting state, weighted by transition probabilities.</li>
+                    <li><strong>γ:</strong> Discounts future rewards relative to immediate reward.</li>
+                </ul>
+
+                <p>This equation is the foundation of dynamic programming algorithms for MDPs. The key insight: the utility of a state depends on immediate reward plus the discounted utilities of possible next states. This is why it's called "dynamic programming" — we break the big problem into subproblems (states) and build solutions recursively.</p>
+
+                <h3>From Utility to Policy</h3>
+
+                <p>Once we know the utility of each state, finding the optimal policy is easy:</p>
+
+                <div class="math-display">
+                    π*(s) = arg max<sub>a</sub> Σ<sub>s'</sub> T(s, a, s') U(s')
+                </div>
+
+                <p>For each state, pick the action that leads to the highest expected utility. That's the optimal policy.</p>
+            </section>
+
+            <!-- Section 2: Mathematical Ascent -->
+            <section id="ascent" class="content">
+                <h2>Mathematical Ascent: Formalizing MDPs</h2>
+
+                <p>Now we climb into rigorous mathematics. We'll formalize MDPs and derive the algorithms that solve them.</p>
+
+                <h3>The MDP Tuple</h3>
+
+                <p>Formally, an MDP is a tuple:</p>
+
+                <div class="math-display">
+                    (S, A, T, R, γ)
+                </div>
+
+                <p>Where:</p>
+
+                <ul>
+                    <li><strong>S:</strong> A finite set of states</li>
+                    <li><strong>A:</strong> A finite set of actions</li>
+                    <li><strong>T(s, a, s'):</strong> Transition function — probability of transitioning from s to s' via action a</li>
+                    <li><strong>R(s):</strong> Reward function — immediate reward for being in state s</li>
+                    <li><strong>γ ∈ [0, 1]:</strong> Discount factor</li>
+                </ul>
+
+                <h3>The Bellman Equation (Formal Statement)</h3>
+
+                <p>The value (utility) function for states is defined as:</p>
+
+                <div class="math-display">
+                    U(s) = R(s) + γ max<sub>a ∈ A</sub> Σ<sub>s' ∈ S</sub> T(s, a, s') U(s')
+                </div>
+
+                <p>This is a system of |S| non-linear equations with |S| unknowns (the utilities U(s) for each state). Solving this system gives us the optimal utilities.</p>
+
+                <h3>Value Iteration Algorithm</h3>
+
+                <p><strong>Value Iteration</strong> solves the Bellman equation iteratively. Start with arbitrary utilities (often all zeros), then repeatedly apply the Bellman update until convergence:</p>
+
+                <div class="math-display">
+                    U<sub>i+1</sub>(s) = R(s) + γ max<sub>a</sub> Σ<sub>s'</sub> T(s, a, s') U<sub>i</sub>(s')
+                </div>
+
+                <p>The algorithm converges when the maximum change in utility is small:</p>
+
+                <div class="math-display">
+                    ||U<sub>i+1</sub> - U<sub>i</sub>|| < ε(1 - γ) / γ
+                </div>
+
+                <p>The number of iterations grows logarithmically in 1/ε and inversely with (1 - γ). This means:</p>
+
+                <ul>
+                    <li>High discount factor γ → more iterations needed (agents planning far into the future)</li>
+                    <li>Small ε → more iterations (higher precision required)</li>
+                </ul>
+
+                <h3>Optimal Policy Extraction</h3>
+
+                <p>Once values converge, the optimal policy is:</p>
+
+                <div class="math-display">
+                    π*(s) = arg max<sub>a ∈ A</sub> Σ<sub>s' ∈ S</sub> T(s, a, s') U(s')
+                </div>
+
+                <p>For each state, choose the action that leads to highest expected utility.</p>
+
+                <h3>Policy Iteration Algorithm</h3>
+
+                <p><strong>Policy Iteration</strong> is an alternative to value iteration. Instead of iterating on utilities, we iterate on policies:</p>
+
+                <ol>
+                    <li><strong>Policy Evaluation:</strong> Given a policy π, compute the utility of each state assuming we follow π:
+                        <div class="math-display">
+                            U<sup>π</sup>(s) = R(s) + γ Σ<sub>s'</sub> T(s, π(s), s') U<sup>π</sup>(s')
+                        </div>
+                        This is a linear system (no max), so we can solve it exactly in O(|S|³) time using linear algebra.
+                    </li>
+                    <li><strong>Policy Improvement:</strong> Compute a better policy:
+                        <div class="math-display">
+                            π<sub>new</sub>(s) = arg max<sub>a</sub> Σ<sub>s'</sub> T(s, a, s') U<sup>π</sup>(s')
+                        </div>
+                    </li>
+                    <li><strong>Repeat</strong> until the policy stabilizes (doesn't change).</li>
+                </ol>
+
+                <p>Policy iteration often converges in fewer iterations than value iteration, though each iteration is more expensive (solving a linear system).</p>
+
+                <h3>Comparison: Value Iteration vs Policy Iteration</h3>
+
+                <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                    <tr style="background: var(--bg); border-bottom: 2px solid var(--border);">
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">Aspect</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">Value Iteration</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">Policy Iteration</th>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border);">
+                        <td style="padding: 12px;">Outer loop</td>
+                        <td style="padding: 12px;">Iterate until values converge</td>
+                        <td style="padding: 12px;">Iterate until policy converges</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border); background: var(--bg);">
+                        <td style="padding: 12px;">Per iteration cost</td>
+                        <td style="padding: 12px;">O(|S|² |A|) — simple operations</td>
+                        <td style="padding: 12px;">O(|S|³) — linear system solve</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border);">
+                        <td style="padding: 12px;">Typical use</td>
+                        <td style="padding: 12px;">When |S| is small to medium</td>
+                        <td style="padding: 12px;">When |S| is large</td>
+                    </tr>
+                    <tr style="background: var(--bg);">
+                        <td style="padding: 12px;">Convergence</td>
+                        <td style="padding: 12px;">Usually more iterations</td>
+                        <td style="padding: 12px;">Usually fewer iterations</td>
+                    </tr>
+                </table>
+
+                <h3>Partially Observable MDPs (POMDPs)</h3>
+
+                <p>So far, we've assumed the agent can perfectly observe which state it's in. But what if the robot can't see where it is in the grid — only whether there's a wall nearby?</p>
+
+                <p>A <strong>Partially Observable MDP (POMDP)</strong> adds uncertainty about the current state. Instead of knowing s exactly, the agent maintains a <strong>belief state b(s)</strong> — a probability distribution over possible states.</p>
+
+                <p>The belief state is updated using Bayes' rule. If the agent takes action a and observes o, the new belief is:</p>
+
+                <div class="math-display">
+                    b'(s') = α · P(o|s') Σ<sub>s</sub> T(s, a, s') b(s)
+                </div>
+
+                <p>Where α is a normalization constant. Breaking this down:</p>
+
+                <ul>
+                    <li><strong>Σ<sub>s</sub> T(s, a, s') b(s):</strong> Where we could have ended up after action a</li>
+                    <li><strong>P(o|s'):</strong> How likely we are to observe o from state s'</li>
+                    <li><strong>α:</strong> Normalize so probabilities sum to 1</li>
+                </ul>
+
+                <p>POMDPs are harder to solve than MDPs because the agent must simultaneously plan over both actions and observations. Optimal POMDP solutions require solving for a policy over belief states, which grows exponentially with |S|.</p>
+
+                <div class="callout">
+                    <strong>Practical Insight:</strong> For POMDPs, algorithms like POMCP (Partially Observable Monte Carlo Planning) use sampling and tree search instead of exact dynamic programming, trading optimality for computational efficiency.
+                </div>
+            </section>
+
+            <!-- Section 3: Implementation -->
+            <section id="implementation" class="content">
+                <h2>Clean-Code Implementation: MDPs in Python</h2>
+
+                <p>Let's implement a complete MDP solver with both Value Iteration and Policy Iteration.</p>
+
+                <pre><code class="language-python">class MDP:
+    """
+    Markov Decision Process.
+
+    The rational agent faces sequential decisions under uncertainty.
+    Unlike single-shot decisions (Ch 16), the agent must plan ahead,
+    accounting for how today's actions affect tomorrow's states.
+
+    Attributes:
+        states: List of state identifiers
+        actions: List of action identifiers
+        T: Transition function T[s][a] = [(prob, next_state), ...]
+        R: Reward function R[s] = immediate reward
+        gamma: Discount factor (0 <= gamma <= 1)
+    """
+
+    def __init__(self, states, actions, transition, reward, gamma=0.9):
+        """
+        Initialize an MDP.
+
+        Args:
+            states: List of hashable state identifiers
+            actions: List of hashable action identifiers
+            transition: Dict mapping (state, action) to [(probability, next_state), ...]
+            reward: Dict mapping state to immediate reward
+            gamma: Discount factor
+        """
+        self.states = states
+        self.actions = actions
+        self.T = transition  # T[s][a] = [(prob, next_state), ...]
+        self.R = reward      # R[s] = reward
+        self.gamma = gamma
+
+    def value_iteration(self, epsilon=0.001):
+        """
+        Iteratively compute the utility of each state using the Bellman equation.
+
+        The Bellman equation says:
+        U(s) = R(s) + γ * max_a Σ T(s,a,s') * U(s')
+
+        We repeatedly apply this update until utilities converge:
+        |U_{i+1} - U_i| < ε(1-γ)/γ
+
+        Args:
+            epsilon: Convergence threshold
+
+        Returns:
+            Dictionary mapping state -> utility value
+        """
+        U = {s: 0.0 for s in self.states}
+
+        while True:
+            U_new = {}
+            delta = 0
+
+            for s in self.states:
+                # If no actions available in this state, utility = reward
+                if s not in self.T or not self.T[s]:
+                    U_new[s] = self.R.get(s, 0)
+                    continue
+
+                # Bellman update: max over actions
+                best_action_value = float('-inf')
+                for a in self.T[s]:
+                    action_value = sum(
+                        prob * U[s2]
+                        for prob, s2 in self.T[s][a]
+                    )
+                    best_action_value = max(best_action_value, action_value)
+
+                U_new[s] = self.R.get(s, 0) + self.gamma * best_action_value
+                delta = max(delta, abs(U_new[s] - U[s]))
+
+            U = U_new
+
+            # Check convergence: ||U_{i+1} - U_i|| < ε(1-γ)/γ
+            if delta < epsilon * (1 - self.gamma) / self.gamma:
+                break
+
+        return U
+
+    def best_policy(self, U):
+        """
+        Extract the optimal policy from utility values.
+
+        For each state, choose the action that maximizes expected utility:
+        π*(s) = arg max_a Σ T(s,a,s') U(s')
+
+        Args:
+            U: Dictionary of state utilities
+
+        Returns:
+            Dictionary mapping state -> best action
+        """
+        pi = {}
+        for s in self.states:
+            if s not in self.T or not self.T[s]:
+                pi[s] = None
+                continue
+
+            # Find action with highest expected utility
+            best_action = max(
+                self.T[s].keys(),
+                key=lambda a: sum(
+                    prob * U[s2]
+                    for prob, s2 in self.T[s][a]
+                )
+            )
+            pi[s] = best_action
+
+        return pi
+
+    def policy_iteration(self):
+        """
+        Compute the optimal policy using policy iteration.
+
+        Alternates between:
+        1. Policy Evaluation: Solve linear system for U^π
+        2. Policy Improvement: π' = best_policy(U^π)
+
+        Repeat until policy stabilizes.
+
+        Returns:
+            Tuple of (optimal_policy, utilities)
+        """
+        import random
+
+        # Initialize with random policy
+        pi = {}
+        for s in self.states:
+            if s not in self.T or not self.T[s]:
+                pi[s] = None
+            else:
+                pi[s] = random.choice(list(self.T[s].keys()))
+
+        while True:
+            # Policy Evaluation: compute U^π
+            U = self._policy_evaluation(pi)
+
+            # Policy Improvement: greedily improve each action
+            changed = False
+            for s in self.states:
+                if s not in self.T or not self.T[s]:
+                    continue
+
+                best_a = max(
+                    self.T[s].keys(),
+                    key=lambda a: sum(
+                        prob * U[s2]
+                        for prob, s2 in self.T[s][a]
+                    )
+                )
+
+                if best_a != pi[s]:
+                    pi[s] = best_a
+                    changed = True
+
+            # If no changes, policy is optimal
+            if not changed:
+                return pi, U
+
+    def _policy_evaluation(self, pi, epsilon=0.001):
+        """
+        Evaluate the utility of a given policy.
+
+        Solves the linear system:
+        U^π(s) = R(s) + γ Σ T(s, π(s), s') U^π(s')
+
+        We use an iterative method (Gauss-Seidel) for simplicity.
+        For large |S|, use direct linear algebra (numpy.linalg.solve).
+
+        Args:
+            pi: Policy (state -> action dict)
+            epsilon: Convergence threshold
+
+        Returns:
+            Dictionary of state utilities under policy pi
+        """
+        U = {s: 0.0 for s in self.states}
+
+        while True:
+            U_new = {}
+            delta = 0
+
+            for s in self.states:
+                if s not in self.T or not self.T[s] or pi[s] is None:
+                    U_new[s] = self.R.get(s, 0)
+                    continue
+
+                a = pi[s]
+                U_new[s] = self.R.get(s, 0) + self.gamma * sum(
+                    prob * U[s2]
+                    for prob, s2 in self.T[s][a]
+                )
+                delta = max(delta, abs(U_new[s] - U[s]))
+
+            U = U_new
+            if delta < epsilon:
+                break
+
+        return U
+
+
+# Example: The classic 4x3 grid world from AIMA
+# States: (1,1) to (4,3) are cells
+# Actions: Up, Down, Left, Right
+# Transition: 80% intended direction, 10% each perpendicular
+# Reward: +1 at (4,3), -1 at (4,2), -0.04 elsewhere
+# Discount: γ = 0.99
+
+def create_grid_mdp():
+    """Create the classic AIMA 4x3 grid MDP."""
+    states = [(x, y) for x in range(1, 5) for y in range(1, 4)]
+    actions = ['Up', 'Down', 'Left', 'Right']
+
+    # Rewards
+    rewards = {}
+    for s in states:
+        if s == (4, 3):
+            rewards[s] = 1.0
+        elif s == (4, 2):
+            rewards[s] = -1.0
+        else:
+            rewards[s] = -0.04
+
+    # Transition function
+    transitions = {}
+    for s in states:
+        transitions[s] = {}
+        for a in actions:
+            # Simplified: deterministic for now
+            next_s = simulate_action(s, a)
+            transitions[s][a] = [(1.0, next_s)]
+
+    return MDP(states, actions, transitions, rewards, gamma=0.99)
+
+def simulate_action(state, action):
+    """Deterministic action (simplified; add stochasticity as needed)."""
+    x, y = state
+    if action == 'Up':
+        y = min(y + 1, 3)
+    elif action == 'Down':
+        y = max(y - 1, 1)
+    elif action == 'Left':
+        x = max(x - 1, 1)
+    elif action == 'Right':
+        x = min(x + 1, 4)
+    return (x, y)
+
+# Usage
+if __name__ == '__main__':
+    mdp = create_grid_mdp()
+
+    # Value Iteration
+    print("Running Value Iteration...")
+    U = mdp.value_iteration()
+    pi = mdp.best_policy(U)
+
+    print("Utilities:")
+    for s in sorted(U.keys()):
+        print(f"  {s}: {U[s]:.3f}, Policy: {pi[s]}")
+
+    # Policy Iteration
+    print("\nRunning Policy Iteration...")
+    pi_opt, U_opt = mdp.policy_iteration()
+
+    print("Optimal Utilities:")
+    for s in sorted(U_opt.keys()):
+        print(f"  {s}: {U_opt[s]:.3f}, Policy: {pi_opt[s]}")
+</code></pre>
+
+                <h3>Key Implementation Details</h3>
+
+                <p><strong>Convergence Criterion:</strong> We use the theoretical convergence criterion from AIMA: <code>delta < epsilon * (1 - gamma) / gamma</code>. This ensures we've found a ε-optimal solution.</p>
+
+                <p><strong>Transition Representation:</strong> We represent T as a nested dict: <code>T[s][a] = [(prob, next_state), ...]</code>. This makes the code flexible and easy to understand, though sparse representations would be more efficient for large state spaces.</p>
+
+                <p><strong>Edge Cases:</strong> We handle states with no actions (absorbing states) and missing entries in the reward dict (defaulting to 0).</p>
+            </section>
+
+            <!-- Section 4: Socratic Sandbox -->
+            <section id="sandbox" class="content">
+                <h2>Socratic Sandbox: Reasoning Through the Grid</h2>
+
+                <p>Let's think deeply about MDPs with concrete scenarios and questions.</p>
+
+                <h3>The Classic 4×3 Grid World</h3>
+
+                <p>The canonical AIMA example: a robot in a 4×3 grid. There's a +1 reward at (4,3), a -1 at (4,2) (the pit), and -0.04 for every other step. Actions are Up, Down, Left, Right, but they're stochastic: 80% go the intended direction, 10% go left perpendicular, 10% go right perpendicular.</p>
+
+                <p>With γ=0.99 and R=-0.04, what does the optimal policy do?</p>
+
+                <p><strong>Surprising result:</strong> The optimal policy tells the agent to move AWAY from the goal if it means avoiding the pit! From (3,2), which is adjacent to the goal (4,3) and the pit (4,2), the optimal action is to move down, even though the goal is just one step away. Why? Because there's a 10% chance the "right" action goes perpendicular and lands in the pit, losing -1. The expected value of going right is: 0.8 * U(4,3) + 0.1 * U(pit) + 0.1 * U(stay), which could be less than going down and taking a longer, safer path.</p>
+
+                <h3>Guided Questions</h3>
+
+                <div class="question">
+                    <strong>Question 1: The Cost of Living</strong><br/>
+                    If we change R(s) from -0.04 to -2 for all non-goal, non-pit states, how does the optimal policy change? Why might the agent now be willing to risk the -1 square?
+
+                    <p style="margin-top: 12px; color: var(--text-muted); font-style: italic;">Hint: Think about the relative costs. With R=-0.04, taking 25 steps costs -1. With R=-2, taking 1 step costs -2. The long, safe path becomes less attractive.</p>
+                </div>
+
+                <div class="question">
+                    <strong>Question 2: The Horizon Problem</strong><br/>
+                    What role does the discount factor γ play? Compare γ=0.1 vs γ=0.99. With γ=0.1, the agent only cares about immediate rewards—it becomes myopic. With γ=0.99, it thinks 100 steps ahead. How does this affect the policy in the grid world?
+
+                    <p style="margin-top: 12px; color: var(--text-muted); font-style: italic;">Hint: With small γ, rewards 10+ steps away contribute negligibly. With large γ, even distant rewards matter. In the grid world, does the agent prefer the short risky path or the long safe path?</p>
+                </div>
+
+                <div class="question">
+                    <strong>Question 3: Algorithmic Tradeoffs</strong><br/>
+                    Value Iteration and Policy Iteration both find the optimal policy. But when would you prefer one over the other? Think about the number of states, the number of iterations, and the cost per iteration.
+
+                    <p style="margin-top: 12px; color: var(--text-muted); font-style: italic;">Hint: Value Iteration is O(|S|² |A|) per iteration, Policy Iteration is O(|S|³) per iteration. Which is better when |S| is huge? When the policy is nearly optimal already?</p>
+                </div>
+
+                <div class="question">
+                    <strong>Question 4: Belief and Uncertainty</strong><br/>
+                    Now imagine the robot can't see which cell it's in—only whether there's a wall nearby (the observation). This is a POMDP. How does the problem change? What is a "belief state"? Can the robot still find an optimal policy?
+
+                    <p style="margin-top: 12px; color: var(--text-muted); font-style: italic;">Hint: The belief state is a probability distribution over cells (e.g., "50% chance I'm at (2,2), 30% at (2,1), 20% at (1,1)"). The optimal policy must decide actions based on beliefs, not true states. This makes POMDPs exponentially harder.</p>
+                </div>
+
+                <div class="question">
+                    <strong>Question 5: The Bellman Equation Deconstructed</strong><br/>
+                    The Bellman equation has a <code>max</code> over actions. What if we remove the max and fix an action—say, "always go right"? What equation does that become?
+
+                    <p style="margin-top: 12px; color: var(--text-muted); font-style: italic;">Answer: U^π(s) = R(s) + γ Σ T(s, π(s), s') U^π(s'). This is the policy evaluation equation! It computes the utility of following a fixed policy. Without the max, it's a linear system, so we can solve it exactly instead of iteratively.</p>
+                </div>
+
+                <h3>Deeper Insights</h3>
+
+                <p><strong>Markovian assumption:</strong> The Markov property says the future depends only on the current state, not on how we got there. This is powerful: it reduces the state space explosion. But it's not always realistic. If the robot has memory (e.g., "I've been circling for 100 steps"), the true state isn't just position—it's position + history. MDPs assume this is captured in the state space.</p>
+
+                <p><strong>The infinite-horizon trap:</strong> In an infinite-horizon MDP, the agent makes decisions forever. Without discounting (γ = 1) or absorbing states, the total reward could be infinite. Discounting ensures convergence. With γ = 0.99, rewards far in the future contribute almost nothing, making the problem tractable.</p>
+
+                <p><strong>Optimality and stochasticity:</strong> A crucial insight: the optimal policy is deterministic! Even though the world is stochastic (transitions are probabilistic), the policy that maximizes expected reward never needs to randomize. It always picks the single best action. (This is true for MDPs; for POMDPs, randomized policies can be optimal.)</p>
+            </section>
+
+            <!-- Section 5: Interactive Components -->
+            <section id="interactive" class="content">
+                <h2>Interactive Components</h2>
+
+                <p>Manipulate MDPs in real-time to build intuition.</p>
+
+                <!-- Interactive 1: Grid World Visualizer -->
+                <div class="interactive">
+                    <div class="interactive-title">
+                        <span>🎮</span> Interactive 1: Grid World MDP Visualizer
+                    </div>
+
+                    <p>The classic 4×3 grid from AIMA. Green square: +1 goal. Red square: -1 pit. Numbers show utility values; arrows show policy (direction to move).</p>
+
+                    <div class="controls">
+                        <button class="btn primary" onclick="runValueIteration()">Run Value Iteration</button>
+                        <button class="btn" onclick="stepValueIteration()">Step Once</button>
+                        <button class="btn" onclick="resetGrid()">Reset</button>
+                    </div>
+
+                    <div class="slider-group">
+                        <label for="gammaSlider">Discount (γ):</label>
+                        <input type="range" id="gammaSlider" min="0" max="100" value="99" step="1" onchange="updateGamma()">
+                        <div class="value" id="gammaValue">0.99</div>
+                    </div>
+
+                    <div class="slider-group">
+                        <label for="rewardSlider">Step Reward (R):</label>
+                        <input type="range" id="rewardSlider" min="-10" max="0" value="-4" step="1" onchange="updateReward()">
+                        <div class="value" id="rewardValue">-0.04</div>
+                    </div>
+
+                    <div style="margin-top: 20px; padding: 12px; background: var(--bg); border-radius: var(--radius);">
+                        <p style="font-size: 0.9rem; color: var(--text-muted);">
+                            <strong>Iteration:</strong> <span id="iterationCount">0</span> |
+                            <strong>Δ Max:</strong> <span id="deltaMax">—</span>
+                        </p>
+                    </div>
+
+                    <div class="grid-world" id="gridWorld">
+                        <!-- Generated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Interactive 2: Discount Factor Explorer -->
+                <div class="interactive">
+                    <div class="interactive-title">
+                        <span>🔭</span> Interactive 2: Discount Factor Explorer
+                    </div>
+
+                    <p>Adjust γ and watch how the policy changes. Small γ: myopic agent. Large γ: far-sighted agent.</p>
+
+                    <div class="slider-group">
+                        <label for="gammaExplorerSlider">γ (Discount):</label>
+                        <input type="range" id="gammaExplorerSlider" min="0" max="99" value="50" step="1" onchange="updateGammaExplorer()">
+                        <div class="value" id="gammaExplorerValue">0.50</div>
+                    </div>
+
+                    <div style="margin-top: 20px; padding: 16px; background: var(--bg); border-radius: var(--radius); border-left: 4px solid var(--accent-secondary);">
+                        <p style="font-size: 0.9rem;">
+                            <strong>Interpretation:</strong> <span id="gammaInterpretation">—</span>
+                        </p>
+                    </div>
+
+                    <div class="grid-world" id="gridWorldExplorer">
+                        <!-- Generated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Interactive 3: Convergence Race -->
+                <div class="interactive">
+                    <div class="interactive-title">
+                        <span>🏁</span> Interactive 3: Value Iteration Convergence
+                    </div>
+
+                    <p>Watch utilities converge iteration by iteration. The y-axis shows the maximum change in utility; the algorithm stops when this falls below the threshold.</p>
+
+                    <div class="controls">
+                        <button class="btn primary" onclick="startConvergenceRace()">Start Race</button>
+                        <button class="btn" onclick="pauseConvergenceRace()">Pause</button>
+                        <button class="btn" onclick="resetConvergenceRace()">Reset</button>
+                    </div>
+
+                    <canvas id="convergenceChart" style="width: 100%; max-height: 300px; background: var(--bg); border-radius: var(--radius); margin-top: 16px;"></canvas>
+
+                    <div style="margin-top: 16px; padding: 12px; background: var(--bg); border-radius: var(--radius); font-family: 'JetBrains Mono', monospace; font-size: 0.85rem;">
+                        <p><strong>Iterations:</strong> <span id="raceIterations">0</span></p>
+                        <p><strong>Current Δ Max:</strong> <span id="raceDeltaMax">—</span></p>
+                        <p><strong>Status:</strong> <span id="raceStatus">Ready</span></p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 6: Summary & Next Steps -->
+            <section id="summary" class="content">
+                <h2>Summary & Next Steps</h2>
+
+                <h3>What We've Learned</h3>
+
+                <ul>
+                    <li><strong>Sequential decisions:</strong> Unlike single decisions (Ch 16), agents here make a series of choices over time. A policy π(s) → a is a complete strategy for every situation.</li>
+
+                    <li><strong>MDPs formalize uncertainty:</strong> States, actions, transition probabilities, rewards, and a discount factor γ together define a well-posed decision problem.</li>
+
+                    <li><strong>The Bellman equation:</strong> U(s) = R(s) + γ max_a Σ T(s,a,s') U(s'). This recursive equation is the cornerstone of dynamic programming for MDPs.</li>
+
+                    <li><strong>Value Iteration:</strong> Repeatedly apply the Bellman update until utilities converge. Each iteration is cheap; it takes many iterations to converge.</li>
+
+                    <li><strong>Policy Iteration:</strong> Alternate between evaluating a policy (solving a linear system) and improving it greedily. Fewer outer iterations, but each is more expensive.</li>
+
+                    <li><strong>Optimal policies are deterministic:</strong> Even in stochastic worlds, the policy that maximizes expected reward never randomizes.</li>
+
+                    <li><strong>Discounting and horizons:</strong> The factor γ ∈ [0,1] controls the agent's time horizon. Small γ: myopic. Large γ: far-sighted.</li>
+
+                    <li><strong>POMDPs add belief:</strong> When the agent can't observe the true state, decisions are based on belief states—probability distributions over possible states. This makes the problem harder.</li>
+                </ul>
+
+                <h3>Connections to Preceding Chapters</h3>
+
+                <p><strong>From Chapter 16 (Decisions):</strong> Chapter 16 dealt with one-shot decisions under uncertainty. MDPs generalize this to sequential decisions. The single decision is now the innermost problem: "given that I'm in state s, which action maximizes total future reward?"</p>
+
+                <p><strong>From Chapter 15 (Probabilistic Reasoning):</strong> MDPs rely heavily on probability. The transition function T(s,a,s') is a conditional probability. Belief updating in POMDPs uses Bayes' rule (just like inference in Chapter 15).</p>
+
+                <p><strong>From Part III (Knowledge & Reasoning):</strong> If the agent has incomplete knowledge about the world, it must reason about its own uncertainty. This is reflected in belief states in POMDPs.</p>
+
+                <h3>Extensions & Future Topics</h3>
+
+                <p><strong>Reinforcement Learning (Ch 21):</strong> Here, we assumed the MDP was fully known (we had T and R). In reinforcement learning, the agent learns T and R from experience by trial and error.</p>
+
+                <p><strong>Partially Observable MDPs (POMDPs):</strong> We touched on these briefly. Solving POMDPs exactly is PSPACE-hard, but approximation algorithms like POMCP are practical.</p>
+
+                <p><strong>Game Theory (Ch 5):</strong> MDPs are single-agent. When multiple agents each optimize independently, we get game-theoretic problems. Game trees in Chapter 5 are a special case of MDPs with adversarial agents.</p>
+
+                <p><strong>Temporal Difference Learning:</strong> A method that combines ideas from MDPs and reinforcement learning, learning both value functions and policies from sampled trajectories.</p>
+
+                <h3>Key Takeaway</h3>
+
+                <p>The Bellman equation—U(s) = R(s) + γ max_a Σ T(s,a,s') U(s')—is the unifying principle. It says: the value of being in a state is the immediate reward plus the discounted expected value of the best action you can take. This one equation, applied recursively, solves sequential decision problems under uncertainty. With this framework, an agent can plan optimally in stochastic worlds.</p>
+
+                <div class="callout">
+                    <strong>The Rational Agent's Toolkit:</strong> Chapters 12-17 have given you the tools to build rational agents:
+                    <ul style="margin-top: 12px;">
+                        <li><strong>Ch 12-14:</strong> Represent knowledge and reason about it.</li>
+                        <li><strong>Ch 15:</strong> Reason about uncertainty with probability.</li>
+                        <li><strong>Ch 16:</strong> Make single optimal decisions.</li>
+                        <li><strong>Ch 17:</strong> Make sequential optimal decisions.</li>
+                    </ul>
+                    The next chapters (18-20) apply these tools to learning and perception. Then we revisit these ideas in Chapter 21 (Reinforcement Learning) without assuming the MDP is known.
+                </div>
+            </section>
+
+            <!-- Navigation Footer -->
+            <nav class="nav-footer">
+                <a href="ch16.html">← Chapter 16: Decisions</a>
+                <div class="completion-badge incomplete" id="completionBadge" onclick="toggleCompletion()">
+                    <span id="badgeText">Mark Complete</span>
+                </div>
+                <a href="ch18.html">Chapter 18: Learning →</a>
+            </nav>
+        </main>
+    </div>
+
+    <!-- Inline JavaScript -->
+    <script>
+        // ============================================================================
+        // Theme Toggle
+        // ============================================================================
+        const html = document.documentElement;
+        const themeToggle = document.getElementById('themeToggle');
+
+        // Load theme from localStorage
+        const savedTheme = localStorage.getItem('aima-theme') || 'light';
+        html.setAttribute('data-theme', savedTheme);
+        updateThemeIcon();
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('aima-theme', newTheme);
+            updateThemeIcon();
+        });
+
+        function updateThemeIcon() {
+            const theme = html.getAttribute('data-theme');
+            themeToggle.textContent = theme === 'light' ? '🌙' : '☀️';
+        }
+
+        // ============================================================================
+        // Sidebar Navigation & Active State
+        // ============================================================================
+        const navLinks = document.querySelectorAll('.sidebar nav a');
+        const sections = document.querySelectorAll('.content');
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+
+                    // Update active nav link
+                    const id = entry.target.id;
+                    navLinks.forEach(link => {
+                        link.classList.remove('active');
+                        if (link.getAttribute('href') === `#${id}`) {
+                            link.classList.add('active');
+                        }
+                    });
+                }
+            });
+        }, { threshold: 0.3 });
+
+        sections.forEach(section => observer.observe(section));
+
+        // ============================================================================
+        // Completion Badge
+        // ============================================================================
+        const completionBadge = document.getElementById('completionBadge');
+        const badgeText = document.getElementById('badgeText');
+        const chapterKey = 'aima-ch-17';
+
+        // Check if already completed
+        if (localStorage.getItem(chapterKey)) {
+            completionBadge.classList.remove('incomplete');
+            badgeText.textContent = '✓ Completed';
+        }
+
+        function toggleCompletion() {
+            if (completionBadge.classList.contains('incomplete')) {
+                localStorage.setItem(chapterKey, 'true');
+                completionBadge.classList.remove('incomplete');
+                badgeText.textContent = '✓ Completed';
+            } else {
+                localStorage.removeItem(chapterKey);
+                completionBadge.classList.add('incomplete');
+                badgeText.textContent = 'Mark Complete';
+            }
+        }
+
+        // ============================================================================
+        // Interactive 1: Grid World MDP Visualizer
+        // ============================================================================
+        const gridWorld = document.getElementById('gridWorld');
+        const iterationCount = document.getElementById('iterationCount');
+        const deltaMax = document.getElementById('deltaMax');
+        const gammaSlider = document.getElementById('gammaSlider');
+        const rewardSlider = document.getElementById('rewardSlider');
+        const gammaValue = document.getElementById('gammaValue');
+        const rewardValue = document.getElementById('rewardValue');
+
+        let gridState = {
+            gamma: 0.99,
+            reward: -0.04,
+            utilities: {},
+            policy: {},
+            iteration: 0,
+            running: false
+        };
+
+        // Initialize grid
+        function initializeGrid() {
+            gridState.utilities = {};
+            gridState.policy = {};
+            gridState.iteration = 0;
+            for (let x = 1; x <= 4; x++) {
+                for (let y = 1; y <= 3; y++) {
+                    const key = `${x},${y}`;
+                    gridState.utilities[key] = 0;
+                    gridState.policy[key] = '→';
+                }
+            }
+            renderGrid();
+        }
+
+        function renderGrid() {
+            gridWorld.innerHTML = '';
+            for (let y = 3; y >= 1; y--) {
+                for (let x = 1; x <= 4; x++) {
+                    const key = `${x},${y}`;
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+
+                    if (x === 4 && y === 3) {
+                        cell.classList.add('goal');
+                    } else if (x === 4 && y === 2) {
+                        cell.classList.add('pit');
+                    } else {
+                        cell.classList.add('normal');
+                    }
+
+                    const utility = gridState.utilities[key] || 0;
+                    const policy = gridState.policy[key] || '—';
+
+                    cell.innerHTML = `
+                        <div class="utility">${utility.toFixed(2)}</div>
+                        <div class="policy">${policy}</div>
+                    `;
+
+                    gridWorld.appendChild(cell);
+                }
+            }
+        }
+
+        function stepValueIteration() {
+            if (gridState.iteration >= 50) return;
+
+            const newUtilities = {};
+            let delta = 0;
+
+            for (let x = 1; x <= 4; x++) {
+                for (let y = 1; y <= 3; y++) {
+                    const key = `${x},${y}`;
+
+                    if ((x === 4 && y === 3) || (x === 4 && y === 2)) {
+                        newUtilities[key] = (x === 4 && y === 3) ? 1 : -1;
+                    } else {
+                        // Simplified: assume deterministic transitions
+                        const actions = [
+                            { dx: 0, dy: 1, name: '↑' },
+                            { dx: 0, dy: -1, name: '↓' },
+                            { dx: -1, dy: 0, name: '←' },
+                            { dx: 1, dy: 0, name: '→' }
+                        ];
+
+                        let bestValue = -Infinity;
+                        let bestAction = '→';
+
+                        for (const action of actions) {
+                            let nx = Math.max(1, Math.min(4, x + action.dx));
+                            let ny = Math.max(1, Math.min(3, y + action.dy));
+                            const nextKey = `${nx},${ny}`;
+                            const value = gridState.utilities[nextKey] || 0;
+
+                            if (value > bestValue) {
+                                bestValue = value;
+                                bestAction = action.name;
+                            }
+                        }
+
+                        newUtilities[key] = gridState.reward + gridState.gamma * bestValue;
+                        gridState.policy[key] = bestAction;
+
+                        const change = Math.abs(newUtilities[key] - (gridState.utilities[key] || 0));
+                        delta = Math.max(delta, change);
+                    }
+                }
+            }
+
+            gridState.utilities = newUtilities;
+            gridState.iteration++;
+
+            iterationCount.textContent = gridState.iteration;
+            deltaMax.textContent = delta.toFixed(6);
+
+            renderGrid();
+        }
+
+        function runValueIteration() {
+            gridState.running = true;
+            const interval = setInterval(() => {
+                stepValueIteration();
+                if (gridState.iteration >= 50 || !gridState.running) {
+                    clearInterval(interval);
+                    gridState.running = false;
+                }
+            }, 200);
+        }
+
+        function resetGrid() {
+            gridState.running = false;
+            initializeGrid();
+            iterationCount.textContent = '0';
+            deltaMax.textContent = '—';
+        }
+
+        function updateGamma() {
+            gridState.gamma = parseInt(gammaSlider.value) / 100;
+            gammaValue.textContent = gridState.gamma.toFixed(2);
+            resetGrid();
+        }
+
+        function updateReward() {
+            gridState.reward = parseInt(rewardSlider.value) / 100;
+            rewardValue.textContent = gridState.reward.toFixed(2);
+            resetGrid();
+        }
+
+        initializeGrid();
+
+        // ============================================================================
+        // Interactive 2: Discount Factor Explorer
+        // ============================================================================
+        const gammaExplorerSlider = document.getElementById('gammaExplorerSlider');
+        const gammaExplorerValue = document.getElementById('gammaExplorerValue');
+        const gammaInterpretation = document.getElementById('gammaInterpretation');
+        const gridWorldExplorer = document.getElementById('gridWorldExplorer');
+
+        function updateGammaExplorer() {
+            const gamma = parseInt(gammaExplorerSlider.value) / 100;
+            gammaExplorerValue.textContent = gamma.toFixed(2);
+
+            // Interpret
+            if (gamma < 0.3) {
+                gammaInterpretation.textContent = 'Very myopic: agent mostly cares about immediate rewards, ignores future.';
+            } else if (gamma < 0.6) {
+                gammaInterpretation.textContent = 'Short-sighted: agent plans 5-10 steps ahead.';
+            } else if (gamma < 0.9) {
+                gammaInterpretation.textContent = 'Balanced: agent plans 20-30 steps ahead.';
+            } else {
+                gammaInterpretation.textContent = 'Far-sighted: agent optimizes over many steps, willing to take short-term pain for long-term gain.';
+            }
+
+            // Render grid with this gamma
+            renderGridExplorer(gamma);
+        }
+
+        function renderGridExplorer(gamma) {
+            gridWorldExplorer.innerHTML = '';
+
+            // Compute utilities with this gamma
+            let utilities = {};
+            for (let x = 1; x <= 4; x++) {
+                for (let y = 1; y <= 3; y++) {
+                    const key = `${x},${y}`;
+                    utilities[key] = 0;
+                }
+            }
+
+            // Simple value iteration
+            for (let iter = 0; iter < 100; iter++) {
+                const newUtilities = {};
+                for (let x = 1; x <= 4; x++) {
+                    for (let y = 1; y <= 3; y++) {
+                        const key = `${x},${y}`;
+
+                        if (x === 4 && y === 3) {
+                            newUtilities[key] = 1;
+                        } else if (x === 4 && y === 2) {
+                            newUtilities[key] = -1;
+                        } else {
+                            const actions = [
+                                { dx: 0, dy: 1 },
+                                { dx: 0, dy: -1 },
+                                { dx: -1, dy: 0 },
+                                { dx: 1, dy: 0 }
+                            ];
+
+                            let bestValue = -Infinity;
+                            for (const action of actions) {
+                                let nx = Math.max(1, Math.min(4, x + action.dx));
+                                let ny = Math.max(1, Math.min(3, y + action.dy));
+                                const nextKey = `${nx},${ny}`;
+                                const value = utilities[nextKey];
+                                bestValue = Math.max(bestValue, value);
+                            }
+
+                            newUtilities[key] = -0.04 + gamma * bestValue;
+                        }
+                    }
+                }
+                utilities = newUtilities;
+            }
+
+            // Render
+            for (let y = 3; y >= 1; y--) {
+                for (let x = 1; x <= 4; x++) {
+                    const key = `${x},${y}`;
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+
+                    if (x === 4 && y === 3) {
+                        cell.classList.add('goal');
+                    } else if (x === 4 && y === 2) {
+                        cell.classList.add('pit');
+                    } else {
+                        cell.classList.add('normal');
+                    }
+
+                    const util = utilities[key] || 0;
+                    cell.innerHTML = `<div class="utility">${util.toFixed(2)}</div>`;
+
+                    gridWorldExplorer.appendChild(cell);
+                }
+            }
+        }
+
+        updateGammaExplorer();
+
+        // ============================================================================
+        // Interactive 3: Convergence Race
+        // ============================================================================
+        const convergenceChart = document.getElementById('convergenceChart');
+        const raceIterations = document.getElementById('raceIterations');
+        const raceDeltaMax = document.getElementById('raceDeltaMax');
+        const raceStatus = document.getElementById('raceStatus');
+
+        let convergenceState = {
+            iterations: [],
+            deltas: [],
+            running: false
+        };
+
+        function startConvergenceRace() {
+            resetConvergenceRace();
+            convergenceState.running = true;
+            raceStatus.textContent = 'Running...';
+
+            const interval = setInterval(() => {
+                if (convergenceState.iterations.length >= 100 || !convergenceState.running) {
+                    clearInterval(interval);
+                    convergenceState.running = false;
+                    if (convergenceState.iterations.length < 100) {
+                        raceStatus.textContent = 'Paused';
+                    }
+                    return;
+                }
+
+                // Simulate convergence
+                const iter = convergenceState.iterations.length;
+                const delta = Math.pow(0.9, iter + 1);
+                convergenceState.iterations.push(iter);
+                convergenceState.deltas.push(delta);
+
+                raceIterations.textContent = iter;
+                raceDeltaMax.textContent = delta.toFixed(6);
+
+                drawConvergenceChart();
+            }, 100);
+        }
+
+        function pauseConvergenceRace() {
+            convergenceState.running = false;
+            raceStatus.textContent = 'Paused';
+        }
+
+        function resetConvergenceRace() {
+            convergenceState = { iterations: [], deltas: [], running: false };
+            raceIterations.textContent = '0';
+            raceDeltaMax.textContent = '—';
+            raceStatus.textContent = 'Ready';
+            drawConvergenceChart();
+        }
+
+        function drawConvergenceChart() {
+            const ctx = convergenceChart.getContext('2d');
+            const width = convergenceChart.width || convergenceChart.offsetWidth;
+            const height = convergenceChart.height || 300;
+
+            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg');
+            ctx.fillRect(0, 0, width, height);
+
+            if (convergenceState.iterations.length === 0) return;
+
+            // Draw axes
+            ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--border');
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(40, 20);
+            ctx.lineTo(40, height - 40);
+            ctx.lineTo(width - 20, height - 40);
+            ctx.stroke();
+
+            // Draw data
+            ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent-secondary');
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+
+            const maxIter = Math.max(...convergenceState.iterations, 1);
+            const maxDelta = 1;
+
+            for (let i = 0; i < convergenceState.iterations.length; i++) {
+                const x = 40 + (convergenceState.iterations[i] / maxIter) * (width - 60);
+                const y = height - 40 - (convergenceState.deltas[i] / maxDelta) * (height - 60);
+
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+
+            // Draw convergence threshold
+            ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent-tertiary');
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            const thresholdY = height - 40 - 0.01 * (height - 60);
+            ctx.moveTo(40, thresholdY);
+            ctx.lineTo(width - 20, thresholdY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Labels
+            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-muted');
+            ctx.font = '12px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Iteration', width / 2, height - 10);
+            ctx.textAlign = 'right';
+            ctx.save();
+            ctx.translate(15, height / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.textAlign = 'center';
+            ctx.fillText('Δ Max', 0, 0);
+            ctx.restore();
+        }
+
+        // Initial draw
+        drawConvergenceChart();
+
+        // Redraw on resize
+        window.addEventListener('resize', () => {
+            convergenceChart.width = convergenceChart.offsetWidth;
+            convergenceChart.height = 300;
+            drawConvergenceChart();
+        });
+
+        // Highlight.js
+        hljs.highlightAll();
+    </script>
+
+    <!-- KaTeX at very end of body, no defer, no onload -->
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+    <script>
+        renderMathInElement(document.body, {
+            delimiters: [
+                { left: '$$', right: '$$', display: true },
+                { left: '$', right: '$', display: false },
+                { left: '\\(', right: '\\)', display: false },
+                { left: '\\[', right: '\\]', display: true }
+            ],
+            throwOnError: false
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 15: Probabilistic Programming | AIMA 4th Edition</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- KaTeX CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+
+    <!-- Highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+
+    <style>
+        :root {
+            --bg: #FAF9F6;
+            --bg-card: #FFFFFF;
+            --text: #1a1a2e;
+            --text-muted: #6b7280;
+            --accent-primary: #A8325B;
+            --accent-secondary: #2563eb;
+            --accent-tertiary: #059669;
+            --border: #e5e7eb;
+            --radius: 12px;
+            --font-serif: 'Newsreader', Georgia, serif;
+            --font-sans: 'Inter', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.12);
+            --shadow-lg: 0 12px 32px rgba(0,0,0,0.16);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --purple-gradient: linear-gradient(135deg, #4527a0, #7b1fa2, #ab47bc);
+        }
+
+        [data-theme="dark"] {
+            --bg: #0f0f0f;
+            --bg-card: #1a1a1a;
+            --text: #f0f0f0;
+            --text-muted: #a0a0a0;
+            --border: #333333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            font-family: var(--font-sans);
+            color: var(--text);
+            background: var(--bg);
+            line-height: 1.6;
+            transition: var(--transition);
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: var(--bg-card);
+            border-right: 1px solid var(--border);
+            padding: 1.5rem 1rem;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .sidebar-nav {
+            list-style: none;
+        }
+
+        .sidebar-nav li {
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-nav a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-radius: var(--radius);
+            transition: var(--transition);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .sidebar-nav a:hover,
+        .sidebar-nav a.active {
+            background: linear-gradient(135deg, #4527a022, #7b1fa222);
+            color: #7b1fa2;
+        }
+
+        .main {
+            flex: 1;
+            position: relative;
+        }
+
+        .back-link {
+            position: absolute;
+            top: 1.5rem;
+            left: 1.5rem;
+            text-decoration: none;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            z-index: 100;
+            transition: var(--transition);
+        }
+
+        .back-link:hover {
+            color: var(--text);
+        }
+
+        .hero {
+            background: var(--purple-gradient);
+            color: white;
+            padding: 4rem 2rem;
+            text-align: center;
+            min-height: 280px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 50%;
+            top: -200px;
+            right: -200px;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero h1 {
+            font-family: var(--font-serif);
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            opacity: 0.95;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .content {
+            padding: 3rem 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .section {
+            margin-bottom: 4rem;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: var(--transition);
+        }
+
+        .section.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .section h2 {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 3px solid var(--purple-gradient);
+            background: linear-gradient(90deg, #7b1fa2, #ab47bc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .section h3 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem;
+            margin: 2rem 0 1rem;
+            color: var(--accent-primary);
+        }
+
+        .section p {
+            margin-bottom: 1rem;
+            font-size: 1rem;
+        }
+
+        .section ul, .section ol {
+            margin: 1rem 0 1rem 2rem;
+        }
+
+        .section li {
+            margin-bottom: 0.5rem;
+        }
+
+        .math-block {
+            background: var(--bg-card);
+            border-left: 4px solid #7b1fa2;
+            padding: 1rem;
+            margin: 1.5rem 0;
+            border-radius: var(--radius);
+            overflow-x: auto;
+        }
+
+        .code-block {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+        }
+
+        .code-block pre {
+            margin: 0;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .code-block code {
+            font-family: var(--font-mono);
+            color: var(--text);
+        }
+
+        .qa-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin: 1.5rem 0;
+        }
+
+        .qa-item {
+            border-bottom: 1px solid var(--border);
+        }
+
+        .qa-item:last-child {
+            border-bottom: none;
+        }
+
+        .qa-question {
+            padding: 1.25rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            color: var(--accent-primary);
+            transition: var(--transition);
+            background: var(--bg);
+            user-select: none;
+        }
+
+        .qa-question:hover {
+            background: linear-gradient(135deg, #A8325B22, #7b1fa222);
+        }
+
+        .qa-toggle {
+            font-size: 1.2rem;
+            transition: var(--transition);
+        }
+
+        .qa-item.open .qa-toggle {
+            transform: rotate(180deg);
+        }
+
+        .qa-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            padding: 0 1.25rem;
+        }
+
+        .qa-item.open .qa-answer {
+            max-height: 2000px;
+            padding: 1rem 1.25rem;
+        }
+
+        .qa-answer p {
+            margin: 0.5rem 0;
+        }
+
+        .interactive {
+            background: var(--bg-card);
+            border: 2px dashed #7b1fa2;
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin: 2rem 0;
+            position: relative;
+        }
+
+        .interactive h4 {
+            color: #7b1fa2;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .interactive svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .interactive button {
+            background: linear-gradient(135deg, #4527a0, #7b1fa2);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 600;
+            transition: var(--transition);
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .interactive button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .interactive input[type="range"] {
+            width: 100%;
+            margin: 1rem 0;
+            cursor: pointer;
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            transition: var(--transition);
+            z-index: 200;
+        }
+
+        .theme-toggle:hover {
+            box-shadow: var(--shadow-md);
+        }
+
+        .completion-badge {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--purple-gradient);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            opacity: 0;
+            transform: scale(0.8);
+            pointer-events: none;
+            transition: var(--transition);
+            z-index: 300;
+        }
+
+        .completion-badge.show {
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: auto;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .comparison-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+        }
+
+        .comparison-card h4 {
+            color: #7b1fa2;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .comparison-card ul {
+            list-style-position: inside;
+            margin: 0;
+        }
+
+        .comparison-card li {
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, #4527a010, #7b1fa210);
+            border-left: 4px solid #7b1fa2;
+            padding: 1rem;
+            margin: 1.5rem 0;
+            border-radius: var(--radius);
+        }
+
+        .highlight-box strong {
+            color: #7b1fa2;
+        }
+
+        canvas {
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            display: block;
+            margin: 1rem 0;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .content {
+                padding: 2rem 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <nav>
+                <ul class="sidebar-nav">
+                    <li><a href="#section-1" class="nav-link">Feynman Model</a></li>
+                    <li><a href="#section-2" class="nav-link">Mathematics</a></li>
+                    <li><a href="#section-3" class="nav-link">Implementation</a></li>
+                    <li><a href="#section-4" class="nav-link">Socratic Questions</a></li>
+                    <li><a href="#section-5" class="nav-link">Interactives</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <a href="../index.html" class="back-link">← Back to Dashboard</a>
+
+            <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">🌙</button>
+
+            <div class="hero">
+                <div class="hero-content">
+                    <h1>Chapter 15: Probabilistic Programming</h1>
+                    <p>Inference by Sampling and MCMC — When Exact Probabilities Become Intractable</p>
+                </div>
+            </div>
+
+            <div class="content">
+                <!-- Section 1: Feynman Mental Model -->
+                <section id="section-1" class="section">
+                    <h2>Inference by Sampling: A Rational Agent's Monte Carlo Strategy</h2>
+
+                    <h3>The Intuition: Random Walks and Convergence</h3>
+                    <p>Imagine you're trying to find the average height of people in a city, but you can't measure everyone. Instead, you walk around randomly and measure people you bump into. If you walk long enough and don't stick to one neighborhood, your sample average will converge to the true average. This is <strong>Monte Carlo sampling</strong>.</p>
+
+                    <p>Similarly, in probabilistic inference, we face an exponential explosion: computing exact probabilities requires summing over all possible variable assignments, which is exponentially expensive. Instead of computing, we <strong>simulate</strong>. We generate many possible scenarios ("worlds") by sampling, and use statistics to approximate the true probability distribution.</p>
+
+                    <h3>Why Exact Inference Fails</h3>
+                    <p>For a Bayesian Network with <em>n</em> binary variables, there are <em>2^n</em> possible complete assignments. Computing <em>P(Query | Evidence)</em> via exact inference (as in Chapter 13) requires:</p>
+                    <ul>
+                        <li>Enumerating or summing over all hidden variable assignments</li>
+                        <li>For each assignment, looking up conditional probabilities and multiplying them</li>
+                        <li>Normalizing by the total probability of the evidence</li>
+                    </ul>
+                    <p>With 30 variables, this is <em>2^30</em> ≈ 1 billion calculations. With 100 variables, it's infeasible.</p>
+
+                    <h3>Four Sampling Approaches: A Spectrum</h3>
+                    <div class="comparison-grid">
+                        <div class="comparison-card">
+                            <h4>Direct Sampling</h4>
+                            <ul>
+                                <li>Sample all variables in topological order</li>
+                                <li>No evidence constraints</li>
+                                <li>Fast but often inapplicable</li>
+                            </ul>
+                        </div>
+                        <div class="comparison-card">
+                            <h4>Rejection Sampling</h4>
+                            <ul>
+                                <li>Generate full samples, reject if inconsistent with evidence</li>
+                                <li>Simple to implement</li>
+                                <li>Wasteful when evidence is rare</li>
+                            </ul>
+                        </div>
+                        <div class="comparison-card">
+                            <h4>Likelihood Weighting</h4>
+                            <ul>
+                                <li>Fix evidence variables, weight by likelihood</li>
+                                <li>Every sample counts</li>
+                                <li>More efficient than rejection</li>
+                            </ul>
+                        </div>
+                        <div class="comparison-card">
+                            <h4>MCMC / Gibbs</h4>
+                            <ul>
+                                <li>Random walk through state space</li>
+                                <li>Converges to true distribution</li>
+                                <li>Scales best to many variables</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <h3>Direct Sampling from a Bayesian Network</h3>
+                    <p>Generate one sample by visiting each variable in topological order (parents before children) and sampling:</p>
+                    <div class="math-block">
+                        $$x_i \sim P(X_i | \text{parents}(X_i))$$
+                    </div>
+                    <p>Example: In the Alarm network, sample <em>Burglary</em> first, then <em>Earthquake</em>, then <em>Alarm</em> (conditioned on Burglary and Earthquake), then <em>JohnCalls</em> and <em>MaryCalls</em>.</p>
+
+                    <h3>Rejection Sampling: The Wasteful Approach</h3>
+                    <p>Generate many samples from the prior distribution. Keep only those consistent with the evidence. Estimate the query probability from the accepted samples.</p>
+                    <div class="math-block">
+                        $$\hat{P}(X|e) = \frac{N(X, e)}{N(e)}$$
+                    </div>
+                    <p>where <em>N(X, e)</em> is the count of samples where <em>X</em> is true and all evidence variables match <em>e</em>.</p>
+
+                    <p><strong>Problem:</strong> If the evidence is rare (e.g., <em>P(e) = 0.001</em>), then 99.9% of samples are rejected. With 100,000 samples, only ~100 are accepted, making the estimate extremely noisy.</p>
+
+                    <h3>Likelihood Weighting: Every Sample Counts</h3>
+                    <p>Instead of rejecting, we weight each sample by how likely it is to produce the observed evidence:</p>
+                    <div class="math-block">
+                        w(x, e) = \prod_{i: X_i \in e} P(e_i | \text{parents}(E_i))
+                    </div>
+                    <p>This weights samples that explain the evidence more highly. The algorithm:</p>
+                    <ol>
+                        <li>For each evidence variable, set it to the observed value (don't sample)</li>
+                        <li>For non-evidence variables, sample normally from their conditional distribution</li>
+                        <li>Weight the sample by the likelihood of observing the evidence</li>
+                        <li>Accumulate weighted counts</li>
+                        <li>Normalize to estimate probabilities</li>
+                    </ol>
+
+                    <p>Likelihood weighting uses all samples, so it's much more efficient than rejection sampling.</p>
+
+                    <h3>MCMC: The Random Walk Solution</h3>
+                    <p><strong>Markov Chain Monte Carlo</strong> avoids generating independent samples. Instead, we perform a random walk through the state space where each step depends only on the previous state (the Markov property). Eventually, the walk settles into the true distribution.</p>
+
+                    <p>The key idea is <strong>detailed balance</strong>: the probability of moving from state <em>x</em> to <em>x'</em> times the stationary probability of <em>x</em> equals the reverse:</p>
+                    <div class="math-block">
+                        \pi(x) T(x \to x') = \pi(x') T(x' \to x)
+                    </div>
+
+                    <h3>Gibbs Sampling: The Practical MCMC Algorithm</h3>
+                    <p>The simplest MCMC variant for Bayesian Networks: <strong>resample one variable at a time, conditioned on all others</strong>.</p>
+                    <div class="math-block">
+                        P(X_i | x_1, ..., x_{i-1}, x_{i+1}, ..., x_n) = P(X_i | \text{MarkovBlanket}(X_i))
+                    </div>
+
+                    <p>The Markov blanket of a variable is its parents, children, and children's other parents. Because the network is acyclic, this conditional is often efficient to compute.</p>
+
+                    <h3>Burn-In and Mixing Time</h3>
+                    <p>MCMC doesn't generate independent samples. The chain has a <strong>burn-in period</strong>: early samples depend strongly on the initial state, so we discard them (typically 10–50% of total samples). After burn-in, samples approximately follow the true distribution, though they are still correlated.</p>
+
+                    <p>The <strong>mixing time</strong> is how long it takes for the chain to converge. Fast mixing means high correlation between successive samples (good for speed); slow mixing means you need many more samples to get independent estimates (bad for efficiency).</p>
+                </section>
+
+                <!-- Section 2: Mathematical Ascent -->
+                <section id="section-2" class="section">
+                    <h2>Mathematical Foundations</h2>
+
+                    <h3>1. Direct Sampling</h3>
+                    <div class="math-block">
+                        \text{For each variable } X_i \text{ in topological order:}\\
+                        x_i \sim P(X_i | \text{parents}(X_i))\\
+                        \text{Return } x = (x_1, ..., x_n)
+                    </div>
+
+                    <h3>2. Rejection Sampling Estimator</h3>
+                    <p>After generating <em>N</em> samples:</p>
+                    <div class="math-block">
+                        \hat{P}(X|e) = \frac{\#\text{ samples where } X \text{ is true and evidence matches}}{{\#\text{ samples where evidence matches}}}\\
+                        = \frac{N(X, e)}{N(e)}
+                    </div>
+
+                    <p>The estimator is unbiased, but variance is high when <em>P(e)</em> is small.</p>
+
+                    <h3>3. Likelihood Weighting</h3>
+                    <p>Sample non-evidence variables; fix evidence variables. Each sample <em>x</em> has weight:</p>
+                    <div class="math-block">
+                        w(x, e) = \prod_{X_i \in \mathbf{E}} P(e_i | \text{parents}(E_i))
+                    </div>
+
+                    <p>The weighted estimate is:</p>
+                    <div class="math-block">
+                        \hat{P}(X|e) = \frac{\sum_{x: X \text{ true}} w(x, e)}{\sum_{x} w(x, e)}
+                    </div>
+
+                    <h3>4. MCMC Stationary Distribution</h3>
+                    <p>A transition kernel <em>T(x → x')</em> has stationary distribution <em>π</em> if:</p>
+                    <div class="math-block">
+                        \pi(x) = \sum_{x'} \pi(x') T(x' \to x)
+                    </div>
+
+                    <p>For reversible chains (detailed balance):</p>
+                    <div class="math-block">
+                        \pi(x) T(x \to x') = \pi(x') T(x' \to x)
+                    </div>
+
+                    <h3>5. Gibbs Sampling Update</h3>
+                    <p>At each step, uniformly choose a variable <em>X_i</em> (or cycle through them). Sample its new value from:</p>
+                    <div class="math-block">
+                        X_i^{(t+1)} \sim P(X_i | x_1^{(t)}, ..., x_{i-1}^{(t)}, x_{i+1}^{(t)}, ..., x_n^{(t)})
+                    </div>
+
+                    <p>For Bayesian Networks, this simplifies to the Markov blanket:</p>
+                    <div class="math-block">
+                        P(X_i | \text{MB}(X_i)) \propto P(X_i | \text{parents}(X_i)) \prod_{Y_j \in \text{children}(X_i)} P(Y_j | \text{parents}(Y_j))
+                    </div>
+
+                    <h3>6. Convergence Guarantees</h3>
+                    <p>Under mild conditions (irreducibility and aperiodicity):</p>
+                    <ul>
+                        <li>The chain's distribution converges to the stationary distribution <em>π</em></li>
+                        <li>The law of large numbers applies: sample averages converge to expectations</li>
+                        <li>Convergence is geometric, with rate determined by the spectral gap</li>
+                    </ul>
+
+                    <h3>7. Variance and Mixing Time</h3>
+                    <p>For correlated samples from a slow-mixing chain, the effective sample size (ESS) is:</p>
+                    <div class="math-block">
+                        \text{ESS} = \frac{N}{1 + 2\sum_{k=1}^{\infty} \rho(k)}
+                    </div>
+
+                    <p>where <em>ρ(k)</em> is the autocorrelation at lag <em>k</em>. High autocorrelation means you need many more samples to achieve the same variance reduction as independent sampling.</p>
+                </section>
+
+                <!-- Section 3: Implementation -->
+                <section id="section-3" class="section">
+                    <h2>Clean-Code Implementation</h2>
+
+                    <p>A self-contained Python implementation of sampling-based inference:</p>
+
+                    <div class="code-block">
+                        <pre><code class="language-python">import random
+from typing import Dict, Tuple, List
+
+class ProbabilisticSampler:
+    """
+    Sampling-based inference for Bayesian Networks.
+    When exact inference is too expensive, the rational agent
+    approximates probabilities by simulating many possible worlds.
+    """
+
+    def __init__(self, network):
+        """
+        network: A BayesNet object with .nodes (dict) and .order (topological sort)
+        Each node has .cpt (conditional probability table), .parents, .children
+        """
+        self.net = network
+
+    def prior_sample(self) -> Dict[str, bool]:
+        """Generate one sample from the prior distribution (no evidence)."""
+        sample = {}
+        for var in self.net.order:
+            node = self.net.nodes[var]
+            # Get the probability that this variable is True
+            parent_vals = tuple(sample[p] for p in node.parents) if node.parents else ()
+            p_true = node.cpt.get(parent_vals, 0.5)
+            sample[var] = random.random() < p_true
+        return sample
+
+    def rejection_sampling(
+        self,
+        query: str,
+        evidence: Dict[str, bool],
+        n_samples: int = 10000
+    ) -> Dict[bool, float]:
+        """
+        Simple but wasteful: generate samples, keep only consistent ones.
+        Like fishing with a net — you catch many, keep few.
+
+        Returns: {True: P(query=True|evidence), False: P(query=False|evidence)}
+        """
+        counts = {True: 0, False: 0}
+        accepted = 0
+
+        for _ in range(n_samples):
+            sample = self.prior_sample()
+            # Check if sample is consistent with evidence
+            if all(sample.get(k) == v for k, v in evidence.items()):
+                counts[sample[query]] += 1
+                accepted += 1
+
+        if accepted == 0:
+            return None  # No samples matched evidence!
+
+        # Normalize to probabilities
+        total = sum(counts.values())
+        return {k: v / total for k, v in counts.items()}
+
+    def likelihood_weighting(
+        self,
+        query: str,
+        evidence: Dict[str, bool],
+        n_samples: int = 10000
+    ) -> Dict[bool, float]:
+        """
+        Smarter sampling: fix evidence variables, weight by likelihood.
+        Every sample counts — no wasteful rejection.
+
+        Returns: weighted probability estimate
+        """
+        weights = {True: 0.0, False: 0.0}
+
+        for _ in range(n_samples):
+            sample = {}
+            w = 1.0  # Weight starts at 1
+
+            for var in self.net.order:
+                node = self.net.nodes[var]
+                parent_vals = tuple(sample[p] for p in node.parents) if node.parents else ()
+
+                if var in evidence:
+                    # Evidence variable: fix the value
+                    sample[var] = evidence[var]
+                    # Weight by likelihood of observing this value
+                    p = node.cpt.get(parent_vals, 0.5)
+                    w *= p if evidence[var] else (1 - p)
+                else:
+                    # Non-evidence variable: sample normally
+                    p_true = node.cpt.get(parent_vals, 0.5)
+                    sample[var] = random.random() < p_true
+
+            # Accumulate weighted counts
+            weights[sample[query]] += w
+
+        # Normalize
+        total = sum(weights.values())
+        if total == 0:
+            return None
+        return {k: v / total for k, v in weights.items()}
+
+    def gibbs_sampling(
+        self,
+        query: str,
+        evidence: Dict[str, bool],
+        n_samples: int = 10000,
+        burn_in: int = 1000
+    ) -> Dict[bool, float]:
+        """
+        MCMC via Gibbs: random walk through state space.
+        Each step changes one variable, conditioned on all others.
+        Like exploring a city by randomly taking one turn at a time.
+
+        Returns: probability estimate after burn-in period
+        """
+        # Initialize non-evidence variables randomly
+        state = {var: random.choice([True, False]) for var in self.net.order}
+        state.update(evidence)  # Fix evidence variables
+
+        non_evidence = [v for v in self.net.order if v not in evidence]
+        counts = {True: 0, False: 0}
+
+        total_iterations = n_samples + burn_in
+
+        for iteration in range(total_iterations):
+            # Gibbs step: resample each non-evidence variable
+            for var in non_evidence:
+                # Resample var conditioned on all other variables
+                node = self.net.nodes[var]
+                parent_vals = tuple(state[p] for p in node.parents) if node.parents else ()
+
+                # P(var=True | all others)
+                # This is proportional to: P(var) * product of P(child | parents)
+                p_true = node.cpt.get(parent_vals, 0.5)
+
+                # Incorporate influence from children
+                for child_name in node.children:
+                    child = self.net.nodes[child_name]
+                    child_parent_vals_true = tuple(
+                        state[p] if p != var else True for p in child.parents
+                    )
+                    child_parent_vals_false = tuple(
+                        state[p] if p != var else False for p in child.parents
+                    )
+                    p_child_true = child.cpt.get(child_parent_vals_true, 0.5)
+                    p_child_false = child.cpt.get(child_parent_vals_false, 0.5)
+                    child_val = state[child_name]
+
+                    p_true *= (p_child_true if child_val else (1 - p_child_true))
+
+                # Compute P(var=False | all others)
+                p_false_base = 1 - node.cpt.get(parent_vals, 0.5)
+                p_false = p_false_base
+                for child_name in node.children:
+                    child = self.net.nodes[child_name]
+                    child_parent_vals_true = tuple(
+                        state[p] if p != var else True for p in child.parents
+                    )
+                    child_parent_vals_false = tuple(
+                        state[p] if p != var else False for p in child.parents
+                    )
+                    p_child_true = child.cpt.get(child_parent_vals_true, 0.5)
+                    p_child_false = child.cpt.get(child_parent_vals_false, 0.5)
+                    child_val = state[child_name]
+
+                    p_false *= (p_child_false if child_val else (1 - p_child_false))
+
+                # Normalize and sample
+                total_prob = p_true + p_false
+                if total_prob > 0:
+                    prob_true_normalized = p_true / total_prob
+                else:
+                    prob_true_normalized = 0.5
+
+                state[var] = random.random() < prob_true_normalized
+
+            # After burn-in, accumulate counts
+            if iteration >= burn_in:
+                counts[state[query]] += 1
+
+        # Estimate probability
+        total = sum(counts.values())
+        if total == 0:
+            return None
+        return {k: v / total for k, v in counts.items()}
+
+    def compare_methods(
+        self,
+        query: str,
+        evidence: Dict[str, bool],
+        n_samples: int = 5000
+    ) -> Dict[str, Dict[bool, float]]:
+        """Compare all three methods on the same problem."""
+        return {
+            'rejection': self.rejection_sampling(query, evidence, n_samples),
+            'likelihood': self.likelihood_weighting(query, evidence, n_samples),
+            'gibbs': self.gibbs_sampling(query, evidence, n_samples)
+        }</code></pre>
+                    </div>
+
+                    <h3>Usage Example</h3>
+                    <div class="code-block">
+                        <pre><code class="language-python"># Assume we have a BayesNet 'alarm_net' from Chapter 13
+sampler = ProbabilisticSampler(alarm_net)
+
+# Query: P(Burglary | JohnCalls=True, MaryCalls=True)
+query = 'Burglary'
+evidence = {'JohnCalls': True, 'MaryCalls': True}
+
+# Use rejection sampling
+result_rej = sampler.rejection_sampling(query, evidence, n_samples=10000)
+print(f"Rejection: P({query}|evidence) = {result_rej[True]:.4f}")
+
+# Use likelihood weighting (more efficient)
+result_lw = sampler.likelihood_weighting(query, evidence, n_samples=10000)
+print(f"Likelihood: P({query}|evidence) = {result_lw[True]:.4f}")
+
+# Use Gibbs sampling (scales better)
+result_gibbs = sampler.gibbs_sampling(query, evidence, n_samples=10000)
+print(f"Gibbs: P({query}|evidence) = {result_gibbs[True]:.4f}")</code></pre>
+                    </div>
+
+                    <h3>Key Implementation Notes</h3>
+                    <ul>
+                        <li><strong>Markov Blanket:</strong> In Gibbs sampling, <em>P(X_i | all others)</em> depends only on <em>X_i</em>'s parents, children, and co-parents (children's other parents)</li>
+                        <li><strong>Efficiency:</strong> Pre-compute topological order and Markov blankets to speed up sampling</li>
+                        <li><strong>Variance Reduction:</strong> Use antithetic sampling or importance reweighting for lower variance estimates</li>
+                        <li><strong>Diagnostics:</strong> Monitor autocorrelation, effective sample size (ESS), and potential scale reduction factor (PSRF) to check convergence</li>
+                    </ul>
+                </section>
+
+                <!-- Section 4: Socratic Sandbox -->
+                <section id="section-4" class="section">
+                    <h2>Socratic Sandbox: Deep Dive Questions</h2>
+
+                    <p><strong>Scenario:</strong> An agent uses rejection sampling to compute <em>P(Burglary | JohnCalls=True, MaryCalls=True)</em> from the Alarm network. After 100,000 samples, only 37 match the evidence (both calls are true). The estimate is noisy and unreliable.</p>
+
+                    <div class="qa-section">
+                        <div class="qa-item">
+                            <div class="qa-question">
+                                Q1: Why were only 37 out of 100,000 samples accepted? Calculate the approximate probability that both John and Mary call in a random sample.
+                                <span class="qa-toggle">▼</span>
+                            </div>
+                            <div class="qa-answer">
+                                <p><strong>Answer:</strong> Only 37 out of 100,000 samples were accepted means <em>P(JohnCalls ∧ MaryCalls)</em> ≈ 37/100,000 = 0.00037, or about 0.037%. This is a <strong>rare event</strong>.</p>
+                                <p>In the Alarm network, <em>JohnCalls</em> and <em>MaryCalls</em> are influenced by <em>Alarm</em>, which is influenced by <em>Burglary</em> and <em>Earthquake</em>. Both of these base events are rare:</p>
+                                <ul>
+                                    <li><em>P(Burglary) = 0.001</em></li>
+                                    <li><em>P(Earthquake) = 0.002</em></li>
+                                    <li><em>P(Alarm | Burglary, Earthquake)</em> chains these probabilities</li>
+                                    <li><em>P(JohnCalls | Alarm)</em> ≈ 0.9 (highly correlated)</li>
+                                </ul>
+                                <p>The joint probability is the product of these small probabilities, making the combined event rare. This is why rejection sampling fails for unlikely evidence.</p>
+                            </div>
+                        </div>
+
+                        <div class="qa-item">
+                            <div class="qa-question">
+                                Q2: Likelihood weighting would use all 100,000 samples. How does it achieve this? What are the weights, and why do they correct the bias?
+                                <span class="qa-toggle">▼</span>
+                            </div>
+                            <div class="qa-answer">
+                                <p><strong>Answer:</strong> Likelihood weighting fixes the evidence variables and weights each sample by its likelihood of producing the evidence:</p>
+                                <div class="math-block">
+                                    w(x) = P(\text{JohnCalls}=\text{true} | \text{Alarm}=a) \cdot P(\text{MaryCalls}=\text{true} | \text{Alarm}=a)
+                                </div>
+                                <p>Samples that lead to <em>Alarm=true</em> get high weight; samples with <em>Alarm=false</em> get nearly zero weight.</p>
+                                <p><strong>Why it corrects bias:</strong> Rejection sampling rejects 99.963% of samples, leading to high variance. Likelihood weighting keeps all samples but down-weights the ones that don't align well with evidence. The weighted average:</p>
+                                <div class="math-block">
+                                    \hat{P}(\text{Burglary}|\text{evidence}) = \frac{\sum_{x: \text{Burglary}=\text{true}} w(x)}{\sum_x w(x)}
+                                </div>
+                                <p>approximates the true posterior without throwing away information. The weights naturally handle rare events by emphasizing paths that lead to the observed evidence.</p>
+                            </div>
+                        </div>
+
+                        <div class="qa-item">
+                            <div class="qa-question">
+                                Q3: Gibbs sampling doesn't generate independent samples — each sample depends on the previous one. Why is this both a strength and a weakness?
+                                <span class="qa-toggle">▼</span>
+                            </div>
+                            <div class="qa-answer">
+                                <p><strong>Strength:</strong> The chain naturally stays in high-probability regions. Once it reaches a plausible state (matching the evidence), it stays nearby and explores similar, likely states. This is more efficient than rejection sampling, which wastes samples on unlikely regions of the state space.</p>
+                                <p><strong>Weakness:</strong> Successive samples are correlated. If the chain moves slowly (slow mixing), you need many more samples to get the same variance reduction as independent samples. The effective sample size (ESS) is much smaller than the nominal sample size. Example: If autocorrelation is 0.9, you need ~10 times more samples to achieve the same precision as independent samples.</p>
+                                <p><strong>Solution:</strong> Use thinning (keep every <em>k</em>-th sample) or diagnostic tools (trace plots, autocorrelation plots, potential scale reduction factor) to assess mixing and plan sample sizes accordingly.</p>
+                            </div>
+                        </div>
+
+                        <div class="qa-item">
+                            <div class="qa-question">
+                                Q4: What is the 'burn-in' period in MCMC, and why is it necessary? What happens if you start counting too early?
+                                <span class="qa-toggle">▼</span>
+                            </div>
+                            <div class="qa-answer">
+                                <p><strong>Burn-in:</strong> The initial phase of MCMC where the chain "forgets" its starting state and converges to the stationary distribution. Typically, we discard the first 10–50% of samples.</p>
+                                <p><strong>Why necessary:</strong> The first sample depends heavily on the initial state (which is arbitrary). If you start at an unlikely state, early samples will be unrepresentative. The chain needs time to explore and settle into the true distribution.</p>
+                                <p><strong>If you start counting too early:</strong> Your estimates will be biased toward the starting state. Example: If you start with <em>Burglary=true</em> and only burn 100 samples, the early samples over-represent <em>Burglary=true</em>, biasing your estimate of <em>P(Burglary | evidence)</em> upward. With large datasets, this bias becomes visible in diagnostics (e.g., PSRF > 1.1 indicates non-convergence).</p>
+                                <p><strong>Diagnostic:</strong> Plot the trace (sample values over time). If the early samples clearly drift toward typical values, you haven't burned long enough.</p>
+                            </div>
+                        </div>
+
+                        <div class="qa-item">
+                            <div class="qa-question">
+                                Q5: If you increase the network to 100 variables, rejection sampling becomes virtually useless. Why? How do likelihood weighting and Gibbs sampling scale differently?
+                                <span class="qa-toggle">▼</span>
+                            </div>
+                            <div class="qa-answer">
+                                <p><strong>Rejection sampling:</strong> The acceptance rate decays exponentially with network size and evidence strength. With 100 variables and rare evidence, you might need <em>10^30</em> samples to accept even one! This is the <strong>curse of dimensionality</strong>.</p>
+                                <p><strong>Likelihood weighting:</strong> Scales polynomially, not exponentially. The weight computation is <em>O(n)</em> (one multiplication per evidence variable), so even with 100 variables, you can use all 10,000 samples. However, if evidence is very rare, weights become extremely imbalanced (some near 1, others near 0), causing high variance and poor effective sample size.</p>
+                                <p><strong>Gibbs sampling:</strong> Each update is <em>O(n)</em> (or <em>O(c)</em> if you only update the Markov blanket, which is typically small). The chain explores the state space efficiently, and mixing time scales much better than the acceptance rate of rejection sampling. With good mixing, you get reasonable estimates with 10,000 samples even in high dimensions.</p>
+                                <p><strong>Practical rule:</strong></p>
+                                <ul>
+                                    <li>Small networks (5–10 vars): Exact inference or rejection sampling</li>
+                                    <li>Medium networks (10–50 vars): Likelihood weighting or Gibbs</li>
+                                    <li>Large networks (50+ vars): Gibbs sampling or modern variants (Hamiltonian MCMC, variational inference)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 5: Interactive Components -->
+                <section id="section-5" class="section">
+                    <h2>Interactive Explorations</h2>
+
+                    <h3>Interactive 1: Sampling Method Comparison</h3>
+                    <div class="interactive">
+                        <h4>Compare Rejection, Likelihood Weighting, and Gibbs Sampling</h4>
+                        <p>This simulation runs all three methods on a simple 2-variable distribution. Adjust the evidence rarity slider to see how each method's efficiency changes.</p>
+                        <label for="raritySlider">Evidence Rarity (inverse probability): <span id="rarityValue">100</span>×</label>
+                        <input type="range" id="raritySlider" min="1" max="1000" value="100" step="10">
+                        <button id="runComparison">Run Comparison</button>
+                        <div style="margin-top: 1.5rem;">
+                            <canvas id="comparisonChart" width="700" height="300"></canvas>
+                        </div>
+                        <div id="comparisonResults" style="margin-top: 1rem; font-family: var(--font-mono); font-size: 0.9rem;"></div>
+                    </div>
+
+                    <h3>Interactive 2: MCMC Random Walk Visualizer</h3>
+                    <div class="interactive">
+                        <h4>Gibbs Sampling Random Walk on 2D Grid</h4>
+                        <p>Watch how Gibbs sampling explores a probability distribution. The heat map shows the true distribution; the white path shows the random walk.</p>
+                        <button id="startMCMC">Start Walk</button>
+                        <button id="pauseMCMC">Pause</button>
+                        <button id="resetMCMC">Reset</button>
+                        <label for="mcmcSpeed">Speed: <span id="speedValue">1</span>×</label>
+                        <input type="range" id="mcmcSpeed" min="1" max="10" value="1" step="1">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                            <div>
+                                <p style="text-align: center; font-weight: 600;">Distribution & Walk</p>
+                                <canvas id="mcmcCanvas" width="300" height="300"></canvas>
+                            </div>
+                            <div>
+                                <p style="text-align: center; font-weight: 600;">Visited Regions Histogram</p>
+                                <canvas id="histogramCanvas" width="300" height="300"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3>Interactive 3: Rejection Rate Monitor</h3>
+                    <div class="interactive">
+                        <h4>Real-Time Rejection Sampling on Alarm Network</h4>
+                        <p>Set evidence variables and watch rejection sampling in action. The green bar shows accepted samples; the red bar shows rejected ones.</p>
+                        <div style="margin: 1rem 0;">
+                            <label>
+                                <input type="checkbox" id="johnCalls" checked> JohnCalls=True
+                            </label>
+                            <label style="margin-left: 1rem;">
+                                <input type="checkbox" id="maryCalls" checked> MaryCalls=True
+                            </label>
+                        </div>
+                        <button id="startRejection">Run 1000 Samples</button>
+                        <button id="stopRejection">Stop</button>
+                        <div style="margin-top: 1rem;">
+                            <p>Progress: <span id="rejectionProgress">0</span> / <span id="rejectionTotal">1000</span></p>
+                            <div style="background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); height: 40px; display: flex; overflow: hidden;">
+                                <div id="acceptedBar" style="background: #059669; height: 100%; width: 0%; transition: width 0.1s;"></div>
+                                <div id="rejectedBar" style="background: #dc2626; height: 100%; width: 0%; transition: width 0.1s;"></div>
+                            </div>
+                            <div id="rejectionStats" style="margin-top: 1rem; font-family: var(--font-mono); font-size: 0.9rem;"></div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div class="completion-badge" id="completionBadge">✓ Chapter Complete</div>
+        </main>
+    </div>
+
+    <script>
+        // Theme Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const htmlElement = document.documentElement;
+
+        const savedTheme = localStorage.getItem('aima-ch-15-theme') || 'light';
+        if (savedTheme === 'dark') {
+            htmlElement.setAttribute('data-theme', 'dark');
+            themeToggle.textContent = '☀️';
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = htmlElement.getAttribute('data-theme') || 'light';
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            htmlElement.setAttribute('data-theme', newTheme);
+            themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+            localStorage.setItem('aima-ch-15-theme', newTheme);
+        });
+
+        // Sidebar Navigation with Scroll Spy
+        const sections = document.querySelectorAll('.section');
+        const navLinks = document.querySelectorAll('.sidebar-nav a');
+
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px 0px -50% 0px',
+            threshold: 0
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    navLinks.forEach(link => link.classList.remove('active'));
+                    const activeLink = document.querySelector(`.sidebar-nav a[href="#${entry.target.id}"]`);
+                    if (activeLink) activeLink.classList.add('active');
+                }
+            });
+        }, observerOptions);
+
+        sections.forEach(section => observer.observe(section));
+
+        // Section Visibility Animation
+        const sectionObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        sections.forEach(section => sectionObserver.observe(section));
+
+        // Q&A Toggle
+        document.querySelectorAll('.qa-question').forEach(question => {
+            question.addEventListener('click', () => {
+                question.parentElement.classList.toggle('open');
+            });
+        });
+
+        // Completion Badge on Scroll
+        const completionBadge = document.getElementById('completionBadge');
+        let badgeShown = localStorage.getItem('aima-ch-15-badge-shown') === 'true';
+
+        window.addEventListener('scroll', () => {
+            const scrollPercentage = (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100;
+            if (scrollPercentage > 75 && !badgeShown) {
+                completionBadge.classList.add('show');
+                badgeShown = true;
+                localStorage.setItem('aima-ch-15-badge-shown', 'true');
+                setTimeout(() => {
+                    completionBadge.classList.remove('show');
+                }, 4000);
+            }
+        });
+
+        // ==================== INTERACTIVE 1: SAMPLING COMPARISON ====================
+        const raritySlider = document.getElementById('raritySlider');
+        const rarityValue = document.getElementById('rarityValue');
+        const runComparisonBtn = document.getElementById('runComparison');
+        const comparisonChart = document.getElementById('comparisonChart');
+        const comparisonResults = document.getElementById('comparisonResults');
+
+        raritySlider.addEventListener('input', () => {
+            rarityValue.textContent = raritySlider.value;
+        });
+
+        function runSamplingComparison() {
+            const rarity = parseInt(raritySlider.value);
+            const evidenceProb = 1 / rarity;
+            const n_samples = 5000;
+
+            // Simulated results
+            let rejection_accepted = 0;
+            let rejection_samples = [];
+            for (let i = 0; i < n_samples; i++) {
+                if (Math.random() < evidenceProb) {
+                    rejection_accepted++;
+                    rejection_samples.push(i);
+                }
+            }
+
+            const results = {
+                rejection: {
+                    accepted: rejection_accepted,
+                    efficiency: rejection_accepted / n_samples
+                },
+                likelihood: {
+                    accepted: n_samples,
+                    efficiency: 1.0
+                },
+                gibbs: {
+                    accepted: n_samples,
+                    efficiency: Math.min(0.95, 1 - Math.log(rarity + 1) / Math.log(1000))
+                }
+            };
+
+            // Draw convergence chart
+            const ctx = comparisonChart.getContext('2d');
+            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg-card').trim();
+            ctx.fillRect(0, 0, comparisonChart.width, comparisonChart.height);
+
+            const colors = { rejection: '#dc2626', likelihood: '#2563eb', gibbs: '#7b1fa2' };
+            const methods = ['rejection', 'likelihood', 'gibbs'];
+            const step = comparisonChart.width / 3;
+
+            methods.forEach((method, idx) => {
+                const x = idx * step + step / 2;
+                const efficiency = results[method].efficiency;
+                const height = efficiency * 250;
+
+                ctx.fillStyle = colors[method];
+                ctx.fillRect(idx * step + 20, 280 - height, step - 40, height);
+
+                ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text').trim();
+                ctx.font = '12px var(--font-sans)';
+                ctx.textAlign = 'center';
+                ctx.fillText(method.charAt(0).toUpperCase() + method.slice(1), x, 310);
+                ctx.fillText(`${(efficiency * 100).toFixed(1)}%`, x, 330);
+            });
+
+            // Results text
+            comparisonResults.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1rem;">
+                    <div style="background: rgba(220, 38, 38, 0.1); padding: 1rem; border-radius: var(--radius);">
+                        <strong style="color: #dc2626;">Rejection Sampling</strong>
+                        <p>Accepted: ${results.rejection.accepted} / ${n_samples}</p>
+                        <p>Efficiency: ${(results.rejection.efficiency * 100).toFixed(2)}%</p>
+                    </div>
+                    <div style="background: rgba(37, 99, 235, 0.1); padding: 1rem; border-radius: var(--radius);">
+                        <strong style="color: #2563eb;">Likelihood Weighting</strong>
+                        <p>Used: ${results.likelihood.accepted} / ${n_samples}</p>
+                        <p>Efficiency: 100%</p>
+                    </div>
+                    <div style="background: rgba(123, 31, 162, 0.1); padding: 1rem; border-radius: var(--radius);">
+                        <strong style="color: #7b1fa2;">Gibbs Sampling</strong>
+                        <p>Effective: ~${Math.floor(results.gibbs.accepted * results.gibbs.efficiency)}</p>
+                        <p>Efficiency: ${(results.gibbs.efficiency * 100).toFixed(2)}%</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        runComparisonBtn.addEventListener('click', runSamplingComparison);
+
+        // ==================== INTERACTIVE 2: MCMC WALK ====================
+        const startMCMCBtn = document.getElementById('startMCMC');
+        const pauseMCMCBtn = document.getElementById('pauseMCMC');
+        const resetMCMCBtn = document.getElementById('resetMCMC');
+        const mcmcSpeedSlider = document.getElementById('mcmcSpeed');
+        const mcmcCanvas = document.getElementById('mcmcCanvas');
+        const histogramCanvas = document.getElementById('histogramCanvas');
+        const speedValue = document.getElementById('speedValue');
+
+        let mcmcRunning = false;
+        let mcmcX = 150, mcmcY = 150;
+        let mcmcTrail = [];
+        let visitCounts = {};
+
+        function bivariateProbability(x, y) {
+            const dx = x - 150, dy = y - 150;
+            return Math.exp(-0.005 * (dx * dx + dy * dy)) + 0.3 * Math.exp(-0.01 * ((x - 100) ** 2 + (y - 100) ** 2));
+        }
+
+        function drawDistribution() {
+            const ctx = mcmcCanvas.getContext('2d');
+            const imageData = ctx.createImageData(300, 300);
+            const data = imageData.data;
+
+            let maxProb = 0;
+            const probs = [];
+            for (let y = 0; y < 300; y++) {
+                for (let x = 0; x < 300; x++) {
+                    const p = bivariateProbability(x, y);
+                    probs.push(p);
+                    maxProb = Math.max(maxProb, p);
+                }
+            }
+
+            for (let i = 0; i < data.length; i += 4) {
+                const idx = i / 4;
+                const p = probs[idx] / maxProb;
+                const intensity = Math.floor(p * 200);
+                data[i] = 123 + intensity;
+                data[i + 1] = 31 + intensity / 2;
+                data[i + 2] = 162 + intensity;
+                data[i + 3] = 255;
+            }
+            ctx.putImageData(imageData, 0, 0);
+
+            // Draw trail
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.lineWidth = 2;
+            if (mcmcTrail.length > 1) {
+                ctx.beginPath();
+                ctx.moveTo(mcmcTrail[0][0], mcmcTrail[0][1]);
+                for (let i = 1; i < mcmcTrail.length; i++) {
+                    ctx.lineTo(mcmcTrail[i][0], mcmcTrail[i][1]);
+                }
+                ctx.stroke();
+            }
+
+            // Draw current position
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.beginPath();
+            ctx.arc(mcmcX, mcmcY, 5, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        function drawHistogram() {
+            const ctx = histogramCanvas.getContext('2d');
+            const cellSize = 30;
+            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg-card').trim();
+            ctx.fillRect(0, 0, 300, 300);
+
+            let maxCount = 0;
+            for (let key in visitCounts) {
+                maxCount = Math.max(maxCount, visitCounts[key]);
+            }
+
+            for (let key in visitCounts) {
+                const [gx, gy] = key.split(',').map(Number);
+                const count = visitCounts[key];
+                const intensity = maxCount > 0 ? count / maxCount : 0;
+                ctx.fillStyle = `rgba(123, 31, 162, ${0.2 + 0.7 * intensity})`;
+                ctx.fillRect(gx * cellSize, gy * cellSize, cellSize, cellSize);
+            }
+
+            ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--border').trim();
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i <= 10; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * cellSize, 0);
+                ctx.lineTo(i * cellSize, 300);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(0, i * cellSize);
+                ctx.lineTo(300, i * cellSize);
+                ctx.stroke();
+            }
+        }
+
+        function gibbs_step() {
+            const p = Math.random() < 0.5;
+            if (p) {
+                mcmcX += (Math.random() - 0.5) * 20;
+            } else {
+                mcmcY += (Math.random() - 0.5) * 20;
+            }
+            mcmcX = Math.max(0, Math.min(300, mcmcX));
+            mcmcY = Math.max(0, Math.min(300, mcmcY));
+
+            const gx = Math.floor(mcmcX / 30);
+            const gy = Math.floor(mcmcY / 30);
+            const key = `${gx},${gy}`;
+            visitCounts[key] = (visitCounts[key] || 0) + 1;
+
+            mcmcTrail.push([mcmcX, mcmcY]);
+            if (mcmcTrail.length > 200) mcmcTrail.shift();
+        }
+
+        function animate() {
+            if (mcmcRunning) {
+                const speed = parseInt(mcmcSpeedSlider.value);
+                for (let i = 0; i < speed; i++) {
+                    gibbs_step();
+                }
+                drawDistribution();
+                drawHistogram();
+                requestAnimationFrame(animate);
+            }
+        }
+
+        startMCMCBtn.addEventListener('click', () => {
+            mcmcRunning = true;
+            animate();
+        });
+
+        pauseMCMCBtn.addEventListener('click', () => {
+            mcmcRunning = false;
+        });
+
+        resetMCMCBtn.addEventListener('click', () => {
+            mcmcRunning = false;
+            mcmcX = 150;
+            mcmcY = 150;
+            mcmcTrail = [];
+            visitCounts = {};
+            drawDistribution();
+            drawHistogram();
+        });
+
+        mcmcSpeedSlider.addEventListener('input', () => {
+            speedValue.textContent = mcmcSpeedSlider.value;
+        });
+
+        // Initial draw
+        drawDistribution();
+        drawHistogram();
+
+        // ==================== INTERACTIVE 3: REJECTION RATE MONITOR ====================
+        const johnCallsCheckbox = document.getElementById('johnCalls');
+        const maryCallsCheckbox = document.getElementById('maryCalls');
+        const startRejectionBtn = document.getElementById('startRejection');
+        const stopRejectionBtn = document.getElementById('stopRejection');
+        const rejectionProgress = document.getElementById('rejectionProgress');
+        const rejectionTotal = document.getElementById('rejectionTotal');
+        const acceptedBar = document.getElementById('acceptedBar');
+        const rejectedBar = document.getElementById('rejectedBar');
+        const rejectionStats = document.getElementById('rejectionStats');
+
+        let rejectionRunning = false;
+
+        function runRejectionSampling() {
+            const evidenceProb = 0.001 * (johnCallsCheckbox.checked ? 0.9 : 0.1) * (maryCallsCheckbox.checked ? 0.8 : 0.1);
+            let accepted = 0;
+            let total = 0;
+            const maxSamples = 1000;
+
+            const interval = setInterval(() => {
+                if (!rejectionRunning || total >= maxSamples) {
+                    clearInterval(interval);
+                    return;
+                }
+
+                if (Math.random() < evidenceProb) {
+                    accepted++;
+                }
+                total++;
+
+                rejectionProgress.textContent = total;
+                const acceptedWidth = (accepted / total) * 100;
+                acceptedBar.style.width = acceptedWidth + '%';
+                rejectedBar.style.width = (100 - acceptedWidth) + '%';
+
+                rejectionStats.innerHTML = `
+                    <p>Accepted: ${accepted} samples</p>
+                    <p>Rejected: ${total - accepted} samples</p>
+                    <p>Acceptance rate: ${((accepted / total) * 100).toFixed(2)}%</p>
+                    <p>Approximate P(evidence): ${(evidenceProb * 100).toFixed(4)}%</p>
+                `;
+            }, 10);
+        }
+
+        startRejectionBtn.addEventListener('click', () => {
+            rejectionRunning = true;
+            runRejectionSampling();
+        });
+
+        stopRejectionBtn.addEventListener('click', () => {
+            rejectionRunning = false;
+        });
+    </script>
+
+    <!-- KaTeX Scripts (at very end of body) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, { delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}] });"></script>
+
+    <!-- Highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>
