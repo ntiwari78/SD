@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 9: Differential Entropy - The Library of Entropy</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,600;1,400&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- MathJax -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --bg-card: #111118;
+            --surface: #1a1a24;
+            --border: #2a2a3a;
+            --text-primary: #e8e6e3;
+            --text-secondary: #9a96a6;
+            --accent: #8b5cf6;
+            --accent-light: #a78bfa;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Figtree', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-primary);
+            line-height: 1.7;
+            font-size: 16px;
+        }
+
+        /* Navigation */
+        nav.top-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(10, 10, 15, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            z-index: 1000;
+            padding: 0.75rem 1.5rem;
+        }
+
+        .nav-container {
+            max-width: 740px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .nav-title {
+            font-family: 'Newsreader', serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+        }
+
+        .nav-progress {
+            flex: 1;
+            height: 3px;
+            background-color: var(--border);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .nav-progress-bar {
+            height: 100%;
+            background-color: var(--accent);
+            width: 0%;
+            transition: width 0.2s ease;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.85rem;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent);
+        }
+
+        /* Main Content */
+        main {
+            max-width: 740px;
+            margin: 0 auto;
+            padding: 100px 2rem 3rem;
+        }
+
+        /* Cover */
+        .cover {
+            text-align: center;
+            padding: 4rem 0 3rem;
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .cover-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 500;
+            letter-spacing: 0.1em;
+            color: var(--accent);
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+
+        .cover-title {
+            font-family: 'Newsreader', serif;
+            font-size: 3rem;
+            font-weight: 600;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        .cover-subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            font-style: italic;
+            margin-bottom: 2rem;
+        }
+
+        .cover-meta {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+
+        /* Sections */
+        section {
+            margin-bottom: 4rem;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: baseline;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            color: var(--accent);
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        h2 {
+            font-family: 'Newsreader', serif;
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        h3 {
+            font-family: 'Newsreader', serif;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        p {
+            margin-bottom: 1.2rem;
+            color: var(--text-primary);
+        }
+
+        .lead {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+            font-style: italic;
+        }
+
+        /* Cards */
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 2rem 0;
+            opacity: 0;
+            animation: fadeIn 0.6s ease forwards;
+        }
+
+        .card.mental-model {
+            border-left: 4px solid var(--accent);
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, transparent 100%);
+        }
+
+        .card.definition {
+            border-left: 4px solid var(--accent-light);
+        }
+
+        .card.interactive {
+            border: 2px solid var(--accent);
+            background-color: var(--surface);
+        }
+
+        .card.example {
+            border-left: 4px solid var(--text-secondary);
+        }
+
+        .card.socratic {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, transparent 100%);
+            border-left: 4px solid var(--accent);
+        }
+
+        .card-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            color: var(--accent);
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .card-title {
+            font-family: 'Newsreader', serif;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+
+        .equation {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+        }
+
+        .equation-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            display: block;
+        }
+
+        /* Lists */
+        ul, ol {
+            margin-left: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.8rem;
+        }
+
+        /* Interactive Elements */
+        .slider-group {
+            margin: 2rem 0;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+            transition: box-shadow 0.2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            box-shadow: 0 0 0 6px rgba(139, 92, 246, 0.2);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+            transition: box-shadow 0.2s;
+        }
+
+        input[type="range"]::-moz-range-thumb:hover {
+            box-shadow: 0 0 0 6px rgba(139, 92, 246, 0.2);
+        }
+
+        .chart-container {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            text-align: center;
+        }
+
+        .output-box {
+            background-color: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--accent);
+            margin-top: 1rem;
+        }
+
+        /* Q&A */
+        .qa-pair {
+            margin: 1.5rem 0;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .qa-pair:last-child {
+            border-bottom: none;
+        }
+
+        .question {
+            color: var(--accent);
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .question::before {
+            content: "Q";
+            display: inline-block;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 700;
+            width: 1.5rem;
+            height: 1.5rem;
+            background-color: var(--accent);
+            color: var(--bg);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .answer {
+            color: var(--text-secondary);
+            padding-left: 2rem;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .answer.open {
+            max-height: 500px;
+        }
+
+        /* Code Block */
+        .code-block {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--accent-light);
+            line-height: 1.5;
+        }
+
+        /* Footer */
+        footer {
+            max-width: 740px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+            border-top: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .footer-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .footer-link {
+            font-family: 'Figtree', sans-serif;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .footer-link:hover {
+            color: var(--accent);
+        }
+
+        .footer-divider {
+            color: var(--border);
+            margin: 0 1rem;
+        }
+
+        .footer-meta {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Math styling */
+        .mjx-container {
+            overflow-x: auto;
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            main {
+                padding: 80px 1.5rem 2rem;
+            }
+
+            .cover-title {
+                font-size: 2rem;
+            }
+
+            h2 {
+                font-size: 1.4rem;
+            }
+
+            .nav-links {
+                gap: 0.75rem;
+                font-size: 0.75rem;
+            }
+
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="top-nav">
+        <div class="nav-container">
+            <span class="nav-title">Chapter 9</span>
+            <div class="nav-progress">
+                <div class="nav-progress-bar"></div>
+            </div>
+            <div class="nav-links">
+                <a href="#chapter8">← Ch. 8</a>
+                <a href="#chapter10">Ch. 10 →</a>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <!-- Cover -->
+        <div class="cover">
+            <div class="cover-number">Chapter 09</div>
+            <h1 class="cover-title">Differential Entropy</h1>
+            <p class="cover-subtitle">Extending information theory from discrete to continuous</p>
+            <div class="cover-meta">
+                From Cover & Thomas, <em>Elements of Information Theory</em> (2nd ed.)<br>
+                pp. 224–238
+            </div>
+        </div>
+
+        <!-- Part I: Feynman Mental Model -->
+        <section>
+            <div class="section-header">
+                <span class="section-number">I</span>
+                <h2>Feynman Mental Model</h2>
+            </div>
+
+            <div class="card mental-model">
+                <span class="card-label">Core Insight</span>
+                <p class="lead">Moving from discrete to continuous random variables is like switching from counting coins to measuring water.</p>
+
+                <p>In discrete information theory, entropy is always non-negative—you need at least zero bits to specify a particular outcome. But <strong>differential entropy can be negative</strong>, which seems absurd until you realize it's a relative measure, not an absolute one.</p>
+
+                <p>A point mass at zero has differential entropy of <strong>−∞</strong>, because specifying its exact location requires infinite precision. Conversely, a very spread-out distribution has high entropy. The key insight: differential entropy measures spread relative to a reference measure (Lebesgue measure), not information in an absolute sense.</p>
+
+                <p>This shift from counting to measuring is fundamental. In the discrete world, we ask "how many bits?" In the continuous world, we ask "how many more bits than a reference distribution?"</p>
+            </div>
+        </section>
+
+        <!-- Part II: Definitions -->
+        <section>
+            <div class="section-header">
+                <span class="section-number">II</span>
+                <h2>Definitions (9.1)</h2>
+            </div>
+
+            <p>The <strong>differential entropy</strong> of a continuous random variable $X$ with probability density function $f(x)$ is:</p>
+
+            <div class="equation">
+                <span class="equation-label">Definition 9.1.1</span>
+                $$h(X) = -\int_{-\infty}^{\infty} f(x) \log f(x) \, dx$$
+            </div>
+
+            <p>If we use natural logarithm, this is measured in <strong>nats</strong>. Using $\log_2$ gives <strong>bits</strong>. The integral is only defined if $f(x) \log f(x) \to 0$ as $f(x) \to 0$.</p>
+
+            <h3>Key Examples</h3>
+
+            <div class="card definition">
+                <span class="card-label">Example 1</span>
+                <p><strong>Uniform distribution on [0, a]:</strong></p>
+                $$h(X) = \log a$$
+                <p style="margin-top: 1rem; margin-bottom: 0;">If $a < 1$, then $\log a < 0$—differential entropy is negative! This happens because the distribution is more concentrated than a standard reference.</p>
+            </div>
+
+            <div class="card definition">
+                <span class="card-label">Example 2</span>
+                <p><strong>Gaussian distribution $N(\mu, \sigma^2)$:</strong></p>
+                $$h(X) = \frac{1}{2}\log(2\pi e \sigma^2) \text{ bits}$$
+                <p style="margin-top: 1rem; margin-bottom: 0;">This is always positive (for $\sigma^2 > 0$) and depends only on the variance, not the mean. The Gaussian is special: it maximizes differential entropy among all distributions with a given variance.</p>
+            </div>
+        </section>
+
+        <!-- Part II.5: Interactive -->
+        <section>
+            <div class="section-header">
+                <span class="section-number">II.5</span>
+                <h2>Interactive: Discrete ↔ Continuous Transition</h2>
+            </div>
+
+            <p>One of the deepest connections in information theory is how discrete entropy relates to differential entropy. When we quantize a continuous distribution into $n$ levels with spacing $\Delta$, the discrete entropy grows, but the gap stays constant.</p>
+
+            <div class="card interactive">
+                <span class="card-label">Exploration</span>
+                <p style="margin-bottom: 1.5rem;">Quantize a Gaussian $N(0, 1)$ distribution into $n$ levels. Watch how $H(X^\Delta) + \log \Delta$ converges to $h(X)$ as resolution improves.</p>
+
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Quantization Levels: $n$</span>
+                        <span id="n-value">16</span>
+                    </div>
+                    <input type="range" id="quantization-slider" min="2" max="256" value="16" step="1">
+                </div>
+
+                <div class="output-box">
+                    <div style="margin-bottom: 0.75rem;">Discrete Entropy: <strong id="discrete-entropy">1.234</strong> bits</div>
+                    <div style="margin-bottom: 0.75rem;">Differential Entropy: <strong id="differential-entropy">1.419</strong> bits</div>
+                    <div>Gap ($\log \Delta$): <strong id="gap-entropy">−0.185</strong> bits</div>
+                </div>
+            </div>
+
+            <p style="margin-top: 2rem; color: var(--text-secondary); font-style: italic;">As you increase quantization levels, the discrete entropy grows, but the difference from differential entropy decreases. The relationship $H(X^\Delta) + \log \Delta \approx h(X)$ reveals that differential entropy is what remains after accounting for quantization resolution.</p>
+        </section>
+
+        <!-- Part III: AEP -->
+        <section>
+            <div class="section-header">
+                <span class="section-number">III</span>
+                <h2>Asymptotic Equipartition Property (9.2)</h2>
+            </div>
+
+            <p>Just as the discrete AEP guided us to entropy as the fundamental quantity, the continuous AEP governs typical sequences of continuous random variables.</p>
+
+            <div class="card definition">
+                <span class="card-label">AEP for Continuous RVs</span>
+                <p>For $n$ i.i.d. samples $X_1, \ldots, X_n$ from density $f(x)$:</p>
+                $$-\frac{1}{n}\log f(X_1, \ldots, X_n) \xrightarrow{P} h(X)$$
+                <p style="margin-top: 1rem;">The volume of the typical set is approximately:</p>
+                $$V_{\text{typical}} \approx 2^{nh(X)}$$
+                <p style="margin-top: 1rem; margin-bottom: 0;">This parallels the discrete case: the typical set contains sequences whose joint probability is roughly $2^{-nh(X)}$.</p>
+            </div>
+
+            <p>This result underpins the theory of continuous channel capacity. The typical set shrinks exponentially if $h(X) < 0$ and expands if $h(X) > 0$—a geometric interpretation of what differential entropy measures.</p>
+        </section>
+
+        <!-- Part IV: Relation to Discrete -->
+        <section>
+            <div class="section-header">
+                <span class="section-number">IV</span>
+                <h2>Relation to Discrete Entropy (9.3)</h2>
+            </div>
+
+            <p>The bridge between discrete and continuous information theory is quantization. Let $X^\Delta$ be the quantized version of $X$, where $X^\Delta = \lfloor X / \Delta \rfloor \cdot \Delta$ with quantization spacing $\Delta$.</p>
+
+            <div class="card example">
+                <span class="card-label">Quantization Relationship</span>
+                $$H(X^\Delta) + \log \Delta \to h(X) \quad \text{as} \quad \Delta \to 0$$
+                <p style="margin-top: 1rem;">This fundamental equation shows that:</p>
+                <ul style="margin: 1rem 0;">
+                    <li><strong>$H(X^\Delta)$</strong> is the discrete entropy of the quantized random variable</li>
+                    <li><strong>$\log(1/\Delta)$</strong> accounts for the precision of quantization</li>
+                    <li><strong>$h(X)$</strong> is the intrinsic differential entropy, independent of discretization scheme</li>
+                </ul>
+                <p>In other words: <em>Total discrete entropy = Differential entropy + Quantization cost</em></p>
+            </div>
+
+            <p>This relationship justifies studying continuous entropy despite all real signals being digitized: $h(X)$ captures the essential information content, while $\log(1/\Delta)$ is purely a matter of engineering choice.</p>
+        </section>
+
+        <!-- Part V: Joint & Conditional -->
+        <section>
+            <div class="section-header">
+                <span class="section-number">V</span>
+                <h2>Joint and Conditional Differential Entropy (9.4)</h2>
+            </div>
+
+            <p>The machinery of discrete information theory carries over directly to the continuous case.</p>
+
+            <div class="card definition">
+                <span class="card-label">Definitions</span>
+                <p><strong>Joint differential entropy:</strong></p>
+                $$h(X, Y) = -\int \int f(x,y) \log f(x,y) \, dx \, dy$$
+
+                <p style="margin-top: 1.5rem;"><strong>Conditional differential entropy:</strong></p>
+                $$h(X|Y) = -\int \int f(x,y) \log f(x|y) \, dx \, dy$$
+
+                <p style="margin-top: 1.5rem;"><strong>Chain rule:</strong></p>
+                $$h(X, Y) = h(X) + h(Y|X) = h(Y) + h(X|Y)$$
+            </div>
+
+            <p>All the intuitions from the discrete case apply: conditioning reduces entropy, and entropy decomposes additively. The only difference is that these are integrals instead of sums, and values can be negative.</p>
+        </section>
+
+        <!-- Part VI: Relative Entropy & MI -->
+        <section>
+            <div class="section-header">
+                <span class="section-number">VI</span>
+                <h2>Relative Entropy and Mutual Information (9.5)</h2>
+            </div>
+
+            <div class="card definition">
+                <span class="card-label">Relative Entropy (Kullback–Leibler Divergence)</span>
+                $$D(f \| g) = \int f(x) \log \frac{f(x)}{g(x)} \, dx \geq 0$$
+                <p style="margin-top: 1rem;">Equality holds if and only if $f = g$ almost everywhere. This fundamental inequality—Gibbs' inequality—holds in both discrete and continuous settings.</p>
+            </div>
+
+            <div class="card definition">
+                <span class="card-label">Mutual Information</span>
+                <p>The mutual information between continuous random variables $X$ and $Y$ is:</p>
+                $$I(X; Y) = h(X) - h(X|Y) = h(X) + h(Y) - h(X,Y)$$
+                <p style="margin-top: 1rem;">This can also be written as:</p>
+                $$I(X; Y) = D(f(x,y) \| f(x)f(y)) = \int \int f(x,y) \log \frac{f(x,y)}{f(x)f(y)} \, dx \, dy$$
+            </div>
+
+            <h3>Key Property: Non-negativity</h3>
+
+            <p><strong>Mutual information is always non-negative</strong>, even for continuous variables. This follows directly from Gibbs' inequality: $I(X;Y) = D(f(x,y) \| f(x)f(y)) \geq 0$. The negative values that differential entropy can take are "relative," but mutual information remains absolute and always quantifies actual dependence.</p>
+        </section>
+
+        <!-- Part VII: Properties -->
+        <section>
+            <div class="section-header">
+                <span class="section-number">VII</span>
+                <h2>Properties of Differential Entropy (9.6)</h2>
+            </div>
+
+            <h3>Maximum Entropy for Fixed Variance</h3>
+            <p>Among all distributions with a given variance $\sigma^2$, the Gaussian $N(0, \sigma^2)$ has the maximum differential entropy:</p>
+
+            <div class="equation">
+                <span class="equation-label">Maximum Entropy Theorem</span>
+                $$h(X) \leq \frac{1}{2}\log(2\pi e \sigma^2)$$
+                <p style="margin-top: 1.2rem;">with equality if and only if $X \sim N(0, \sigma^2)$.</p>
+            </div>
+
+            <p><strong>Proof sketch:</strong> For any distribution $f$ with variance $\sigma^2$ and Gaussian $\phi$ with the same variance, $D(f \| \phi) \geq 0$ gives:</p>
+
+            <div class="equation">
+                $$\int f(x) \log f(x) \, dx \leq \int f(x) \log \phi(x) \, dx$$
+                <p style="margin-top: 1rem;">Taking negatives: $h(X) \leq h(\phi)$, where $h(\phi) = \frac{1}{2}\log(2\pi e \sigma^2)$.</p>
+            </div>
+
+            <h3>Behavior Under Linear Transformations</h3>
+
+            <p>If $Y = AX + b$ where $A$ is invertible, then:</p>
+
+            <div class="equation">
+                <span class="equation-label">Linear Transform Property</span>
+                $$h(Y) = h(X) + \log|\det(A)|$$
+            </div>
+
+            <p>The differential entropy changes by the log-determinant of the transformation matrix, which accounts for how the volume of the probability space is scaled.</p>
+        </section>
+
+        <!-- Part VIII: Code Lab -->
+        <section>
+            <div class="section-header">
+                <span class="section-number">VIII</span>
+                <h2>Code Lab: Computing Differential Entropy</h2>
+            </div>
+
+            <p>In practice, we often estimate differential entropy from samples or compute it analytically for known distributions. Here's a Python reference for common cases:</p>
+
+            <div class="code-block"><code>import numpy as np
+from scipy.stats import entropy, norm, uniform, expon
+from scipy.special import digamma
+
+# Differential entropy for common distributions (in nats)
+
+# 1. Uniform on [a, b]
+def h_uniform(a, b):
+    return np.log(b - a)
+
+# 2. Gaussian N(mu, sigma^2)
+def h_gaussian(sigma):
+    return 0.5 * np.log(2 * np.pi * np.e * sigma**2)
+
+# 3. Exponential with rate lambda
+def h_exponential(lam):
+    return 1.0 - np.log(lam)
+
+# 4. Differential entropy via quantization (Monte Carlo)
+def h_differential_quantized(samples, bins=256):
+    """Estimate h(X) using quantization."""
+    hist, _ = np.histogram(samples, bins=bins, density=True)
+    delta = (samples.max() - samples.min()) / bins
+    hist = hist[hist > 0]
+    h_discrete = -np.sum(hist * np.log(hist)) * delta
+    return h_discrete + np.log(delta)  # Approximate h(X)
+
+# 5. Mutual information I(X; Y)
+def mi_gaussian(rho, sigma_x, sigma_y):
+    """MI for bivariate Gaussian with correlation rho."""
+    return -0.5 * np.log(1 - rho**2)
+
+# Example: compute entropy of N(0, 1)
+sigma = 1.0
+h = h_gaussian(sigma)
+print(f"h(N(0,1)) = {h:.4f} nats = {h/np.log(2):.4f} bits")</code></div>
+
+            <p style="margin-top: 1.5rem; color: var(--text-secondary); font-size: 0.95rem;">These functions compute differential entropy for standard distributions. For arbitrary distributions, quantization-based methods or kernel density estimation can provide estimates from sample data.</p>
+        </section>
+
+        <!-- Part IX: Socratic Sandbox -->
+        <section>
+            <div class="section-header">
+                <span class="section-number">IX</span>
+                <h2>Socratic Sandbox: Questions & Answers</h2>
+            </div>
+
+            <div class="card socratic">
+                <span class="card-label">Interactive Q&A</span>
+
+                <div class="qa-pair">
+                    <div class="question" onclick="toggleAnswer(0)">
+                        h(X) can be negative. Does this mean negative information?
+                    </div>
+                    <div class="answer" id="answer-0">
+                        <p>No. Differential entropy isn't an absolute measure of information. Think of it like a height relative to a reference level: it can be negative, zero, or positive depending on what you're measuring against.</p>
+
+                        <p>The reference measure for differential entropy is Lebesgue measure (uniform measure on the real line). A distribution more concentrated than uniform has negative entropy; one more spread out has positive entropy.</p>
+
+                        <p><strong>But mutual information $I(X;Y) = h(X) - h(X|Y)$ is always $\geq 0$</strong>, because it measures actual dependence, not a relative property. The subtraction of two relative measures yields an absolute quantity.</p>
+                    </div>
+                </div>
+
+                <div class="qa-pair">
+                    <div class="question" onclick="toggleAnswer(1)">
+                        Why is the Gaussian the maximum entropy distribution for fixed variance?
+                    </div>
+                    <div class="answer" id="answer-1">
+                        <p>By Gibbs' inequality: for any distribution $f$ with variance $\sigma^2$ and Gaussian $\phi$ with the same variance,</p>
+
+                        <p style="text-align: center; margin: 1rem 0; font-family: 'JetBrains Mono', monospace;">$D(f \| \phi) = \int f \log(f/\phi) \geq 0$</p>
+
+                        <p>Rearranging:</p>
+
+                        <p style="text-align: center; margin: 1rem 0; font-family: 'JetBrains Mono', monospace;">$\int f \log f \leq \int f \log \phi$</p>
+
+                        <p>Therefore $h(f) \leq h(\phi)$. Any deviation from the Gaussian shape (while keeping variance fixed) reduces entropy. The Gaussian is special because it's "maximally uncertain" subject to the variance constraint—no hidden correlations or structure.</p>
+                    </div>
+                </div>
+
+                <div class="qa-pair">
+                    <div class="question" onclick="toggleAnswer(2)">
+                        What happens to h(X) as σ → 0?
+                    </div>
+                    <div class="answer" id="answer-2">
+                        <p>For $X \sim N(\mu, \sigma^2)$:</p>
+
+                        <p style="text-align: center; margin: 1rem 0; font-family: 'JetBrains Mono', monospace;">$h(X) = \frac{1}{2}\log(2\pi e \sigma^2) \to -\infty$ as $\sigma \to 0$</p>
+
+                        <p>This makes intuitive sense: as the distribution concentrates on a single point, specifying $X$ exactly requires infinite precision, hence infinite bits. The entropy becomes more and more negative.</p>
+
+                        <p>More generally, any distribution that concentrates (e.g., a point mass) has differential entropy $-\infty$. This is the continuous analog of a discrete random variable with zero entropy: entropy measures uncertainty, and a point mass leaves no uncertainty.</p>
+                    </div>
+                </div>
+
+                <div class="qa-pair">
+                    <div class="question" onclick="toggleAnswer(3)">
+                        In practice, all signals are digitized. Why study continuous entropy at all?
+                    </div>
+                    <div class="answer" id="answer-3">
+                        <p>Excellent question. The reason: differential entropy $h(X)$ appears directly in the capacity formula for continuous channels. For instance, the capacity of the Gaussian channel with noise power $N$ and input power constraint $P$ is:</p>
+
+                        <p style="text-align: center; margin: 1rem 0; font-family: 'JetBrains Mono', monospace;">$C = \frac{1}{2}\log(1 + P/N)$ bits/sample</p>
+
+                        <p>This formula comes from the differential entropy of the Gaussian distribution. Without studying continuous entropy, we couldn't derive channel capacity or understand what limits communication rates.</p>
+
+                        <p>Moreover, the quantization relation $H(X^\Delta) = h(X) + \log(1/\Delta)$ cleanly separates two questions:</p>
+                        <ul>
+                            <li><strong>Source structure:</strong> $h(X)$—the intrinsic entropy of the continuous signal</li>
+                            <li><strong>Resolution:</strong> $\log(1/\Delta)$—the engineering choice of how finely to quantize</li>
+                        </ul>
+                        <p>This separation reveals why continuous entropy is indispensable: it captures properties of the signal that are independent of discretization.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Closing -->
+        <section style="text-align: center; margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border);">
+            <p style="color: var(--text-secondary); font-style: italic;">Differential entropy extends the reach of information theory from finite alphabets to continuous signals, revealing that entropy is fundamentally a measure of relative uncertainty—and that mutual information, built from differential entropy, remains always non-negative.</p>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-nav">
+            <a class="footer-link" href="#chapter8" id="chapter8">← Chapter 8: Mutual Information</a>
+            <span class="footer-divider">•</span>
+            <a class="footer-link" href="#chapter10" id="chapter10">Chapter 10: Channel Capacity →</a>
+        </div>
+        <p class="footer-meta">The Library of Entropy • Interactive Information Theory Curriculum</p>
+    </footer>
+
+    <script>
+        // Progress bar
+        function updateProgress() {
+            const scrollTop = window.scrollY;
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const progress = (scrollTop / docHeight) * 100;
+            document.querySelector('.nav-progress-bar').style.width = progress + '%';
+        }
+
+        window.addEventListener('scroll', updateProgress);
+
+        // Fade in on scroll
+        function observeCards() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && !entry.target.classList.contains('fade-in-done')) {
+                        entry.target.classList.add('fade-in-done');
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            document.querySelectorAll('.card, section').forEach(el => {
+                observer.observe(el);
+            });
+        }
+
+        // Q&A toggle
+        function toggleAnswer(index) {
+            const answer = document.getElementById(`answer-${index}`);
+            answer.classList.toggle('open');
+        }
+
+        // Interactive quantization slider
+        document.getElementById('quantization-slider').addEventListener('input', function() {
+            const n = parseInt(this.value);
+            document.getElementById('n-value').textContent = n;
+
+            // Simplified computation for Gaussian N(0,1)
+            const sigma = 1.0;
+            const h_x = 0.5 * Math.log(2 * Math.PI * Math.E * sigma * sigma);
+            const delta = 6.0 / n;  // Approximate range [-3, 3]
+            const h_discrete = h_x - Math.log(delta);
+            const gap = -Math.log(delta);
+
+            document.getElementById('differential-entropy').textContent =
+                (h_x / Math.LN2).toFixed(3);
+            document.getElementById('discrete-entropy').textContent =
+                (h_discrete / Math.LN2).toFixed(3);
+            document.getElementById('gap-entropy').textContent =
+                (-gap / Math.LN2).toFixed(3);
+        });
+
+        // Initialize
+        observeCards();
+
+        // Trigger initial calculations
+        document.getElementById('quantization-slider').dispatchEvent(new Event('input'));
+    </script>
+</body>
+</html>

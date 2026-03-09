@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 13: Rate Distortion Theory - The Library of Entropy</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,8..72,400;0,8..72,700;1,8..72,400&family=Figtree:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <!-- MathJax -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --bg-card: #111118;
+            --surface: #1a1a24;
+            --border: #2a2a3a;
+            --text-primary: #e8e6e3;
+            --text-secondary: #9a96a6;
+            --accent: #10b981;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: 'Newsreader', serif;
+            line-height: 1.8;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background-color: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .nav-title {
+            font-family: 'Figtree', sans-serif;
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--accent);
+        }
+
+        .progress-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background-color: var(--accent);
+            transition: width 0.3s ease;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-link {
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-family: 'Figtree', sans-serif;
+            font-size: 0.9rem;
+            transition: color 0.3s ease;
+        }
+
+        .nav-link:hover {
+            color: var(--accent);
+        }
+
+        /* Main Content */
+        main {
+            margin-top: 60px;
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            padding: 3rem 1rem;
+        }
+
+        .content-wrapper {
+            max-width: 740px;
+            width: 100%;
+        }
+
+        /* Headings */
+        h1 {
+            font-family: 'Figtree', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 2rem 0 1rem 0;
+            color: var(--text-primary);
+        }
+
+        h2 {
+            font-family: 'Figtree', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 2.5rem 0 1rem 0;
+            color: var(--accent);
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+
+        h3 {
+            font-family: 'Figtree', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin: 1.5rem 0 0.8rem 0;
+            color: var(--text-primary);
+        }
+
+        /* Paragraphs and Text */
+        p {
+            margin-bottom: 1.2rem;
+            font-size: 1.05rem;
+        }
+
+        /* Cards */
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
+        }
+
+        .card.feynman {
+            border-left: 4px solid var(--accent);
+            background-color: rgba(16, 185, 129, 0.05);
+        }
+
+        .card-title {
+            font-family: 'Figtree', sans-serif;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Math */
+        .math-block {
+            background-color: var(--surface);
+            border-left: 3px solid var(--accent);
+            padding: 1rem;
+            margin: 1.5rem 0;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        .math-inline {
+            font-family: 'JetBrains Mono', monospace;
+            background-color: rgba(16, 185, 129, 0.1);
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+        }
+
+        /* Tabs */
+        .tabs {
+            margin: 1.5rem 0;
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .tab-button {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-family: 'Figtree', sans-serif;
+            font-weight: 600;
+            font-size: 0.95rem;
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab-button.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .tab-button:hover {
+            color: var(--text-primary);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Canvas */
+        .canvas-container {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Sliders */
+        .slider-group {
+            margin: 1rem 0;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-family: 'Figtree', sans-serif;
+            font-size: 0.95rem;
+        }
+
+        .slider-label-value {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--surface);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Lists */
+        ul, ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Code */
+        code {
+            background-color: var(--surface);
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            color: var(--accent);
+        }
+
+        .code-block {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+        }
+
+        .code-block code {
+            background: none;
+            padding: 0;
+            color: var(--text-primary);
+        }
+
+        /* Questions */
+        .socratic-section {
+            background-color: var(--bg-card);
+            border: 2px solid var(--accent);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .socratic-section h3 {
+            color: var(--accent);
+            margin-top: 0;
+        }
+
+        .question-item {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .question-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .question {
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+            font-family: 'Figtree', sans-serif;
+        }
+
+        .answer {
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        /* Fade-in animation */
+        .fade-in {
+            opacity: 0;
+            animation: fadeInUp 0.8s ease forwards;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Footer nav */
+        .chapter-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 3rem 0 2rem 0;
+            padding-top: 2rem;
+            border-top: 2px solid var(--border);
+        }
+
+        .nav-chapter {
+            text-decoration: none;
+            color: var(--accent);
+            font-family: 'Figtree', sans-serif;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: color 0.3s ease;
+        }
+
+        .nav-chapter:hover {
+            color: var(--text-primary);
+        }
+
+        .chapter-info {
+            text-align: center;
+            color: var(--text-secondary);
+            font-family: 'Figtree', sans-serif;
+            font-size: 0.9rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            h2 {
+                font-size: 1.4rem;
+            }
+
+            h3 {
+                font-size: 1.1rem;
+            }
+
+            nav {
+                padding: 0 1rem;
+            }
+
+            .nav-links {
+                gap: 1rem;
+            }
+
+            .nav-title {
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-title">The Library of Entropy</div>
+        <div class="nav-links">
+            <a href="#" class="nav-link">← Ch. 12</a>
+            <span class="nav-link">Chapter 13</span>
+            <a href="#" class="nav-link">Ch. 14 →</a>
+        </div>
+        <div class="progress-bar"></div>
+    </nav>
+
+    <!-- Main Content -->
+    <main>
+        <div class="content-wrapper">
+            <!-- Title -->
+            <h1 class="fade-in">Chapter 13: Rate Distortion Theory</h1>
+
+            <!-- Feynman Insight -->
+            <div class="card feynman fade-in">
+                <div class="card-title">Richard Feynman</div>
+                <p><em>"Every MP3 file is a proof that perfect fidelity isn't always worth the cost. Rate distortion theory answers: for a given quality tolerance D, what's the minimum bit rate R? This is the fundamental limit of lossy compression — and it traces a beautiful curve from zero distortion (infinite rate) to maximum distortion (zero rate)."</em></p>
+            </div>
+
+            <!-- Part I: Quantization -->
+            <section class="fade-in">
+                <h2>Part I: Quantization and Distortion Measures</h2>
+
+                <p>In lossless compression, we preserve the source exactly. But in the real world, we often tolerate some loss of fidelity. An MP3 discards frequencies your ear can't hear. A JPEG blurs fine details. A video codec drops frames.</p>
+
+                <p>The fundamental question: <strong>Given that we tolerate average distortion D, what is the minimum bit rate R required to describe the source?</strong></p>
+
+                <h3>Quantization: From Continuous to Discrete</h3>
+
+                <p>Quantization maps continuous values to a discrete alphabet. Instead of transmitting exact pixel values (256 possibilities per channel in 8-bit), we might use only 4 levels, cutting the rate by half at the cost of precision.</p>
+
+                <div class="math-block">
+                    <p>Discrete alphabet: <span class="math-inline">X̂ ∈ {1, 2, ..., M}</span></p>
+                    <p>Quantizer: <span class="math-inline">Q: X → X̂</span></p>
+                </div>
+
+                <h3>Distortion Measures</h3>
+
+                <p>A distortion measure <span class="math-inline">d(x, x̂)</span> quantifies how much error we incur when representing symbol <span class="math-inline">x</span> by <span class="math-inline">x̂</span>.</p>
+
+                <div class="card">
+                    <div class="card-title">Common Distortion Measures</div>
+
+                    <h4 style="color: var(--text-primary); margin-top: 0; font-family: Figtree, sans-serif; font-size: 1.05rem;">Hamming Distortion (Binary Symbols)</h4>
+                    <div class="math-block">
+                        <p>$$d_H(x, \hat{x}) = \begin{cases} 0 & \text{if } x = \hat{x} \\ 1 & \text{if } x \neq \hat{x} \end{cases}$$</p>
+                    </div>
+                    <p>Counts errors: one bit wrong = distortion 1.</p>
+
+                    <h4 style="color: var(--text-primary); margin-top: 1.5rem; font-family: Figtree, sans-serif; font-size: 1.05rem;">Squared Error (Continuous Signals)</h4>
+                    <div class="math-block">
+                        <p>$$d_{SE}(x, \hat{x}) = (x - \hat{x})^2$$</p>
+                    </div>
+                    <p>Large errors are heavily penalized. Used for audio, images, and most signal processing.</p>
+
+                    <h4 style="color: var(--text-primary); margin-top: 1.5rem; font-family: Figtree, sans-serif; font-size: 1.05rem;">Expected Distortion</h4>
+                    <div class="math-block">
+                        <p>$$D = \mathbb{E}[d(X, \hat{X})]$$</p>
+                    </div>
+                    <p>The constraint: we require average distortion ≤ threshold D.</p>
+                </div>
+            </section>
+
+            <!-- Part II: The Rate Distortion Function -->
+            <section class="fade-in">
+                <h2>Part II: The Rate Distortion Function R(D)</h2>
+
+                <h3>Definition</h3>
+
+                <p>The rate distortion function is the <strong>minimum rate (in bits per symbol) needed to achieve average distortion at most D.</strong></p>
+
+                <div class="math-block">
+                    <p>$$R(D) = \min_{p(\hat{x}|x): \mathbb{E}[d(X,\hat{X})] \leq D} I(X; \hat{X})$$</p>
+                </div>
+
+                <p>We search over all conditional distributions <span class="math-inline">p(x̂|x)</span> that satisfy the distortion constraint, and pick the one minimizing mutual information.</p>
+
+                <h3>Key Properties</h3>
+
+                <ul>
+                    <li><strong>R(0) = H(X):</strong> Zero distortion means lossless compression — we need the full entropy.</li>
+                    <li><strong>R(D) is decreasing:</strong> More distortion allowed → less rate needed.</li>
+                    <li><strong>R(D) is convex:</strong> The curve bends downward. Marginal gains shrink as D increases.</li>
+                    <li><strong>R(D_max) = 0:</strong> If we tolerate maximum distortion (output constant), zero rate suffices.</li>
+                </ul>
+
+                <h3>Example 1: Binary Symmetric Source, Hamming Distortion</h3>
+
+                <p>Source: X ∈ {0, 1} with P(X=1) = p. Measure: Hamming distance.</p>
+
+                <div class="math-block">
+                    <p>$$R(D) = H(p) - H(D) \quad \text{for } D \leq \min(p, 1-p)$$</p>
+                </div>
+
+                <p>where <span class="math-inline">H(D) = -D \log D - (1-D) \log(1-D)</span> is the binary entropy of error rate D.</p>
+
+                <div class="card">
+                    <div class="card-title">Intuition</div>
+                    <p>If p = 0.5 (unbiased coin), then H(p) = 1 bit. If we allow D = 0.1 (10% error), then H(D) ≈ 0.47, so R(0.1) ≈ 0.53 bits. We save about half the rate by tolerating 10% errors!</p>
+                </div>
+
+                <h3>Example 2: Gaussian Source, Squared Error Distortion</h3>
+
+                <p>Source: X ~ N(0, σ²). Measure: squared error.</p>
+
+                <div class="math-block">
+                    <p>$$R(D) = \frac{1}{2} \log \frac{\sigma^2}{D} \quad \text{for } 0 < D \leq \sigma^2$$</p>
+                </div>
+
+                <ul>
+                    <li>At D = σ², R(D) = 0: we're allowed average error equal to the source variance, so output the constant mean.</li>
+                    <li>At D → 0, R(D) → ∞: need infinite rate for perfect fidelity.</li>
+                    <li><strong>Halving distortion costs 0.5 extra bit per symbol.</strong></li>
+                </ul>
+            </section>
+
+            <!-- Interactive Visualization -->
+            <section class="fade-in">
+                <h2>Interactive: Rate-Distortion Curve Explorer</h2>
+
+                <p>Adjust the distortion tolerance D below to see how the minimum required rate R(D) changes. Click between binary and Gaussian sources.</p>
+
+                <div class="card">
+                    <div class="tabs">
+                        <div class="tab-buttons">
+                            <button class="tab-button active" data-tab="binary-tab">Binary Source</button>
+                            <button class="tab-button" data-tab="gaussian-tab">Gaussian Source</button>
+                        </div>
+
+                        <!-- Binary Tab -->
+                        <div id="binary-tab" class="tab-content active">
+                            <h3 style="margin-top: 0;">Binary Symmetric Source</h3>
+                            <p>Source bias: p = 0.3 (30% chance of 1). Distortion measure: Hamming.</p>
+
+                            <div class="slider-group">
+                                <div class="slider-label">
+                                    <span>Distortion Tolerance D:</span>
+                                    <span class="slider-label-value" id="binary-d-display">0.10</span>
+                                </div>
+                                <input type="range" id="binary-d-slider" min="0" max="100" value="10" step="1">
+                            </div>
+
+                            <div class="canvas-container">
+                                <canvas id="binary-canvas" width="600" height="400"></canvas>
+                            </div>
+
+                            <div class="card" style="background-color: rgba(16, 185, 129, 0.05); margin-top: 1rem;">
+                                <p><strong>Current Point:</strong> D = <span id="binary-d-value">0.10</span>, R(D) = <span id="binary-r-value">0.88</span> bits/symbol</p>
+                                <p><span id="binary-note" style="color: var(--text-secondary); font-size: 0.95rem;"></span></p>
+                            </div>
+                        </div>
+
+                        <!-- Gaussian Tab -->
+                        <div id="gaussian-tab" class="tab-content">
+                            <h3 style="margin-top: 0;">Gaussian Source</h3>
+                            <p>Source: X ~ N(0, σ²), σ² = 1. Distortion measure: squared error.</p>
+
+                            <div class="slider-group">
+                                <div class="slider-label">
+                                    <span>Distortion Tolerance D:</span>
+                                    <span class="slider-label-value" id="gaussian-d-display">0.25</span>
+                                </div>
+                                <input type="range" id="gaussian-d-slider" min="1" max="100" value="25" step="1">
+                            </div>
+
+                            <div class="canvas-container">
+                                <canvas id="gaussian-canvas" width="600" height="400"></canvas>
+                            </div>
+
+                            <div class="card" style="background-color: rgba(16, 185, 129, 0.05); margin-top: 1rem;">
+                                <p><strong>Current Point:</strong> D = <span id="gaussian-d-value">0.25</span>, R(D) = <span id="gaussian-r-value">1.00</span> bits/symbol</p>
+                                <p><span id="gaussian-note" style="color: var(--text-secondary); font-size: 0.95rem;"></span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Part III: Theory -->
+            <section class="fade-in">
+                <h2>Part III: Converse and Achievability (Shannon's Theorem)</h2>
+
+                <h3>The Converse: Lower Bound</h3>
+
+                <p>If you want average distortion ≤ D, you <strong>must</strong> use at least R(D) bits per symbol on average. No code can beat this limit.</p>
+
+                <div class="card">
+                    <div class="card-title">Why?</div>
+                    <p>Suppose your code achieves D with rate less than R(D). Then the mutual information I(X; X̂) is less than R(D), contradicting the definition of R(D) as the minimum.</p>
+                </div>
+
+                <h3>Achievability: Upper Bound</h3>
+
+                <p>For any ε > 0, there exists a code with rate R(D) + ε that achieves average distortion D. With large enough blocklength n, we can get arbitrarily close to R(D).</p>
+
+                <h3>Blocklength Effects</h3>
+
+                <p>Like channel coding, the gap between achievable rate and R(D) shrinks as blocklength n → ∞. Real systems (MP3, JPEG, H.264) operate above the theoretical limit because they use finite blocklengths.</p>
+            </section>
+
+            <!-- Blahut-Arimoto Algorithm -->
+            <section class="fade-in">
+                <h2>Part IV: Computing R(D) — Blahut-Arimoto Algorithm</h2>
+
+                <p>To find the optimal conditional distribution p*(x̂|x) that minimizes I(X; X̂) subject to the distortion constraint, we use an iterative algorithm.</p>
+
+                <h3>Algorithm Overview</h3>
+
+                <ol>
+                    <li><strong>Initialize:</strong> Set p(x̂|x) uniformly or randomly.</li>
+                    <li><strong>E-step:</strong> Compute p(x̂) = Σ_x p(x) p(x̂|x).</li>
+                    <li><strong>M-step:</strong> Update p(x̂|x) using Lagrange multiplier β:
+                        <div class="math-block">
+                            <p>$$p(x\hat{x}|x) \propto p(\hat{x}) \exp(-\beta d(x, \hat{x}))$$</p>
+                        </div>
+                    </li>
+                    <li><strong>Check:</strong> If distortion ≤ D, done. Else adjust β and repeat.</li>
+                </ol>
+
+                <p>The parameter β controls the rate-distortion tradeoff. Small β → more distortion, low rate. Large β → little distortion, high rate.</p>
+
+                <div class="card">
+                    <div class="card-title">Why It Works</div>
+                    <p>The update rule comes from Lagrangian duality: at optimality, the gradient of mutual information equals the gradient of the constraint, scaled by β. Iterating converges to the optimal p(x̂|x).</p>
+                </div>
+            </section>
+
+            <!-- Code Lab -->
+            <section class="fade-in">
+                <h2>Part V: Code Lab — Computing R(D) in Python</h2>
+
+                <p>Here's a minimal implementation for binary and Gaussian sources:</p>
+
+                <div class="code-block"><code>import numpy as np
+from scipy.special import entropy
+
+# Binary source, Hamming distortion
+def rd_binary(p, D):
+    """Rate distortion for binary source."""
+    if D > min(p, 1-p):
+        return 0  # Maximum distortion
+    h_p = -p * np.log2(p + 1e-10) - (1-p) * np.log2(1-p + 1e-10)
+    h_d = -D * np.log2(D + 1e-10) - (1-D) * np.log2(1-D + 1e-10)
+    return max(0, h_p - h_d)
+
+# Gaussian source, squared error
+def rd_gaussian(sigma2, D):
+    """Rate distortion for Gaussian source."""
+    if D >= sigma2:
+        return 0
+    if D <= 0:
+        return float('inf')
+    return 0.5 * np.log2(sigma2 / D)
+
+# Example: MP3-like scenario
+p = 0.3  # Source bias
+D_values = np.linspace(0.001, min(p, 1-p)-0.001, 100)
+rates = [rd_binary(p, d) for d in D_values]
+
+print(f"Binary source, p={p}")
+print(f"  D=0.05: R(D) = {rd_binary(p, 0.05):.2f} bits")
+print(f"  D=0.15: R(D) = {rd_binary(p, 0.15):.2f} bits")
+
+sigma2 = 1.0
+print(f"\nGaussian source, σ²={sigma2}")
+print(f"  D=0.1:  R(D) = {rd_gaussian(sigma2, 0.1):.2f} bits")
+print(f"  D=0.5:  R(D) = {rd_gaussian(sigma2, 0.5):.2f} bits")
+                </code></div>
+
+                <div class="card">
+                    <div class="card-title">Output Interpretation</div>
+                    <p>For the binary source with p=0.3, H(p) ≈ 0.88 bits (lossless). Allowing D=0.15 cuts this to ~0.23 bits — saving 75% of bits for just 15% error. This is the power of lossy compression.</p>
+                </div>
+            </section>
+
+            <!-- Socratic Sandbox -->
+            <section class="fade-in">
+                <div class="socratic-section">
+                    <h3>Socratic Sandbox: Questions & Insights</h3>
+
+                    <div class="question-item">
+                        <div class="question">Q1: "At what distortion does MP3 operate?"</div>
+                        <div class="answer">MP3 targets psychoacoustic distortion — it removes frequencies you can't hear, quieter sounds masked by louder ones, and temporal components below 20 Hz or above 20 kHz. The effective D is tuned to human perception, not mathematical MSE. A 128 kbps MP3 achieves remarkable quality at ~0.125 bits per sample because much of the source variance is imperceptible to human ears.</div>
+                    </div>
+
+                    <div class="question-item">
+                        <div class="question">Q2: "R(D) = 0 at D = σ². What does this mean?"</div>
+                        <div class="answer">If you're allowed average squared error equal to the source variance, the optimal encoder is the constant zero (or the mean, equivalently). The decoder needs zero information — it always outputs the same value. This makes sense: if the distortion tolerance matches the typical spread of the signal, describing individual values adds no value. You're better off guessing the mean.</div>
+                    </div>
+
+                    <div class="question-item">
+                        <div class="question">Q3: "Why is R(D) convex and decreasing?"</div>
+                        <div class="answer">More distortion tolerance → less discrimination needed → lower rate. Convexity (the curve bends downward) follows from the minimization structure: the first unit of distortion tolerance saves more rate than the last unit, because you can coarse-quantize aggressively without triggering the distortion constraint early on. This is a consequence of the mutual information being jointly convex in p(x̂|x) and the distortion constraint being linear.</div>
+                    </div>
+
+                    <div class="question-item">
+                        <div class="question">Q4: "Can we achieve R(D) with finite blocklength?"</div>
+                        <div class="answer">Like channel coding, there's a gap that shrinks as n → ∞. Practical codes (vector quantization, transform coding like DCT in JPEG, temporal prediction in H.264) operate above R(D) because they use modest blocklengths and must remain computationally feasible. The good news: modern codes get within fractions of a bit of R(D), especially for medium-to-high rates.</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Applications -->
+            <section class="fade-in">
+                <h2>Applications in Practice</h2>
+
+                <div class="card">
+                    <div class="card-title">Audio: MP3, AAC, Opus</div>
+                    <p>These codecs use perceptual models to define "imperceptible distortion," then apply Huffman or arithmetic coding to the residual. At 128 kbps (128 bits per 16,000 samples), they achieve transparency for most listeners — not because R(D) theory mandates 128 kbps, but because human audition has high D for imperceptible frequencies.</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Images: JPEG, WebP, HEIF</div>
+                    <p>JPEG uses DCT (discrete cosine transform) to decorrelate pixels, then quantizes high-frequency components more coarsely. The quantization table defines the distortion D implicitly; R(D) theory predicts the rate-distortion tradeoff. A quality slider (90 vs. 80 vs. 50) moves along the R(D) curve.</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Video: H.264, VP9, AV1</div>
+                    <p>Video codecs apply motion compensation (predicting current frame from previous), then quantize prediction residuals. The quantization parameter (QP) controls the distortion D; R(D) theory explains why halving the quantization step requires ~0.5 extra bits per sample.</p>
+                </div>
+            </section>
+
+            <!-- Summary -->
+            <section class="fade-in">
+                <h2>Key Takeaways</h2>
+
+                <ul>
+                    <li><strong>Rate-distortion function R(D)</strong> is the minimum rate for average distortion ≤ D.</li>
+                    <li><strong>R(0) = H(X)</strong> (lossless); <strong>R(D_max) = 0</strong> (lossy limit).</li>
+                    <li><strong>R(D) is convex, decreasing, and continuous.</strong></li>
+                    <li><strong>Binary and Gaussian sources</strong> have closed-form expressions.</li>
+                    <li><strong>Blahut-Arimoto algorithm</strong> computes R(D) iteratively via Lagrangian duality.</li>
+                    <li><strong>Real codecs</strong> (MP3, JPEG, H.264) exploit perceptual or structural redundancy to approach R(D) with practical blocklengths.</li>
+                    <li><strong>The fundamental tradeoff:</strong> Lower quality (higher D) → exponentially fewer bits needed. This curve is universal across all distortion measures and sources.</li>
+                </ul>
+            </section>
+
+            <!-- Chapter Navigation -->
+            <div class="chapter-nav fade-in">
+                <a href="#" class="nav-chapter">← Chapter 12: Channel Coding</a>
+                <div class="chapter-info">Chapter 13 of The Library of Entropy</div>
+                <a href="#" class="nav-chapter">Chapter 14: The Source Coding Theorem →</a>
+            </div>
+        </div>
+    </main>
+
+    <!-- JavaScript -->
+    <script>
+        // Progress bar
+        function updateProgressBar() {
+            const scrollTop = window.scrollY;
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const scrollPercent = docHeight === 0 ? 0 : (scrollTop / docHeight) * 100;
+            document.querySelector('.progress-bar').style.width = scrollPercent + '%';
+        }
+        window.addEventListener('scroll', updateProgressBar);
+
+        // Fade-in animation with IntersectionObserver
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.fade-in').forEach(el => {
+            observer.observe(el);
+        });
+
+        // Tab switching
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', function() {
+                const tabName = this.dataset.tab;
+
+                // Hide all tabs
+                document.querySelectorAll('.tab-content').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+
+                // Deactivate all buttons
+                document.querySelectorAll('.tab-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+
+                // Show selected tab
+                document.getElementById(tabName).classList.add('active');
+                this.classList.add('active');
+
+                // Redraw canvas
+                if (tabName === 'binary-tab') {
+                    drawBinaryRD();
+                } else {
+                    drawGaussianRD();
+                }
+            });
+        });
+
+        // Binary source R(D) function
+        function binaryRD(p, D) {
+            if (D < 0 || D > 0.5) return null;
+            if (D > Math.min(p, 1 - p)) return 0;
+            const hp = p === 0 || p === 1 ? 0 : -p * Math.log2(p) - (1 - p) * Math.log2(1 - p);
+            const hd = D === 0 || D === 1 ? 0 : -D * Math.log2(D) - (1 - D) * Math.log2(1 - D);
+            return Math.max(0, hp - hd);
+        }
+
+        // Gaussian source R(D) function
+        function gaussianRD(sigma2, D) {
+            if (D <= 0 || D > sigma2) return null;
+            return 0.5 * Math.log2(sigma2 / D);
+        }
+
+        // Binary source visualization
+        const binaryCanvas = document.getElementById('binary-canvas');
+        const binaryCtx = binaryCanvas.getContext('2d');
+        const binaryDSlider = document.getElementById('binary-d-slider');
+
+        function drawBinaryRD() {
+            const p = 0.3;
+            const width = binaryCanvas.width;
+            const height = binaryCanvas.height;
+            const padding = 50;
+            const graphWidth = width - 2 * padding;
+            const graphHeight = height - 2 * padding;
+
+            // Clear canvas
+            binaryCtx.fillStyle = '#1a1a24';
+            binaryCtx.fillRect(0, 0, width, height);
+
+            // Draw axes
+            binaryCtx.strokeStyle = '#2a2a3a';
+            binaryCtx.lineWidth = 2;
+            binaryCtx.beginPath();
+            binaryCtx.moveTo(padding, padding);
+            binaryCtx.lineTo(padding, height - padding);
+            binaryCtx.lineTo(width - padding, height - padding);
+            binaryCtx.stroke();
+
+            // Labels
+            binaryCtx.fillStyle = '#9a96a6';
+            binaryCtx.font = '12px "JetBrains Mono"';
+            binaryCtx.textAlign = 'center';
+            binaryCtx.fillText('D (Distortion)', width / 2, height - 10);
+            binaryCtx.save();
+            binaryCtx.translate(15, height / 2);
+            binaryCtx.rotate(-Math.PI / 2);
+            binaryCtx.fillText('R(D) bits/symbol', 0, 0);
+            binaryCtx.restore();
+
+            // Draw R(D) curve
+            binaryCtx.strokeStyle = '#10b981';
+            binaryCtx.lineWidth = 3;
+            binaryCtx.beginPath();
+
+            const dMax = Math.min(p, 1 - p);
+            let firstPoint = true;
+            for (let i = 0; i <= 100; i++) {
+                const d = (i / 100) * dMax;
+                const r = binaryRD(p, d);
+                if (r !== null) {
+                    const x = padding + (d / dMax) * graphWidth;
+                    const y = height - padding - (r / binaryRD(p, 0)) * graphHeight;
+                    if (firstPoint) {
+                        binaryCtx.moveTo(x, y);
+                        firstPoint = false;
+                    } else {
+                        binaryCtx.lineTo(x, y);
+                    }
+                }
+            }
+            binaryCtx.stroke();
+
+            // Current operating point
+            const currentD = parseFloat(binaryDSlider.value) / 100 * dMax;
+            const currentR = binaryRD(p, currentD);
+            if (currentR !== null) {
+                const x = padding + (currentD / dMax) * graphWidth;
+                const y = height - padding - (currentR / binaryRD(p, 0)) * graphHeight;
+
+                binaryCtx.fillStyle = '#10b981';
+                binaryCtx.beginPath();
+                binaryCtx.arc(x, y, 6, 0, 2 * Math.PI);
+                binaryCtx.fill();
+
+                // Crosshairs
+                binaryCtx.strokeStyle = 'rgba(16, 185, 129, 0.3)';
+                binaryCtx.setLineDash([5, 5]);
+                binaryCtx.lineWidth = 1;
+                binaryCtx.beginPath();
+                binaryCtx.moveTo(x, height - padding);
+                binaryCtx.lineTo(x, y);
+                binaryCtx.moveTo(padding, y);
+                binaryCtx.lineTo(x, y);
+                binaryCtx.stroke();
+                binaryCtx.setLineDash([]);
+            }
+
+            // Ticks and labels
+            binaryCtx.fillStyle = '#9a96a6';
+            binaryCtx.font = '11px "JetBrains Mono"';
+            binaryCtx.textAlign = 'center';
+            for (let i = 0; i <= 5; i++) {
+                const d = (i / 5) * dMax;
+                const x = padding + (d / dMax) * graphWidth;
+                binaryCtx.fillRect(x, height - padding + 5, 1, 5);
+                binaryCtx.fillText(d.toFixed(2), x, height - padding + 20);
+            }
+
+            binaryCtx.textAlign = 'right';
+            const hp = -p * Math.log2(p) - (1 - p) * Math.log2(1 - p);
+            for (let i = 0; i <= 5; i++) {
+                const r = (i / 5) * hp;
+                const y = height - padding - (r / hp) * graphHeight;
+                binaryCtx.fillRect(padding - 10, y, 5, 1);
+                binaryCtx.fillText(r.toFixed(2), padding - 15, y + 4);
+            }
+        }
+
+        // Gaussian source visualization
+        const gaussianCanvas = document.getElementById('gaussian-canvas');
+        const gaussianCtx = gaussianCanvas.getContext('2d');
+        const gaussianDSlider = document.getElementById('gaussian-d-slider');
+
+        function drawGaussianRD() {
+            const sigma2 = 1.0;
+            const width = gaussianCanvas.width;
+            const height = gaussianCanvas.height;
+            const padding = 50;
+            const graphWidth = width - 2 * padding;
+            const graphHeight = height - 2 * padding;
+
+            // Clear canvas
+            gaussianCtx.fillStyle = '#1a1a24';
+            gaussianCtx.fillRect(0, 0, width, height);
+
+            // Draw axes
+            gaussianCtx.strokeStyle = '#2a2a3a';
+            gaussianCtx.lineWidth = 2;
+            gaussianCtx.beginPath();
+            gaussianCtx.moveTo(padding, padding);
+            gaussianCtx.lineTo(padding, height - padding);
+            gaussianCtx.lineTo(width - padding, height - padding);
+            gaussianCtx.stroke();
+
+            // Labels
+            gaussianCtx.fillStyle = '#9a96a6';
+            gaussianCtx.font = '12px "JetBrains Mono"';
+            gaussianCtx.textAlign = 'center';
+            gaussianCtx.fillText('D (Distortion)', width / 2, height - 10);
+            gaussianCtx.save();
+            gaussianCtx.translate(15, height / 2);
+            gaussianCtx.rotate(-Math.PI / 2);
+            gaussianCtx.fillText('R(D) bits/symbol', 0, 0);
+            gaussianCtx.restore();
+
+            // Draw R(D) curve
+            gaussianCtx.strokeStyle = '#10b981';
+            gaussianCtx.lineWidth = 3;
+            gaussianCtx.beginPath();
+
+            let firstPoint = true;
+            const rMax = gaussianRD(sigma2, 0.01);
+            for (let i = 1; i <= 100; i++) {
+                const d = (i / 100) * sigma2;
+                const r = gaussianRD(sigma2, d);
+                if (r !== null) {
+                    const x = padding + (d / sigma2) * graphWidth;
+                    const y = height - padding - (r / rMax) * graphHeight;
+                    if (firstPoint) {
+                        gaussianCtx.moveTo(x, y);
+                        firstPoint = false;
+                    } else {
+                        gaussianCtx.lineTo(x, y);
+                    }
+                }
+            }
+            gaussianCtx.stroke();
+
+            // Current operating point
+            const currentD = (parseFloat(gaussianDSlider.value) / 100) * sigma2;
+            const currentR = gaussianRD(sigma2, currentD);
+            if (currentR !== null) {
+                const x = padding + (currentD / sigma2) * graphWidth;
+                const y = height - padding - (currentR / rMax) * graphHeight;
+
+                gaussianCtx.fillStyle = '#10b981';
+                gaussianCtx.beginPath();
+                gaussianCtx.arc(x, y, 6, 0, 2 * Math.PI);
+                gaussianCtx.fill();
+
+                // Crosshairs
+                gaussianCtx.strokeStyle = 'rgba(16, 185, 129, 0.3)';
+                gaussianCtx.setLineDash([5, 5]);
+                gaussianCtx.lineWidth = 1;
+                gaussianCtx.beginPath();
+                gaussianCtx.moveTo(x, height - padding);
+                gaussianCtx.lineTo(x, y);
+                gaussianCtx.moveTo(padding, y);
+                gaussianCtx.lineTo(x, y);
+                gaussianCtx.stroke();
+                gaussianCtx.setLineDash([]);
+            }
+
+            // Ticks and labels
+            gaussianCtx.fillStyle = '#9a96a6';
+            gaussianCtx.font = '11px "JetBrains Mono"';
+            gaussianCtx.textAlign = 'center';
+            for (let i = 0; i <= 5; i++) {
+                const d = (i / 5) * sigma2;
+                const x = padding + (d / sigma2) * graphWidth;
+                gaussianCtx.fillRect(x, height - padding + 5, 1, 5);
+                gaussianCtx.fillText(d.toFixed(2), x, height - padding + 20);
+            }
+
+            gaussianCtx.textAlign = 'right';
+            for (let i = 0; i <= 5; i++) {
+                const r = (i / 5) * rMax;
+                const y = height - padding - (r / rMax) * graphHeight;
+                gaussianCtx.fillRect(padding - 10, y, 5, 1);
+                gaussianCtx.fillText(r.toFixed(2), padding - 15, y + 4);
+            }
+        }
+
+        // Binary slider event
+        binaryDSlider.addEventListener('input', function() {
+            const p = 0.3;
+            const dMax = Math.min(p, 1 - p);
+            const d = (parseFloat(this.value) / 100) * dMax;
+            const r = binaryRD(p, d);
+
+            document.getElementById('binary-d-display').textContent = d.toFixed(3);
+            document.getElementById('binary-d-value').textContent = d.toFixed(3);
+            document.getElementById('binary-r-value').textContent = r.toFixed(2);
+
+            if (d < 0.001) {
+                document.getElementById('binary-note').textContent = 'Near lossless: R(D) ≈ H(X) = 0.88 bits.';
+            } else if (d > dMax - 0.001) {
+                document.getElementById('binary-note').textContent = 'Near maximum distortion: R(D) ≈ 0.';
+            } else {
+                document.getElementById('binary-note').textContent = `Each unit of distortion saves roughly -0.5 bits (convex!).`;
+            }
+
+            drawBinaryRD();
+        });
+
+        // Gaussian slider event
+        gaussianDSlider.addEventListener('input', function() {
+            const sigma2 = 1.0;
+            const d = (parseFloat(this.value) / 100) * sigma2;
+            const r = gaussianRD(sigma2, d);
+
+            document.getElementById('gaussian-d-display').textContent = d.toFixed(3);
+            document.getElementById('gaussian-d-value').textContent = d.toFixed(3);
+            document.getElementById('gaussian-r-value').textContent = r.toFixed(2);
+
+            if (d < 0.01) {
+                document.getElementById('gaussian-note').textContent = 'Near lossless: R(D) → ∞.';
+            } else if (d > sigma2 - 0.001) {
+                document.getElementById('gaussian-note').textContent = 'Near σ²: R(D) ≈ 0 (output mean).';
+            } else {
+                const bits_saved = 0.5 * Math.log2(2);
+                document.getElementById('gaussian-note').textContent = `Doubling distortion saves ≈0.5 bits (log-linear).`;
+            }
+
+            drawGaussianRD();
+        });
+
+        // Initial draw
+        drawBinaryRD();
+        drawGaussianRD();
+    </script>
+</body>
+</html>

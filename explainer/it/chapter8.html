@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 8: Channel Capacity - The Library of Entropy</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,8..72,400;0,8..72,700;1,8..72,400&family=Figtree:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <!-- MathJax -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --bg-card: #111118;
+            --surface: #1a1a24;
+            --border: #2a2a3a;
+            --text-primary: #e8e6e3;
+            --text-secondary: #9a96a6;
+            --accent: #06b6d4;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            font-family: 'Figtree', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Fixed Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(10, 10, 15, 0.95);
+            border-bottom: 1px solid var(--border);
+            z-index: 1000;
+            padding: 1rem 0;
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-container {
+            max-width: 740px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-title {
+            font-family: 'Newsreader', serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .reading-progress {
+            height: 3px;
+            background-color: var(--border);
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            background: linear-gradient(90deg, var(--accent), #0891b2);
+            transition: width 0.1s ease;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent);
+        }
+
+        /* Main Content */
+        main {
+            max-width: 740px;
+            margin: 0 auto;
+            padding: 6rem 2rem 3rem;
+        }
+
+        /* Section Styling */
+        section {
+            opacity: 0;
+            transition: opacity 0.6s ease-out;
+            margin-bottom: 3rem;
+        }
+
+        section.visible {
+            opacity: 1;
+        }
+
+        h1 {
+            font-family: 'Newsreader', serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+
+        h2 {
+            font-family: 'Newsreader', serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 2rem 0 1rem;
+            color: var(--accent);
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+
+        h3 {
+            font-family: 'Newsreader', serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin: 1.5rem 0 0.75rem;
+            color: var(--text-primary);
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        /* Cover Section */
+        .cover {
+            text-align: center;
+            padding: 3rem 0;
+            border-bottom: 2px solid var(--border);
+            margin-bottom: 3rem;
+        }
+
+        .cover h1 {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .cover .subtitle {
+            font-family: 'Newsreader', serif;
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            font-style: italic;
+            margin-bottom: 1.5rem;
+        }
+
+        .cover .chapter-number {
+            font-size: 0.95rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Card Styling */
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .card.highlight {
+            border-color: var(--accent);
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, transparent 100%);
+        }
+
+        /* Feynman Model */
+        .feynman-box {
+            background-color: var(--surface);
+            border-left: 4px solid var(--accent);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            font-style: italic;
+            border-radius: 4px;
+        }
+
+        /* Code Styling */
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            background-color: var(--surface);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            color: var(--accent);
+            font-size: 0.9rem;
+        }
+
+        pre {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: var(--text-primary);
+        }
+
+        /* Tab System */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+
+        .tab-button {
+            background: none;
+            border: none;
+            padding: 0.75rem 1rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-family: 'Figtree', sans-serif;
+            font-size: 0.95rem;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab-button.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .tab-button:hover {
+            color: var(--text-primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Canvas Styling */
+        canvas {
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background-color: var(--surface);
+            margin: 1rem 0;
+            width: 100%;
+            max-width: 100%;
+        }
+
+        /* Slider Styling */
+        .slider-container {
+            margin: 1.5rem 0;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .slider-label span:first-child {
+            color: var(--text-secondary);
+        }
+
+        .slider-label span:last-child {
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: linear-gradient(90deg, var(--surface) 0%, var(--surface) 100%);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+        }
+
+        /* SVG Styling */
+        svg {
+            display: block;
+            margin: 1rem 0;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background-color: var(--surface);
+            width: 100%;
+            height: auto;
+        }
+
+        /* Socratic Q&A */
+        .qa-item {
+            background-color: var(--bg-card);
+            border-left: 4px solid var(--accent);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 4px;
+        }
+
+        .qa-question {
+            color: var(--accent);
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+        }
+
+        .qa-answer {
+            display: none;
+            color: var(--text-primary);
+            margin-top: 1rem;
+        }
+
+        .qa-answer.visible {
+            display: block;
+        }
+
+        /* Math Display */
+        .math-box {
+            background-color: var(--surface);
+            padding: 1.5rem;
+            border-radius: 6px;
+            margin: 1.5rem 0;
+            border: 1px solid var(--border);
+            overflow-x: auto;
+        }
+
+        /* List Styling */
+        ul, ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        .chapter-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .chapter-nav a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .chapter-nav a:hover {
+            color: var(--text-secondary);
+        }
+
+        .chapter-nav-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .chapter-nav-disabled {
+            color: var(--text-secondary);
+            cursor: not-allowed;
+        }
+
+        /* Calculator Output */
+        .capacity-output {
+            background-color: var(--surface);
+            padding: 1.5rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+            text-align: center;
+            border: 2px solid var(--accent);
+        }
+
+        .capacity-output .label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .capacity-output .value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2rem;
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            main {
+                padding: 5rem 1rem 2rem;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            h2 {
+                font-size: 1.4rem;
+            }
+
+            .nav-container {
+                padding: 0 1rem;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Fixed Navigation -->
+    <nav>
+        <div class="nav-container">
+            <div class="nav-title">The Library of Entropy</div>
+            <div class="nav-links">
+                <a href="#chapter7">← Ch 7</a>
+                <a href="#toc">Contents</a>
+                <a href="#chapter9">Ch 9 →</a>
+            </div>
+        </div>
+        <div class="reading-progress"></div>
+    </nav>
+
+    <main>
+        <!-- Cover Section -->
+        <section class="cover">
+            <div class="chapter-number">Chapter 8</div>
+            <h1>Channel Capacity</h1>
+            <div class="subtitle">The Speed Limit of Communication</div>
+            <p style="color: var(--text-secondary); margin-top: 1.5rem;">Cover & Thomas, pp. 183–222</p>
+        </section>
+
+        <!-- Part I: Feynman Mental Model -->
+        <section id="feynman">
+            <h2>The Intuition: Shouting Across a Noisy Room</h2>
+            <div class="feynman-box">
+                <p>"Imagine shouting across a noisy room. There's a maximum rate at which you can communicate reliably — no matter how cleverly you encode. Shannon proved this limit exists <strong>AND is achievable</strong>. That's channel capacity: the speed limit of communication."</p>
+            </div>
+            <p>This simple image captures the essence of Shannon's most profound discovery. Every communication channel — whether a WiFi link, an optical fiber, or two people in a crowd — has a fundamental speed limit. This limit is:</p>
+            <ul>
+                <li><strong>Universal:</strong> No code, no matter how sophisticated, can exceed it.</li>
+                <li><strong>Achievable:</strong> We can get arbitrarily close with the right approach.</li>
+                <li><strong>Computable:</strong> From the channel's physical properties, we can calculate it exactly.</li>
+            </ul>
+            <p>This is the bridge between information theory and real communication systems. Channel capacity is where mathematics meets physics.</p>
+        </section>
+
+        <!-- Part II: Channel Capacity Definition -->
+        <section id="definition">
+            <h2>Channel Capacity: Formal Definition</h2>
+            <p>The <strong>channel capacity</strong> of a discrete memoryless channel (DMC) is defined as:</p>
+            <div class="math-box">
+                $$C = \max_{p(x)} I(X;Y)$$
+            </div>
+            <p>where the maximum is over all input probability distributions $p(x)$, and $I(X;Y)$ is the mutual information between the channel input $X$ and output $Y$.</p>
+            <p>In other words: <em>find the input distribution that maximizes how much information can flow through the channel.</em></p>
+
+            <h3>Key Intuitions</h3>
+            <ul>
+                <li><strong>Units:</strong> Capacity is measured in bits per channel use (or nats per use).</li>
+                <li><strong>Optimization:</strong> Not all input distributions are equally good. The capacity-achieving distribution is often non-uniform.</li>
+                <li><strong>Noise Trade-off:</strong> More noise means more uncertainty at the receiver, which lowers capacity.</li>
+            </ul>
+
+            <h3>Quick Examples</h3>
+            <div class="card">
+                <strong>Noiseless Binary Channel:</strong>
+                <div class="math-box">
+                    $$C = 1 \text{ bit}$$
+                </div>
+                <p>Each symbol carries full information. Uniform input distribution is optimal.</p>
+            </div>
+
+            <div class="card">
+                <strong>Noisy 4-Symbol Channel (Special Case):</strong>
+                <div class="math-box">
+                    $$C = 1 \text{ bit}$$
+                </div>
+                <p>Even though 4 symbols could carry 2 bits, noise forces us to use only 2 of them reliably. Capacity remains 1 bit.</p>
+            </div>
+
+            <div class="card">
+                <strong>Binary Symmetric Channel (BSC):</strong>
+                <div class="math-box">
+                    $$C = 1 - H(p)$$
+                </div>
+                <p>where $p$ is the crossover probability and $H(p) = -p \log_2 p - (1-p) \log_2(1-p)$ is the binary entropy function. As $p \to 0$ (noiseless), $C \to 1$. As $p \to 0.5$ (complete noise), $C \to 0$.</p>
+            </div>
+
+            <div class="card">
+                <strong>Binary Erasure Channel (BEC):</strong>
+                <div class="math-box">
+                    $$C = 1 - \alpha$$
+                </div>
+                <p>where $\alpha$ is the erasure probability. Each symbol is either received correctly or erased. Capacity is simply the probability of not being erased.</p>
+            </div>
+        </section>
+
+        <!-- Part III: Interactive Channel Capacity Calculator -->
+        <section id="calculator">
+            <h2>Interactive: Channel Capacity Calculator</h2>
+            <p>Adjust channel parameters in real-time and see how capacity changes. The capacity curve updates instantly.</p>
+
+            <div class="tabs">
+                <button class="tab-button active" data-tab="bsc">Binary Symmetric Channel</button>
+                <button class="tab-button" data-tab="bec">Binary Erasure Channel</button>
+                <button class="tab-button" data-tab="z-channel">Z-Channel</button>
+            </div>
+
+            <!-- BSC Tab -->
+            <div id="bsc" class="tab-content active">
+                <div class="card">
+                    <h3>Binary Symmetric Channel (BSC)</h3>
+                    <p>In a BSC, bits are flipped with probability $p$. Capacity is $C = 1 - H(p)$.</p>
+
+                    <div class="slider-container">
+                        <div class="slider-label">
+                            <span>Crossover Probability (p)</span>
+                            <span id="bsc-value">0.10</span>
+                        </div>
+                        <input type="range" id="bsc-slider" min="0" max="0.5" step="0.01" value="0.1">
+                    </div>
+
+                    <div class="capacity-output">
+                        <div class="label">Channel Capacity</div>
+                        <div class="value" id="bsc-capacity">0.531 bits</div>
+                    </div>
+
+                    <canvas id="bsc-canvas" width="600" height="300"></canvas>
+
+                    <svg viewBox="0 0 400 120" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Input -->
+                        <circle cx="50" cy="60" r="20" fill="none" stroke="#06b6d4" stroke-width="2"/>
+                        <text x="50" y="65" text-anchor="middle" fill="#e8e6e3" font-size="12">X</text>
+
+                        <!-- Channel with p label -->
+                        <g id="bsc-channel-diagram">
+                            <!-- Arrow to 0 -->
+                            <path d="M 70 50 Q 200 30 330 50" fill="none" stroke="#06b6d4" stroke-width="2" marker-end="url(#arrowhead)"/>
+                            <text x="200" y="25" text-anchor="middle" fill="#9a96a6" font-size="11">1-p</text>
+
+                            <!-- Arrow to 1 -->
+                            <path d="M 70 70 Q 200 90 330 70" fill="none" stroke="#06b6d4" stroke-width="2" marker-end="url(#arrowhead)"/>
+                            <text x="200" y="105" text-anchor="middle" fill="#9a96a6" font-size="11">p (flip)</text>
+                        </g>
+
+                        <!-- Output -->
+                        <circle cx="350" cy="60" r="20" fill="none" stroke="#06b6d4" stroke-width="2"/>
+                        <text x="350" y="65" text-anchor="middle" fill="#e8e6e3" font-size="12">Y</text>
+
+                        <!-- Arrow marker definition -->
+                        <defs>
+                            <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                                <polygon points="0 0, 10 3, 0 6" fill="#06b6d4" />
+                            </marker>
+                        </defs>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- BEC Tab -->
+            <div id="bec" class="tab-content">
+                <div class="card">
+                    <h3>Binary Erasure Channel (BEC)</h3>
+                    <p>In a BEC, each bit is either received correctly or erased (marked as "?"). Capacity is $C = 1 - \alpha$ where $\alpha$ is the erasure probability.</p>
+
+                    <div class="slider-container">
+                        <div class="slider-label">
+                            <span>Erasure Probability (α)</span>
+                            <span id="bec-value">0.10</span>
+                        </div>
+                        <input type="range" id="bec-slider" min="0" max="1" step="0.01" value="0.1">
+                    </div>
+
+                    <div class="capacity-output">
+                        <div class="label">Channel Capacity</div>
+                        <div class="value" id="bec-capacity">0.900 bits</div>
+                    </div>
+
+                    <canvas id="bec-canvas" width="600" height="300"></canvas>
+
+                    <svg viewBox="0 0 400 140" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Input -->
+                        <circle cx="50" cy="60" r="20" fill="none" stroke="#06b6d4" stroke-width="2"/>
+                        <text x="50" y="65" text-anchor="middle" fill="#e8e6e3" font-size="12">X</text>
+
+                        <!-- Arrows -->
+                        <path d="M 70 50 Q 180 20 330 40" fill="none" stroke="#06b6d4" stroke-width="2" marker-end="url(#arrowhead2)"/>
+                        <text x="180" y="15" text-anchor="middle" fill="#9a96a6" font-size="11">1-α</text>
+
+                        <path d="M 70 70 Q 180 100 330 100" fill="none" stroke="#06b6d4" stroke-width="2" marker-end="url(#arrowhead2)"/>
+                        <text x="180" y="125" text-anchor="middle" fill="#9a96a6" font-size="11">α (erase)</text>
+
+                        <!-- Output -->
+                        <circle cx="350" cy="40" r="18" fill="none" stroke="#06b6d4" stroke-width="2"/>
+                        <text x="350" y="45" text-anchor="middle" fill="#e8e6e3" font-size="12">0</text>
+
+                        <circle cx="350" cy="100" r="18" fill="none" stroke="#06b6d4" stroke-width="2"/>
+                        <text x="350" y="105" text-anchor="middle" fill="#e8e6e3" font-size="12">?</text>
+
+                        <defs>
+                            <marker id="arrowhead2" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                                <polygon points="0 0, 10 3, 0 6" fill="#06b6d4" />
+                            </marker>
+                        </defs>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Z-Channel Tab -->
+            <div id="z-channel" class="tab-content">
+                <div class="card">
+                    <h3>Z-Channel</h3>
+                    <p>In the Z-channel, a transmitted 0 is always received as 0, but a transmitted 1 is flipped to 0 with probability $p$. This asymmetric channel is more complex: capacity depends on solving an optimization problem numerically.</p>
+
+                    <div class="slider-container">
+                        <div class="slider-label">
+                            <span>Flip Probability (p)</span>
+                            <span id="z-value">0.10</span>
+                        </div>
+                        <input type="range" id="z-slider" min="0" max="0.5" step="0.01" value="0.1">
+                    </div>
+
+                    <div class="capacity-output">
+                        <div class="label">Channel Capacity (Numerical)</div>
+                        <div class="value" id="z-capacity">0.715 bits</div>
+                    </div>
+
+                    <canvas id="z-canvas" width="600" height="300"></canvas>
+
+                    <svg viewBox="0 0 400 120" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Input -->
+                        <circle cx="50" cy="60" r="20" fill="none" stroke="#06b6d4" stroke-width="2"/>
+                        <text x="50" y="65" text-anchor="middle" fill="#e8e6e3" font-size="12">X</text>
+
+                        <!-- Arrows -->
+                        <path d="M 70 40 Q 180 20 330 40" fill="none" stroke="#06b6d4" stroke-width="2" marker-end="url(#arrowhead3)"/>
+                        <text x="200" y="15" text-anchor="middle" fill="#9a96a6" font-size="11">1 (always)</text>
+
+                        <path d="M 70 80 Q 180 100 330 80" fill="none" stroke="#06b6d4" stroke-width="2" marker-end="url(#arrowhead3)"/>
+                        <text x="200" y="115" text-anchor="middle" fill="#9a96a6" font-size="11">p (flip to 0)</text>
+
+                        <!-- Output -->
+                        <circle cx="350" cy="40" r="18" fill="none" stroke="#06b6d4" stroke-width="2"/>
+                        <text x="350" y="45" text-anchor="middle" fill="#e8e6e3" font-size="12">0</text>
+
+                        <circle cx="350" cy="80" r="18" fill="none" stroke="#06b6d4" stroke-width="2"/>
+                        <text x="350" y="85" text-anchor="middle" fill="#e8e6e3" font-size="12">1</text>
+
+                        <defs>
+                            <marker id="arrowhead3" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                                <polygon points="0 0, 10 3, 0 6" fill="#06b6d4" />
+                            </marker>
+                        </defs>
+                    </svg>
+                </div>
+            </div>
+        </section>
+
+        <!-- Part IV: Shannon's Channel Coding Theorem -->
+        <section id="coding-theorem">
+            <h2>Shannon's Channel Coding Theorem (Theorem 8.7)</h2>
+            <p>Shannon's crowning achievement can be stated in two parts:</p>
+
+            <div class="card highlight">
+                <h3>Direct Part (Achievability)</h3>
+                <p>For any rate $R < C$, there exists a code with:</p>
+                <ul>
+                    <li>$M = 2^{nR}$ codewords</li>
+                    <li>Block length $n$</li>
+                    <li>Maximum probability of error $P_e^{(n)} \to 0$ as $n \to \infty$</li>
+                </ul>
+                <p><strong>In plain language:</strong> If you want to send information at a rate below capacity, you can make the error probability arbitrarily small by making your code longer.</p>
+            </div>
+
+            <div class="card highlight">
+                <h3>Converse Part (Impossibility)</h3>
+                <p>For any rate $R > C$, the error probability is bounded away from zero for all sufficiently large $n$:</p>
+                <div class="math-box">
+                    $$P_e^{(n)} \geq 1 - O(1/n)$$
+                </div>
+                <p><strong>In plain language:</strong> If you try to send above capacity, you'll always have a non-negligible error rate, no matter how long your code is.</p>
+            </div>
+
+            <h3>The Proof Sketch</h3>
+            <p><strong>Why does random coding work?</strong> This is Shannon's profound insight: pick codewords independently and uniformly at random from the input alphabet. Analyze the error probability by counting how many codewords could be confused with the received sequence.</p>
+            <p>The key observation: typical sequences have a special property — they cluster in a small region of the high-dimensional space. With random coding, different codewords spread out uniformly, making their typical sets nearly disjoint.</p>
+            <p>For the converse, use <strong>Fano's inequality</strong>: if the error probability is small, the mutual information $I(X;Y)$ must be close to the entropy of $X$. But this can't happen if $R > C$.</p>
+        </section>
+
+        <!-- Part V: Jointly Typical Sequences -->
+        <section id="joint-typical">
+            <h2>Jointly Typical Sequences (Section 8.6)</h2>
+            <p>The mathematical machinery behind the coding theorem rests on the notion of <strong>jointly typical sequences</strong>.</p>
+
+            <h3>Definition</h3>
+            <p>A pair of sequences $(x^n, y^n)$ is jointly $\delta$-typical if:</p>
+            <div class="math-box">
+                $$\left| -\frac{1}{n} \log p(x^n) - H(X) \right| < \delta$$
+                $$\left| -\frac{1}{n} \log p(y^n) - H(Y) \right| < \delta$$
+                $$\left| -\frac{1}{n} \log p(x^n, y^n) - H(X,Y) \right| < \delta$$
+            </div>
+            <p>In other words: the empirical frequencies match the true distributions closely.</p>
+
+            <h3>Key Properties</h3>
+            <ul>
+                <li><strong>High Probability:</strong> For large $n$, most sequences are jointly typical.</li>
+                <li><strong>Small Size:</strong> The number of jointly typical pairs is approximately $2^{n(H(X) + H(Y))}$.</li>
+                <li><strong>Decoding Rule:</strong> Find the unique codeword $(x^n, y^n)$ that is jointly typical with the received sequence. If exactly one exists, decode it; otherwise, declare an error.</li>
+            </ul>
+
+            <p>This elegant principle connects probability (typical sets) with coding (finding the right codeword).</p>
+        </section>
+
+        <!-- Part VI: Hamming Codes -->
+        <section id="hamming">
+            <h2>Hamming Codes & Error Correction (Section 8.11)</h2>
+            <p>While Shannon's theorem proves that near-capacity performance is <em>possible</em>, practical codes must be explicitly constructed. A classic example is the <strong>Hamming [7,4] code</strong>.</p>
+
+            <div class="card">
+                <h3>[7,4] Hamming Code</h3>
+                <ul>
+                    <li><strong>Block length:</strong> $n = 7$ bits</li>
+                    <li><strong>Information bits:</strong> $k = 4$ bits</li>
+                    <li><strong>Parity bits:</strong> $7 - 4 = 3$ bits</li>
+                    <li><strong>Code rate:</strong> $R = 4/7 \approx 0.571$ bits/use</li>
+                    <li><strong>Error correction:</strong> Corrects <strong>all single-bit errors</strong></li>
+                </ul>
+
+                <p><strong>How it works:</strong> Three parity-check equations relate the seven bits. When a single bit flips, the pattern of parity violations (the syndrome) uniquely identifies which bit was corrupted.</p>
+
+                <p><strong>Trade-off:</strong> For a Binary Symmetric Channel with very low crossover probability $p$, the Hamming code is efficient: you get $4/7$ of the information with single-error correction. As $p$ increases, random coding schemes achieve higher rates closer to capacity.</p>
+
+                <div class="math-box">
+                    $$\text{For } p = 0.01: \quad C = 1 - H(0.01) \approx 0.919 \text{ bits}$$
+                    $$\text{Hamming [7,4] rate: } 4/7 \approx 0.571 \text{ bits}$$
+                </div>
+                <p>There's a gap — random codes can achieve rates up to 0.919 bits with vanishing error; Hamming gets 0.571 with guaranteed single-error correction. This is the trade-off between practical structure and optimal performance.</p>
+            </div>
+        </section>
+
+        <!-- Part VII: Feedback Does NOT Increase Capacity -->
+        <section id="feedback">
+            <h2>Feedback Capacity (Section 8.12): A Surprise</h2>
+            <p>Intuitively, <strong>feedback should help</strong>. If the receiver can tell the sender what was received, the sender can adapt. Surely that's useful?</p>
+
+            <p>Shannon proved otherwise for discrete memoryless channels:</p>
+
+            <div class="card highlight">
+                <h3>Feedback Does NOT Increase DMC Capacity</h3>
+                <div class="math-box">
+                    $$C_{\text{feedback}} = C_{\text{no feedback}}$$
+                </div>
+                <p><strong>Why?</strong> For a DMC, the channel is memoryless: future outputs don't depend on past inputs. Feedback is information, but it's information about things that don't affect the future. From an information-theoretic standpoint, it doesn't help reach the fundamental limit.</p>
+            </div>
+
+            <h3>What Feedback DOES Help With</h3>
+            <p>Although feedback doesn't increase capacity, it provides practical benefits:</p>
+            <ul>
+                <li><strong>Simpler Codes:</strong> Variable-length codes become easier to implement with feedback (e.g., ARQ — Automatic Repeat reQuest).</li>
+                <li><strong>Lower Delay:</strong> Shorter average block lengths for some schemes.</li>
+                <li><strong>Error Exponents:</strong> The rate at which error probability decreases can be improved.</li>
+                <li><strong>Channels with Memory:</strong> For channels with memory, feedback CAN increase capacity. Shannon's result applies only to memoryless channels.</li>
+            </ul>
+        </section>
+
+        <!-- Part VIII: Code Lab -->
+        <section id="code-lab">
+            <h2>Code Lab: Random Coding Capacity Estimation</h2>
+            <p>Here's a Python implementation that estimates channel capacity for a Binary Symmetric Channel using Monte Carlo simulation of mutual information:</p>
+
+            <pre><code>import numpy as np
+
+def binary_entropy(p):
+    """Compute binary entropy H(p)."""
+    if p == 0 or p == 1:
+        return 0
+    return -p * np.log2(p) - (1 - p) * np.log2(1 - p)
+
+def bsc_capacity(p):
+    """Analytic BSC capacity: C = 1 - H(p)."""
+    return 1 - binary_entropy(p)
+
+def estimate_mutual_information(p_crossover, n_samples=100000):
+    """
+    Estimate I(X; Y) for BSC with uniform input distribution.
+    X ~ Bernoulli(0.5)
+    """
+    # Generate random input
+    X = np.random.randint(0, 2, n_samples)
+
+    # Generate output: flip bit with probability p
+    Y = X.copy()
+    flip_mask = np.random.rand(n_samples) < p_crossover
+    Y[flip_mask] = 1 - Y[flip_mask]
+
+    # Compute mutual information via empirical distributions
+    # I(X;Y) = H(Y) - H(Y|X)
+
+    # H(Y): marginal entropy
+    p_y0 = np.mean(Y == 0)
+    p_y1 = np.mean(Y == 1)
+    h_y = -p_y0 * np.log2(p_y0 + 1e-10) - p_y1 * np.log2(p_y1 + 1e-10)
+
+    # H(Y|X): conditional entropy
+    h_y_given_x = 0
+    for x_val in [0, 1]:
+        mask = X == x_val
+        if np.any(mask):
+            y_given_x = Y[mask]
+            p_y0_given_x = np.mean(y_given_x == 0)
+            p_y1_given_x = np.mean(y_given_x == 1)
+            h_y_x = (-p_y0_given_x * np.log2(p_y0_given_x + 1e-10)
+                     - p_y1_given_x * np.log2(p_y1_given_x + 1e-10))
+            h_y_given_x += np.mean(mask) * h_y_x
+
+    mi = h_y - h_y_given_x
+    return mi
+
+# Example: estimate capacity at p = 0.1
+p = 0.1
+analytic_c = bsc_capacity(p)
+estimated_c = estimate_mutual_information(p)
+
+print(f"BSC with p = {p}")
+print(f"Analytic capacity: {analytic_c:.4f} bits")
+print(f"Estimated capacity: {estimated_c:.4f} bits")
+print(f"Error: {abs(analytic_c - estimated_c):.6f} bits")</code></pre>
+
+            <p><strong>Key Insights:</strong></p>
+            <ul>
+                <li>The analytic formula $C = 1 - H(p)$ is exact.</li>
+                <li>The Monte Carlo estimate converges to the true value as $n_{\text{samples}} \to \infty$.</li>
+                <li>For practical coding, you'd simulate the error probability of a specific code at various rates and compare against capacity.</li>
+            </ul>
+        </section>
+
+        <!-- Part IX: Socratic Sandbox -->
+        <section id="socratic">
+            <h2>Socratic Sandbox: The Channel Coding Challenge</h2>
+            <p>Test your understanding with these questions. Click to reveal answers.</p>
+
+            <div class="qa-item">
+                <div class="qa-question">Q1: BSC with $p = 0.01$. Can we send at 0.9 bits/use reliably?</div>
+                <div class="qa-answer">
+                    <p><strong>A:</strong> Let's compute capacity:</p>
+                    <div class="math-box">
+                        $$C = 1 - H(0.01) = 1 - (-0.01 \log_2 0.01 - 0.99 \log_2 0.99)$$
+                        $$\approx 1 - 0.0808 = 0.919 \text{ bits}$$
+                    </div>
+                    <p>Since $0.9 < 0.919$, <strong>yes!</strong> According to Shannon's theorem, we can construct a code with rate 0.9 and vanishing error probability as we increase block length. This requires explicit code construction, but it's theoretically possible.</p>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <div class="qa-question">Q2: Why does random coding work? Isn't structure needed?</div>
+                <div class="qa-answer">
+                    <p><strong>A:</strong> This is Shannon's genius! Random codes work because they <em>spread codewords uniformly in high-dimensional space.</em> When block length is large:</p>
+                    <ul>
+                        <li>Each codeword has a "typical set" — the set of sequences it might be confused with after noise.</li>
+                        <li>Random coding makes these typical sets nearly disjoint.</li>
+                        <li>The receiver can uniquely identify which codeword was sent.</li>
+                    </ul>
+                    <p>Structure (like in Hamming codes) helps make decoding practical and fast, but structure is <em>not required</em> for approaching capacity. Nature didn't design structured codes; Shannon proved random ones work too.</p>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <div class="qa-question">Q3: Feedback doesn't increase DMC capacity. What DOES it help with?</div>
+                <div class="qa-answer">
+                    <p><strong>A:</strong> For discrete memoryless channels, feedback is "information about the past," which doesn't affect the future. So capacity stays the same. <strong>But</strong> feedback helps with:</p>
+                    <ul>
+                        <li><strong>Simplicity:</strong> ARQ (Automatic Repeat reQuest) is far simpler than designing an optimal fixed-rate code.</li>
+                        <li><strong>Latency:</strong> Variable-length codes can use fewer symbols on average.</li>
+                        <li><strong>Error exponents:</strong> The exponent $E(R)$ governing how fast $P_e \to 0$ can improve.</li>
+                        <li><strong>Channels with memory:</strong> Feedback CAN increase capacity if the channel is not memoryless.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <div class="qa-question">Q4: The theorem needs $n \to \infty$. What about real finite-block-length codes?</div>
+                <div class="qa-answer">
+                    <p><strong>A:</strong> Excellent question. Shannon's theorem is asymptotic. In practice:</p>
+                    <ul>
+                        <li><strong>Rate Penalty:</strong> With finite $n$, achievable rate is $\approx C - O(1/\sqrt{n})$, where the $O(1/\sqrt{n})$ term depends on the channel and target error probability.</li>
+                        <li><strong>Trade-off:</strong> Longer codes approach capacity but increase delay and complexity.</li>
+                        <li><strong>Finite Blocklength Regime:</strong> There's a growing field of research on exact capacity-error-blocklength relationships (beyond Shannon's asymptotic limit).</li>
+                        <li><strong>Example:</strong> A code with $n = 1000$ on a BSC with $p = 0.01$ might achieve 0.910 bits instead of 0.919, a small gap.</li>
+                    </ul>
+                    <p>Modern wireless and data transmission systems operate in the finite-blocklength regime, where both capacity and latency matter.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Chapter Navigation -->
+        <div class="chapter-nav">
+            <a href="#chapter7" class="chapter-nav-btn chapter-nav-disabled">← Chapter 7</a>
+            <a href="#toc">Table of Contents</a>
+            <a href="#chapter9" class="chapter-nav-btn">Chapter 9 →</a>
+        </div>
+    </main>
+
+    <script>
+        // ============================
+        // Intersection Observer (Fade-in)
+        // ============================
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('section').forEach(section => {
+            observer.observe(section);
+        });
+
+        // ============================
+        // Reading Progress Bar
+        // ============================
+        function updateProgress() {
+            const height = document.documentElement.scrollHeight - window.innerHeight;
+            const scrolled = window.scrollY;
+            const progress = height > 0 ? (scrolled / height) * 100 : 0;
+            document.querySelector('.reading-progress').style.width = progress + '%';
+        }
+
+        window.addEventListener('scroll', updateProgress);
+        updateProgress();
+
+        // ============================
+        // Helper Functions for Channels
+        // ============================
+        function binaryEntropy(p) {
+            if (p <= 0 || p >= 1) return 0;
+            return -p * Math.log2(p) - (1 - p) * Math.log2(1 - p);
+        }
+
+        function bscCapacity(p) {
+            return 1 - binaryEntropy(p);
+        }
+
+        function becCapacity(alpha) {
+            return 1 - alpha;
+        }
+
+        function zChannelCapacity(p) {
+            // Numerical optimization for Z-channel
+            let maxMI = 0;
+            for (let q = 0; q <= 1; q += 0.001) {
+                // Input distribution: P(X=0) = q
+                const px0 = q, px1 = 1 - q;
+
+                // Output probabilities for Z-channel
+                const py0 = px0 + px1 * p;  // 0 from input 0, or 1 flipped
+                const py1 = px1 * (1 - p);   // 1 from input 1 not flipped
+
+                // H(Y)
+                const hy = py0 > 0 && py1 > 0
+                    ? -(py0 * Math.log2(py0) + py1 * Math.log2(py1))
+                    : 0;
+
+                // H(Y|X)
+                const hyGivenX0 = 0;  // Y=0 always when X=0
+                const hyGivenX1 = binaryEntropy(p);
+                const hyGivenX = px1 * hyGivenX1;
+
+                const mi = hy - hyGivenX;
+                maxMI = Math.max(maxMI, mi);
+            }
+            return maxMI;
+        }
+
+        // ============================
+        // Plot Capacity Curves
+        // ============================
+        function plotCapacityCurve(canvasId, capacityFunction, xLabel) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            const padding = 50;
+
+            // Clear canvas
+            ctx.fillStyle = '#1a1a24';
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw axes
+            ctx.strokeStyle = '#2a2a3a';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(padding, height - padding);
+            ctx.lineTo(width - padding, height - padding);
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, height - padding);
+            ctx.stroke();
+
+            // Axis labels
+            ctx.fillStyle = '#9a96a6';
+            ctx.font = '12px JetBrains Mono';
+            ctx.textAlign = 'center';
+            ctx.fillText(xLabel, width / 2, height - 10);
+            ctx.save();
+            ctx.translate(10, height / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText('Capacity (bits)', 0, 0);
+            ctx.restore();
+
+            // Plot capacity curve
+            ctx.strokeStyle = '#06b6d4';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+
+            for (let i = 0; i <= 100; i++) {
+                const x = i / 100;
+                const capacity = capacityFunction(x);
+
+                const canvasX = padding + (x / 1) * (width - 2 * padding);
+                const canvasY = height - padding - (capacity / 1) * (height - 2 * padding);
+
+                if (i === 0) {
+                    ctx.moveTo(canvasX, canvasY);
+                } else {
+                    ctx.lineTo(canvasX, canvasY);
+                }
+            }
+            ctx.stroke();
+
+            // Grid
+            ctx.strokeStyle = '#2a2a3a';
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i <= 5; i++) {
+                const y = padding + (i / 5) * (height - 2 * padding);
+                ctx.beginPath();
+                ctx.moveTo(padding - 5, y);
+                ctx.lineTo(width - padding, y);
+                ctx.stroke();
+            }
+        }
+
+        // ============================
+        // Tab System
+        // ============================
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const tabName = button.dataset.tab;
+                const tabGroup = button.closest('.card') ? button.closest('.card').parentElement : button.parentElement;
+
+                // Find all tab buttons and contents in this group
+                tabGroup.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+                tabGroup.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+                button.classList.add('active');
+                document.getElementById(tabName).classList.add('active');
+
+                // Re-render canvas if switching tabs
+                if (tabName === 'bsc') updateBSCPlot();
+                if (tabName === 'bec') updateBECPlot();
+                if (tabName === 'z-channel') updateZChannelPlot();
+            });
+        });
+
+        // Initialize first tab as active
+        document.querySelectorAll('.tabs')[0]?.querySelector('.tab-button').classList.add('active');
+        document.querySelectorAll('.tab-content')[0]?.classList.add('active');
+
+        // ============================
+        // BSC Calculator
+        // ============================
+        function updateBSCPlot() {
+            const slider = document.getElementById('bsc-slider');
+            const valueSpan = document.getElementById('bsc-value');
+            const capacitySpan = document.getElementById('bsc-capacity');
+
+            if (!slider) return;
+
+            const p = parseFloat(slider.value);
+            valueSpan.textContent = p.toFixed(2);
+            const capacity = bscCapacity(p);
+            capacitySpan.textContent = capacity.toFixed(3) + ' bits';
+
+            plotCapacityCurve('bsc-canvas', bscCapacity, 'Crossover Probability (p)');
+
+            // Highlight current point
+            const canvas = document.getElementById('bsc-canvas');
+            const ctx = canvas.getContext('2d');
+            const padding = 50;
+            const width = canvas.width;
+            const height = canvas.height;
+
+            const canvasX = padding + (p / 0.5) * (width - 2 * padding);
+            const canvasY = height - padding - (capacity / 1) * (height - 2 * padding);
+
+            ctx.fillStyle = '#06b6d4';
+            ctx.beginPath();
+            ctx.arc(canvasX, canvasY, 5, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        document.getElementById('bsc-slider')?.addEventListener('input', updateBSCPlot);
+        updateBSCPlot();
+
+        // ============================
+        // BEC Calculator
+        // ============================
+        function updateBECPlot() {
+            const slider = document.getElementById('bec-slider');
+            const valueSpan = document.getElementById('bec-value');
+            const capacitySpan = document.getElementById('bec-capacity');
+
+            if (!slider) return;
+
+            const alpha = parseFloat(slider.value);
+            valueSpan.textContent = alpha.toFixed(2);
+            const capacity = becCapacity(alpha);
+            capacitySpan.textContent = capacity.toFixed(3) + ' bits';
+
+            plotCapacityCurve('bec-canvas', becCapacity, 'Erasure Probability (α)');
+
+            // Highlight current point
+            const canvas = document.getElementById('bec-canvas');
+            const ctx = canvas.getContext('2d');
+            const padding = 50;
+            const width = canvas.width;
+            const height = canvas.height;
+
+            const canvasX = padding + (alpha / 1) * (width - 2 * padding);
+            const canvasY = height - padding - (capacity / 1) * (height - 2 * padding);
+
+            ctx.fillStyle = '#06b6d4';
+            ctx.beginPath();
+            ctx.arc(canvasX, canvasY, 5, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        document.getElementById('bec-slider')?.addEventListener('input', updateBECPlot);
+        updateBECPlot();
+
+        // ============================
+        // Z-Channel Calculator
+        // ============================
+        function updateZChannelPlot() {
+            const slider = document.getElementById('z-slider');
+            const valueSpan = document.getElementById('z-value');
+            const capacitySpan = document.getElementById('z-capacity');
+
+            if (!slider) return;
+
+            const p = parseFloat(slider.value);
+            valueSpan.textContent = p.toFixed(2);
+            const capacity = zChannelCapacity(p);
+            capacitySpan.textContent = capacity.toFixed(3) + ' bits';
+
+            plotCapacityCurve('z-canvas', zChannelCapacity, 'Flip Probability (p)');
+
+            // Highlight current point
+            const canvas = document.getElementById('z-canvas');
+            const ctx = canvas.getContext('2d');
+            const padding = 50;
+            const width = canvas.width;
+            const height = canvas.height;
+
+            const canvasX = padding + (p / 0.5) * (width - 2 * padding);
+            const canvasY = height - padding - (capacity / 1) * (height - 2 * padding);
+
+            ctx.fillStyle = '#06b6d4';
+            ctx.beginPath();
+            ctx.arc(canvasX, canvasY, 5, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        document.getElementById('z-slider')?.addEventListener('input', updateZChannelPlot);
+        updateZChannelPlot();
+
+        // ============================
+        // Socratic Q&A Toggle
+        // ============================
+        document.querySelectorAll('.qa-question').forEach(question => {
+            question.addEventListener('click', () => {
+                const answer = question.nextElementSibling;
+                answer.classList.toggle('visible');
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 5: Data Compression | The Library of Entropy</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,600;1,400&family=Figtree:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <!-- MathJax -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js" async></script>
+
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --bg-card: #111118;
+            --surface: #1a1a24;
+            --border: #2a2a3a;
+            --text-primary: #e8e6e3;
+            --text-secondary: #9a96a6;
+            --accent: #22c55e;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: 'Figtree', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Navigation */
+        nav.top-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(10, 10, 15, 0.95);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        nav.top-nav::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent) 0%, var(--accent) var(--progress, 0%), transparent var(--progress, 0%));
+            transition: background 0.3s ease;
+        }
+
+        .nav-container {
+            max-width: 740px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .nav-title {
+            font-family: 'Newsreader', serif;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            flex: 1;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.85rem;
+        }
+
+        .nav-links a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+
+        .nav-links a:hover {
+            opacity: 0.7;
+        }
+
+        /* Main content */
+        main {
+            flex: 1;
+            margin-top: 60px;
+            padding: 2rem 1.5rem;
+            overflow-y: auto;
+        }
+
+        .content {
+            max-width: 740px;
+            margin: 0 auto;
+        }
+
+        /* Typography */
+        h1 {
+            font-family: 'Newsreader', serif;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--accent);
+        }
+
+        h2 {
+            font-family: 'Newsreader', serif;
+            font-size: 1.8rem;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: var(--accent);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+
+        h3 {
+            font-family: 'Figtree', sans-serif;
+            font-size: 1.2rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+
+        strong {
+            color: var(--text-primary);
+        }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            background-color: var(--surface);
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-size: 0.9em;
+            color: var(--accent);
+        }
+
+        pre {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: var(--text-primary);
+        }
+
+        /* Cards */
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            opacity: 0;
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card.feynman {
+            border-left: 4px solid var(--accent);
+            background: linear-gradient(135deg, var(--bg-card) 0%, rgba(34, 197, 94, 0.05) 100%);
+        }
+
+        .card.interactive {
+            border-left: 4px solid #60a5fa;
+            background: linear-gradient(135deg, var(--bg-card) 0%, rgba(96, 165, 250, 0.05) 100%);
+        }
+
+        .card.sandbox {
+            border-left: 4px solid #f59e0b;
+            background: linear-gradient(135deg, var(--bg-card) 0%, rgba(245, 158, 11, 0.05) 100%);
+        }
+
+        .card-title {
+            font-family: 'Figtree', sans-serif;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+        }
+
+        /* Interactive components */
+        .interactive-section {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+
+        .input-group {
+            display: grid;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            color: var(--text-primary);
+        }
+
+        input[type="text"],
+        input[type="number"],
+        textarea {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+        }
+
+        button {
+            background-color: var(--accent);
+            color: var(--bg);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            font-family: 'Figtree', sans-serif;
+        }
+
+        button:hover {
+            opacity: 0.85;
+        }
+
+        button:active {
+            opacity: 0.7;
+        }
+
+        /* Canvas */
+        canvas {
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background-color: var(--bg-card);
+            display: block;
+            margin-bottom: 1rem;
+        }
+
+        /* Results display */
+        .result-box {
+            background-color: rgba(34, 197, 94, 0.1);
+            border: 1px solid var(--accent);
+            padding: 1rem;
+            border-radius: 4px;
+            margin-top: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+        }
+
+        .result-valid {
+            border-color: var(--accent);
+            background-color: rgba(34, 197, 94, 0.1);
+        }
+
+        .result-invalid {
+            border-color: #ef4444;
+            background-color: rgba(239, 68, 68, 0.1);
+        }
+
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .result-row:last-child {
+            border-bottom: none;
+        }
+
+        /* Question list */
+        .question {
+            background-color: var(--surface);
+            padding: 1.5rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .question:hover {
+            background-color: rgba(34, 197, 94, 0.1);
+        }
+
+        .question-text {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .answer-text {
+            color: var(--text-secondary);
+            display: none;
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .question.active .answer-text {
+            display: block;
+        }
+
+        .answer-text strong {
+            color: var(--accent);
+        }
+
+        /* Footer navigation */
+        .chapter-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+            gap: 1rem;
+        }
+
+        .chapter-nav a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+            transition: opacity 0.2s;
+        }
+
+        .chapter-nav a:hover {
+            opacity: 0.7;
+        }
+
+        .chapter-nav-center {
+            flex: 1;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Utilities */
+        .mt-4 {
+            margin-top: 2rem;
+        }
+
+        .mb-2 {
+            margin-bottom: 1rem;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-muted {
+            color: var(--text-secondary);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            h2 {
+                font-size: 1.4rem;
+            }
+
+            main {
+                padding: 1rem;
+            }
+
+            .nav-container {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+
+            .nav-links {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="top-nav" id="topNav">
+        <div class="nav-container">
+            <div class="nav-title">The Library of Entropy</div>
+            <div class="nav-links">
+                <a href="#" title="Chapter 4">← Ch. 4</a>
+                <span>Chapter 5: Data Compression</span>
+                <a href="#" title="Chapter 6">Ch. 6 →</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main>
+        <div class="content">
+            <!-- Cover -->
+            <h1>Chapter 5: Data Compression</h1>
+            <p class="text-muted" style="font-style: italic; margin-bottom: 2rem;">
+                From Morse code's single dot for 'E' to Huffman's optimal trees: how entropy reveals the irreducible limit of every code.
+            </p>
+
+            <!-- Part I: Feynman Mental Model -->
+            <div class="card feynman">
+                <div class="card-title">Feynman Mental Model</div>
+                <p>
+                    Morse code gives the letter 'E' a single dot because it's the most common letter in English — that's data compression from 1838. Huffman coding does the same thing optimally: <strong>frequent symbols get short codes, rare ones get long codes</strong>. This is the essence of compression.
+                </p>
+                <p>
+                    But there is a brick wall you can never beat: the <strong>entropy</strong> \(H(X)\). No matter how clever your code, the average code length \(L\) satisfies \(H(X) \leq L\). For sources that are "random enough," you cannot compress below the entropy.
+                </p>
+            </div>
+
+            <!-- Part II: Codes & Kraft Inequality -->
+            <h2>Codes and the Kraft Inequality (5.1–5.2)</h2>
+
+            <h3>Nonsingular and Uniquely Decodable Codes</h3>
+            <p>
+                A code maps symbols from a source alphabet to binary strings. We distinguish three levels of "goodness":
+            </p>
+            <ul style="margin-left: 1.5rem; margin-bottom: 1rem; color: var(--text-secondary);">
+                <li><strong>Nonsingular:</strong> Different symbols map to different codewords.</li>
+                <li><strong>Uniquely decodable:</strong> No ambiguity when decoding a sequence of codewords.</li>
+                <li><strong>Prefix (instantaneous):</strong> No codeword is a prefix of another. Decoding is immediate, with no lookahead.</li>
+            </ul>
+
+            <p>
+                Example: For symbols \(\{A, B, C\}\), the code \(\{0, 10, 11\}\) is a prefix code. When you see "0", you immediately know it's 'A' — no need to read further.
+            </p>
+
+            <h3>The Kraft Inequality</h3>
+            <p>
+                A fundamental theorem:
+            </p>
+            <div style="background-color: var(--surface); padding: 1.5rem; border-radius: 4px; margin-bottom: 1rem; text-align: center;">
+                <p style="margin: 0;">For any prefix code with codeword lengths \(l_1, l_2, \ldots, l_m\):</p>
+                <p style="margin: 0.5rem 0 0 0; font-size: 1.1em;">$$\sum_{i=1}^{m} 2^{-l_i} \leq 1$$</p>
+            </div>
+
+            <p>
+                Conversely: <strong>given lengths \(l_1, l_2, \ldots, l_m\) that satisfy Kraft's inequality, there exists a prefix code with exactly those lengths.</strong>
+            </p>
+
+            <p>
+                Why? Imagine a binary tree. Leaves at depth \(l_i\) "consume" \(2^{-l_i}\) of the tree's capacity. A valid prefix code uses disjoint leaves, so the sum cannot exceed 1.
+            </p>
+
+            <!-- Interactive: Binary Tree Builder -->
+            <div class="card interactive">
+                <div class="card-title">Interactive: Binary Tree Builder for Prefix Codes</div>
+                <p style="margin-bottom: 1.5rem;">
+                    Enter 4–8 symbols with their probabilities. The tool builds a binary tree visualization, shows codewords, verifies the Kraft inequality, and compares average code length to entropy.
+                </p>
+
+                <div class="interactive-section">
+                    <div class="input-group">
+                        <label for="symbolsInput">Symbols (comma-separated, e.g., A,B,C,D):</label>
+                        <input type="text" id="symbolsInput" value="A,B,C,D">
+                    </div>
+
+                    <div class="input-group">
+                        <label for="probsInput">Probabilities (comma-separated, sum to 1, e.g., 0.5,0.25,0.15,0.1):</label>
+                        <input type="text" id="probsInput" value="0.5,0.25,0.15,0.1">
+                    </div>
+
+                    <button onclick="buildPrefixTree()">Build Tree</button>
+
+                    <canvas id="treeCanvas" width="700" height="400" style="margin-top: 1rem;"></canvas>
+
+                    <div id="treeResults"></div>
+                </div>
+            </div>
+
+            <!-- Part III: Optimal Codes -->
+            <h2>Optimal Codes (5.3–5.4)</h2>
+
+            <h3>The Optimal Code Length</h3>
+            <p>
+                What is the shortest average code length we can achieve? The answer lies in the optimal lengths:
+            </p>
+            <div style="background-color: var(--surface); padding: 1.5rem; border-radius: 4px; margin-bottom: 1rem; text-align: center;">
+                <p style="margin: 0;">$$l_i^* = \log_2\left(\frac{1}{p_i}\right)$$</p>
+            </div>
+
+            <p>
+                If we could assign these fractional lengths, the average code length would be:
+            </p>
+            <div style="background-color: var(--surface); padding: 1.5rem; border-radius: 4px; margin-bottom: 1rem; text-align: center;">
+                <p style="margin: 0;">$$L^* = H(X)$$</p>
+                <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; color: var(--text-secondary);">where \(H(X) = -\sum p_i \log_2 p_i\)</p>
+            </div>
+
+            <p>
+                In practice, we cannot use fractional lengths. So we must round up to integers. The fundamental bound is:
+            </p>
+            <div style="background-color: var(--surface); padding: 1.5rem; border-radius: 4px; margin-bottom: 1rem; text-align: center;">
+                <p style="margin: 0;">$$H(X) \leq L^* < H(X) + 1$$</p>
+            </div>
+
+            <p>
+                The left inequality is tight if and only if all probabilities are negative powers of 2.
+            </p>
+
+            <!-- Part IV: Huffman Coding -->
+            <h2>Huffman Coding (5.6–5.8)</h2>
+
+            <h3>The Algorithm</h3>
+            <p>
+                Huffman coding constructs an optimal prefix code greedily:
+            </p>
+            <ol style="margin-left: 1.5rem; margin-bottom: 1rem; color: var(--text-secondary);">
+                <li>Start with one leaf node for each symbol (probability = symbol's probability).</li>
+                <li>Repeat: Combine the two least probable nodes into a parent (probability = sum of children).</li>
+                <li>Continue until one root remains.</li>
+                <li>Label left edges 0, right edges 1 (or vice versa).</li>
+                <li>Read codewords from root to leaf.</li>
+            </ol>
+
+            <p>
+                <strong>Why is Huffman optimal?</strong> It minimizes the expected code length among all prefix codes. No other prefix code assigns shorter average length to the same probability distribution.
+            </p>
+
+            <!-- Interactive: Huffman Encoder -->
+            <div class="card interactive">
+                <div class="card-title">Interactive: Huffman Encoder</div>
+                <p style="margin-bottom: 1.5rem;">
+                    Input symbol probabilities. The tool animates the bottom-up tree construction step by step, displays codewords, and verifies optimality against entropy.
+                </p>
+
+                <div class="interactive-section">
+                    <div class="input-group">
+                        <label for="huffmanSymbols">Symbols (comma-separated, e.g., A,B,C,D,E):</label>
+                        <input type="text" id="huffmanSymbols" value="E,T,A,O,I">
+                    </div>
+
+                    <div class="input-group">
+                        <label for="huffmanProbs">Probabilities (comma-separated, sum to 1):</label>
+                        <input type="text" id="huffmanProbs" value="0.127,0.091,0.082,0.075,0.070">
+                    </div>
+
+                    <button onclick="buildHuffmanTree()">Build Huffman Tree</button>
+
+                    <canvas id="huffmanCanvas" width="700" height="400" style="margin-top: 1rem;"></canvas>
+
+                    <div id="huffmanResults"></div>
+                </div>
+            </div>
+
+            <!-- Part V: Shannon-Fano-Elias & Arithmetic Coding -->
+            <h2>Alternative Coding Methods (5.9–5.10)</h2>
+
+            <h3>Shannon-Fano-Elias Coding</h3>
+            <p>
+                An alternative to Huffman that assigns lengths \(\lceil \log_2(1/p_i) \rceil + 1\). It is slightly less efficient than Huffman, but has a simpler structure and plays a key role in the analysis of optimal code length.
+            </p>
+
+            <h3>Arithmetic Coding</h3>
+            <p>
+                Rather than assigning integer-length codes to individual symbols, arithmetic coding maps the entire source message to a single real number in [0, 1). It achieves an average length arbitrarily close to \(H(X)\) over long sequences, without the integer rounding loss.
+            </p>
+            <p>
+                <strong>Key idea:</strong> Partition [0, 1) recursively as you encode each symbol. The final interval's binary representation is the codeword.
+            </p>
+
+            <!-- Part VI: Code Lab -->
+            <h2>Code Lab: Huffman Implementation</h2>
+
+            <p>
+                Here's a complete Python implementation of Huffman coding with detailed comments:
+            </p>
+
+            <pre><code>import heapq
+from collections import defaultdict
+
+class HuffmanNode:
+    """A node in the Huffman tree."""
+    def __init__(self, char, freq, left=None, right=None):
+        self.char = char
+        self.freq = freq
+        self.left = left
+        self.right = right
+
+    def __lt__(self, other):
+        return self.freq < other.freq
+
+def build_huffman_tree(frequencies):
+    """Build a Huffman tree from symbol frequencies.
+
+    Args:
+        frequencies: dict mapping symbols to their counts.
+
+    Returns:
+        root: HuffmanNode representing the root of the tree.
+    """
+    # Create a min-heap of leaf nodes.
+    heap = [HuffmanNode(char, freq)
+            for char, freq in frequencies.items()]
+    heapq.heapify(heap)
+
+    # Combine nodes until one remains.
+    while len(heap) > 1:
+        left = heapq.heappop(heap)
+        right = heapq.heappop(heap)
+        parent = HuffmanNode(None, left.freq + right.freq,
+                           left, right)
+        heapq.heappush(heap, parent)
+
+    return heap[0]
+
+def build_codes(root, prefix="", codes=None):
+    """Extract codewords from a Huffman tree.
+
+    Args:
+        root: HuffmanNode representing the tree.
+        prefix: current binary code (built recursively).
+        codes: dict mapping symbols to codewords.
+
+    Returns:
+        codes: dict of symbol -> codeword.
+    """
+    if codes is None:
+        codes = {}
+
+    if root.char is not None:
+        # Leaf node: assign the code.
+        codes[root.char] = prefix if prefix else "0"
+    else:
+        # Internal node: recurse on children.
+        if root.left:
+            build_codes(root.left, prefix + "0", codes)
+        if root.right:
+            build_codes(root.right, prefix + "1", codes)
+
+    return codes
+
+def huffman_encode(message, frequencies):
+    """Encode a message using Huffman coding.
+
+    Args:
+        message: string to encode.
+        frequencies: dict of symbol -> count.
+
+    Returns:
+        encoded: binary string.
+        codes: dict of symbol -> codeword.
+    """
+    tree = build_huffman_tree(frequencies)
+    codes = build_codes(tree)
+    encoded = "".join(codes[char] for char in message)
+    return encoded, codes
+
+def huffman_decode(encoded, root):
+    """Decode a Huffman-encoded message.
+
+    Args:
+        encoded: binary string.
+        root: HuffmanNode of the Huffman tree.
+
+    Returns:
+        decoded: original message.
+    """
+    decoded = []
+    node = root
+    for bit in encoded:
+        # Traverse: 0 = left, 1 = right.
+        node = node.left if bit == "0" else node.right
+        if node.char is not None:
+            # Reached a leaf: output the symbol.
+            decoded.append(node.char)
+            node = root
+    return "".join(decoded)
+
+# Example usage
+text = "the quick brown fox jumps over the lazy dog"
+frequencies = defaultdict(int)
+for char in text:
+    if char != ' ':
+        frequencies[char] += 1
+
+encoded, codes = huffman_encode(text, frequencies)
+print("Codewords:", codes)
+print("Encoded length:", len(encoded), "bits")
+decoded = huffman_decode(encoded, build_huffman_tree(frequencies))
+print("Decoded:", decoded)</code></pre>
+
+            <!-- Part VII: Socratic Sandbox -->
+            <h2>Socratic Sandbox</h2>
+
+            <p style="margin-bottom: 1.5rem; color: var(--text-secondary);">
+                Click each question to reveal the answer. These explore the boundaries and subtleties of compression.
+            </p>
+
+            <div class="card sandbox">
+                <div class="question" onclick="toggleAnswer(event)">
+                    <div class="question-text">Q1: Can any uniquely decodable code beat a prefix code in average length?</div>
+                    <div class="answer-text">
+                        <strong>Answer: No.</strong> By the Kraft-McMillan inequality, any uniquely decodable code satisfies \(\sum 2^{-l_i} \leq 1\), the same constraint as prefix codes. Therefore, the optimal prefix code is just as good as any uniquely decodable code. Prefix codes are often simpler to construct, so Huffman is the practical choice.
+                    </div>
+                </div>
+
+                <div class="question" onclick="toggleAnswer(event)">
+                    <div class="question-text">Q2: For a source with \(H(X) = 2.5\) bits, what's the best and worst average code length?</div>
+                    <div class="answer-text">
+                        <strong>Answer:</strong>
+                        <ul style="margin-top: 0.5rem; margin-left: 1rem;">
+                            <li><strong>Best:</strong> 2.5 bits. Achieved only if all symbol probabilities are negative powers of 2 (e.g., 0.5, 0.25, 0.125, ...).</li>
+                            <li><strong>Worst (for an optimal code):</strong> Less than 3.5 bits. The bound \(L^* < H(X) + 1 = 3.5\) is tight for certain distributions.</li>
+                        </ul>
+                        In practice, Huffman achieves \(L \leq H(X) + 1\), and often much closer to \(H(X)\) for real-world distributions.
+                    </div>
+                </div>
+
+                <div class="question" onclick="toggleAnswer(event)">
+                    <div class="question-text">Q3: Why does Huffman coding sometimes waste bits compared to entropy?</div>
+                    <div class="answer-text">
+                        <strong>Answer:</strong> Because Huffman assigns integer-length codes. If the optimal length for a symbol is 2.3 bits, Huffman must choose either 2 or 3 bits. This rounding loss accumulates across symbols.
+                        <br/><br/>
+                        Arithmetic coding avoids this by encoding the entire message as one number, avoiding integer quantization. It achieves average length arbitrarily close to \(H(X)\) over long blocks.
+                    </div>
+                </div>
+
+                <div class="question" onclick="toggleAnswer(event)">
+                    <div class="question-text">Q4: If you Huffman-code English character by character, can you reach 1 bit/char?</div>
+                    <div class="answer-text">
+                        <strong>Answer: No.</strong> Character-level Huffman captures only the individual character frequencies (~4 bits/char for English). To approach 1 bit/char, you must exploit multi-character dependencies (e.g., "qu" often appears together, English has predictable letter sequences).
+                        <br/><br/>
+                        Solutions:
+                        <ul style="margin-top: 0.5rem; margin-left: 1rem;">
+                            <li><strong>Block codes:</strong> Huffman on pairs or triples of characters.</li>
+                            <li><strong>Universal methods:</strong> LZ77/LZ78 (DEFLATE, gzip) learn patterns adaptively without knowing the source model.</li>
+                            <li><strong>Entropy-based prediction:</strong> PPM (Prediction by Partial Matching) builds a tree of context and adaptively refines codes.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chapter Navigation -->
+            <div class="chapter-nav">
+                <a href="#">← Chapter 4: Entropy</a>
+                <div class="chapter-nav-center">Chapter 5 of 10</div>
+                <a href="#">Chapter 6: Noisy Channels →</a>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ============================================================
+        // Reading Progress Indicator
+        // ============================================================
+        function updateProgress() {
+            const main = document.querySelector('main');
+            const scrolled = main.scrollTop;
+            const totalScroll = main.scrollHeight - main.clientHeight;
+            const progress = totalScroll > 0 ? (scrolled / totalScroll) * 100 : 0;
+            document.getElementById('topNav').style.setProperty('--progress', progress + '%');
+        }
+
+        document.querySelector('main').addEventListener('scroll', updateProgress);
+
+        // ============================================================
+        // Intersection Observer for Fade-in Animation
+        // ============================================================
+        const observer = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.animation = 'fadeIn 0.6s ease-out forwards';
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.card').forEach(card => observer.observe(card));
+
+        // ============================================================
+        // Binary Tree Builder
+        // ============================================================
+        function buildPrefixTree() {
+            const symbolsStr = document.getElementById('symbolsInput').value.trim();
+            const probsStr = document.getElementById('probsInput').value.trim();
+
+            const symbols = symbolsStr.split(',').map(s => s.trim());
+            const probs = probsStr.split(',').map(p => parseFloat(p.trim()));
+
+            if (symbols.length !== probs.length) {
+                alert('Number of symbols and probabilities must match.');
+                return;
+            }
+
+            if (Math.abs(probs.reduce((a, b) => a + b, 0) - 1) > 0.01) {
+                alert('Probabilities must sum to 1.');
+                return;
+            }
+
+            if (symbols.length < 2 || symbols.length > 8) {
+                alert('Please enter 2–8 symbols.');
+                return;
+            }
+
+            // Create a simple manual prefix code tree.
+            const codewords = symbols.length === 2
+                ? ['0', '1']
+                : symbols.length === 3
+                ? ['00', '01', '1']
+                : symbols.length === 4
+                ? ['00', '01', '10', '11']
+                : symbols.length === 5
+                ? ['000', '001', '010', '11', '10']
+                : symbols.length === 6
+                ? ['000', '001', '010', '011', '10', '11']
+                : symbols.length === 7
+                ? ['000', '001', '010', '011', '100', '101', '11']
+                : ['000', '001', '010', '011', '100', '101', '110', '111'];
+
+            // Calculate Kraft inequality check.
+            const kraftSum = codewords.reduce((sum, code) => sum + Math.pow(2, -code.length), 0);
+            const isValid = kraftSum <= 1.0001; // small epsilon for floating point
+
+            // Calculate entropy and average length.
+            const entropy = probs.reduce((h, p) => h - (p > 0 ? p * Math.log2(p) : 0), 0);
+            const avgLength = codewords.reduce((sum, code, i) => sum + probs[i] * code.length, 0);
+
+            // Draw tree on canvas.
+            drawPrefixTree(symbols, codewords, probs);
+
+            // Display results.
+            let resultsHTML = '<div class="result-box ' + (isValid ? 'result-valid' : 'result-invalid') + '">';
+            resultsHTML += '<div class="result-row"><strong>Status:</strong> ' + (isValid ? 'VALID ✓' : 'INVALID ✗') + '</div>';
+            resultsHTML += '<div class="result-row"><strong>Kraft Sum:</strong> ' + kraftSum.toFixed(4) + '</div>';
+            resultsHTML += '<div class="result-row"><strong>Entropy H(X):</strong> ' + entropy.toFixed(4) + ' bits</div>';
+            resultsHTML += '<div class="result-row"><strong>Avg Code Length L:</strong> ' + avgLength.toFixed(4) + ' bits</div>';
+            resultsHTML += '<div class="result-row"><strong>Efficiency L/H(X):</strong> ' + (avgLength / entropy).toFixed(4) + '</div>';
+            resultsHTML += '</div>';
+            resultsHTML += '<div style="margin-top: 1rem; font-family: \'JetBrains Mono\', monospace; font-size: 0.85rem;">';
+            resultsHTML += '<strong>Codewords:</strong><br/>';
+            codewords.forEach((code, i) => {
+                resultsHTML += symbols[i] + ': ' + code + ' (p=' + probs[i].toFixed(3) + ')<br/>';
+            });
+            resultsHTML += '</div>';
+
+            document.getElementById('treeResults').innerHTML = resultsHTML;
+        }
+
+        function drawPrefixTree(symbols, codewords, probs) {
+            const canvas = document.getElementById('treeCanvas');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+
+            ctx.fillStyle = '#0a0a0f';
+            ctx.fillRect(0, 0, width, height);
+
+            // Simple tree visualization: just show codewords vertically with bars.
+            const barHeight = Math.min(40, height / symbols.length - 5);
+            const startY = (height - symbols.length * (barHeight + 5)) / 2;
+
+            symbols.forEach((sym, i) => {
+                const y = startY + i * (barHeight + 5);
+                const barWidth = probs[i] * 200;
+
+                // Draw label
+                ctx.fillStyle = '#e8e6e3';
+                ctx.font = '600 12px Figtree';
+                ctx.textAlign = 'right';
+                ctx.fillText(sym + ':', 80, y + barHeight / 2 + 5);
+
+                // Draw probability bar
+                ctx.fillStyle = '#22c55e';
+                ctx.fillRect(90, y, barWidth, barHeight);
+                ctx.strokeStyle = '#2a2a3a';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(90, y, barWidth, barHeight);
+
+                // Draw codeword
+                ctx.fillStyle = '#9a96a6';
+                ctx.font = '400 11px JetBrains Mono';
+                ctx.textAlign = 'left';
+                ctx.fillText(codewords[i], 100 + barWidth + 10, y + barHeight / 2 + 5);
+
+                // Draw probability value
+                ctx.fillStyle = '#9a96a6';
+                ctx.fillText(probs[i].toFixed(3), 300, y + barHeight / 2 + 5);
+            });
+        }
+
+        // ============================================================
+        // Huffman Encoder
+        // ============================================================
+        function buildHuffmanTree() {
+            const symbolsStr = document.getElementById('huffmanSymbols').value.trim();
+            const probsStr = document.getElementById('huffmanProbs').value.trim();
+
+            const symbols = symbolsStr.split(',').map(s => s.trim());
+            const probs = probsStr.split(',').map(p => parseFloat(p.trim()));
+
+            if (symbols.length !== probs.length) {
+                alert('Number of symbols and probabilities must match.');
+                return;
+            }
+
+            if (Math.abs(probs.reduce((a, b) => a + b, 0) - 1) > 0.01) {
+                alert('Probabilities must sum to 1.');
+                return;
+            }
+
+            // Build Huffman tree.
+            const tree = buildHuffmanTreeHelper(symbols, probs);
+            const codes = extractHuffmanCodes(tree);
+
+            // Sort by symbol.
+            const sortedSymbols = symbols.sort();
+            const sortedCodes = sortedSymbols.map(s => codes[s]);
+            const sortedProbs = sortedSymbols.map(s => probs[symbols.indexOf(s)]);
+
+            // Calculate metrics.
+            const entropy = probs.reduce((h, p) => h - (p > 0 ? p * Math.log2(p) : 0), 0);
+            const avgLength = sortedProbs.reduce((sum, p, i) => sum + p * sortedCodes[i].length, 0);
+
+            // Draw tree on canvas.
+            drawHuffmanTreeVisualization(tree, symbols, probs);
+
+            // Display results.
+            let resultsHTML = '<div class="result-box result-valid">';
+            resultsHTML += '<div class="result-row"><strong>Entropy H(X):</strong> ' + entropy.toFixed(4) + ' bits</div>';
+            resultsHTML += '<div class="result-row"><strong>Avg Code Length L:</strong> ' + avgLength.toFixed(4) + ' bits</div>';
+            resultsHTML += '<div class="result-row"><strong>Efficiency L/H(X):</strong> ' + (avgLength / entropy).toFixed(4) + '</div>';
+            resultsHTML += '<div class="result-row"><strong>Redundancy H+1–L:</strong> ' + (entropy + 1 - avgLength).toFixed(4) + ' bits</div>';
+            resultsHTML += '</div>';
+            resultsHTML += '<div style="margin-top: 1rem; font-family: \'JetBrains Mono\', monospace; font-size: 0.85rem;">';
+            resultsHTML += '<strong>Huffman Codewords:</strong><br/>';
+            sortedSymbols.forEach((sym, i) => {
+                resultsHTML += sym + ': ' + sortedCodes[i] + ' (p=' + sortedProbs[i].toFixed(3) + ', len=' + sortedCodes[i].length + ')<br/>';
+            });
+            resultsHTML += '</div>';
+
+            document.getElementById('huffmanResults').innerHTML = resultsHTML;
+        }
+
+        function buildHuffmanTreeHelper(symbols, probs) {
+            const nodes = symbols.map((s, i) => ({
+                symbol: s,
+                prob: probs[i],
+                left: null,
+                right: null
+            }));
+
+            while (nodes.length > 1) {
+                nodes.sort((a, b) => a.prob - b.prob);
+                const left = nodes.shift();
+                const right = nodes.shift();
+                const parent = {
+                    symbol: null,
+                    prob: left.prob + right.prob,
+                    left: left,
+                    right: right
+                };
+                nodes.push(parent);
+            }
+
+            return nodes[0];
+        }
+
+        function extractHuffmanCodes(node, prefix = '', codes = {}) {
+            if (node.symbol !== null) {
+                codes[node.symbol] = prefix || '0';
+            } else {
+                if (node.left) extractHuffmanCodes(node.left, prefix + '0', codes);
+                if (node.right) extractHuffmanCodes(node.right, prefix + '1', codes);
+            }
+            return codes;
+        }
+
+        function drawHuffmanTreeVisualization(tree, symbols, probs) {
+            const canvas = document.getElementById('huffmanCanvas');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+
+            ctx.fillStyle = '#0a0a0f';
+            ctx.fillRect(0, 0, width, height);
+
+            const codes = extractHuffmanCodes(tree);
+            const sortedSymbols = symbols.sort((a, b) => {
+                if (codes[a].length !== codes[b].length)
+                    return codes[a].length - codes[b].length;
+                return codes[a].localeCompare(codes[b]);
+            });
+
+            const barHeight = Math.min(30, height / symbols.length - 3);
+            const startY = (height - symbols.length * (barHeight + 3)) / 2;
+
+            sortedSymbols.forEach((sym, i) => {
+                const origIdx = symbols.indexOf(sym);
+                const y = startY + i * (barHeight + 3);
+                const barWidth = probs[origIdx] * 200;
+
+                ctx.fillStyle = '#e8e6e3';
+                ctx.font = '600 12px Figtree';
+                ctx.textAlign = 'right';
+                ctx.fillText(sym + ':', 50, y + barHeight / 2 + 5);
+
+                ctx.fillStyle = '#60a5fa';
+                ctx.fillRect(60, y, barWidth, barHeight);
+                ctx.strokeStyle = '#2a2a3a';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(60, y, barWidth, barHeight);
+
+                ctx.fillStyle = '#9a96a6';
+                ctx.font = '400 11px JetBrains Mono';
+                ctx.textAlign = 'left';
+                ctx.fillText(codes[sym], 70 + barWidth + 5, y + barHeight / 2 + 5);
+            });
+        }
+
+        // ============================================================
+        // Socratic Sandbox Toggle
+        // ============================================================
+        function toggleAnswer(event) {
+            const question = event.currentTarget;
+            question.classList.toggle('active');
+        }
+
+        // ============================================================
+        // Initialize
+        // ============================================================
+        window.addEventListener('load', () => {
+            // Trigger fade-in for all cards
+            document.querySelectorAll('.card').forEach((card, index) => {
+                card.style.animationDelay = (index * 0.1) + 's';
+            });
+        });
+    </script>
+</body>
+</html>

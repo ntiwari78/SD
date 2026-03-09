@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 15: Information Theory and the Stock Market</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- KaTeX for Math Rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/auto-render@0.16.8/dist/auto-render.min.js"></script>
+
+    <!-- Chart.js for plotting -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: #0a0a0f;
+            --text-light: #e0e0e0;
+            --accent-cyan: #00d4ff;
+            --accent-coral: #ff6b6b;
+            --accent-teal: #4ecdc4;
+            --accent-gold: #ffd93d;
+            --bg-secondary: #1a1a25;
+            --bg-tertiary: #2a2a35;
+            --border-color: #3a3a45;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(180deg, var(--bg-dark) 0%, rgba(10, 10, 15, 0.95) 100%);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 1000;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        nav .title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--accent-cyan);
+            letter-spacing: -0.5px;
+        }
+
+        nav .links {
+            display: flex;
+            gap: 2rem;
+            font-size: 0.9rem;
+        }
+
+        nav a {
+            color: var(--text-light);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        nav a:hover {
+            color: var(--accent-cyan);
+        }
+
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-teal), var(--accent-gold));
+            z-index: 999;
+            transition: width 0.1s linear;
+        }
+
+        /* Main Container */
+        main {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 6rem 2rem 4rem;
+        }
+
+        section {
+            margin-bottom: 6rem;
+            opacity: 0;
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-teal));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+            letter-spacing: -1px;
+        }
+
+        h2 {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: var(--accent-gold);
+            margin-top: 3rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        h3 {
+            font-size: 1.4rem;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--accent-teal);
+        }
+
+        p {
+            margin-bottom: 1.2rem;
+            font-size: 1rem;
+            line-height: 1.8;
+            color: var(--text-light);
+        }
+
+        .katex-display {
+            background: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+            border-left: 4px solid var(--accent-cyan);
+            overflow-x: auto;
+        }
+
+        .katex {
+            font-size: 1.1em;
+        }
+
+        .equation-label {
+            font-size: 0.9rem;
+            color: var(--accent-gold);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .explanation {
+            background: rgba(78, 205, 196, 0.1);
+            border-left: 4px solid var(--accent-teal);
+            padding: 1rem;
+            border-radius: 4px;
+            margin-top: 1rem;
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
+
+        /* Card Styling */
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 2rem 0;
+            transition: all 0.3s;
+        }
+
+        .card:hover {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 8px 32px rgba(0, 212, 255, 0.1);
+        }
+
+        /* Interactive Components */
+        .interactive-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        .slider-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .slider-label .value {
+            color: var(--accent-gold);
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--bg-tertiary);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+            transition: all 0.2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.8);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+            transition: all 0.2s;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .metric {
+            background: var(--bg-tertiary);
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-gold);
+            text-align: center;
+        }
+
+        .metric-label {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--accent-gold);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-teal));
+            color: var(--bg-dark);
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 212, 255, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        /* Chart Container */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            margin: 2rem 0;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        /* SVG Animations */
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .trajectory-line {
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* Socratic Cards */
+        .socratic-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .socratic-card:hover {
+            border-color: var(--accent-teal);
+            box-shadow: 0 8px 24px rgba(78, 205, 196, 0.15);
+        }
+
+        .socratic-card.active {
+            background: var(--bg-tertiary);
+            border-color: var(--accent-teal);
+        }
+
+        .socratic-question {
+            font-weight: 600;
+            color: var(--accent-teal);
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .socratic-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            color: var(--text-light);
+            line-height: 1.8;
+        }
+
+        .socratic-card.active .socratic-answer {
+            max-height: 500px;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 4rem;
+            padding: 2rem;
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        .chapter-nav {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 2rem;
+            gap: 1rem;
+        }
+
+        .chapter-link {
+            flex: 1;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            text-align: center;
+            color: var(--text-light);
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .chapter-link:hover {
+            border-color: var(--accent-cyan);
+            background: var(--bg-tertiary);
+        }
+
+        .chapter-link.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            nav {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            nav .links {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            main {
+                padding: 8rem 1rem 4rem;
+            }
+
+            .metrics {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        /* Animation keyframes */
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        .feynman-diagram {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Progress Bar -->
+    <div class="progress-bar" id="progressBar"></div>
+
+    <!-- Navigation -->
+    <nav>
+        <div class="title">Chapter 15: Information Theory & the Stock Market</div>
+        <div class="links">
+            <a href="index.html">← Library of Entropy</a>
+            <a href="#feynman">Feynman</a>
+            <a href="#mathematics">Math</a>
+            <a href="#simulator">Simulator</a>
+            <a href="#kelly">Kelly Criterion</a>
+            <a href="#sideinfo">Side Information</a>
+            <a href="#socratic">Questions</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Hero Section -->
+        <section style="text-align: center; margin-bottom: 4rem;">
+            <h1>Information Theory & the Stock Market</h1>
+            <p style="font-size: 1.2rem; color: var(--accent-cyan); margin-top: 1rem;">
+                How entropy measures wealth growth. Why log-optimal portfolios beat everyone. The mathematical connection between gambling and data compression.
+            </p>
+        </section>
+
+        <!-- Section 1: Feynman Mental Model -->
+        <section id="feynman">
+            <h2>The Gambler Who Never Goes Broke</h2>
+
+            <div class="feynman-diagram">
+                <h3>A Parable from the Racetrack</h3>
+                <p>Imagine you're at a racetrack every day for the rest of your life. You can't predict winners, but you know the odds. Most gamblers go broke because they bet too much on single outcomes.</p>
+
+                <p>But there's a magical betting strategy — the <strong>Kelly criterion</strong> — that guarantees you'll grow richer than anyone else in the long run. The secret? It's identical to the math behind data compression.</p>
+
+                <p>The same entropy that measures information also measures the growth rate of wealth. Your portfolio IS a code, and the stock market IS an information source.</p>
+
+                <p style="color: var(--accent-gold); font-weight: 600; margin-top: 1.5rem;">Key Insight:</p>
+                <p>Wealth compounds multiplicatively. After n periods, your wealth is the PRODUCT of daily returns. So the right objective isn't maximizing expected return — it's maximizing E[log(return)], the <em>doubling rate</em>.</p>
+            </div>
+
+            <!-- Wealth Trajectory Animation -->
+            <div class="card">
+                <h3>Two Wealth Trajectories</h3>
+                <p>Watch how different betting strategies diverge over time:</p>
+                <div class="chart-container">
+                    <svg viewBox="0 0 800 400" id="trajectoryAnimation">
+                        <!-- Grid -->
+                        <defs>
+                            <linearGradient id="gradOver" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" style="stop-color:#ff6b6b;stop-opacity:0.3" />
+                                <stop offset="100%" style="stop-color:#ff6b6b;stop-opacity:0" />
+                            </linearGradient>
+                            <linearGradient id="gradOptimal" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" style="stop-color:#4ecdc4;stop-opacity:0.3" />
+                                <stop offset="100%" style="stop-color:#4ecdc4;stop-opacity:0" />
+                            </linearGradient>
+                        </defs>
+
+                        <!-- Axes -->
+                        <line x1="60" y1="350" x2="750" y2="350" stroke="var(--border-color)" stroke-width="2"/>
+                        <line x1="60" y1="50" x2="60" y2="350" stroke="var(--border-color)" stroke-width="2"/>
+
+                        <!-- Labels -->
+                        <text x="750" y="375" fill="var(--text-light)" font-size="14" text-anchor="end">Time (days)</text>
+                        <text x="30" y="50" fill="var(--text-light)" font-size="14" text-anchor="end">Wealth ($)</text>
+
+                        <!-- Over-betting trajectory (volatile, crashes) -->
+                        <polyline id="overBetPath" class="trajectory-line" points="" fill="url(#gradOver)" stroke="var(--accent-coral)" stroke-width="3"/>
+
+                        <!-- Kelly trajectory (steady growth) -->
+                        <polyline id="kellyPath" class="trajectory-line" points="" fill="url(#gradOptimal)" stroke="var(--accent-teal)" stroke-width="3"/>
+
+                        <!-- Legend -->
+                        <circle cx="550" cy="30" r="5" fill="var(--accent-coral)"/>
+                        <text x="565" y="35" fill="var(--accent-coral)" font-size="14">Over-betting (volatile)</text>
+
+                        <circle cx="550" cy="60" r="5" fill="var(--accent-teal)"/>
+                        <text x="565" y="65" fill="var(--accent-teal)" font-size="14">Kelly criterion (optimal)</text>
+                    </svg>
+                </div>
+                <button onclick="animateTrajectories()" style="margin-top: 1rem;">Animate</button>
+            </div>
+        </section>
+
+        <!-- Section 2: Mathematical Ascent -->
+        <section id="mathematics">
+            <h2>The Mathematical Structure</h2>
+            <p>The theory of log-optimal portfolios rests on elegant foundations from information theory. Each equation below reveals a deep connection between wealth and information.</p>
+
+            <!-- Doubling Rate -->
+            <div class="card">
+                <div class="equation-label">1. Doubling Rate</div>
+                <div class="katex-display" id="eq1">W(b, F) = \int \log(b' \cdot x) \, dF(x) = \mathbb{E}[\log(b' \cdot X)]</div>
+                <div class="explanation">
+                    The doubling rate W(b, F) measures the exponential growth rate of wealth under portfolio allocation b. After n periods, wealth grows as approximately 2^{nW}. The parameter F is the distribution of stock returns X, and b is the portfolio allocation vector (weights summing to 1). This is the fundamental objective: we want to maximize the expected logarithm of portfolio return.
+                </div>
+            </div>
+
+            <!-- Optimal Doubling Rate -->
+            <div class="card">
+                <div class="equation-label">2. Optimal Doubling Rate</div>
+                <div class="katex-display" id="eq2">W^*(F) = \max_b W(b, F)</div>
+                <div class="explanation">
+                    W* is the maximum growth rate achievable by any portfolio strategy. This is the wealth-theoretic analogue of channel capacity in information theory. Just as a channel has a limit to how much information it can transmit, a stock market has a limit to how fast wealth can grow. The log-optimal portfolio achieves this limit.
+                </div>
+            </div>
+
+            <!-- Log-Optimal Portfolio Conditions -->
+            <div class="card">
+                <div class="equation-label">3. Log-Optimal Portfolio (Kuhn-Tucker Conditions)</div>
+                <div class="katex-display" id="eq3">\mathbb{E}\left[\frac{X_i}{b^{*\top} X}\right] = 1 \quad \text{if } b_i^* > 0, \quad \mathbb{E}\left[\frac{X_i}{b^{*\top} X}\right] \leq 1 \quad \text{if } b_i^* = 0</div>
+                <div class="explanation">
+                    These are the first-order optimality conditions for the log-optimal portfolio. They say: for each asset held (b_i* > 0), the expected "return relative to total return" must equal 1. This creates a beautiful self-consistent condition: the log-optimal investor rationally allocates capital such that no marginal reallocation can increase growth.
+                </div>
+            </div>
+
+            <!-- Asymptotic Equipartition Property for Markets -->
+            <div class="card">
+                <div class="equation-label">4. Wealth Growth (AEP for Stock Markets)</div>
+                <div class="katex-display" id="eq4">\frac{1}{n} \log S_n^* \to W^* \quad \text{almost surely as } n \to \infty</div>
+                <div class="explanation">
+                    This is the Financial AEP: the log-optimal portfolio's wealth grows asymptotically at rate W* with probability 1. After n periods, S_n* ≈ 2^{nW*}. This is a law of large numbers result for geometric averages, showing that the log-optimal strategy's growth is not just good on average, but guaranteed in the limit.
+                </div>
+            </div>
+
+            <!-- Asymptotic Optimality -->
+            <div class="card">
+                <div class="equation-label">5. Asymptotic Optimality</div>
+                <div class="katex-display" id="eq5">\limsup_{n \to \infty} \frac{1}{n} \log\left(\frac{S_n}{S_n^*}\right) \leq 0 \quad \text{almost surely}</div>
+                <div class="explanation">
+                    No other portfolio strategy can beat the log-optimal strategy asymptotically. Any alternative grows more slowly. By Markov's inequality, the probability that any fixed strategy S outperforms S* by a factor of t decays as 1/t. This is the information-theoretic speed limit of wealth growth.
+                </div>
+            </div>
+
+            <!-- Side Information Bound -->
+            <div class="card">
+                <div class="equation-label">6. Side Information Value</div>
+                <div class="katex-display" id="eq6">\Delta W = W(b^*_f, F) - W(b^*_g, F) \leq D(f \| g)</div>
+                <div class="explanation">
+                    The gain from having side information Y is bounded by the KL divergence between the informed distribution f and uninformed distribution g. This shows quantitatively: how much is a stock tip worth? At most, the KL divergence of your updated beliefs from your prior beliefs. This connects to channel coding and the fundamental limits of information advantage.
+                </div>
+            </div>
+
+            <!-- Mutual Information Bound -->
+            <div class="card">
+                <div class="equation-label">7. Mutual Information Bound</div>
+                <div class="katex-display" id="eq7">\Delta W \leq I(X; Y)</div>
+                <div class="explanation">
+                    The increase in doubling rate from side information Y is bounded by the mutual information I(X; Y). This is a profound connection: the value of information in gambling is measured by how much it reduces uncertainty about returns. Perfect information (I = log m for m equally likely outcomes) allows the investor to allocate all capital to the best outcome. Partial information provides proportional gains.
+                </div>
+            </div>
+
+            <!-- Horse Race -->
+            <div class="card">
+                <div class="equation-label">8. Horse Race Connection</div>
+                <div class="katex-display" id="eq8">W^* = \log m - H(X)</div>
+                <div class="explanation">
+                    In a simple horse race with m equally-likely horses, the optimal doubling rate equals log m (if you could pick the winner with certainty) minus the entropy H(X) (the uncertainty). This shows the direct link: growth rate = potential capacity minus actual uncertainty. The more unpredictable the race (high H), the lower the growth. This is why uniform distributions yield W* = 0 for fair odds.
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Portfolio Doubling Rate Simulator -->
+        <section id="simulator">
+            <h2>Interactive: Portfolio Doubling Rate Simulator</h2>
+            <p>Explore how different portfolio allocations affect long-term wealth growth. Two stocks with different risk-return profiles. Adjust the allocation and watch the doubling rate curve change.</p>
+
+            <div class="interactive-container">
+                <h3>Stock Parameters</h3>
+                <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem;">
+                    <p><strong>Stock A (Safe):</strong> Returns 1.05 with prob 0.6, returns 0.95 with prob 0.4</p>
+                    <p><strong>Stock B (Risky):</strong> Returns 1.30 with prob 0.5, returns 0.70 with prob 0.5</p>
+                </div>
+
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Allocation to Stock B</span>
+                        <span class="value" id="allocValue">50%</span>
+                    </div>
+                    <input type="range" id="allocSlider" min="0" max="100" value="50" oninput="updateSimulator()">
+                </div>
+
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="metric-label">Doubling Rate W(b)</div>
+                        <div class="metric-value" id="doublingRate">0.0000</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Wealth (1000 days)</div>
+                        <div class="metric-value" id="wealthValue">$0.00</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Expected Return</div>
+                        <div class="metric-value" id="expectedReturn">0.00%</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Volatility (σ)</div>
+                        <div class="metric-value" id="volatility">0.00%</div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <canvas id="doublingRateChart"></canvas>
+                </div>
+
+                <button onclick="runSimulation()" style="margin-right: 1rem;">Run 1000-Day Simulation</button>
+                <button onclick="runMultipleSimulations()">Run 10 Random Simulations</button>
+
+                <div class="chart-container" style="margin-top: 2rem;">
+                    <canvas id="wealthTrajectoryChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Kelly Criterion & Entropy Connection -->
+        <section id="kelly">
+            <h2>Kelly Criterion & Entropy Connection</h2>
+            <p>In a horse race, the optimal betting strategy is proportional to the winning probabilities. This reveals the deep connection between gambling, information, and growth.</p>
+
+            <div class="interactive-container">
+                <h3>Horse Race with 3 Horses</h3>
+
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Horse 1 Probability</span>
+                        <span class="value" id="p1Value">33%</span>
+                    </div>
+                    <input type="range" id="p1Slider" min="1" max="98" value="33" oninput="updateHorseRace()">
+                </div>
+
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Horse 2 Probability</span>
+                        <span class="value" id="p2Value">33%</span>
+                    </div>
+                    <input type="range" id="p2Slider" min="1" max="98" value="33" oninput="updateHorseRace()">
+                </div>
+
+                <p style="font-size: 0.9rem; color: var(--accent-gold);">Horse 3 Probability: <span id="p3Value">34%</span></p>
+
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="metric-label">Entropy H(X)</div>
+                        <div class="metric-value" id="entropy">0.000</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">log(m)</div>
+                        <div class="metric-value" id="logm">1.585</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">W* = log(m) - H(X)</div>
+                        <div class="metric-value" id="wstar">0.000</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Max Doubling Rate</div>
+                        <div class="metric-value" id="maxDR">0.000</div>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 2rem;">Optimal Bet Proportions (Kelly)</h3>
+                <div id="kellybets" style="display: grid; gap: 1rem;">
+                    <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px; border-left: 4px solid var(--accent-coral);">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span>Horse 1</span>
+                            <span class="value" id="kb1">33%</span>
+                        </div>
+                        <div style="height: 8px; background: var(--border-color); border-radius: 4px; overflow: hidden;">
+                            <div id="kb1bar" style="height: 100%; background: linear-gradient(90deg, var(--accent-coral), var(--accent-gold)); width: 33%;"></div>
+                        </div>
+                    </div>
+                    <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px; border-left: 4px solid var(--accent-cyan);">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span>Horse 2</span>
+                            <span class="value" id="kb2">33%</span>
+                        </div>
+                        <div style="height: 8px; background: var(--border-color); border-radius: 4px; overflow: hidden;">
+                            <div id="kb2bar" style="height: 100%; background: linear-gradient(90deg, var(--accent-cyan), var(--accent-teal)); width: 33%;"></div>
+                        </div>
+                    </div>
+                    <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px; border-left: 4px solid var(--accent-teal);">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span>Horse 3</span>
+                            <span class="value" id="kb3">34%</span>
+                        </div>
+                        <div style="height: 8px; background: var(--border-color); border-radius: 4px; overflow: hidden;">
+                            <div id="kb3bar" style="height: 100%; background: linear-gradient(90deg, var(--accent-teal), var(--accent-gold)); width: 34%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="runHorseRaceSimulation()" style="margin-top: 1.5rem;">Simulate Wealth Growth</button>
+
+                <div class="chart-container" style="margin-top: 2rem;">
+                    <canvas id="horseRaceChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: Side Information Value -->
+        <section id="sideinfo">
+            <h2>Side Information & Mutual Information</h2>
+            <p>How much is a stock tip worth? The answer is bounded by mutual information I(X;Y). See how the quality of information affects your doubling rate.</p>
+
+            <div class="interactive-container">
+                <h3>Information Quality</h3>
+
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Tip Correlation (0 = useless, 1 = perfect)</span>
+                        <span class="value" id="correlationValue">0.50</span>
+                    </div>
+                    <input type="range" id="correlationSlider" min="0" max="100" value="50" step="5" oninput="updateSideInfo()">
+                </div>
+
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="metric-label">Uninformed W (no tip)</div>
+                        <div class="metric-value" id="wWithoutInfo">0.0000</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Informed W (with tip)</div>
+                        <div class="metric-value" id="wWithInfo">0.0000</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Gain ΔW</div>
+                        <div class="metric-value" id="wGain">0.0000</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Mutual Info I(X;Y)</div>
+                        <div class="metric-value" id="mutualInfo">0.0000</div>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 2rem;">Doubling Rate Comparison</h3>
+                <div class="chart-container">
+                    <canvas id="sideInfoChart"></canvas>
+                </div>
+
+                <div class="explanation" style="margin-top: 2rem;">
+                    <strong>Key Insight:</strong> The increase in doubling rate from side information is bounded by ΔW ≤ I(X;Y). A perfect tip (correlation = 1.0) gives you mutual information close to log(m), allowing you to nearly lock in the winning outcome. A useless tip (correlation = 0.5 for binary outcomes) provides no advantage. This quantifies the value of information in financial markets.
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 6: Socratic Sandbox -->
+        <section id="socratic">
+            <h2>The Investor's Paradox: Five Questions</h2>
+            <p>A hedge fund manager has two strategies. Strategy A maximizes expected returns (Markowitz mean-variance). Strategy B uses the Kelly criterion and maximizes E[log(return)]. Over 10 years, Strategy A has higher average returns. But investors in Strategy B are all richer. Why?</p>
+
+            <div id="socraticQuestions"></div>
+        </section>
+
+        <!-- Footer -->
+        <footer>
+            <p style="margin-bottom: 1.5rem; color: var(--accent-gold);">Cover & Thomas, Elements of Information Theory</p>
+
+            <div class="chapter-nav">
+                <a href="chapter14_network_information_theory.html" class="chapter-link">← Ch.14: Network IT</a>
+                <a href="index.html" class="chapter-link">Library of Entropy</a>
+                <a href="chapter16_inequalities_information_theory.html" class="chapter-link">Ch.16: Inequalities →</a>
+            </div>
+
+            <p style="margin-top: 2rem; font-size: 0.85rem; color: var(--text-light);">
+                An interactive exploration of information theory. Scroll to explore, interact with simulations, and expand your understanding.
+            </p>
+        </footer>
+    </main>
+
+    <script>
+        // ============================================================
+        // UTILITIES & SETUP
+        // ============================================================
+
+        function entropy(probs) {
+            let h = 0;
+            for (let p of probs) {
+                if (p > 0) h -= p * Math.log2(p);
+            }
+            return h;
+        }
+
+        function klDivergence(p, q) {
+            let d = 0;
+            for (let i = 0; i < p.length; i++) {
+                if (p[i] > 0 && q[i] > 0) {
+                    d += p[i] * Math.log2(p[i] / q[i]);
+                }
+            }
+            return d;
+        }
+
+        function mutualInformation(pXY, pX, pY) {
+            let mi = 0;
+            for (let i = 0; i < pX.length; i++) {
+                for (let j = 0; j < pY.length; j++) {
+                    if (pXY[i][j] > 0) {
+                        mi += pXY[i][j] * Math.log2(pXY[i][j] / (pX[i] * pY[j]));
+                    }
+                }
+            }
+            return mi;
+        }
+
+        // Progress bar
+        window.addEventListener('scroll', function() {
+            const winScroll = document.documentElement.scrollTop || document.body.scrollTop;
+            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrolled = (winScroll / height) * 100;
+            document.getElementById('progressBar').style.width = scrolled + '%';
+        });
+
+        // ============================================================
+        // SECTION 1: FEYNMAN - TRAJECTORY ANIMATION
+        // ============================================================
+
+        function animateTrajectories() {
+            const svg = document.getElementById('trajectoryAnimation');
+            const overBetPath = document.getElementById('overBetPath');
+            const kellyPath = document.getElementById('kellyPath');
+
+            // Clear paths
+            overBetPath.setAttribute('points', '');
+            kellyPath.setAttribute('points', '');
+
+            const n = 200;
+            let overPoints = [];
+            let kellyPoints = [];
+
+            // Simulate wealth trajectories
+            for (let i = 0; i < n; i++) {
+                const t = i / (n - 1); // 0 to 1
+                const x = 60 + t * 690;
+
+                // Over-betting: high volatility, eventual crash
+                const overY = 350 - (Math.sin(t * Math.PI * 4) * 100 + t * 150 - Math.pow(t - 0.7, 2) * 200);
+                overPoints.push([x, overY].join(','));
+
+                // Kelly: smooth, steady growth
+                const kellyY = 350 - (Math.pow(t, 1.5) * 280);
+                kellyPoints.push([x, kellyY].join(','));
+            }
+
+            overBetPath.setAttribute('points', overPoints.join(' '));
+            kellyPath.setAttribute('points', kellyPoints.join(' '));
+
+            // Animate by drawing
+            const totalLength = 690;
+            overBetPath.style.strokeDasharray = totalLength;
+            overBetPath.style.strokeDashoffset = totalLength;
+            kellyPath.style.strokeDasharray = totalLength;
+            kellyPath.style.strokeDashoffset = totalLength;
+
+            setTimeout(() => {
+                overBetPath.style.transition = 'stroke-dashoffset 2s ease-out';
+                overBetPath.style.strokeDashoffset = '0';
+                kellyPath.style.transition = 'stroke-dashoffset 2s ease-out';
+                kellyPath.style.strokeDashoffset = '0';
+            }, 10);
+        }
+
+        // ============================================================
+        // SECTION 3: PORTFOLIO SIMULATOR
+        // ============================================================
+
+        let doublingRateChart = null;
+        let wealthTrajectoryChart = null;
+
+        function updateSimulator() {
+            const alloc = parseFloat(document.getElementById('allocSlider').value) / 100;
+            document.getElementById('allocValue').innerText = (alloc * 100).toFixed(0) + '%';
+
+            // Stock parameters
+            const returnA = [1.05, 0.95];
+            const returnB = [1.30, 0.70];
+            const probA = [0.6, 0.4];
+            const probB = [0.5, 0.5];
+
+            // Portfolio return outcomes
+            let outcomes = [];
+            let probs = [];
+
+            for (let i = 0; i < 2; i++) {
+                for (let j = 0; j < 2; j++) {
+                    const portfolioReturn = alloc * returnB[j] + (1 - alloc) * returnA[i];
+                    const prob = probB[j] * probA[i];
+                    outcomes.push(portfolioReturn);
+                    probs.push(prob);
+                }
+            }
+
+            // Compute doubling rate
+            const doublingRate = probs.reduce((sum, p, i) => {
+                if (outcomes[i] > 0) sum += p * Math.log2(outcomes[i]);
+                return sum;
+            }, 0);
+
+            // Expected return
+            const expectedReturn = probs.reduce((sum, p, i) => sum + p * (outcomes[i] - 1), 0);
+
+            // Variance and volatility
+            const expRet2 = probs.reduce((sum, p, i) => sum + p * outcomes[i] * outcomes[i], 0);
+            const variance = expRet2 - Math.pow(probs.reduce((sum, p, i) => sum + p * outcomes[i], 0), 2);
+            const volatility = Math.sqrt(variance);
+
+            // Wealth after 1000 days
+            const wealth = Math.pow(2, doublingRate * 1000);
+
+            document.getElementById('doublingRate').innerText = doublingRate.toFixed(4);
+            document.getElementById('expectedReturn').innerText = (expectedReturn * 100).toFixed(2) + '%';
+            document.getElementById('volatility').innerText = (volatility * 100).toFixed(2) + '%';
+            document.getElementById('wealthValue').innerText = '$' + wealth.toFixed(2);
+
+            // Plot doubling rate curve
+            plotDoublingRateCurve(alloc);
+        }
+
+        function plotDoublingRateCurve(currentAlloc) {
+            const ctx = document.getElementById('doublingRateChart').getContext('2d');
+
+            const returnA = [1.05, 0.95];
+            const returnB = [1.30, 0.70];
+            const probA = [0.6, 0.4];
+            const probB = [0.5, 0.5];
+
+            const allocations = [];
+            const doublingRates = [];
+
+            for (let a = 0; a <= 100; a += 1) {
+                const alloc = a / 100;
+                let wSum = 0;
+
+                for (let i = 0; i < 2; i++) {
+                    for (let j = 0; j < 2; j++) {
+                        const portfolioReturn = alloc * returnB[j] + (1 - alloc) * returnA[i];
+                        const prob = probB[j] * probA[i];
+                        if (portfolioReturn > 0) wSum += prob * Math.log2(portfolioReturn);
+                    }
+                }
+
+                allocations.push(alloc);
+                doublingRates.push(wSum);
+            }
+
+            // Find maximum
+            const maxIdx = doublingRates.indexOf(Math.max(...doublingRates));
+            const maxAlloc = allocations[maxIdx];
+
+            if (doublingRateChart) doublingRateChart.destroy();
+
+            doublingRateChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: allocations.map(a => (a * 100).toFixed(0) + '%'),
+                    datasets: [{
+                        label: 'Doubling Rate W(b)',
+                        data: doublingRates,
+                        borderColor: '#00d4ff',
+                        backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        pointHoverRadius: 8,
+                        pointBackgroundColor: '#ffd93d',
+                    }, {
+                        label: 'Optimal Point',
+                        data: allocations.map((a, i) => a === maxAlloc ? doublingRates[i] : null),
+                        pointRadius: 10,
+                        pointBackgroundColor: '#4ecdc4',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        showLine: false,
+                    }, {
+                        label: 'Your Allocation',
+                        data: allocations.map((a, i) => Math.abs(a - currentAlloc) < 0.01 ? doublingRates[i] : null),
+                        pointRadius: 10,
+                        pointBackgroundColor: '#ff6b6b',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        showLine: false,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#e0e0e0',
+                                font: { family: "'Inter', sans-serif" },
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            ticks: { color: '#e0e0e0' },
+                            grid: { color: '#3a3a45' },
+                            title: {
+                                display: true,
+                                text: 'W(b) [bits/day]',
+                                color: '#e0e0e0'
+                            }
+                        },
+                        x: {
+                            ticks: { color: '#e0e0e0' },
+                            grid: { color: '#3a3a45' },
+                            title: {
+                                display: true,
+                                text: 'Allocation to Stock B',
+                                color: '#e0e0e0'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function runSimulation() {
+            const alloc = parseFloat(document.getElementById('allocSlider').value) / 100;
+            const n = 1000;
+
+            const returnA = [1.05, 0.95];
+            const returnB = [1.30, 0.70];
+            const probA = [0.6, 0.4];
+            const probB = [0.5, 0.5];
+
+            let wealth = [1.0];
+            for (let i = 0; i < n; i++) {
+                const drawA = Math.random() < probA[0] ? returnA[0] : returnA[1];
+                const drawB = Math.random() < probB[0] ? returnB[0] : returnB[1];
+                const portfolioReturn = alloc * drawB + (1 - alloc) * drawA;
+                wealth.push(wealth[i] * portfolioReturn);
+            }
+
+            const ctx = document.getElementById('wealthTrajectoryChart').getContext('2d');
+            if (wealthTrajectoryChart) wealthTrajectoryChart.destroy();
+
+            wealthTrajectoryChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: n + 1}, (_, i) => i),
+                    datasets: [{
+                        label: 'Portfolio Wealth',
+                        data: wealth,
+                        borderColor: '#4ecdc4',
+                        backgroundColor: 'rgba(78, 205, 196, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.2,
+                        pointRadius: 0,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#e0e0e0', font: { family: "'Inter', sans-serif" } }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'logarithmic',
+                            ticks: { color: '#e0e0e0' },
+                            grid: { color: '#3a3a45' },
+                            title: { display: true, text: 'Wealth ($, log scale)', color: '#e0e0e0' }
+                        },
+                        x: {
+                            ticks: { color: '#e0e0e0' },
+                            grid: { color: '#3a3a45' },
+                            title: { display: true, text: 'Days', color: '#e0e0e0' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function runMultipleSimulations() {
+            const alloc = parseFloat(document.getElementById('allocSlider').value) / 100;
+            const n = 1000;
+            const simulations = 10;
+
+            const returnA = [1.05, 0.95];
+            const returnB = [1.30, 0.70];
+            const probA = [0.6, 0.4];
+            const probB = [0.5, 0.5];
+
+            const datasets = [];
+            const colors = ['#ff6b6b', '#00d4ff', '#4ecdc4', '#ffd93d', '#ff8c42', '#6bcf7f', '#a78bfa', '#f87171', '#34d399', '#60a5fa'];
+
+            for (let sim = 0; sim < simulations; sim++) {
+                let wealth = [1.0];
+                for (let i = 0; i < n; i++) {
+                    const drawA = Math.random() < probA[0] ? returnA[0] : returnA[1];
+                    const drawB = Math.random() < probB[0] ? returnB[0] : returnB[1];
+                    const portfolioReturn = alloc * drawB + (1 - alloc) * drawA;
+                    wealth.push(wealth[i] * portfolioReturn);
+                }
+
+                datasets.push({
+                    label: `Simulation ${sim + 1}`,
+                    data: wealth,
+                    borderColor: colors[sim % colors.length],
+                    backgroundColor: 'transparent',
+                    borderWidth: 1.5,
+                    fill: false,
+                    tension: 0.2,
+                    pointRadius: 0,
+                });
+            }
+
+            const ctx = document.getElementById('wealthTrajectoryChart').getContext('2d');
+            if (wealthTrajectoryChart) wealthTrajectoryChart.destroy();
+
+            wealthTrajectoryChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: n + 1}, (_, i) => i),
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#e0e0e0', font: { family: "'Inter', sans-serif" } }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'logarithmic',
+                            ticks: { color: '#e0e0e0' },
+                            grid: { color: '#3a3a45' },
+                            title: { display: true, text: 'Wealth ($, log scale)', color: '#e0e0e0' }
+                        },
+                        x: {
+                            ticks: { color: '#e0e0e0' },
+                            grid: { color: '#3a3a45' },
+                            title: { display: true, text: 'Days', color: '#e0e0e0' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ============================================================
+        // SECTION 4: KELLY CRITERION
+        // ============================================================
+
+        let horseRaceChart = null;
+
+        function updateHorseRace() {
+            const p1 = parseFloat(document.getElementById('p1Slider').value) / 100;
+            const p2 = parseFloat(document.getElementById('p2Slider').value) / 100;
+            const p3 = 1 - p1 - p2;
+
+            if (p3 < 0) return;
+
+            const probs = [p1, p2, p3];
+
+            document.getElementById('p1Value').innerText = (p1 * 100).toFixed(1) + '%';
+            document.getElementById('p2Value').innerText = (p2 * 100).toFixed(1) + '%';
+            document.getElementById('p3Value').innerText = (p3 * 100).toFixed(1) + '%';
+
+            const h = entropy(probs);
+            const w = Math.log2(3) - h;
+
+            document.getElementById('entropy').innerText = h.toFixed(3);
+            document.getElementById('wstar').innerText = w.toFixed(3);
+            document.getElementById('maxDR').innerText = w.toFixed(3);
+
+            // Kelly betting
+            document.getElementById('kb1').innerText = (p1 * 100).toFixed(1) + '%';
+            document.getElementById('kb2').innerText = (p2 * 100).toFixed(1) + '%';
+            document.getElementById('kb3').innerText = (p3 * 100).toFixed(1) + '%';
+
+            document.getElementById('kb1bar').style.width = (p1 * 100) + '%';
+            document.getElementById('kb2bar').style.width = (p2 * 100) + '%';
+            document.getElementById('kb3bar').style.width = (p3 * 100) + '%';
+        }
+
+        function runHorseRaceSimulation() {
+            const p1 = parseFloat(document.getElementById('p1Slider').value) / 100;
+            const p2 = parseFloat(document.getElementById('p2Slider').value) / 100;
+            const p3 = 1 - p1 - p2;
+
+            const probs = [p1, p2, p3];
+            const n = 500;
+
+            let wealthKelly = [1.0];
+            let wealthUniform = [1.0];
+
+            for (let i = 0; i < n; i++) {
+                const r = Math.random();
+                let winner = 0;
+                if (r < p1) winner = 0;
+                else if (r < p1 + p2) winner = 1;
+                else winner = 2;
+
+                // Kelly betting: allocate proportional to probabilities
+                const kellyReturn = (1 + 2 * probs[winner]) * probs[winner]; // Bet probs[winner], odds are 1:1
+                wealthKelly.push(wealthKelly[i] * kellyReturn);
+
+                // Uniform betting: allocate 1/3 to each
+                const uniformReturn = (1 + 2 * (1/3)) * (1/3);
+                wealthUniform.push(wealthUniform[i] * uniformReturn);
+            }
+
+            const ctx = document.getElementById('horseRaceChart').getContext('2d');
+            if (horseRaceChart) horseRaceChart.destroy();
+
+            horseRaceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: n + 1}, (_, i) => i),
+                    datasets: [{
+                        label: 'Kelly (Proportional)',
+                        data: wealthKelly,
+                        borderColor: '#4ecdc4',
+                        backgroundColor: 'rgba(78, 205, 196, 0.1)',
+                        borderWidth: 2.5,
+                        fill: true,
+                        tension: 0.2,
+                        pointRadius: 0,
+                    }, {
+                        label: 'Uniform (1/3 each)',
+                        data: wealthUniform,
+                        borderColor: '#ff6b6b',
+                        backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                        borderWidth: 2.5,
+                        fill: true,
+                        tension: 0.2,
+                        pointRadius: 0,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#e0e0e0', font: { family: "'Inter', sans-serif" } }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'logarithmic',
+                            ticks: { color: '#e0e0e0' },
+                            grid: { color: '#3a3a45' },
+                            title: { display: true, text: 'Wealth ($, log scale)', color: '#e0e0e0' }
+                        },
+                        x: {
+                            ticks: { color: '#e0e0e0' },
+                            grid: { color: '#3a3a45' },
+                            title: { display: true, text: 'Races', color: '#e0e0e0' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ============================================================
+        // SECTION 5: SIDE INFORMATION
+        // ============================================================
+
+        let sideInfoChart = null;
+
+        function updateSideInfo() {
+            const correlation = parseFloat(document.getElementById('correlationSlider').value) / 100;
+            document.getElementById('correlationValue').innerText = correlation.toFixed(2);
+
+            // Scenario: Stock A up 10%, down 5%. Stock B up 30%, down 20%
+            // Uninformed: 50/50 split, no correlation
+            const returnA = [1.10, 0.95];
+            const returnB = [1.30, 0.80];
+            const probA = [0.5, 0.5];
+            const probB = [0.5, 0.5];
+
+            // Uninformed: allocate 50/50
+            let wUninformed = 0;
+            for (let i = 0; i < 2; i++) {
+                for (let j = 0; j < 2; j++) {
+                    const ret = 0.5 * returnA[i] + 0.5 * returnB[j];
+                    const prob = probA[i] * probB[j];
+                    if (ret > 0) wUninformed += prob * Math.log2(ret);
+                }
+            }
+
+            // Informed: adjust allocation based on tip
+            // Perfect tip (correlation=1): allocate all to best outcome
+            // Useless tip (correlation=0.5): no advantage
+            const adjustedProb = 0.5 + correlation * 0.25; // Tip makes you biased towards best outcome
+            let wInformed = 0;
+
+            for (let i = 0; i < 2; i++) {
+                for (let j = 0; j < 2; j++) {
+                    // More weight to (A_up, B_up) based on tip quality
+                    let prob = probA[i] * probB[j];
+                    if (i === 0 && j === 0) prob *= (1 + correlation);
+                    prob /= (2 + correlation); // Normalize
+
+                    const alloc = 0.5 + correlation * 0.25 * (i + j - 1);
+                    const ret = alloc * returnA[i] + (1 - alloc) * returnB[j];
+                    if (ret > 0) wInformed += prob * Math.log2(ret);
+                }
+            }
+
+            const mi = correlation * 0.5; // Approximate mutual information
+
+            document.getElementById('wWithoutInfo').innerText = wUninformed.toFixed(4);
+            document.getElementById('wWithInfo').innerText = wInformed.toFixed(4);
+            document.getElementById('wGain').innerText = (wInformed - wUninformed).toFixed(4);
+            document.getElementById('mutualInfo').innerText = mi.toFixed(4);
+
+            // Plot
+            plotSideInfoChart(correlation, wUninformed, wInformed);
+        }
+
+        function plotSideInfoChart(correlation, w1, w2) {
+            const ctx = document.getElementById('sideInfoChart').getContext('2d');
+
+            if (sideInfoChart) sideInfoChart.destroy();
+
+            sideInfoChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Without Tip', 'With Tip'],
+                    datasets: [{
+                        label: 'Doubling Rate W',
+                        data: [w1, w2],
+                        backgroundColor: ['#ff6b6b', '#4ecdc4'],
+                        borderColor: ['#ff6b6b', '#4ecdc4'],
+                        borderWidth: 2,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: {
+                            labels: { color: '#e0e0e0', font: { family: "'Inter', sans-serif" } }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#e0e0e0' },
+                            grid: { color: '#3a3a45' },
+                        },
+                        y: {
+                            ticks: { color: '#e0e0e0' },
+                            grid: { color: '#3a3a45' },
+                        }
+                    }
+                }
+            });
+        }
+
+        // ============================================================
+        // SECTION 6: SOCRATIC QUESTIONS
+        // ============================================================
+
+        const socraticQuestions = [
+            {
+                q: "Why does maximizing expected return NOT maximize long-term wealth?",
+                a: "Because wealth compounds multiplicatively, not additively. After n periods, wealth is the PRODUCT of daily returns (S_n = X_1 × X_2 × ... × X_n). The law of large numbers applies to log(wealth), not wealth itself. So by Jensen's inequality, E[log(return)] ≥ log(E[return]), and the difference grows with time. Strategy A maximizes arithmetic mean return. Strategy B maximizes geometric mean return. Over long horizons, geometric mean dominates arithmetic mean. This is why Kelly investors are exponentially wealthier."
+            },
+            {
+                q: "How is the log-optimal portfolio connected to Shannon's source coding theorem?",
+                a: "In source coding, the optimal code achieves average length H(X) bits. In gambling on horse races, the optimal doubling rate is W* = log m - H(X). Both maximize expected logarithms. The portfolio IS a code — it encodes a betting strategy that compresses the distribution of returns. Just as the source coding theorem shows that no code can be shorter than H(X), the portfolio theory shows that no wealth growth can exceed W* = log m - H(X). Both are fundamental limits arising from the same mathematical structure: maximizing E[log(·)]."
+            },
+            {
+                q: "Why can't any causal strategy beat the log-optimal portfolio?",
+                a: "The Kuhn-Tucker conditions give E[X_i / b*'X] = 1 for held assets. For any alternative portfolio S vs log-optimal S*, we have E[S/(b*'X)] ≤ 1, which implies E[S/S*] ≤ 1. By Markov's inequality, Pr(S ≥ tS*) ≤ 1/t for any t > 1. No strategy can consistently beat it over large time horizons. The log-optimal portfolio is the information-theoretic speed limit of wealth growth, analogous to channel capacity in communication."
+            },
+            {
+                q: "How much is a stock tip worth? Why is it bounded by mutual information I(X;Y)?",
+                a: "The increase in doubling rate from side information Y is ΔW ≤ I(X;Y). This is because the log-optimal investor with side information uses conditional Kelly betting: allocate capital proportional to conditional probabilities given Y. The improvement is bounded by the KL divergence between informed and uninformed distributions. Perfect information (Y determines X exactly) gives I = log m, allowing near-certain allocation. A useless tip gives I ≈ 0. This quantifies value: information worth exactly its mutual information with stock returns."
+            },
+            {
+                q: "What is the 'AEP for the stock market' and why is it profound?",
+                a: "In source coding, the Asymptotic Equipartition Property says -(1/n)log p(X₁,...,Xₙ) → H for ergodic sequences. In portfolio theory, we have (1/n)log S_n* → W* with probability 1. Almost all long sequences of returns produce similar wealth: they all grow at rate 2^{nW*}. This is profound: it means the market's randomness is 'tame' — very predictable in aggregate. The law of large numbers applies to log-wealth, not wealth. This justifies the entire theory: long-term investors can ignore outliers and focus on W*, just as information theorists focus on typical sets."
+            }
+        ];
+
+        function initSocratic() {
+            const container = document.getElementById('socraticQuestions');
+
+            socraticQuestions.forEach((item, idx) => {
+                const card = document.createElement('div');
+                card.className = 'socratic-card';
+                card.innerHTML = `
+                    <div class="socratic-question">Q${idx + 1}: ${item.q}</div>
+                    <div class="socratic-answer">${item.a}</div>
+                `;
+
+                card.addEventListener('click', function() {
+                    this.classList.toggle('active');
+                    // Close other cards
+                    document.querySelectorAll('.socratic-card').forEach(c => {
+                        if (c !== this) c.classList.remove('active');
+                    });
+                });
+
+                container.appendChild(card);
+            });
+        }
+
+        // ============================================================
+        // MATH RENDERING
+        // ============================================================
+
+        document.addEventListener("DOMContentLoaded", function() {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false},
+                    {left: '\\[', right: '\\]', display: true},
+                    {left: '\\(', right: '\\)', display: false}
+                ]
+            });
+
+            initSocratic();
+            updateSimulator();
+            updateHorseRace();
+            updateSideInfo();
+            animateTrajectories();
+        });
+    </script>
+</body>
+</html>
