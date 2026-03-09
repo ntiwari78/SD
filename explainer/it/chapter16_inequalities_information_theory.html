@@ -621,6 +621,7 @@
             <li><a href="#feynman">Feynman Model</a></li>
             <li><a href="#mathematical">Mathematics</a></li>
             <li><a href="#interactive">Interactive</a></li>
+            <li><a href="#code">Code</a></li>
             <li><a href="#sandbox">Sandbox</a></li>
         </ul>
     </nav>
@@ -1063,6 +1064,82 @@
                         <span class="result-value" id="infoLost">-</span>
                     </div>
                 </div>
+            </div>
+        </section>
+
+        <!-- Code Laboratory -->
+        <section class="content-section" id="code">
+            <div class="section-label">V — Code Laboratory</div>
+            <h2 class="section-title">Python Implementation</h2>
+            <p>Verifying fundamental information inequalities computationally — from entropy power to data processing:</p>
+            <div style="background: #111118; border: 1px solid #2a2a3a; border-radius: 12px; padding: 1.5rem; overflow-x: auto; margin: 1.5rem 0; white-space: pre; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 0.85rem; line-height: 1.6; color: #e0e0e0;">
+<span style="color:#ff7b72">import</span> numpy <span style="color:#ff7b72">as</span> np
+
+<span style="color:#ff7b72">def</span> <span style="color:#d2a8ff">entropy</span>(p):
+    <span style="color:#a5d6ff">"""H(X) = -Σ p(x) log₂ p(x), the bedrock quantity."""</span>
+    p = np.asarray(p, dtype=<span style="color:#ff7b72">float</span>)
+    p = p[p > <span style="color:#79c0ff">0</span>]
+    <span style="color:#ff7b72">return</span> -np.sum(p * np.log2(p))
+
+<span style="color:#ff7b72">def</span> <span style="color:#d2a8ff">kl_divergence</span>(p, q):
+    <span style="color:#a5d6ff">"""D(p||q) ≥ 0 (Theorem 16.1.7: Information inequality)"""</span>
+    p, q = np.asarray(p), np.asarray(q)
+    mask = p > <span style="color:#79c0ff">0</span>
+    <span style="color:#ff7b72">return</span> np.sum(p[mask] * np.log2(p[mask] / q[mask]))
+
+<span style="color:#ff7b72">def</span> <span style="color:#d2a8ff">mutual_information</span>(p_joint):
+    <span style="color:#a5d6ff">"""I(X;Y) = D(p(x,y) || p(x)p(y)) ≥ 0"""</span>
+    px = p_joint.sum(axis=<span style="color:#79c0ff">1</span>)
+    py = p_joint.sum(axis=<span style="color:#79c0ff">0</span>)
+    mi = <span style="color:#79c0ff">0.0</span>
+    <span style="color:#ff7b72">for</span> i <span style="color:#ff7b72">in</span> range(p_joint.shape[<span style="color:#79c0ff">0</span>]):
+        <span style="color:#ff7b72">for</span> j <span style="color:#ff7b72">in</span> range(p_joint.shape[<span style="color:#79c0ff">1</span>]):
+            <span style="color:#ff7b72">if</span> p_joint[i,j] > <span style="color:#79c0ff">0</span>:
+                mi += p_joint[i,j] * np.log2(
+                    p_joint[i,j] / (px[i] * py[j]))
+    <span style="color:#ff7b72">return</span> mi
+
+<span style="color:#ff7b72">def</span> <span style="color:#d2a8ff">verify_entropy_power_ineq</span>(h_X, h_Y):
+    <span style="color:#a5d6ff">"""
+    Entropy Power Inequality (Theorem 16.7):
+    e^{2h(X+Y)} ≥ e^{2h(X)} + e^{2h(Y)}
+
+    Connects to Brunn-Minkowski: Vol(A+B)^{1/n} ≥ Vol(A)^{1/n} + Vol(B)^{1/n}
+    """</span>
+    N_X = np.exp(<span style="color:#79c0ff">2</span> * h_X) / (<span style="color:#79c0ff">2</span> * np.pi * np.e)
+    N_Y = np.exp(<span style="color:#79c0ff">2</span> * h_Y) / (<span style="color:#79c0ff">2</span> * np.pi * np.e)
+    h_sum_min = <span style="color:#79c0ff">0.5</span> * np.log(<span style="color:#79c0ff">2</span> * np.pi * np.e * (N_X + N_Y))
+    <span style="color:#ff7b72">return</span> {<span style="color:#a5d6ff">'N_X'</span>: N_X, <span style="color:#a5d6ff">'N_Y'</span>: N_Y, <span style="color:#a5d6ff">'h_min'</span>: h_sum_min}
+
+<span style="color:#ff7b72">def</span> <span style="color:#d2a8ff">data_processing_demo</span>(eps1=<span style="color:#79c0ff">0.1</span>, eps2=<span style="color:#79c0ff">0.2</span>):
+    <span style="color:#a5d6ff">"""
+    Data Processing Inequality: X→Y→Z ⟹ I(X;Z) ≤ I(X;Y)
+    Processing can only LOSE information, never create it.
+    """</span>
+    <span style="color:#6e7681"># X ~ Bernoulli(0.5), BSC channels</span>
+    p_xy = np.array([[<span style="color:#79c0ff">0.5</span>*(<span style="color:#79c0ff">1</span>-eps1), <span style="color:#79c0ff">0.5</span>*eps1],
+                      [<span style="color:#79c0ff">0.5</span>*eps1, <span style="color:#79c0ff">0.5</span>*(<span style="color:#79c0ff">1</span>-eps1)]])
+    p_y = p_xy.sum(axis=<span style="color:#79c0ff">0</span>)
+
+    ch2 = np.array([[<span style="color:#79c0ff">1</span>-eps2, eps2], [eps2, <span style="color:#79c0ff">1</span>-eps2]])
+    p_xz_joint = np.zeros((<span style="color:#79c0ff">2</span>, <span style="color:#79c0ff">2</span>))
+    <span style="color:#ff7b72">for</span> i <span style="color:#ff7b72">in</span> range(<span style="color:#79c0ff">2</span>):
+        <span style="color:#ff7b72">for</span> j <span style="color:#ff7b72">in</span> range(<span style="color:#79c0ff">2</span>):
+            <span style="color:#ff7b72">for</span> k <span style="color:#ff7b72">in</span> range(<span style="color:#79c0ff">2</span>):
+                p_xz_joint[i,k] += p_xy[i,j] * ch2[j,k]
+
+    I_XY = mutual_information(p_xy)
+    I_XZ = mutual_information(p_xz_joint)
+    <span style="color:#d2a8ff">print</span>(f<span style="color:#a5d6ff">"I(X;Y) = {I_XY:.4f} bits"</span>)
+    <span style="color:#d2a8ff">print</span>(f<span style="color:#a5d6ff">"I(X;Z) = {I_XZ:.4f} bits"</span>)
+    <span style="color:#d2a8ff">print</span>(f<span style="color:#a5d6ff">"DPI holds: I(X;Y) ≥ I(X;Z) → {I_XY >= I_XZ}"</span>)
+
+<span style="color:#6e7681"># Verify inequalities</span>
+p = [<span style="color:#79c0ff">0.5</span>, <span style="color:#79c0ff">0.3</span>, <span style="color:#79c0ff">0.2</span>]
+q = [<span style="color:#79c0ff">0.33</span>, <span style="color:#79c0ff">0.33</span>, <span style="color:#79c0ff">0.34</span>]
+<span style="color:#d2a8ff">print</span>(f<span style="color:#a5d6ff">"D(p||q) = {kl_divergence(p, q):.4f} ≥ 0 ✓"</span>)
+<span style="color:#d2a8ff">print</span>(f<span style="color:#a5d6ff">"H(p) = {entropy(p):.4f} ≤ log₂(3) = {np.log2(3):.4f} ✓"</span>)
+data_processing_demo()
             </div>
         </section>
 

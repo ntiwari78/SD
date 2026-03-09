@@ -492,6 +492,7 @@
             <a href="#simulator">Simulator</a>
             <a href="#kelly">Kelly Criterion</a>
             <a href="#sideinfo">Side Information</a>
+            <a href="#code">Code</a>
             <a href="#socratic">Questions</a>
         </div>
     </nav>
@@ -826,7 +827,72 @@
             </div>
         </section>
 
-        <!-- Section 6: Socratic Sandbox -->
+        <!-- Section 6: Code Laboratory -->
+        <section class="content-section" id="code">
+            <div class="section-label">V — Code Laboratory</div>
+            <h2 class="section-title">Python Implementation</h2>
+            <p>A complete implementation of log-optimal portfolio theory connecting information theory to wealth growth:</p>
+            <div style="background: #111118; border: 1px solid #2a2a3a; border-radius: 12px; padding: 1.5rem; overflow-x: auto; margin: 1.5rem 0; white-space: pre; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 0.85rem; line-height: 1.6; color: #e0e0e0;">
+<span style="color:#ff7b72">import</span> numpy <span style="color:#ff7b72">as</span> np
+<span style="color:#ff7b72">from</span> scipy.optimize <span style="color:#ff7b72">import</span> minimize
+
+<span style="color:#ff7b72">def</span> <span style="color:#d2a8ff">log_optimal_portfolio</span>(returns, probs):
+    <span style="color:#a5d6ff">"""
+    Find the log-optimal portfolio b* that maximizes W(b,F).
+
+    The doubling rate W(b,F) = E[log b'X] measures the
+    exponential growth rate of wealth. By the AEP for
+    stock markets: (1/n) log S_n* → W* with probability 1.
+
+    Key insight: The portfolio IS a code. Just as Shannon's
+    optimal code achieves expected length H(X), the log-optimal
+    portfolio achieves growth rate W* = log m - H(X) for
+    horse races.
+    """</span>
+    n_outcomes, n_assets = returns.shape
+
+    <span style="color:#ff7b72">def</span> <span style="color:#d2a8ff">neg_doubling_rate</span>(b):
+        <span style="color:#6e7681"># W(b,F) = Σ p_i * log(b' · x_i)</span>
+        portfolio_returns = returns @ b
+        portfolio_returns = np.maximum(portfolio_returns, <span style="color:#79c0ff">1e-10</span>)
+        <span style="color:#ff7b72">return</span> -np.sum(probs * np.log2(portfolio_returns))
+
+    <span style="color:#6e7681"># Optimize over the simplex: b_i ≥ 0, Σ b_i = 1</span>
+    constraints = {<span style="color:#a5d6ff">'type'</span>: <span style="color:#a5d6ff">'eq'</span>, <span style="color:#a5d6ff">'fun'</span>: <span style="color:#ff7b72">lambda</span> b: np.sum(b) - <span style="color:#79c0ff">1</span>}
+    bounds = [(<span style="color:#79c0ff">0</span>, <span style="color:#79c0ff">1</span>)] * n_assets
+    b0 = np.ones(n_assets) / n_assets
+
+    result = minimize(neg_doubling_rate, b0, method=<span style="color:#a5d6ff">'SLSQP'</span>,
+                     bounds=bounds, constraints=constraints)
+    <span style="color:#ff7b72">return</span> result.x, -result.fun
+
+<span style="color:#ff7b72">def</span> <span style="color:#d2a8ff">side_information_value</span>(W_with, W_without):
+    <span style="color:#a5d6ff">"""
+    Theorem 15.4.2: The increase in doubling rate due to
+    side information Y is bounded by mutual information:
+        ΔW = W(b*_f, F) - W(b*_g, F) ≤ I(X; Y)
+    """</span>
+    <span style="color:#ff7b72">return</span> W_with - W_without
+
+<span style="color:#ff7b72">def</span> <span style="color:#d2a8ff">simulate_wealth</span>(b, returns, probs, n_days=<span style="color:#79c0ff">1000</span>):
+    <span style="color:#a5d6ff">"""Simulate wealth: S_n = Π b'X_i ≈ 2^{nW*}"""</span>
+    outcomes = np.random.choice(len(probs), n_days, p=probs)
+    daily = returns[outcomes] @ b
+    <span style="color:#ff7b72">return</span> np.cumprod(daily)
+
+<span style="color:#6e7681"># Example: 2-stock market</span>
+returns = np.array([[<span style="color:#79c0ff">1.10</span>, <span style="color:#79c0ff">0.80</span>],    <span style="color:#6e7681"># Outcome 1</span>
+                     [<span style="color:#79c0ff">0.95</span>, <span style="color:#79c0ff">1.30</span>]])   <span style="color:#6e7681"># Outcome 2</span>
+probs = np.array([<span style="color:#79c0ff">0.5</span>, <span style="color:#79c0ff">0.5</span>])
+
+b_star, W_star = log_optimal_portfolio(returns, probs)
+<span style="color:#d2a8ff">print</span>(f<span style="color:#a5d6ff">"Log-optimal: {b_star[0]:.1%} Stock A, {b_star[1]:.1%} Stock B"</span>)
+<span style="color:#d2a8ff">print</span>(f<span style="color:#a5d6ff">"W* = {W_star:.4f} bits/day"</span>)
+<span style="color:#d2a8ff">print</span>(f<span style="color:#a5d6ff">"Wealth after 1000 days ≈ 2^(1000·{W_star:.4f}) = {2**(1000*W_star):.2e}"</span>)
+            </div>
+        </section>
+
+        <!-- Section 7: Socratic Sandbox -->
         <section id="socratic">
             <h2>The Investor's Paradox: Five Questions</h2>
             <p>A hedge fund manager has two strategies. Strategy A maximizes expected returns (Markowitz mean-variance). Strategy B uses the Kelly criterion and maximizes E[log(return)]. Over 10 years, Strategy A has higher average returns. But investors in Strategy B are all richer. Why?</p>
