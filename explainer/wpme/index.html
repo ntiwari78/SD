@@ -102,6 +102,7 @@ body{background:var(--bg);color:var(--cream);font-family:var(--font-sans);font-s
 .chapter-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--border)}
 .sessions-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
 .session-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;cursor:pointer;transition:all .25s;position:relative;overflow:hidden}
+a.session-card{display:block;text-decoration:none;color:inherit}
 .session-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
 .session-card[data-part="1"]::before{background:linear-gradient(90deg,var(--p1),var(--p1dim))}
 .session-card[data-part="2"]::before{background:linear-gradient(90deg,var(--p2),var(--p2dim))}
@@ -593,8 +594,8 @@ function buildAuditTable(){
 function getSessionPageUrl(s){
   if(!s.id||!s.id.startsWith('s')) return null;
   const n = parseInt(s.id.replace('s',''),10);
-  if(n>=1&&n<=17) return 'session-'+String(n).padStart(2,'0')+'.html';
-  return null;
+  if(isNaN(n)||n<1||n>17) return null;
+  return 'session-'+String(n).padStart(2,'0')+'.html';
 }
 
 function buildSessionCard(s){
@@ -605,15 +606,18 @@ function buildSessionCard(s){
   const rootTags = s.roots.slice(0,4).map(r=>`<span class="root-tag">${r.split(' (')[0]}</span>`).join('');
   const wordPrev = s.words.slice(0,4).join(', ')+(s.words.length>4?'…':'');
   const sessionHref = getSessionPageUrl(s);
-  const clickAttr = sessionHref ? `onclick="location.href='${sessionHref}'"` : `onclick="openModal('${s.id}')"`;
   const btnLabel = sessionHref ? (done?'✓ Revisit':'▶ Open Session') : (done?'✓ Revisit':'▶ Initialize Session');
-  return `<div class="session-card${done?' completed':''}" data-part="${partAttr}" ${clickAttr}>
+  const cardClass = 'session-card'+(done?' completed':'');
+  const cardContent = `
     <div class="session-num">${s.num}</div>
     <div class="session-title">${s.theme}</div>
     <div class="session-roots">${rootTags}</div>
     <div class="session-words">${wordPrev}</div>
-    <button class="init-btn" type="button" ${sessionHref ? `onclick="event.stopPropagation();location.href='${sessionHref}'"` : ''}>${btnLabel}</button>
-  </div>`;
+    ${sessionHref ? `<span class="init-btn">${btnLabel}</span>` : `<button class="init-btn" type="button">${btnLabel}</button>`}`;
+  if(sessionHref){
+    return `<a href="${sessionHref}" class="${cardClass}" data-part="${partAttr}">${cardContent}</a>`;
+  }
+  return `<div class="${cardClass}" data-part="${partAttr}" onclick="openModal('${s.id}')">${cardContent}</div>`;
 }
 
 function buildIntermissionCard(i){
