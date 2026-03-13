@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Session 10 — Writing &amp; Aging | Word Power Made Easy</title>
+<style>
+:root {
+  --gold:#c9a84c; --gold-light:#e2c97e; --parchment:#e8dcc8;
+  --deep:#0d0b08; --panel:#17130e; --card:#1e1810;
+  --border:#3a2e1e; --text:#d4c9b0; --muted:#8a7a5a;
+  --green:#4caf72; --red:#c94c4c; --blue:#4c8ec9;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--deep);color:var(--text);font-family:'Georgia',serif;min-height:100vh;line-height:1.7}
+header{background:linear-gradient(135deg,#1a1208 0%,#0d0b08 100%);border-bottom:2px solid var(--gold);padding:2rem;text-align:center}
+header h1{color:var(--gold);font-size:2rem;letter-spacing:.08em;margin-bottom:.4rem}
+header p{color:var(--muted);font-size:.95rem;letter-spacing:.05em}
+.breadcrumb{color:var(--muted);font-size:.8rem;margin-bottom:.5rem}
+.breadcrumb span{color:var(--gold)}
+.tab-bar{display:flex;background:var(--panel);border-bottom:1px solid var(--border);overflow-x:auto}
+.tab{padding:.85rem 1.5rem;cursor:pointer;color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap;font-size:.9rem;letter-spacing:.05em;transition:all .2s}
+.tab:hover{color:var(--parchment)}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold);background:rgba(201,168,76,.07)}
+.pane{display:none;padding:2rem;max-width:900px;margin:0 auto}
+.pane.active{display:block}
+h2{color:var(--gold);font-size:1.35rem;margin-bottom:1.2rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+h3{color:var(--gold-light);font-size:1.05rem;margin:1.5rem 0 .7rem}
+p{margin-bottom:1rem;color:var(--text)}
+
+/* Word Cards */
+.word-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem;margin-bottom:1.5rem}
+.word-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:1.1rem;cursor:pointer;transition:all .2s;position:relative}
+.word-card:hover{border-color:var(--gold);transform:translateY(-2px);box-shadow:0 4px 16px rgba(201,168,76,.15)}
+.word-card .word{color:var(--gold);font-size:1.1rem;font-style:italic;font-weight:bold}
+.word-card .pron{color:var(--muted);font-size:.8rem;margin:.2rem 0}
+.word-card .pos{display:inline-block;background:rgba(201,168,76,.12);color:var(--gold);font-size:.72rem;padding:.15rem .5rem;border-radius:20px;margin:.3rem 0}
+.word-card .def{color:var(--text);font-size:.88rem;margin-top:.4rem}
+.word-card .formula{color:var(--blue);font-size:.78rem;margin-top:.4rem;font-style:italic}
+
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--panel);border:2px solid var(--gold);border-radius:12px;padding:2rem;max-width:520px;width:90%;max-height:80vh;overflow-y:auto}
+.modal h3{color:var(--gold);font-size:1.3rem;margin-bottom:.5rem}
+.modal .close{float:right;cursor:pointer;color:var(--muted);font-size:1.3rem;line-height:1}
+.modal .close:hover{color:var(--gold)}
+.modal section{margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)}
+.modal section h4{color:var(--gold-light);font-size:.85rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:.4rem}
+
+/* Etymology SVG */
+.svg-container{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0;overflow-x:auto}
+svg text{font-family:'Georgia',serif}
+
+/* Formula box */
+.formula-box{background:rgba(76,142,201,.08);border:1px solid rgba(76,142,201,.3);border-radius:6px;padding:.8rem 1.2rem;margin:.8rem 0;color:var(--blue);font-size:.95rem}
+.formula-box .eq{font-style:italic}
+
+/* Feynman callout */
+.callout{background:rgba(201,168,76,.07);border-left:3px solid var(--gold);border-radius:0 6px 6px 0;padding:1rem 1.2rem;margin:1rem 0}
+.callout p{margin:0;color:var(--parchment);font-size:.95rem}
+.analogy-box{background:rgba(76,175,114,.07);border:1px solid rgba(76,175,114,.25);border-radius:6px;padding:1rem;margin:1rem 0}
+.analogy-box p{margin:0;font-size:.92rem}
+
+/* Practice */
+.exercise-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:1.5rem;margin-bottom:1.5rem}
+.exercise-card h3{color:var(--gold-light);margin-top:0;margin-bottom:1rem}
+.match-row{display:flex;align-items:flex-start;gap:.8rem;margin:.6rem 0;padding:.5rem;border-radius:4px;transition:background .2s}
+.match-row:hover{background:rgba(255,255,255,.03)}
+.match-row label{color:var(--text);font-size:.92rem;flex:1;font-style:italic;padding-top:.2rem}
+.match-row select{background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:.3rem .6rem;font-size:.88rem;font-family:'Georgia',serif;min-width:60px}
+.match-row select.correct{border-color:var(--green);color:var(--green)}
+.match-row select.wrong{border-color:var(--red);color:var(--red)}
+.tf-row{margin:.6rem 0;padding:.5rem;border-radius:4px}
+.tf-row p{font-size:.92rem;margin-bottom:.4rem}
+.tf-btn{padding:.3rem .9rem;border:1px solid var(--border);background:var(--panel);color:var(--text);border-radius:4px;cursor:pointer;font-size:.85rem;font-family:'Georgia',serif;margin-right:.4rem;transition:all .2s}
+.tf-btn:hover{border-color:var(--gold)}
+.tf-btn.correct{background:rgba(76,175,114,.2);border-color:var(--green);color:var(--green)}
+.tf-btn.wrong{background:rgba(201,76,76,.2);border-color:var(--red);color:var(--red)}
+.recall-row{margin:.6rem 0}
+.recall-row label{display:block;font-size:.88rem;color:var(--muted);margin-bottom:.3rem}
+.recall-row input{background:var(--panel);border:1px solid var(--border);color:var(--text);padding:.35rem .7rem;border-radius:4px;font-size:.9rem;font-family:'Georgia',serif;width:100%;max-width:320px}
+.recall-row input.correct{border-color:var(--green);color:var(--green)}
+.recall-row input.wrong{border-color:var(--red);color:var(--red)}
+.recall-row .hint{font-size:.8rem;color:var(--muted);margin-top:.2rem;font-style:italic}
+.check-btn{background:linear-gradient(135deg,var(--gold),#a07830);color:#0d0b08;border:none;padding:.6rem 1.5rem;border-radius:6px;cursor:pointer;font-size:.9rem;font-family:'Georgia',serif;font-weight:bold;margin-top:1rem;transition:opacity .2s}
+.check-btn:hover{opacity:.85}
+.score-banner{background:rgba(201,168,76,.12);border:1px solid var(--gold);border-radius:6px;padding:.7rem 1rem;margin-top:.8rem;color:var(--gold);font-size:.92rem;display:none}
+.score-banner.show{display:block}
+
+/* Chapter Review */
+.cr-row{margin:.5rem 0;padding:.4rem .5rem;border-radius:4px;font-size:.9rem}
+.cr-btn{padding:.22rem .65rem;border:1px solid var(--border);background:var(--panel);color:var(--text);border-radius:3px;cursor:pointer;font-size:.82rem;margin:.1rem .2rem;font-family:'Georgia',serif;transition:all .2s}
+.cr-btn:hover{border-color:var(--gold)}
+.cr-btn.correct{background:rgba(76,175,114,.2);border-color:var(--green);color:var(--green)}
+.cr-btn.wrong{background:rgba(201,76,76,.2);border-color:var(--red);color:var(--red)}
+
+/* Roots grid */
+.roots-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.6rem;margin:.8rem 0}
+.root-item{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:.6rem .8rem}
+.root-item .root-num{color:var(--muted);font-size:.75rem}
+.root-item .root-latin{color:var(--gold);font-style:italic;font-size:.9rem}
+.root-item .root-meaning{color:var(--text);font-size:.85rem}
+
+/* Sandbox */
+.sandbox-word{font-size:2rem;color:var(--gold);font-style:italic;text-align:center;margin:1rem 0}
+.sandbox-pron{text-align:center;color:var(--muted);margin-bottom:1rem}
+.question-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:1.2rem;margin:.8rem 0}
+.question-card p{font-size:.95rem;margin-bottom:.7rem;color:var(--parchment)}
+.sandbox-input{width:100%;background:var(--panel);border:1px solid var(--border);color:var(--text);padding:.5rem .8rem;border-radius:4px;font-size:.9rem;font-family:'Georgia',serif;resize:vertical;min-height:60px}
+.sandbox-input:focus{outline:none;border-color:var(--gold)}
+.reveal-btn{background:transparent;border:1px solid var(--muted);color:var(--muted);padding:.4rem 1rem;border-radius:4px;cursor:pointer;font-size:.83rem;font-family:'Georgia',serif;margin-top:.5rem;transition:all .2s}
+.reveal-btn:hover{border-color:var(--gold);color:var(--gold)}
+.reveal-text{display:none;margin-top:.7rem;padding:.7rem;background:rgba(201,168,76,.07);border-radius:4px;font-size:.88rem;color:var(--parchment)}
+.reveal-text.show{display:block}
+
+/* Progress */
+footer{background:var(--panel);border-top:1px solid var(--border);padding:1rem 2rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap}
+.prog-label{color:var(--muted);font-size:.82rem}
+.prog-bar{flex:1;min-width:140px;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-light));border-radius:3px;transition:width .5s}
+.prog-text{color:var(--gold);font-size:.82rem;font-weight:bold}
+.session-nav{display:flex;gap:.6rem;margin-left:auto}
+.session-nav a{color:var(--muted);font-size:.82rem;text-decoration:none;padding:.25rem .6rem;border:1px solid var(--border);border-radius:4px;transition:all .2s}
+.session-nav a:hover{color:var(--gold);border-color:var(--gold)}
+
+@media(max-width:600px){
+  header h1{font-size:1.4rem}
+  .pane{padding:1.2rem}
+  .word-grid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="breadcrumb">Word Power Made Easy &rsaquo; Chapter 5 &rsaquo; <span>Session 10</span></div>
+  <h1>Session 10 — Writing &amp; Aging</h1>
+  <p>GRAPHEIN &bull; GERON/GERAS &bull; SENEX &bull; Chapter 5 Review</p>
+</header>
+
+<div class="tab-bar">
+  <div class="tab active" onclick="showTab('feynman',this)">&#x1F4A1; Feynman Model</div>
+  <div class="tab" onclick="showTab('etymology',this)">&#x1F333; Etymology</div>
+  <div class="tab" onclick="showTab('practice',this)">&#x270F;&#xFE0F; Practice</div>
+  <div class="tab" onclick="showTab('sandbox',this)">&#x1F9EA; Socratic Sandbox</div>
+</div>
+
+<!-- ===== FEYNMAN TAB ===== -->
+<div id="feynman" class="pane active">
+  <h2>&#x1F4A1; The Feynman Mental Model</h2>
+
+  <div class="callout">
+    <p>Imagine language as a civilization's memory. Before the printing press, before computers—writing was the only way humans could speak across time. The Greek word <em>graphein</em> (to write) gave us tools not just to record, but to judge that writing. Meanwhile, Latin <em>senex</em> (old) reminds us that every civilization also must grapple with age.</p>
+  </div>
+
+  <h3>Part 1 — The GRAPHEIN Family: Writing in All Its Forms</h3>
+  <p>Think of <strong>graphein</strong> as the mother root of human recording. Pair it with different descriptors and you describe the quality, medium, or purpose of writing:</p>
+
+  <div class="analogy-box">
+    <p><strong>The Quality axis:</strong> Writing can be <em>beautiful</em> (calligraphy = KALLOS + GRAPHEIN) or <em>ugly</em> (cacography = KAKOS + GRAPHEIN). These aren't just aesthetic judgments — they're built into the words' very bones. A calligrapher crafts each letter as art; a cacographer scrawls illegibly.</p>
+  </div>
+  <div class="analogy-box">
+    <p><strong>The Medium axis:</strong> What "writes" the image? Light writes a <em>photograph</em> (PHOTOS). Sound patterns "write" on a <em>phonograph</em> (PHONE). Distance transmission "writes" via <em>telegraph</em> (TELE). A life "written" is a <em>biography</em> (BIOS).</p>
+  </div>
+  <div class="analogy-box">
+    <p><strong>The Analysis axis:</strong> When you <em>analyze</em> handwriting, that's <em>graphology</em> — the scientific study of what writing reveals about personality. The graphologist reads what others merely write.</p>
+  </div>
+
+  <p>The strangest word in this family is <strong>callipygian</strong>: KALLOS (beauty) + PYGE (buttocks) = possessed of beautiful buttocks. The ancient Greeks had aesthetic standards for everything — and they named them all. It survives today mostly as a compliment — or a dare — in elevated vocabulary.</p>
+
+  <h3>Part 2 — GERON and SENEX: The Science and Experience of Old Age</h3>
+  <p>Two completely different linguistic traditions converge on the same human reality: growing old.</p>
+
+  <div class="analogy-box">
+    <p><strong>Greek tradition (GERAS/GERON):</strong> <em>Geras</em> means old age as a condition; <em>geron</em> means an old man. Combine with <em>-logos</em> (study) and you get <em>gerontology</em> — the scientific and social study of aging populations. A geriatrician treats individual patients; a gerontologist studies aging as a social phenomenon.</p>
+  </div>
+  <div class="analogy-box">
+    <p><strong>Latin tradition (SENEX):</strong> Latin <em>senex</em> gave us four common English words. <em>Senior</em> simply means "older." <em>Senate</em> was literally a council of elders — the word encodes a belief that wisdom comes with age. <em>Senescent</em> means in the process of growing old (note the same -escent suffix as adolescent). <em>Senile</em> means the deterioration that can accompany extreme old age.</p>
+  </div>
+
+  <div class="callout">
+    <p><strong>Key contrast:</strong> <em>Senescent</em> is neutral — it simply describes aging. <em>Senile</em> carries a negative implication — it means mental/physical deterioration specifically. Use them with precision.</p>
+  </div>
+
+  <h3>The Word Cards</h3>
+  <p style="color:var(--muted);font-size:.85rem;margin-bottom:.8rem">Click any card for full detail, etymology, and usage.</p>
+
+  <h3 style="color:var(--muted);font-size:.85rem;text-transform:uppercase;letter-spacing:.1em">Writing Family</h3>
+  <div class="word-grid">
+    <div class="word-card" onclick="openModal('graphology')">
+      <div class="word">graphology</div>
+      <div class="pron">grə-FOL'-ə-jee</div>
+      <div class="pos">noun</div>
+      <div class="def">Analysis / study of handwriting</div>
+      <div class="formula">GRAPHEIN + LOGOS</div>
+    </div>
+    <div class="word-card" onclick="openModal('calligraphy')">
+      <div class="word">calligraphy</div>
+      <div class="pron">kə-LIG'-rə-fee</div>
+      <div class="pos">noun</div>
+      <div class="def">Penmanship as artistic expression; beautiful writing</div>
+      <div class="formula">KALLOS + GRAPHEIN</div>
+    </div>
+    <div class="word-card" onclick="openModal('callipygian')">
+      <div class="word">callipygian</div>
+      <div class="pron">kal'-ə-PIJ'-ee-ən</div>
+      <div class="pos">adjective</div>
+      <div class="def">Possessed of beautiful or shapely buttocks</div>
+      <div class="formula">KALLOS + PYGE</div>
+    </div>
+    <div class="word-card" onclick="openModal('cacography')">
+      <div class="word">cacography</div>
+      <div class="pron">kə-KOG'-rə-fee</div>
+      <div class="pos">noun</div>
+      <div class="def">Ugly, bad, or illegible handwriting</div>
+      <div class="formula">KAKOS + GRAPHEIN</div>
+    </div>
+    <div class="word-card" onclick="openModal('photograph')">
+      <div class="word">photograph</div>
+      <div class="pron">FOH'-tə-graf</div>
+      <div class="pos">noun</div>
+      <div class="def">Image captured by light; etymologically "written by light"</div>
+      <div class="formula">PHOTOS + GRAPHEIN</div>
+    </div>
+    <div class="word-card" onclick="openModal('biography')">
+      <div class="word">biography</div>
+      <div class="pron">bī-OG'-rə-fee</div>
+      <div class="pos">noun</div>
+      <div class="def">Written account of a person's life; "life writing"</div>
+      <div class="formula">BIOS + GRAPHEIN</div>
+    </div>
+    <div class="word-card" onclick="openModal('telegraph')">
+      <div class="word">telegraph</div>
+      <div class="pron">TEL'-ə-graf</div>
+      <div class="pos">noun</div>
+      <div class="def">Device sending messages at a distance; "distance writer"</div>
+      <div class="formula">TELE + GRAPHEIN</div>
+    </div>
+    <div class="word-card" onclick="openModal('phonograph')">
+      <div class="word">phonograph</div>
+      <div class="pron">FOH'-nə-graf</div>
+      <div class="pos">noun</div>
+      <div class="def">Record player; etymologically "sound writer"</div>
+      <div class="formula">PHONE + GRAPHEIN</div>
+    </div>
+  </div>
+
+  <h3 style="color:var(--muted);font-size:.85rem;text-transform:uppercase;letter-spacing:.1em;margin-top:1.5rem">Aging Family</h3>
+  <div class="word-grid">
+    <div class="word-card" onclick="openModal('gerontology')">
+      <div class="word">gerontology</div>
+      <div class="pron">jair'-ən-TOL'-ə-jee</div>
+      <div class="pos">noun</div>
+      <div class="def">Science of social/economic problems of the aged</div>
+      <div class="formula">GERON + LOGOS</div>
+    </div>
+    <div class="word-card" onclick="openModal('senile')">
+      <div class="word">senile</div>
+      <div class="pron">SEE'-nil</div>
+      <div class="pos">adjective</div>
+      <div class="def">Showing physical/mental deterioration of extreme old age</div>
+      <div class="formula">SENEX (Latin: old)</div>
+    </div>
+    <div class="word-card" onclick="openModal('senescent')">
+      <div class="word">senescent</div>
+      <div class="pron">sə-NES'-ənt</div>
+      <div class="pos">adjective</div>
+      <div class="def">Aging; growing old (neutral — process only)</div>
+      <div class="formula">SENEX + -ESCENT</div>
+    </div>
+    <div class="word-card" onclick="openModal('senate')">
+      <div class="word">senate</div>
+      <div class="pron">SEN'-ət</div>
+      <div class="pos">noun</div>
+      <div class="def">Governing council; etymologically a "council of elders"</div>
+      <div class="formula">SENEX (old)</div>
+    </div>
+    <div class="word-card" onclick="openModal('senior')">
+      <div class="word">senior</div>
+      <div class="pron">SEEN'-yər</div>
+      <div class="pos">adjective / noun</div>
+      <div class="def">Older; higher in rank or standing</div>
+      <div class="formula">SENEX (old)</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ETYMOLOGY TAB ===== -->
+<div id="etymology" class="pane">
+  <h2>&#x1F333; Etymological Ascent</h2>
+
+  <h3>Root 1 — GRAPHEIN (Greek: to write)</h3>
+  <div class="formula-box">
+    <div class="eq">graphein → graph- / -graphy / -graph</div>
+    <br>
+    GRAPHEIN + LOGOS = <strong>graphology</strong> (study of handwriting)<br>
+    KALLOS + GRAPHEIN = <strong>calligraphy</strong> (beautiful writing)<br>
+    KALLOS + PYGE = <strong>callipygian</strong> (beautiful buttocks) [KALLOS family bonus]<br>
+    KAKOS + GRAPHEIN = <strong>cacography</strong> (ugly writing)<br>
+    PHOTOS + GRAPHEIN = <strong>photograph</strong> (written by light)<br>
+    PHONE + GRAPHEIN = <strong>phonograph</strong> (sound writer)<br>
+    TELE + GRAPHEIN = <strong>telegraph</strong> (distance writer)<br>
+    BIOS + GRAPHEIN = <strong>biography</strong> (life writing)<br>
+    KARDIA + GRAPHEIN = <strong>cardiograph</strong> (heart writer)
+  </div>
+
+  <div class="svg-container">
+    <svg width="820" height="320" viewBox="0 0 820 320">
+      <defs>
+        <marker id="arr10" markerWidth="8" markerHeight="6" refX="6" refY="3" orient="auto">
+          <polygon points="0 0,8 3,0 6" fill="#3a2e1e"/>
+        </marker>
+      </defs>
+      <!-- Root -->
+      <rect x="330" y="10" width="160" height="44" rx="8" fill="#2a2010" stroke="#c9a84c" stroke-width="2"/>
+      <text x="410" y="28" text-anchor="middle" fill="#c9a84c" font-size="13" font-style="italic">GRAPHEIN</text>
+      <text x="410" y="46" text-anchor="middle" fill="#8a7a5a" font-size="11">to write</text>
+
+      <!-- Branches -->
+      <!-- graphology -->
+      <line x1="360" y1="54" x2="80" y2="120" stroke="#3a2e1e" stroke-width="1.5" marker-end="url(#arr10)"/>
+      <rect x="10" y="120" width="140" height="38" rx="6" fill="#1e1810" stroke="#3a2e1e"/>
+      <text x="80" y="136" text-anchor="middle" fill="#e2c97e" font-size="11" font-style="italic">graphology</text>
+      <text x="80" y="150" text-anchor="middle" fill="#8a7a5a" font-size="10">+logos: handwriting study</text>
+
+      <!-- calligraphy -->
+      <line x1="380" y1="54" x2="190" y2="120" stroke="#3a2e1e" stroke-width="1.5" marker-end="url(#arr10)"/>
+      <rect x="120" y="120" width="140" height="38" rx="6" fill="#1e1810" stroke="#3a2e1e"/>
+      <text x="190" y="136" text-anchor="middle" fill="#e2c97e" font-size="11" font-style="italic">calligraphy</text>
+      <text x="190" y="150" text-anchor="middle" fill="#8a7a5a" font-size="10">kallos: beautiful writing</text>
+
+      <!-- cacography -->
+      <line x1="410" y1="54" x2="310" y2="120" stroke="#3a2e1e" stroke-width="1.5" marker-end="url(#arr10)"/>
+      <rect x="240" y="120" width="140" height="38" rx="6" fill="#1e1810" stroke="#3a2e1e"/>
+      <text x="310" y="136" text-anchor="middle" fill="#e2c97e" font-size="11" font-style="italic">cacography</text>
+      <text x="310" y="150" text-anchor="middle" fill="#8a7a5a" font-size="10">kakos: bad writing</text>
+
+      <!-- photograph -->
+      <line x1="430" y1="54" x2="430" y2="120" stroke="#3a2e1e" stroke-width="1.5" marker-end="url(#arr10)"/>
+      <rect x="360" y="120" width="140" height="38" rx="6" fill="#1e1810" stroke="#3a2e1e"/>
+      <text x="430" y="136" text-anchor="middle" fill="#e2c97e" font-size="11" font-style="italic">photograph</text>
+      <text x="430" y="150" text-anchor="middle" fill="#8a7a5a" font-size="10">photos: light-written</text>
+
+      <!-- phonograph -->
+      <line x1="450" y1="54" x2="560" y2="120" stroke="#3a2e1e" stroke-width="1.5" marker-end="url(#arr10)"/>
+      <rect x="490" y="120" width="140" height="38" rx="6" fill="#1e1810" stroke="#3a2e1e"/>
+      <text x="560" y="136" text-anchor="middle" fill="#e2c97e" font-size="11" font-style="italic">phonograph</text>
+      <text x="560" y="150" text-anchor="middle" fill="#8a7a5a" font-size="10">phone: sound-writer</text>
+
+      <!-- biography -->
+      <line x1="460" y1="54" x2="690" y2="120" stroke="#3a2e1e" stroke-width="1.5" marker-end="url(#arr10)"/>
+      <rect x="620" y="120" width="140" height="38" rx="6" fill="#1e1810" stroke="#3a2e1e"/>
+      <text x="690" y="136" text-anchor="middle" fill="#e2c97e" font-size="11" font-style="italic">biography</text>
+      <text x="690" y="150" text-anchor="middle" fill="#8a7a5a" font-size="10">bios: life-writing</text>
+
+      <!-- Second level for calligraphy family -->
+      <line x1="190" y1="158" x2="115" y2="220" stroke="#2a2418" stroke-width="1" marker-end="url(#arr10)"/>
+      <rect x="50" y="220" width="130" height="34" rx="5" fill="#17130e" stroke="#2a2418"/>
+      <text x="115" y="234" text-anchor="middle" fill="#c9a84c" font-size="10" font-style="italic">calligrapher</text>
+      <text x="115" y="246" text-anchor="middle" fill="#6a5a3a" font-size="9">one who</text>
+
+      <line x1="190" y1="158" x2="230" y2="220" stroke="#2a2418" stroke-width="1" marker-end="url(#arr10)"/>
+      <rect x="165" y="220" width="130" height="34" rx="5" fill="#17130e" stroke="#2a2418"/>
+      <text x="230" y="234" text-anchor="middle" fill="#c9a84c" font-size="10" font-style="italic">calligraphic</text>
+      <text x="230" y="246" text-anchor="middle" fill="#6a5a3a" font-size="9">adjective</text>
+
+      <!-- callipygian bonus -->
+      <rect x="300" y="220" width="160" height="38" rx="6" fill="#17130e" stroke="#4c8ec9" stroke-width="1.5"/>
+      <text x="380" y="235" text-anchor="middle" fill="#4c8ec9" font-size="10" font-style="italic">callipygian</text>
+      <text x="380" y="249" text-anchor="middle" fill="#6a5a3a" font-size="9">kallos+pyge: beautiful buttocks</text>
+
+      <!-- Second level cacography -->
+      <line x1="310" y1="158" x2="350" y2="220" stroke="#2a2418" stroke-width="1" marker-end="url(#arr10)"/>
+
+      <text x="410" y="280" text-anchor="middle" fill="#6a5a3a" font-size="10" font-style="italic">(telegraph, cardiograph follow same -graph pattern)</text>
+    </svg>
+  </div>
+
+  <h3>Root 2 — GERON/GERAS (Greek: old man / old age)</h3>
+  <div class="formula-box">
+    <div class="eq">geras → geriatrics &nbsp;|&nbsp; geron → gerontology</div>
+    <br>
+    GERON + LOGOS = <strong>gerontology</strong> (jair'-ən-TOL'-ə-jee) — study of social/economic issues of the aged<br>
+    → adjective: <strong>gerontological</strong> (jair'-ən-tə-LOJ'-ə-kəl)
+  </div>
+
+  <h3>Root 3 — SENEX (Latin: old)</h3>
+  <div class="formula-box">
+    <div class="eq">senex → sen- (Latin base)</div>
+    <br>
+    SENEX = <strong>senior</strong> (SEEN'-yər) — older one; higher in standing<br>
+    SENEX + -ity = <strong>seniority</strong> (seen-YAWR'-ə-tee)<br>
+    SENEX = <strong>senate</strong> (SEN'-ət) — council of elders (originally)<br>
+    SENEX = <strong>senile</strong> (SEE'-nil) — mentally/physically deteriorated from old age<br>
+    &nbsp;&nbsp;&nbsp; noun: <strong>senility</strong> (sə-NIL'-ə-tee)<br>
+    SENEX + -ESCENT = <strong>senescent</strong> (sə-NES'-ənt) — aging, growing old (neutral)<br>
+    &nbsp;&nbsp;&nbsp; noun: <strong>senescence</strong> (sə-NES'-əns)
+  </div>
+
+  <div class="svg-container">
+    <svg width="740" height="260" viewBox="0 0 740 260">
+      <defs>
+        <marker id="arr10b" markerWidth="8" markerHeight="6" refX="6" refY="3" orient="auto">
+          <polygon points="0 0,8 3,0 6" fill="#3a2e1e"/>
+        </marker>
+      </defs>
+      <!-- SENEX root -->
+      <rect x="300" y="10" width="140" height="44" rx="8" fill="#2a2010" stroke="#c9a84c" stroke-width="2"/>
+      <text x="370" y="28" text-anchor="middle" fill="#c9a84c" font-size="13" font-style="italic">SENEX</text>
+      <text x="370" y="46" text-anchor="middle" fill="#8a7a5a" font-size="11">Latin: old</text>
+
+      <!-- Branches -->
+      <line x1="330" y1="54" x2="90" y2="130" stroke="#3a2e1e" stroke-width="1.5" marker-end="url(#arr10b)"/>
+      <rect x="20" y="130" width="140" height="38" rx="6" fill="#1e1810" stroke="#3a2e1e"/>
+      <text x="90" y="146" text-anchor="middle" fill="#e2c97e" font-size="11" font-style="italic">senate</text>
+      <text x="90" y="160" text-anchor="middle" fill="#8a7a5a" font-size="10">council of elders</text>
+
+      <line x1="350" y1="54" x2="230" y2="130" stroke="#3a2e1e" stroke-width="1.5" marker-end="url(#arr10b)"/>
+      <rect x="160" y="130" width="140" height="38" rx="6" fill="#1e1810" stroke="#3a2e1e"/>
+      <text x="230" y="146" text-anchor="middle" fill="#e2c97e" font-size="11" font-style="italic">senior / seniority</text>
+      <text x="230" y="160" text-anchor="middle" fill="#8a7a5a" font-size="10">older; higher rank</text>
+
+      <line x1="370" y1="54" x2="370" y2="130" stroke="#3a2e1e" stroke-width="1.5" marker-end="url(#arr10b)"/>
+      <rect x="300" y="130" width="140" height="38" rx="6" fill="#1e1810" stroke="#3a2e1e"/>
+      <text x="370" y="146" text-anchor="middle" fill="#e2c97e" font-size="11" font-style="italic">senile / senility</text>
+      <text x="370" y="160" text-anchor="middle" fill="#8a7a5a" font-size="10">deterioration of old age</text>
+
+      <line x1="390" y1="54" x2="510" y2="130" stroke="#3a2e1e" stroke-width="1.5" marker-end="url(#arr10b)"/>
+      <rect x="440" y="130" width="160" height="38" rx="6" fill="#1e1810" stroke="#3a2e1e"/>
+      <text x="520" y="146" text-anchor="middle" fill="#e2c97e" font-size="11" font-style="italic">senescent / senescence</text>
+      <text x="520" y="160" text-anchor="middle" fill="#8a7a5a" font-size="10">growing old (neutral)</text>
+
+      <!-- GERON root -->
+      <rect x="530" y="10" width="160" height="44" rx="8" fill="#2a2010" stroke="#4c8ec9" stroke-width="1.5"/>
+      <text x="610" y="28" text-anchor="middle" fill="#4c8ec9" font-size="13" font-style="italic">GERON/GERAS</text>
+      <text x="610" y="46" text-anchor="middle" fill="#8a7a5a" font-size="11">Greek: old man / old age</text>
+
+      <line x1="610" y1="54" x2="640" y2="130" stroke="#2a4060" stroke-width="1.5" marker-end="url(#arr10b)"/>
+      <rect x="555" y="130" width="170" height="38" rx="6" fill="#1e1810" stroke="#2a4060"/>
+      <text x="640" y="146" text-anchor="middle" fill="#4c8ec9" font-size="11" font-style="italic">gerontology</text>
+      <text x="640" y="160" text-anchor="middle" fill="#8a7a5a" font-size="10">+logos: study of aging</text>
+
+      <!-- Note -->
+      <text x="370" y="220" text-anchor="middle" fill="#6a5a3a" font-size="10">Note: adolescent, convalescent, obsolescent all share -escent (growing/becoming)</text>
+    </svg>
+  </div>
+
+  <h3>Complete Pronunciation Guide — Session 10</h3>
+  <div class="roots-grid">
+    <div class="root-item"><div class="root-latin">graphology</div><div class="root-meaning">grə-FOL'-ə-jee</div></div>
+    <div class="root-item"><div class="root-latin">graphological</div><div class="root-meaning">graf'-ə-LOJ'-ə-kəl</div></div>
+    <div class="root-item"><div class="root-latin">calligraphy</div><div class="root-meaning">kə-LIG'-rə-fee</div></div>
+    <div class="root-item"><div class="root-latin">calligrapher</div><div class="root-meaning">kə-LIG'-rə-fər</div></div>
+    <div class="root-item"><div class="root-latin">calligraphic</div><div class="root-meaning">kal'-ə-GRAF'-ik</div></div>
+    <div class="root-item"><div class="root-latin">callipygian</div><div class="root-meaning">kal'-ə-PIJ'-ee-ən</div></div>
+    <div class="root-item"><div class="root-latin">cacography</div><div class="root-meaning">kə-KOG'-rə-fee</div></div>
+    <div class="root-item"><div class="root-latin">cacographer</div><div class="root-meaning">kə-KOG'-rə-fər</div></div>
+    <div class="root-item"><div class="root-latin">cacographic</div><div class="root-meaning">kak'-ə-GRAF'-ik</div></div>
+    <div class="root-item"><div class="root-latin">gerontology</div><div class="root-meaning">jair'-ən-TOL'-ə-jee</div></div>
+    <div class="root-item"><div class="root-latin">gerontological</div><div class="root-meaning">jair'-ən-tə-LOJ'-ə-kəl</div></div>
+    <div class="root-item"><div class="root-latin">senile</div><div class="root-meaning">SEE'-nil</div></div>
+    <div class="root-item"><div class="root-latin">senility</div><div class="root-meaning">sə-NIL'-ə-tee</div></div>
+    <div class="root-item"><div class="root-latin">senescent</div><div class="root-meaning">sə-NES'-ənt</div></div>
+    <div class="root-item"><div class="root-latin">senescence</div><div class="root-meaning">sə-NES'-əns</div></div>
+    <div class="root-item"><div class="root-latin">senior</div><div class="root-meaning">SEEN'-yər</div></div>
+    <div class="root-item"><div class="root-latin">seniority</div><div class="root-meaning">seen-YAWR'-ə-tee</div></div>
+  </div>
+</div>
+
+<!-- ===== PRACTICE TAB ===== -->
+<div id="practice" class="pane">
+  <h2>&#x270F;&#xFE0F; Active Implementation</h2>
+
+  <!-- Match Session 10 words -->
+  <div class="exercise-card">
+    <h3>Can you work with the words? — Match</h3>
+    <p style="font-size:.85rem;color:var(--muted);margin-bottom:1rem">Match each word to its definition. Enter a–g.</p>
+    <div class="match-row"><label>1. graphology</label><select id="m10_1"><option value="">—</option><option>a</option><option>b</option><option>c</option><option>d</option><option>e</option><option>f</option><option>g</option></select></div>
+    <div class="match-row"><label>2. calligraphy</label><select id="m10_2"><option value="">—</option><option>a</option><option>b</option><option>c</option><option>d</option><option>e</option><option>f</option><option>g</option></select></div>
+    <div class="match-row"><label>3. callipygian</label><select id="m10_3"><option value="">—</option><option>a</option><option>b</option><option>c</option><option>d</option><option>e</option><option>f</option><option>g</option></select></div>
+    <div class="match-row"><label>4. cacography</label><select id="m10_4"><option value="">—</option><option>a</option><option>b</option><option>c</option><option>d</option><option>e</option><option>f</option><option>g</option></select></div>
+    <div class="match-row"><label>5. gerontology</label><select id="m10_5"><option value="">—</option><option>a</option><option>b</option><option>c</option><option>d</option><option>e</option><option>f</option><option>g</option></select></div>
+    <div class="match-row"><label>6. senility</label><select id="m10_6"><option value="">—</option><option>a</option><option>b</option><option>c</option><option>d</option><option>e</option><option>f</option><option>g</option></select></div>
+    <div class="match-row"><label>7. senescence</label><select id="m10_7"><option value="">—</option><option>a</option><option>b</option><option>c</option><option>d</option><option>e</option><option>f</option><option>g</option></select></div>
+    <div style="background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:.8rem 1rem;margin:.5rem 0;font-size:.85rem;color:var(--muted)">
+      <strong style="color:var(--text)">Choices:</strong><br>
+      a. possessed of beautiful buttocks &nbsp;&bull;&nbsp; b. science of the social, economic, etc. problems of the aged<br>
+      c. condition of aging or growing old &nbsp;&bull;&nbsp; d. deteriorated old age<br>
+      e. analysis of handwriting &nbsp;&bull;&nbsp; f. ugly, bad, illegible handwriting &nbsp;&bull;&nbsp; g. beautiful handwriting; handwriting as an artistic expression
+    </div>
+    <button class="check-btn" onclick="checkMatch10()">Check Answers</button>
+    <div class="score-banner" id="score-match10"></div>
+  </div>
+
+  <!-- T/F Session 10 -->
+  <div class="exercise-card">
+    <h3>Do you understand the words? — True / False</h3>
+    <div class="tf-row"><p>1. <em>Graphology</em> analyzes the grammar, spelling, and sentence structure of written material.</p><button class="tf-btn" onclick="checkTF(this,'F')">TRUE</button><button class="tf-btn" onclick="checkTF(this,'F')">FALSE</button></div>
+    <div class="tf-row"><p>2. A <em>calligrapher</em> creates artistic forms out of alphabetical symbols.</p><button class="tf-btn" onclick="checkTF(this,'T')">TRUE</button><button class="tf-btn" onclick="checkTF(this,'T')">FALSE</button></div>
+    <div class="tf-row"><p>3. Tight slacks are best worn by those of <em>callipygian</em> anatomy.</p><button class="tf-btn" onclick="checkTF(this,'T')">TRUE</button><button class="tf-btn" onclick="checkTF(this,'T')">FALSE</button></div>
+    <div class="tf-row"><p>4. <em>Cacographic</em> writing is easy to read.</p><button class="tf-btn" onclick="checkTF(this,'F')">TRUE</button><button class="tf-btn" onclick="checkTF(this,'F')">FALSE</button></div>
+    <div class="tf-row"><p>5. <em>Gerontology</em> aims to help old people live more comfortably.</p><button class="tf-btn" onclick="checkTF(this,'T')">TRUE</button><button class="tf-btn" onclick="checkTF(this,'T')">FALSE</button></div>
+    <div class="tf-row"><p>6. <em>Senile</em> people are old but still vigorous and mentally alert.</p><button class="tf-btn" onclick="checkTF(this,'F')">TRUE</button><button class="tf-btn" onclick="checkTF(this,'F')">FALSE</button></div>
+    <div class="tf-row"><p>7. In a society dedicated to the worship of youth, <em>senescence</em> is not an attractive prospect.</p><button class="tf-btn" onclick="checkTF(this,'T')">TRUE</button><button class="tf-btn" onclick="checkTF(this,'T')">FALSE</button></div>
+  </div>
+
+  <!-- Recall Session 10 -->
+  <div class="exercise-card">
+    <h3>Can you recall the words?</h3>
+    <div class="recall-row"><label>1. pertaining to the study of the non-medical problems of the aged (adj.) — G___</label><input id="r10_1" placeholder="G…" oninput="liveRecall(this,'gerontological')"><div class="hint">Hint: G_________</div></div>
+    <div class="recall-row"><label>2. growing old (adj.) — S___</label><input id="r10_2" placeholder="S…" oninput="liveRecall(this,'senescent')"><div class="hint">Hint: S_________</div></div>
+    <div class="recall-row"><label>3. pertaining to handwriting as an artistic expression (adj.) — C___</label><input id="r10_3" placeholder="C…" oninput="liveRecall(this,'calligraphic')"><div class="hint">Hint: C_________</div></div>
+    <div class="recall-row"><label>4. one who uses ugly, illegible handwriting — C___</label><input id="r10_4" placeholder="C…" oninput="liveRecall(this,'cacographer')"><div class="hint">Hint: C_________</div></div>
+    <div class="recall-row"><label>5. mentally and physically deteriorated from old age — S___</label><input id="r10_5" placeholder="S…" oninput="liveRecall(this,'senile')"><div class="hint">Hint: S_____</div></div>
+    <div class="recall-row"><label>6. pertaining to the analysis of handwriting (adj.) — G___</label><input id="r10_6" placeholder="G…" oninput="liveRecall(this,'graphological')"><div class="hint">Hint: G_________</div></div>
+    <div class="recall-row"><label>7. possessed of beautiful or shapely buttocks — C___</label><input id="r10_7" placeholder="C…" oninput="liveRecall(this,'callipygian')"><div class="hint">Hint: C_________</div></div>
+  </div>
+
+  <!-- Chapter 5 Review — 15 MC -->
+  <div class="exercise-card">
+    <h3>📚 Chapter 5 Review — Do you recognize the words?</h3>
+    <p style="font-size:.85rem;color:var(--muted);margin-bottom:1rem">Choose the correct answer (a, b, or c) for each question. Click your answer to check.</p>
+
+    <div class="cr-row">1. Practitioner trained in Freudian techniques:<br><button class="cr-btn" onclick="checkCR(this,'b','1')">a. psychologist</button><button class="cr-btn" onclick="checkCR(this,'b','1')">b. psychoanalyst</button><button class="cr-btn" onclick="checkCR(this,'b','1')">c. psychotherapist</button></div>
+    <div class="cr-row">2. Foot doctor:<br><button class="cr-btn" onclick="checkCR(this,'a','2')">a. podiatrist</button><button class="cr-btn" onclick="checkCR(this,'a','2')">b. osteopath</button><button class="cr-btn" onclick="checkCR(this,'a','2')">c. chiropractor</button></div>
+    <div class="cr-row">3. Handwriting analyst:<br><button class="cr-btn" onclick="checkCR(this,'a','3')">a. graphologist</button><button class="cr-btn" onclick="checkCR(this,'a','3')">b. chirographer</button><button class="cr-btn" onclick="checkCR(this,'a','3')">c. cacographer</button></div>
+    <div class="cr-row">4. Mentally or emotionally disturbed:<br><button class="cr-btn" onclick="checkCR(this,'b','4')">a. psychological</button><button class="cr-btn" onclick="checkCR(this,'b','4')">b. psychopathic</button><button class="cr-btn" onclick="checkCR(this,'b','4')">c. psychic</button></div>
+    <div class="cr-row">5. Originating in the emotions:<br><button class="cr-btn" onclick="checkCR(this,'b','5')">a. psychic</button><button class="cr-btn" onclick="checkCR(this,'b','5')">b. psychogenic</button><button class="cr-btn" onclick="checkCR(this,'b','5')">c. psychoanalytic</button></div>
+    <div class="cr-row">6. Describing bodily ailments tied up with the emotions:<br><button class="cr-btn" onclick="checkCR(this,'a','6')">a. psychosomatic</button><button class="cr-btn" onclick="checkCR(this,'a','6')">b. psychopathic</button><button class="cr-btn" onclick="checkCR(this,'a','6')">c. psychiatric</button></div>
+    <div class="cr-row">7. Gum specialist:<br><button class="cr-btn" onclick="checkCR(this,'a','7')">a. periodontist</button><button class="cr-btn" onclick="checkCR(this,'a','7')">b. pedodontist</button><button class="cr-btn" onclick="checkCR(this,'a','7')">c. endodontist</button></div>
+    <div class="cr-row">8. Specialist in tooth extraction:<br><button class="cr-btn" onclick="checkCR(this,'b','8')">a. orthodontist</button><button class="cr-btn" onclick="checkCR(this,'b','8')">b. exodontist</button><button class="cr-btn" onclick="checkCR(this,'b','8')">c. endodontist</button></div>
+    <div class="cr-row">9. Blood-pressure apparatus:<br><button class="cr-btn" onclick="checkCR(this,'c','9')">a. barometer</button><button class="cr-btn" onclick="checkCR(this,'c','9')">b. thermometer</button><button class="cr-btn" onclick="checkCR(this,'c','9')">c. sphygmomanometer</button></div>
+    <div class="cr-row">10. Prediction by palm reading:<br><button class="cr-btn" onclick="checkCR(this,'c','10')">a. chirography</button><button class="cr-btn" onclick="checkCR(this,'c','10')">b. chiropody</button><button class="cr-btn" onclick="checkCR(this,'c','10')">c. chiromancy</button></div>
+    <div class="cr-row">11. Possessed of a shapely posterior:<br><button class="cr-btn" onclick="checkCR(this,'b','11')">a. calligraphic</button><button class="cr-btn" onclick="checkCR(this,'b','11')">b. callipygian</button><button class="cr-btn" onclick="checkCR(this,'b','11')">c. adolescent</button></div>
+    <div class="cr-row">12. Artistic handwriting:<br><button class="cr-btn" onclick="checkCR(this,'a','12')">a. calligraphy</button><button class="cr-btn" onclick="checkCR(this,'a','12')">b. chirography</button><button class="cr-btn" onclick="checkCR(this,'a','12')">c. graphology</button></div>
+    <div class="cr-row">13. Growing old:<br><button class="cr-btn" onclick="checkCR(this,'c','13')">a. senile</button><button class="cr-btn" onclick="checkCR(this,'c','13')">b. geriatric</button><button class="cr-btn" onclick="checkCR(this,'c','13')">c. senescent</button></div>
+    <div class="cr-row">14. Medical specialty dealing with the aged:<br><button class="cr-btn" onclick="checkCR(this,'b','14')">a. gerontology</button><button class="cr-btn" onclick="checkCR(this,'b','14')">b. geriatrics</button><button class="cr-btn" onclick="checkCR(this,'b','14')">c. chiropractic</button></div>
+    <div class="cr-row">15. Antisocial person who may commit criminal acts:<br><button class="cr-btn" onclick="checkCR(this,'a','15')">a. psychopath</button><button class="cr-btn" onclick="checkCR(this,'a','15')">b. sociopath</button><button class="cr-btn" onclick="checkCR(this,'a','15')">c. osteopath</button></div>
+
+    <div id="cr-score" class="score-banner" style="margin-top:1rem"></div>
+  </div>
+
+  <!-- Can you recognize roots? — 20 items -->
+  <div class="exercise-card">
+    <h3>📚 Chapter 5 Review — Can you recognize the roots?</h3>
+    <p style="font-size:.85rem;color:var(--muted);margin-bottom:1rem">Write the meaning of each root. Check against the key below.</p>
+    <div class="roots-grid">
+      <div class="root-item"><div class="root-num">1.</div><div class="root-latin">psyche</div><div class="root-meaning" id="rr1" style="color:var(--border)">▸ mind</div></div>
+      <div class="root-item"><div class="root-num">2.</div><div class="root-latin">iatreia</div><div class="root-meaning" id="rr2" style="color:var(--border)">▸ medical healing</div></div>
+      <div class="root-item"><div class="root-num">3.</div><div class="root-latin">soma</div><div class="root-meaning" id="rr3" style="color:var(--border)">▸ body</div></div>
+      <div class="root-item"><div class="root-num">4.</div><div class="root-latin">pathos</div><div class="root-meaning" id="rr4" style="color:var(--border)">▸ disease</div></div>
+      <div class="root-item"><div class="root-num">5.</div><div class="root-latin">orthos</div><div class="root-meaning" id="rr5" style="color:var(--border)">▸ straight, correct</div></div>
+      <div class="root-item"><div class="root-num">6.</div><div class="root-latin">paidos</div><div class="root-meaning" id="rr6" style="color:var(--border)">▸ child</div></div>
+      <div class="root-item"><div class="root-num">7.</div><div class="root-latin">odontos</div><div class="root-meaning" id="rr7" style="color:var(--border)">▸ tooth</div></div>
+      <div class="root-item"><div class="root-num">8.</div><div class="root-latin">pous, podos</div><div class="root-meaning" id="rr8" style="color:var(--border)">▸ foot</div></div>
+      <div class="root-item"><div class="root-num">9.</div><div class="root-latin">cheir (chiro-)</div><div class="root-meaning" id="rr9" style="color:var(--border)">▸ hand</div></div>
+      <div class="root-item"><div class="root-num">10.</div><div class="root-latin">okto</div><div class="root-meaning" id="rr10" style="color:var(--border)">▸ eight</div></div>
+      <div class="root-item"><div class="root-num">11.</div><div class="root-latin">graphein</div><div class="root-meaning" id="rr11" style="color:var(--border)">▸ to write</div></div>
+      <div class="root-item"><div class="root-num">12.</div><div class="root-latin">kallos</div><div class="root-meaning" id="rr12" style="color:var(--border)">▸ beauty</div></div>
+      <div class="root-item"><div class="root-num">13.</div><div class="root-latin">pyge</div><div class="root-meaning" id="rr13" style="color:var(--border)">▸ buttocks</div></div>
+      <div class="root-item"><div class="root-num">14.</div><div class="root-latin">kakos</div><div class="root-meaning" id="rr14" style="color:var(--border)">▸ bad, ugly</div></div>
+      <div class="root-item"><div class="root-num">15.</div><div class="root-latin">photos</div><div class="root-meaning" id="rr15" style="color:var(--border)">▸ light</div></div>
+      <div class="root-item"><div class="root-num">16.</div><div class="root-latin">tele-</div><div class="root-meaning" id="rr16" style="color:var(--border)">▸ distance</div></div>
+      <div class="root-item"><div class="root-num">17.</div><div class="root-latin">bios</div><div class="root-meaning" id="rr17" style="color:var(--border)">▸ life</div></div>
+      <div class="root-item"><div class="root-num">18.</div><div class="root-latin">geras</div><div class="root-meaning" id="rr18" style="color:var(--border)">▸ old age</div></div>
+      <div class="root-item"><div class="root-num">19.</div><div class="root-latin">geron</div><div class="root-meaning" id="rr19" style="color:var(--border)">▸ old man</div></div>
+      <div class="root-item"><div class="root-num">20.</div><div class="root-latin">senex</div><div class="root-meaning" id="rr20" style="color:var(--border)">▸ old</div></div>
+    </div>
+    <button class="check-btn" onclick="revealRoots()">Reveal All Meanings</button>
+  </div>
+</div>
+
+<!-- ===== SANDBOX TAB ===== -->
+<div id="sandbox" class="pane">
+  <h2>&#x1F9EA; Socratic Sandbox</h2>
+  <div class="callout">
+    <p>Today's rare challenge word — built from the same roots you've just mastered, yet rarely encountered:</p>
+  </div>
+  <div class="sandbox-word">stenography</div>
+  <div class="sandbox-pron">stə-NOG'-rə-fee &nbsp;|&nbsp; Greek: stenos (narrow) + graphein (to write)</div>
+
+  <p>Stenography means shorthand writing — a system of abbreviated symbols used to record speech at high speed. The word literally means "narrow writing" (compressed symbols). Court reporters, secretaries, and journalists once mastered it. It shares its root graphein with every word in today's session.</p>
+
+  <div class="question-card">
+    <p><strong>Question 1 — Etymology Breakdown:</strong> Break down <em>stenography</em> into its Greek roots. What does each root mean, and how do they combine to describe what shorthand actually is?</p>
+    <textarea class="sandbox-input" placeholder="Your analysis…"></textarea>
+    <button class="reveal-btn" onclick="toggleReveal(this)">Reveal Insight</button>
+    <div class="reveal-text">STENOS (narrow/compressed) + GRAPHEIN (to write) = "narrow writing." Shorthand is literally writing made narrow — symbols compressed so tightly they can keep pace with spoken speech. A stenographer is thus a "narrow-writer." Compare: calligrapher (beautiful-writer), cacographer (bad-writer), chirographer (hand-writer).</div>
+  </div>
+
+  <div class="question-card">
+    <p><strong>Question 2 — Analogical Reasoning:</strong> Calligraphy (beautiful writing) and cacography (bad writing) form an antonym pair. Can you construct a similar antonym pair using any two of these roots: eu- (good), kakos (bad), graphein, phone, bios, tele?</p>
+    <textarea class="sandbox-input" placeholder="Your word pair…"></textarea>
+    <button class="reveal-btn" onclick="toggleReveal(this)">Reveal Insight</button>
+    <div class="reveal-text">EU- (good) + PHONE = <em>euphony</em> (pleasing sound) vs. KAKOS + PHONE = <em>cacophony</em> (harsh sound). Or EU + GRAPHEIN = <em>eugraphy</em> (good writing, though less common) vs. <em>cacography</em>. The Greek prefix eu- (well, good) perfectly mirrors kakos (bad, harsh). This is the same eu- in <em>euthanasia</em> (good death), <em>eulogy</em> (good speech), <em>euphemism</em> (good saying).</div>
+  </div>
+
+  <div class="question-card">
+    <p><strong>Question 3 — Semantic Precision:</strong> What is the crucial difference between <em>senescent</em> and <em>senile</em>? Could a 30-year-old be either? Defend your answer etymologically.</p>
+    <textarea class="sandbox-input" placeholder="Your argument…"></textarea>
+    <button class="reveal-btn" onclick="toggleReveal(this)">Reveal Insight</button>
+    <div class="reveal-text">Senescent is value-neutral — it means "growing old" (the -escent suffix means "in the process of becoming"). Technically, biological senescence begins in early adulthood at the cellular level. A 30-year-old is indeed senescent in a biological sense. Senile, however, implies mental/physical deterioration — a pathological condition associated with extreme old age. A 30-year-old cannot properly be called senile. The distinction: senescent = process; senile = deteriorated result.</div>
+  </div>
+
+  <div class="question-card">
+    <p><strong>Question 4 — Political Etymology:</strong> The word <em>senate</em> comes from SENEX (old). What does this etymology imply about how ancient Romans valued age? Does the U.S. Senate (minimum age 30) reflect or betray this etymological heritage?</p>
+    <textarea class="sandbox-input" placeholder="Your reflection…"></textarea>
+    <button class="reveal-btn" onclick="toggleReveal(this)">Reveal Insight</button>
+    <div class="reveal-text">The Roman senate was explicitly a council of elders — the Latin root assumes governance requires seasoned wisdom. Ancient Romans believed experience and age correlated with wisdom and temperance. The U.S. Senate minimum age of 30 (and 35 for president) faintly echoes this, though modern senators often serve into their 80s and 90s — arguably fulfilling the etymology more than the rule. Compare: the French <em>sénat</em>, Italian <em>senato</em> — all descend from SENEX, all carry the implication that governing is for the experienced.</div>
+  </div>
+
+  <div class="question-card">
+    <p><strong>Question 5 — Creative Application:</strong> Suppose a brilliant 8-year-old has perfect, artistic handwriting. A retired professor's handwriting has become illegible. Using only vocabulary from this session, write two sentences describing them — one each. Use at minimum 4 session words.</p>
+    <textarea class="sandbox-input" placeholder="Your sentences…" style="min-height:80px"></textarea>
+    <button class="reveal-btn" onclick="toggleReveal(this)">Reveal Model Answer</button>
+    <div class="reveal-text">Model: "The prodigy's <em>calligraphic</em> script — produced by the hand of a mere child — would impress any <em>graphologist</em> who analyzed it." / "The professor's <em>senescent</em> fingers produced only <em>cacographic</em> scrawl where once elegant letters had flowed — a visible reminder that <em>senescence</em> spares no art."</div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal" id="modalContent">
+    <span class="close" onclick="closeModalDirect()">&#x2715;</span>
+    <h3 id="mTitle"></h3>
+    <div id="mPron" style="color:var(--muted);font-size:.88rem;margin:.2rem 0"></div>
+    <div id="mPos" style="margin:.3rem 0"></div>
+    <section>
+      <h4>Definition</h4>
+      <div id="mDef"></div>
+    </section>
+    <section>
+      <h4>Etymology Formula</h4>
+      <div id="mFormula" style="color:var(--blue);font-style:italic"></div>
+    </section>
+    <section>
+      <h4>In Context</h4>
+      <div id="mContext"></div>
+    </section>
+    <section>
+      <h4>Word Family</h4>
+      <div id="mFamily" style="color:var(--muted);font-size:.88rem"></div>
+    </section>
+  </div>
+</div>
+
+<footer>
+  <span class="prog-label">Session 10 Progress</span>
+  <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+  <span class="prog-text" id="progText">0%</span>
+  <div class="session-nav">
+    <a href="session-09.html">&#x2190; S9</a>
+    <a href="session-11.html">S11 &#x2192;</a>
+  </div>
+</footer>
+
+<script>
+// ---- Tab navigation ----
+function showTab(id, el) {
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  el.classList.add('active');
+  saveProgress();
+}
+
+// ---- Modal data ----
+const words = {
+  graphology:{title:'graphology',pron:'grə-FOL\'-ə-jee',pos:'noun',def:'The analysis and study of handwriting, especially as used to assess personality and character.',formula:'Greek GRAPHEIN (to write) + LOGOS (study, science)',context:'The detective sent the anonymous letter to a <em>graphology</em> expert, who confirmed it matched the suspect\'s habitual pen pressure and letter formation.',family:'graphological (adj.) | graphologist (n.) | graphologically (adv.)'},
+  calligraphy:{title:'calligraphy',pron:'kə-LIG\'-rə-fee',pos:'noun',def:'The art of producing decorative handwriting or lettering; penmanship as an artistic expression.',formula:'Greek KALLOS (beauty) + GRAPHEIN (to write) = "beautiful writing"',context:'Wedding invitations arrived in exquisite <em>calligraphy</em>, each letter a tiny sculpture of ink and elegance.',family:'calligrapher (n., one who) | calligraphic (adj.) | calligraphically (adv.)'},
+  callipygian:{title:'callipygian',pron:'kal\'-ə-PIJ\'-ee-ən',pos:'adjective',def:'Having or pertaining to well-shaped, beautiful buttocks.',formula:'Greek KALLOS (beauty) + PYGE (buttocks)',context:'The ancient Greek Aphrodite Kallipygos — "Aphrodite of the beautiful buttocks" — was a celebrated statue in Syracuse.',family:'callipygous (variant) | callipygian (adj.) only'},
+  cacography:{title:'cacography',pron:'kə-KOG\'-rə-fee',pos:'noun',def:'Bad, ugly, or illegible handwriting; the opposite of calligraphy.',formula:'Greek KAKOS (bad, harsh) + GRAPHEIN (to write) = "bad writing"',context:'The doctor\'s prescription was a masterpiece of <em>cacography</em> — the pharmacist spent ten minutes deciphering it.',family:'cacographer (n., one who) | cacographic (adj.) | cacographically (adv.)'},
+  photograph:{title:'photograph',pron:'FOH\'-tə-graf',pos:'noun / verb',def:'An image produced by recording light on a light-sensitive surface; etymologically "written by light."',formula:'Greek PHOTOS (light) + GRAPHEIN (to write)',context:'When Daguerre produced the first <em>photograph</em> in 1839, he was literally "writing with light" — fulfilling the word\'s etymology.',family:'photography (n.) | photographer (n.) | photographic (adj.) | photographically (adv.)'},
+  biography:{title:'biography',pron:'bī-OG\'-rə-fee',pos:'noun',def:'A written account of a person\'s life; etymologically "life writing."',formula:'Greek BIOS (life) + GRAPHEIN (to write)',context:'Her <em>biography</em> of Marie Curie revealed not just the scientist\'s discoveries but the quiet tenacity behind each experiment.',family:'biographer (n.) | biographical (adj.) | autobiography (n., self-life-writing)'},
+  telegraph:{title:'telegraph',pron:'TEL\'-ə-graf',pos:'noun / verb',def:'An apparatus for transmitting messages at a distance, especially electrically; "distance writer."',formula:'Greek TELE (distance) + GRAPHEIN (to write)',context:'Before the telephone, the <em>telegraph</em> made instantaneous long-distance communication possible — shrinking a continent to the speed of electricity.',family:'telegraphy (n.) | telegraphic (adj.) | telegraphist (n.)'},
+  phonograph:{title:'phonograph',pron:'FOH\'-nə-graf',pos:'noun',def:'A machine for reproducing sounds from recordings; "sound writer."',formula:'Greek PHONE (sound, voice) + GRAPHEIN (to write)',context:'Edison\'s <em>phonograph</em> of 1877 — a "sound writer" that could also read back what it wrote — was the ancestor of every record player and music streaming service.',family:'phonographic (adj.) | phonography (n.) | phonograph record'},
+  gerontology:{title:'gerontology',pron:'jair\'-ən-TOL\'-ə-jee',pos:'noun',def:'The scientific and social study of old age and the aging process, especially its economic and social implications.',formula:'Greek GERON (old man) + LOGOS (study)',context:'With populations aging worldwide, <em>gerontology</em> has become one of the fastest-growing fields in social science and medicine.',family:'gerontological (adj.) | gerontologist (n.) | gerontologically (adv.)'},
+  senile:{title:'senile',pron:'SEE\'-nil',pos:'adjective',def:'Showing the weaknesses or diseases of old age, especially a loss of mental faculty; relating to or characteristic of old age.',formula:'Latin SENEX (old)',context:'The once-brilliant mathematician had grown <em>senile</em>, sometimes forgetting his own name — a reminder that the mind, too, can age beyond repair.',family:'senility (n.) | seniley (rare adv.)'},
+  senescent:{title:'senescent',pron:'sə-NES\'-ənt',pos:'adjective',def:'Growing old; aging (neutral — refers to the process, not the deterioration).',formula:'Latin SENEX (old) + -ESCENT (in the process of becoming)',context:'Even at thirty, cells are <em>senescent</em> at a biological level — the body begins its long, slow arc toward age from the moment it reaches maturity.',family:'senescence (n., the process) | Note: -escent appears in adolescent, convalescent, obsolescent'},
+  senate:{title:'senate',pron:'SEN\'-ət',pos:'noun',def:'A governing or legislative body; originally, a council of elders.',formula:'Latin SENEX (old) — literally "assembly of old men"',context:'The Roman <em>senate</em> was established on the premise that the wisest governance flowed from age and experience — a belief encoded in the very word.',family:'senator (n.) | senatorial (adj.) | senatorially (adv.)'},
+  senior:{title:'senior',pron:'SEEN\'-yər',pos:'adjective / noun',def:'Older, or of higher standing or rank. As a noun: an older person or upper-class student.',formula:'Latin SENEX (old) — comparative form: "more old"',context:'She was assigned to the <em>senior</em> partner as assistant — the most experienced lawyer in the firm, whose white hair matched his title.',family:'seniority (n.) | senior citizen | seniorly (rare)'}
+};
+
+function openModal(key) {
+  const w = words[key]; if(!w) return;
+  document.getElementById('mTitle').textContent = w.title;
+  document.getElementById('mPron').textContent = w.pron;
+  document.getElementById('mPos').innerHTML = '<span style="background:rgba(201,168,76,.12);color:var(--gold);font-size:.75rem;padding:.15rem .5rem;border-radius:20px">'+w.pos+'</span>';
+  document.getElementById('mDef').textContent = w.def;
+  document.getElementById('mFormula').textContent = w.formula;
+  document.getElementById('mContext').innerHTML = w.context;
+  document.getElementById('mFamily').innerHTML = w.family;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function closeModal(e){if(e.target===document.getElementById('modalOverlay'))closeModalDirect();}
+function closeModalDirect(){document.getElementById('modalOverlay').classList.remove('open');}
+
+// ---- Exercises ----
+function checkTF(btn, correct) {
+  const row = btn.parentElement;
+  const btns = row.querySelectorAll('.tf-btn');
+  if(btns[0].classList.contains('correct')||btns[0].classList.contains('wrong')) return;
+  const clicked = btn.textContent.trim();
+  const isCorrect = (clicked === 'TRUE' && correct === 'T') || (clicked === 'FALSE' && correct === 'F');
+  btn.classList.add(isCorrect ? 'correct' : 'wrong');
+  btns.forEach(b => {
+    const bCorrect = (b.textContent.trim() === 'TRUE' && correct === 'T') || (b.textContent.trim() === 'FALSE' && correct === 'F');
+    if(bCorrect) b.classList.add('correct');
+  });
+  saveProgress();
+}
+
+const match10Key = {m10_1:'e',m10_2:'g',m10_3:'a',m10_4:'f',m10_5:'b',m10_6:'d',m10_7:'c'};
+function checkMatch10() {
+  let correct=0,total=7;
+  for(const [id,ans] of Object.entries(match10Key)) {
+    const sel = document.getElementById(id);
+    sel.classList.remove('correct','wrong');
+    if(sel.value===ans){sel.classList.add('correct');correct++;}
+    else if(sel.value!==''){sel.classList.add('wrong');}
+  }
+  const b = document.getElementById('score-match10');
+  b.textContent = correct+'/'+total+' correct'+(correct===total?' — Perfect! ✓':'');
+  b.classList.add('show');
+  saveProgress();
+}
+
+function liveRecall(input, answer) {
+  input.classList.remove('correct','wrong');
+  if(input.value.toLowerCase().trim()===answer.toLowerCase()) {
+    input.classList.add('correct');
+    saveProgress();
+  } else if(input.value.length >= answer.length) {
+    input.classList.add('wrong');
+  }
+}
+
+// Chapter Review
+const crAnswers = {};
+function checkCR(btn, correct, qNum) {
+  if(crAnswers[qNum]) return;
+  const row = btn.parentElement;
+  const btns = row.querySelectorAll('.cr-btn');
+  const labels = ['a','b','c'];
+  const idx = Array.from(btns).indexOf(btn);
+  const clicked = labels[idx];
+  crAnswers[qNum] = clicked;
+  if(clicked===correct) btn.classList.add('correct');
+  else {
+    btn.classList.add('wrong');
+    btns.forEach((b,i)=>{ if(labels[i]===correct) b.classList.add('correct'); });
+  }
+  // Show score
+  const total = 15;
+  const answered = Object.keys(crAnswers).length;
+  const correct_count = Object.values(crAnswers).filter((v,i)=>{
+    const keys = Object.keys(crAnswers); const key = keys[i];
+    const correctMap = {'1':'b','2':'a','3':'a','4':'b','5':'b','6':'a','7':'a','8':'b','9':'c','10':'c','11':'b','12':'a','13':'c','14':'b','15':'a'};
+    return v === correctMap[key];
+  }).length;
+  if(answered===total) {
+    const sb = document.getElementById('cr-score');
+    sb.textContent = 'Chapter Review complete: '+correct_count+'/'+total+' correct';
+    sb.classList.add('show');
+  }
+  saveProgress();
+}
+
+function revealRoots() {
+  document.querySelectorAll('[id^="rr"]').forEach(el=>{
+    el.style.color='var(--green)';
+  });
+}
+
+function toggleReveal(btn) {
+  const rt = btn.nextElementSibling;
+  rt.classList.toggle('show');
+  btn.textContent = rt.classList.contains('show') ? 'Hide' : 'Reveal Insight';
+}
+
+// ---- Progress ----
+function saveProgress() {
+  const inputs = document.querySelectorAll('input, select');
+  let filled = 0;
+  inputs.forEach(i=>{ if(i.value && i.value!=='') filled++; });
+  const tfs = document.querySelectorAll('.tf-btn.correct, .tf-btn.wrong');
+  const crDone = Object.keys(crAnswers).length;
+  const total = 40;
+  const done = Math.min(filled + Math.floor(tfs.length/2) + crDone, total);
+  const pct = Math.round((done/total)*100);
+  document.getElementById('progFill').style.width = pct+'%';
+  document.getElementById('progText').textContent = pct+'%';
+  try { localStorage.setItem('wpme_s10_prog', pct); } catch(e){}
+}
+
+// Load saved progress indicator
+(function(){
+  try {
+    const p = localStorage.getItem('wpme_s10_prog');
+    if(p) { document.getElementById('progFill').style.width=p+'%'; document.getElementById('progText').textContent=p+'%'; }
+  } catch(e){}
+})();
+</script>
+</body>
+</html>
