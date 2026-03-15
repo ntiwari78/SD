@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 19: Mini Blackjack and Card Counting | Nash Command Center</title>
+
+    <!-- KaTeX for Mathematics -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0a0e27;
+            --bg-lighter: #141829;
+            --bg-panel: #1a1f3a;
+            --text-light: #e0e8ff;
+            --text-muted: #a0afd0;
+            --accent-cyan: #00d4ff;
+            --accent-gold: #ffd700;
+            --accent-red: #ff6b6b;
+            --accent-green: #51cf66;
+            --border-color: #2d3561;
+            --shadow: 0 8px 32px rgba(0, 212, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-lighter) 100%);
+            color: var(--text-light);
+            line-height: 1.6;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* Scroll Progress Bar */
+        .scroll-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-gold));
+            width: 0%;
+            z-index: 1000;
+            transition: width 0.1s ease-out;
+        }
+
+        /* Header */
+        header {
+            padding: 2rem;
+            text-align: center;
+            border-bottom: 2px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            background: rgba(10, 14, 39, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        header .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        header .meta {
+            font-size: 0.9rem;
+            color: var(--accent-cyan);
+            letter-spacing: 1px;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+            background: var(--border-color);
+            border: 1px solid var(--accent-cyan);
+            color: var(--accent-cyan);
+            text-decoration: none;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .back-link:hover {
+            background: var(--accent-cyan);
+            color: var(--bg-dark);
+            box-shadow: 0 0 16px rgba(0, 212, 255, 0.3);
+        }
+
+        /* Navigation Dots */
+        .nav-dots {
+            position: fixed;
+            right: 2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            z-index: 50;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: transparent;
+        }
+
+        .dot.active {
+            background: var(--accent-cyan);
+            box-shadow: 0 0 16px var(--accent-cyan);
+            width: 16px;
+            height: 16px;
+        }
+
+        .dot:hover {
+            border-color: var(--accent-cyan);
+        }
+
+        /* Main Container */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        section {
+            margin-bottom: 4rem;
+            padding: 2rem;
+            background: var(--bg-panel);
+            border-left: 4px solid var(--accent-cyan);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            opacity: 0;
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+
+        section.in-view {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h2 {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: var(--accent-cyan);
+            border-bottom: 2px solid var(--accent-gold);
+            padding-bottom: 0.5rem;
+        }
+
+        h3 {
+            font-size: 1.3rem;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--accent-gold);
+        }
+
+        p {
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+
+        /* Math */
+        .math-block {
+            background: rgba(0, 212, 255, 0.05);
+            border-left: 3px solid var(--accent-cyan);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        .katex-display {
+            overflow-x: auto;
+        }
+
+        /* Simulation Styles */
+        .simulator {
+            background: var(--bg-lighter);
+            border: 2px solid var(--accent-cyan);
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        .sim-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-size: 0.9rem;
+            color: var(--accent-gold);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        input[type="number"],
+        input[type="range"],
+        select,
+        button {
+            padding: 0.75rem;
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            color: var(--text-light);
+            border-radius: 4px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        input[type="number"],
+        select {
+            min-width: 100%;
+        }
+
+        input[type="number"]:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 8px rgba(0, 212, 255, 0.3);
+        }
+
+        button {
+            cursor: pointer;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-gold));
+            color: var(--bg-dark);
+            border: none;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 212, 255, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.secondary {
+            background: var(--bg-panel);
+            color: var(--text-light);
+            border: 1px solid var(--border-color);
+        }
+
+        button.secondary:hover {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 8px rgba(0, 212, 255, 0.3);
+        }
+
+        /* Game Display */
+        .game-display {
+            background: rgba(0, 212, 255, 0.05);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 1.5rem 0;
+        }
+
+        .game-section {
+            margin-bottom: 2rem;
+        }
+
+        .game-section h4 {
+            color: var(--accent-gold);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+        }
+
+        .deck-display {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .card {
+            width: 60px;
+            height: 90px;
+            border: 2px solid var(--border-color);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.5rem;
+            background: var(--bg-panel);
+            transition: all 0.3s ease;
+            cursor: default;
+        }
+
+        .card.flipped {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-gold));
+            color: var(--bg-dark);
+        }
+
+        .card.one {
+            color: var(--accent-gold);
+        }
+
+        .card.two {
+            color: var(--accent-red);
+        }
+
+        .card-back {
+            width: 60px;
+            height: 90px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-gold));
+            border: 2px solid var(--border-color);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-box {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+            letter-spacing: 1px;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            color: var(--accent-cyan);
+            font-weight: bold;
+        }
+
+        .stat-box.negative .stat-value {
+            color: var(--accent-red);
+        }
+
+        .stat-box.positive .stat-value {
+            color: var(--accent-green);
+        }
+
+        .probability-bar {
+            width: 100%;
+            height: 40px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            display: flex;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+
+        .probability-segment {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: width 0.3s ease;
+        }
+
+        .prob-ones {
+            background: var(--accent-gold);
+            color: var(--bg-dark);
+        }
+
+        .prob-twos {
+            background: var(--accent-red);
+            color: var(--bg-dark);
+        }
+
+        .probability-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+        }
+
+        .player-hand {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .hand-cards {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .round-result {
+            padding: 1rem;
+            border-radius: 4px;
+            margin-top: 1rem;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .result-win {
+            background: rgba(81, 207, 102, 0.2);
+            color: var(--accent-green);
+            border: 1px solid var(--accent-green);
+        }
+
+        .result-loss {
+            background: rgba(255, 107, 107, 0.2);
+            color: var(--accent-red);
+            border: 1px solid var(--accent-red);
+        }
+
+        .result-push {
+            background: rgba(0, 212, 255, 0.2);
+            color: var(--accent-cyan);
+            border: 1px solid var(--accent-cyan);
+        }
+
+        /* Socratic Sandbox */
+        .question-box {
+            background: var(--bg-lighter);
+            border-left: 4px solid var(--accent-gold);
+            border-radius: 4px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .question-toggle {
+            width: 100%;
+            padding: 1.5rem;
+            background: var(--bg-panel);
+            border: none;
+            color: var(--text-light);
+            text-align: left;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .question-toggle:hover {
+            background: var(--border-color);
+        }
+
+        .question-toggle.active {
+            background: rgba(0, 212, 255, 0.1);
+            color: var(--accent-cyan);
+        }
+
+        .toggle-icon {
+            display: inline-block;
+            transition: transform 0.3s ease;
+            font-size: 1.2rem;
+        }
+
+        .question-toggle.active .toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        .question-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .question-answer.open {
+            max-height: 800px;
+            transition: max-height 0.3s ease-in;
+        }
+
+        .answer-content {
+            padding: 1.5rem;
+            color: var(--text-muted);
+            line-height: 1.8;
+        }
+
+        /* Feynman Bridge */
+        .analogy-box {
+            background: rgba(255, 215, 0, 0.05);
+            border: 2px solid var(--accent-gold);
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 1.5rem 0;
+        }
+
+        .analogy-box h3 {
+            color: var(--accent-gold);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8rem;
+            }
+
+            .nav-dots {
+                display: none;
+            }
+
+            main {
+                padding: 1rem;
+            }
+
+            section {
+                padding: 1.5rem;
+                margin-bottom: 2rem;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            .sim-controls {
+                grid-template-columns: 1fr;
+            }
+
+            .simulator {
+                padding: 1.5rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border-color);
+            margin-top: 3rem;
+        }
+
+        footer a {
+            color: var(--accent-cyan);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        footer a:hover {
+            color: var(--accent-gold);
+        }
+    </style>
+</head>
+<body>
+    <div class="scroll-progress"></div>
+
+    <header>
+        <div class="header-content">
+            <h1>Mini Blackjack and Card Counting</h1>
+            <p class="subtitle">Game Theory Through Examples — Chapter 19</p>
+            <p class="meta">Prisoners & Payoffs | Nash Equilibrium | Perfect Information</p>
+            <a href="index.html" class="back-link">← Back to Command Center</a>
+        </div>
+    </header>
+
+    <div class="nav-dots" id="navDots"></div>
+
+    <main>
+        <!-- Section 1: Feynman Bridge -->
+        <section id="feynman-bridge">
+            <h2>The Feynman Bridge: When Cards Tell Their Secrets</h2>
+
+            <p>Imagine you're sitting at a casino blackjack table. For the first hand, you know nothing about which cards have been played, so you bet conservatively—maybe $1. Then you watch carefully as cards are dealt. You see a lot of high cards come out (ones, in our simplified game). A crucial insight hits you: <em>the remaining deck must have fewer ones now.</em> This means the next card is more likely to be a two, which changes everything about your strategy.</p>
+
+            <div class="analogy-box">
+                <h3>The Restaurant Analogy</h3>
+                <p>Picture a restaurant with a fixed supply of appetizers: they have 3 delicious ones and 3 bland twos. A friend orders before you and picks a delicious appetizer—now you know the remaining supply is 2 delicious, 3 bland. Your choice to order now carries different odds. If you had ordered without knowing what your friend picked, you would have assumed 50-50 odds. But with information, your expectations shift.</p>
+                <p>Card counting in blackjack is exactly this: <strong>using observed information to update your beliefs about the future.</strong> Each card that leaves the deck shrinks the remaining deck and changes the probabilities. A savvy player who tracks what's left gets an edge over someone who doesn't.</p>
+            </div>
+
+            <h3>Why Casinos Reshuffle</h3>
+            <p>Casinos reshuffle frequently for one reason: to destroy the information advantage card counters build up. If you can't track what's left, you can't update your probabilities, and you can't adjust your bets intelligently. Reshuffling erases the card counter's edge and resets the game back to its neutral state—fair for neither side, but unpredictable for the skilled player.</p>
+
+            <h3>The Deep Insight</h3>
+            <p>Here's the game theory punch line: <strong>Information is power.</strong> In a game with perfect information (you know the entire game tree), you can use backward induction to find the exact optimal strategy. In a game with imperfect information (you don't know what cards remain), you can still apply game theory—you just work with probabilities instead of certainties. Card counting bridges the gap: it converts "imperfect information" into "nearly perfect information" by eliminating uncertainty about the remaining cards.</p>
+        </section>
+
+        <!-- Section 2: Mathematical Ascent -->
+        <section id="math-ascent">
+            <h2>Mathematical Ascent: The Formalism of Card Games</h2>
+
+            <h3>Formal Definition: MINI BLACKJACK(a,b)</h3>
+            <div class="math-block">
+                <p><strong>Definition:</strong> A shuffled deck contains <em>a</em> cards valued at 1 and <em>b</em> cards valued at 2. Players draw sequentially, attempting to reach a hand total of exactly 3. A hand totaling more than 3 is a loss; totaling less than 3 allows further draws. A player may voluntarily stop drawing at any time.</p>
+            </div>
+
+            <h3>Game Tree Structure and Backward Induction</h3>
+            <p>Consider MINI BLACKJACK(3,3): 6 cards total, 3 ones and 3 twos. The game tree begins with Ann's draw.</p>
+
+            <div class="math-block">
+                <h4>Ann's Initial Draw:</h4>
+                <p style="margin-top: 1rem;">
+                    <span id="annDrawProb"></span>
+                </p>
+                <p style="margin-top: 0.5rem;">With 6 cards (3 ones, 3 twos):
+                <br><span id="drawOneProb"></span>
+                <br><span id="drawTwoProb"></span>
+                </p>
+            </div>
+
+            <h3>Case 1: Ann Draws a One (prob = 1/2)</h3>
+            <p>After drawing one, Ann's sum = 1. She can stop or draw again.</p>
+            <ul style="margin-left: 2rem; margin-bottom: 1rem;">
+                <li><strong>If Ann stops:</strong> Sum = 1, below target. Beth then plays. Beth sees sum < 3, must draw. Beth draws from remaining 5 cards (2 ones, 3 twos).</li>
+                <li><strong>If Ann draws:</strong> Remaining deck has 2 ones and 3 twos (5 cards).
+                    <br><span id="annSecondDrawProb"></span>
+                </li>
+            </ul>
+
+            <h3>Expected Value and Strategic Analysis</h3>
+            <div class="math-block">
+                <p><strong>Key Principle:</strong> At each decision node, a player chooses the action with the higher expected payoff.</p>
+                <p style="margin-top: 1rem;"><span id="expectedValue"></span></p>
+            </div>
+
+            <h3>Probability Updates: The Card Counting Formula</h3>
+            <p>This is the heart of card counting. As cards leave the deck, your probabilities shift.</p>
+
+            <div class="math-block">
+                <h4>Before drawing any cards (deck has <em>a</em> ones, <em>b</em> twos):</h4>
+                <p style="margin-top: 1rem;">
+                    <span id="initialProb"></span>
+                </p>
+
+                <h4 style="margin-top: 1.5rem;">After observing <em>k</em> ones and <em>m</em> twos drawn:</h4>
+                <p style="margin-top: 1rem;">
+                    <span id="updatedProb"></span>
+                </p>
+
+                <h4 style="margin-top: 1.5rem;">The remaining deck has <em>a</em> − <em>k</em> ones and <em>b</em> − <em>m</em> twos:</h4>
+                <p style="margin-top: 1rem;">
+                    <span id="remainingProb"></span>
+                </p>
+            </div>
+
+            <h3>Betting Strategy with Card Counting</h3>
+            <p>Before each hand, the player bets high ($2) or low ($1). If the remaining deck composition favors the player, bet high. Otherwise, bet low.</p>
+
+            <div class="math-block">
+                <p><strong>Expected Return per Hand:</strong> <span id="expectedReturn"></span></p>
+                <p style="margin-top: 0.5rem;">If <span id="edgeCondition"></span> the player has an edge and should bet high.</p>
+            </div>
+
+            <h3>Reshuffling Analysis</h3>
+            <p>When the casino reshuffles, it resets the deck to its original composition. This eliminates the card counter's informational advantage.</p>
+
+            <div class="math-block">
+                <p><strong>Effect of Reshuffling:</strong> All probability estimates reset to initial values, destroying the counter's ability to predict future cards based on past observations. This is why casinos reshuffle frequently—not to prevent cheating, but to neutralize the advantage skilled players gain through observation.</p>
+            </div>
+        </section>
+
+        <!-- Section 3: Simulation -->
+        <section id="simulation">
+            <h2>Interactive Simulator: Play Mini Blackjack</h2>
+
+            <p>Use the simulator below to explore Mini Blackjack directly. Adjust the deck composition, make strategic decisions (draw or stop), and see how card counting changes your probability estimates in real time.</p>
+
+            <div class="simulator">
+                <div class="sim-controls">
+                    <div class="control-group">
+                        <label for="deckOnes">Ones in Deck:</label>
+                        <input type="number" id="deckOnes" min="0" max="6" value="3">
+                    </div>
+                    <div class="control-group">
+                        <label for="deckTwos">Twos in Deck:</label>
+                        <input type="number" id="deckTwos" min="0" max="6" value="3">
+                    </div>
+                    <div class="control-group">
+                        <label for="betAmount">Bet Amount:</label>
+                        <select id="betAmount">
+                            <option value="1">Low ($1)</option>
+                            <option value="2">High ($2)</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <button id="startGameBtn" onclick="startNewGame()">Start New Game</button>
+                    </div>
+                </div>
+
+                <div id="gameDisplay" style="display: none;">
+                    <div class="game-section">
+                        <h4>Remaining Deck</h4>
+                        <div class="deck-display" id="deckDisplay"></div>
+                        <p style="font-size: 0.9rem; color: var(--text-muted);">
+                            <span id="deckCount"></span> cards remaining
+                        </p>
+                    </div>
+
+                    <div class="game-section">
+                        <h4>Your Hand</h4>
+                        <div class="player-hand">
+                            <span>Sum: <strong id="playerSum" style="color: var(--accent-cyan); font-size: 1.3rem;">0</strong></span>
+                            <div class="hand-cards" id="playerCards"></div>
+                        </div>
+                    </div>
+
+                    <div class="game-section">
+                        <h4>Next Card Probability</h4>
+                        <div class="probability-bar" id="probBar">
+                            <div class="probability-segment prob-ones" id="segmentOnes" style="width: 50%;">
+                                <span id="probOnesLabel">1: 50%</span>
+                            </div>
+                            <div class="probability-segment prob-twos" id="segmentTwos" style="width: 50%;">
+                                <span id="probTwosLabel">2: 50%</span>
+                            </div>
+                        </div>
+                        <div class="probability-label">
+                            Remaining: <strong id="remainingOnes">3</strong> ones, <strong id="remainingTwos">3</strong> twos
+                        </div>
+                    </div>
+
+                    <div class="game-section">
+                        <h4>Your Actions</h4>
+                        <div class="action-buttons" id="actionButtons">
+                            <button onclick="playerDraw()">Draw Card</button>
+                            <button class="secondary" onclick="playerStop()">Stop / Stand</button>
+                        </div>
+                    </div>
+
+                    <div class="game-section" id="gameResultSection" style="display: none;">
+                        <h4>Game Result</h4>
+                        <div id="gameResult" class="round-result"></div>
+                    </div>
+
+                    <div class="stats-grid" id="statsGrid" style="display: none;">
+                        <div class="stat-box">
+                            <div class="stat-label">Round Outcome</div>
+                            <div class="stat-value" id="roundOutcome">-</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Your Sum</div>
+                            <div class="stat-value" id="finalYourSum">-</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Dealer Sum</div>
+                            <div class="stat-value" id="finalDealerSum">-</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Profit/Loss</div>
+                            <div class="stat-value" id="roundProfit">-</div>
+                        </div>
+                    </div>
+
+                    <div class="game-section" id="dealerInfoSection" style="display: none; margin-top: 1.5rem;">
+                        <h4>Dealer Info (Beth)</h4>
+                        <p style="font-size: 0.9rem; color: var(--text-muted);">
+                            Dealer's fixed rule: Draw on 1, Stop on 2
+                        </p>
+                        <div class="hand-cards" id="dealerCards"></div>
+                        <p style="margin-top: 0.5rem;">Dealer Sum: <strong id="dealerSum">-</strong></p>
+                    </div>
+
+                    <div class="game-section" id="continuationSection" style="display: none; margin-top: 1.5rem;">
+                        <button onclick="startNewGame()" style="width: 100%; padding: 1rem;">Play Another Round</button>
+                    </div>
+                </div>
+
+                <div id="noGameMessage" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                    <p>Configure the deck and click "Start New Game" to begin playing.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Socratic Sandbox -->
+        <section id="socratic-sandbox">
+            <h2>Socratic Sandbox: Test Your Understanding</h2>
+
+            <p>Expand the questions below and think through your answers before revealing the discussion. These are guiding questions, not puzzle answers—they invite you to apply game theory principles to card games.</p>
+
+            <div class="question-box">
+                <button class="question-toggle" onclick="toggleQuestion(this)">
+                    <span>1. Why does card counting give players an edge, and is it actually "cheating"?</span>
+                    <span class="toggle-icon">▼</span>
+                </button>
+                <div class="question-answer">
+                    <div class="answer-content">
+                        <p>Card counting works because it converts a game of imperfect information into one of nearly-perfect information. In the original game, you don't know what cards remain, so your probability estimates are fixed at the deck's initial composition. As cards are revealed, a card counter updates these probabilities—using logic, not cheating.</p>
+
+                        <p style="margin-top: 1rem;"><strong>Is it cheating?</strong> No, it's rational play. You're not marking cards, using devices, or manipulating the game. You're simply remembering and analyzing public information. However, casinos have the right to refuse service to skilled players, and they use countermeasures (frequent reshuffling, multiple decks) to eliminate the advantage.</p>
+
+                        <p style="margin-top: 1rem;"><strong>The game theory insight:</strong> Card counting exploits incomplete information. Once information is made more complete (through observation), the game shifts. The player with better information makes better decisions. This is true in poker, investing, and business—not just blackjack.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="question-box">
+                <button class="question-toggle" onclick="toggleQuestion(this)">
+                    <span>2. How does backward induction help us analyze a multi-round card game?</span>
+                    <span class="toggle-icon">▼</span>
+                </button>
+                <div class="question-answer">
+                    <div class="answer-content">
+                        <p>Backward induction is a technique from perfect information game theory: you start at the end of the game tree and work backwards, determining the optimal action at each node. For Mini Blackjack, the end states are clear—someone wins (sum = 3), losses (sum > 3), or the game continues.</p>
+
+                        <p style="margin-top: 1rem;">At each decision node, a player chooses the action with the highest expected value. For example, if you have a sum of 1, you calculate: <em>EV(draw) vs EV(stop)</em>. The probabilities of drawing a one vs a two depend on what cards remain, which depends on the entire history of the game.</p>
+
+                        <p style="margin-top: 1rem;"><strong>Why backward induction works here:</strong> Each hand is a finite, finite game (it ends after a few draws). The probability of each outcome is deterministic given the remaining deck. We can compute exactly what each action is worth, so we can determine the optimal strategy precisely.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="question-box">
+                <button class="question-toggle" onclick="toggleQuestion(this)">
+                    <span>3. Why do casinos reshuffle frequently, and how does this hurt card counters?</span>
+                    <span class="toggle-icon">▼</span>
+                </button>
+                <div class="question-answer">
+                    <div class="answer-content">
+                        <p>Reshuffling resets the deck to its original composition, which erases all of the card counter's hard-won information. If a counter has observed that many ones have been drawn, they know ones are scarce in the remaining deck. But reshuffle, and suddenly it's back to 50-50 odds.</p>
+
+                        <p style="margin-top: 1rem;"><strong>The strategic insight:</strong> Reshuffling is a counter-strategy. It's not that casinos are preventing fraud; they're eliminating the information advantage that builds naturally through observation. A deck played to completion would give card counters a larger and larger edge. But if you reshuffle after every few hands, the counter never accumulates enough information to act on.</p>
+
+                        <p style="margin-top: 1rem;"><strong>From a game theory perspective:</strong> The casino plays a strategy (reshuffle frequently) that eliminates the counter's profitable strategy (exploit the changing composition). This is strategic defense—not against illegal play, but against superior skill.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="question-box">
+                <button class="question-toggle" onclick="toggleQuestion(this)">
+                    <span>4. How does the optimal bet size depend on deck composition?</span>
+                    <span class="toggle-icon">▼</span>
+                </button>
+                <div class="question-answer">
+                    <div class="answer-content">
+                        <p>Betting strategy in Mini Blackjack follows from expected value. Before each hand, you assess: given the remaining deck composition, do I have an advantage or disadvantage?</p>
+
+                        <p style="margin-top: 1rem;"><strong>The principle:</strong> Bet high ($2) when your expected value is positive, and low ($1) when it's negative. To calculate expected value, you need to know the remaining composition and work through the game tree to determine win/loss probabilities.</p>
+
+                        <p style="margin-top: 1rem;"><strong>Example:</strong> In MINI BLACKJACK(6,0)—a deck with only ones—your expected value is very different than in MINI BLACKJACK(3,3). With only ones, you're likely to bust (exceed 3), so you should bet low. With a balanced deck, your odds are more neutral.</p>
+
+                        <p style="margin-top: 1rem;">This is <strong>dynamic strategy:</strong> your betting changes moment-to-moment as the deck composition changes. Optimal play isn't fixed—it adapts to new information.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="question-box">
+                <button class="question-toggle" onclick="toggleQuestion(this)">
+                    <span>5. What's the relationship between incomplete information and poker strategy?</span>
+                    <span class="toggle-icon">▼</span>
+                </button>
+                <div class="question-answer">
+                    <div class="answer-content">
+                        <p>Mini Blackjack (with card counting) bridges blackjack and poker. In pure blackjack, you don't know what card is next—it's random. In poker, you don't know your opponents' hole cards—that's where incomplete information lives.</p>
+
+                        <p style="margin-top: 1rem;"><strong>The parallel:</strong> Just as card counting uses observed information to update beliefs about the remaining deck, poker players use observed actions (bets, folds, tells) to update beliefs about opponents' hands. In both games, information is a source of advantage.</p>
+
+                        <p style="margin-top: 1rem;"><strong>Key difference:</strong> In blackjack, the hidden information is the remaining cards—pure randomness. In poker, the hidden information is opponent strategies—purposeful choices. But the principle is the same: <em>gather information, update beliefs, make better decisions.</em></p>
+
+                        <p style="margin-top: 1rem;">Advanced poker uses mixed strategies (randomizing your plays to keep opponents uncertain) precisely because opponents will otherwise gain information and exploit you. Game theory shows that the answer to information disadvantage is often to randomize—the opposite of card counting's observation strategy.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>Chapter 19: Mini Blackjack and Card Counting | <em>Game Theory Through Examples</em> by Elinor Prisner</p>
+        <p style="margin-top: 0.5rem; font-size: 0.9rem;">
+            <a href="index.html">← Back to Nash Command Center</a>
+        </p>
+    </footer>
+
+    <script>
+        // ============ MATH RENDERING ============
+        function renderMath() {
+            const mathExpressions = {
+                'annDrawProb': `P(\\text{draw 1}) = \\frac{3}{6} = \\frac{1}{2}, \\quad P(\\text{draw 2}) = \\frac{3}{6} = \\frac{1}{2}`,
+                'drawOneProb': `P(\\text{next = 1}) = \\frac{\\text{ones left}}{\\text{total cards left}}`,
+                'drawTwoProb': `P(\\text{next = 2}) = \\frac{\\text{twos left}}{\\text{total cards left}}`,
+                'annSecondDrawProb': `P(\\text{draw 1}) = \\frac{2}{5}, \\quad P(\\text{draw 2}) = \\frac{3}{5}`,
+                'expectedValue': `EV(\\text{action}) = \\sum_{\\text{outcomes}} P(\\text{outcome}) \\cdot \\text{payoff(outcome)}`,
+                'initialProb': `P(\\text{next = 1}) = \\frac{a}{a+b}, \\quad P(\\text{next = 2}) = \\frac{b}{a+b}`,
+                'updatedProb': `P(\\text{next = 1 | observed}) = \\frac{a - k}{(a-k) + (b-m)}, \\quad P(\\text{next = 2 | observed}) = \\frac{b - m}{(a-k) + (b-m)}`,
+                'remainingProb': `\\text{Remaining deck:} \\quad (a - k) \\text{ ones}, \\quad (b - m) \\text{ twos}`,
+                'expectedReturn': `EV(\\text{hand}) = P(\\text{win}) \\cdot \\text{bet} - P(\\text{loss}) \\cdot \\text{bet}`,
+                'edgeCondition': `EV(\\text{hand}) > 0, \\text{ then}`
+            };
+
+            for (const [id, expr] of Object.entries(mathExpressions)) {
+                const el = document.getElementById(id);
+                if (el) {
+                    try {
+                        katex.render(expr, el, { throwOnError: false });
+                    } catch (e) {
+                        console.log('KaTeX render error for ' + id);
+                    }
+                }
+            }
+        }
+
+        // ============ SCROLL PROGRESS ============
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.scrollY;
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const scrolled = (scrollTop / docHeight) * 100;
+            document.querySelector('.scroll-progress').style.width = scrolled + '%';
+        });
+
+        // ============ NAVIGATION DOTS ============
+        const sections = ['feynman-bridge', 'math-ascent', 'simulation', 'socratic-sandbox'];
+        const navContainer = document.getElementById('navDots');
+
+        sections.forEach((id, idx) => {
+            const dot = document.createElement('div');
+            dot.className = 'dot';
+            dot.onclick = () => {
+                document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+            };
+            navContainer.appendChild(dot);
+        });
+
+        // Intersection Observer for active dot
+        const observerOptions = {
+            threshold: 0.5
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const dots = document.querySelectorAll('.dot');
+                    const sectionIndex = sections.indexOf(entry.target.id);
+                    dots.forEach((dot, idx) => {
+                        dot.classList.toggle('active', idx === sectionIndex);
+                    });
+                }
+            });
+        }, observerOptions);
+
+        sections.forEach(id => {
+            observer.observe(document.getElementById(id));
+        });
+
+        // Scroll animations
+        const sectionObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('in-view');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('section').forEach(section => {
+            sectionObserver.observe(section);
+        });
+
+        // ============ SOCRATIC SANDBOX ============
+        function toggleQuestion(button) {
+            button.classList.toggle('active');
+            const answer = button.nextElementSibling;
+            answer.classList.toggle('open');
+        }
+
+        // ============ GAME SIMULATION ============
+        let gameState = {
+            deckOnes: 3,
+            deckTwos: 3,
+            remainingOnes: 3,
+            remainingTwos: 3,
+            playerCards: [],
+            playerSum: 0,
+            dealerCards: [],
+            dealerSum: 0,
+            gameActive: false,
+            betAmount: 1,
+            gameResult: null
+        };
+
+        function startNewGame() {
+            const onesInput = parseInt(document.getElementById('deckOnes').value) || 0;
+            const twosInput = parseInt(document.getElementById('deckTwos').value) || 0;
+
+            if (onesInput + twosInput !== 6) {
+                alert('Total cards must equal 6 (ones + twos)');
+                return;
+            }
+
+            gameState.deckOnes = onesInput;
+            gameState.deckTwos = twosInput;
+            gameState.remainingOnes = onesInput;
+            gameState.remainingTwos = twosInput;
+            gameState.playerCards = [];
+            gameState.playerSum = 0;
+            gameState.dealerCards = [];
+            gameState.dealerSum = 0;
+            gameState.gameActive = true;
+            gameState.betAmount = parseInt(document.getElementById('betAmount').value);
+            gameState.gameResult = null;
+
+            document.getElementById('gameDisplay').style.display = 'block';
+            document.getElementById('noGameMessage').style.display = 'none';
+            document.getElementById('gameResultSection').style.display = 'none';
+            document.getElementById('statsGrid').style.display = 'none';
+            document.getElementById('dealerInfoSection').style.display = 'none';
+            document.getElementById('continuationSection').style.display = 'none';
+
+            updateDisplay();
+        }
+
+        function drawCard() {
+            const total = gameState.remainingOnes + gameState.remainingTwos;
+            if (total === 0) return null;
+
+            const r = Math.random() * total;
+            let card;
+
+            if (r < gameState.remainingOnes) {
+                card = 1;
+                gameState.remainingOnes--;
+            } else {
+                card = 2;
+                gameState.remainingTwos--;
+            }
+
+            return card;
+        }
+
+        function playerDraw() {
+            if (!gameState.gameActive) return;
+
+            const card = drawCard();
+            if (card === null) return;
+
+            gameState.playerCards.push(card);
+            gameState.playerSum += card;
+
+            updateDisplay();
+
+            if (gameState.playerSum > 3) {
+                endGame('loss');
+            }
+        }
+
+        function playerStop() {
+            if (!gameState.gameActive) return;
+
+            // Dealer plays (fixed rules: draw on 1, stop on 2)
+            gameState.dealerSum = 0;
+            gameState.dealerCards = [];
+
+            // Dealer draws first card
+            if (gameState.remainingOnes + gameState.remainingTwos > 0) {
+                const card = drawCard();
+                if (card) {
+                    gameState.dealerCards.push(card);
+                    gameState.dealerSum = card;
+
+                    // Dealer rule: if sum = 1, must draw; if sum = 2, must stop
+                    while (gameState.dealerSum === 1 && gameState.remainingOnes + gameState.remainingTwos > 0) {
+                        const nextCard = drawCard();
+                        if (nextCard) {
+                            gameState.dealerCards.push(nextCard);
+                            gameState.dealerSum += nextCard;
+                        }
+                    }
+                }
+            }
+
+            // Determine outcome
+            determineOutcome();
+            endGame('ended');
+        }
+
+        function determineOutcome() {
+            const playerScore = gameState.playerSum;
+            const dealerScore = gameState.dealerSum;
+
+            if (playerScore === 3) {
+                gameState.gameResult = 'win';
+            } else if (playerScore > 3) {
+                gameState.gameResult = 'loss';
+            } else if (dealerScore === 3) {
+                gameState.gameResult = 'loss';
+            } else if (dealerScore > 3) {
+                gameState.gameResult = 'win';
+            } else {
+                // Both under 3: compare
+                if (playerScore > dealerScore) {
+                    gameState.gameResult = 'win';
+                } else if (dealerScore > playerScore) {
+                    gameState.gameResult = 'loss';
+                } else {
+                    gameState.gameResult = 'push';
+                }
+            }
+        }
+
+        function endGame(reason) {
+            gameState.gameActive = false;
+            updateDisplay();
+            showGameResult();
+        }
+
+        function updateDisplay() {
+            // Update deck display
+            const deckDisplay = document.getElementById('deckDisplay');
+            deckDisplay.innerHTML = '';
+
+            for (let i = 0; i < gameState.remainingOnes; i++) {
+                const card = document.createElement('div');
+                card.className = 'card-back';
+                card.innerHTML = '🂠';
+                deckDisplay.appendChild(card);
+            }
+            for (let i = 0; i < gameState.remainingTwos; i++) {
+                const card = document.createElement('div');
+                card.className = 'card-back';
+                card.innerHTML = '🂠';
+                deckDisplay.appendChild(card);
+            }
+
+            // Update deck count
+            const total = gameState.remainingOnes + gameState.remainingTwos;
+            document.getElementById('deckCount').textContent = total;
+
+            // Update player cards
+            const playerCardsDiv = document.getElementById('playerCards');
+            playerCardsDiv.innerHTML = '';
+            gameState.playerCards.forEach(card => {
+                const cardEl = document.createElement('div');
+                cardEl.className = 'card flipped ' + (card === 1 ? 'one' : 'two');
+                cardEl.innerHTML = card;
+                playerCardsDiv.appendChild(cardEl);
+            });
+
+            // Update player sum
+            document.getElementById('playerSum').textContent = gameState.playerSum;
+
+            // Update probability display
+            updateProbabilityDisplay();
+
+            // Update remaining counts
+            document.getElementById('remainingOnes').textContent = gameState.remainingOnes;
+            document.getElementById('remainingTwos').textContent = gameState.remainingTwos;
+
+            // Update dealer cards if game is over
+            if (!gameState.gameActive) {
+                const dealerCardsDiv = document.getElementById('dealerCards');
+                dealerCardsDiv.innerHTML = '';
+                gameState.dealerCards.forEach(card => {
+                    const cardEl = document.createElement('div');
+                    cardEl.className = 'card flipped ' + (card === 1 ? 'one' : 'two');
+                    cardEl.innerHTML = card;
+                    dealerCardsDiv.appendChild(cardEl);
+                });
+                document.getElementById('dealerSum').textContent = gameState.dealerSum;
+                document.getElementById('dealerInfoSection').style.display = 'block';
+            }
+
+            // Disable/enable action buttons
+            const drawBtn = document.querySelector('[onclick="playerDraw()"]');
+            const stopBtn = document.querySelector('[onclick="playerStop()"]');
+            if (gameState.gameActive) {
+                drawBtn.disabled = false;
+                stopBtn.disabled = false;
+            } else {
+                drawBtn.disabled = true;
+                stopBtn.disabled = true;
+            }
+        }
+
+        function updateProbabilityDisplay() {
+            const total = gameState.remainingOnes + gameState.remainingTwos;
+            let probOnes = 0, probTwos = 0;
+
+            if (total > 0) {
+                probOnes = gameState.remainingOnes / total;
+                probTwos = gameState.remainingTwos / total;
+            }
+
+            const onesPercent = (probOnes * 100).toFixed(0);
+            const twosPercent = (probTwos * 100).toFixed(0);
+
+            document.getElementById('segmentOnes').style.width = (probOnes * 100) + '%';
+            document.getElementById('segmentTwos').style.width = (probTwos * 100) + '%';
+            document.getElementById('probOnesLabel').textContent = `1: ${onesPercent}%`;
+            document.getElementById('probTwosLabel').textContent = `2: ${twosPercent}%`;
+        }
+
+        function showGameResult() {
+            document.getElementById('gameResultSection').style.display = 'block';
+            document.getElementById('statsGrid').style.display = 'grid';
+            document.getElementById('continuationSection').style.display = 'block';
+
+            const resultDiv = document.getElementById('gameResult');
+            let resultHTML = '';
+            let resultClass = '';
+
+            if (gameState.gameResult === 'win') {
+                resultHTML = `🎉 WIN! You beat the dealer with sum ${gameState.playerSum}. Profit: +$${gameState.betAmount}`;
+                resultClass = 'result-win';
+            } else if (gameState.gameResult === 'loss') {
+                resultHTML = `You lost. Your sum: ${gameState.playerSum}, Dealer sum: ${gameState.dealerSum}. Loss: -$${gameState.betAmount}`;
+                resultClass = 'result-loss';
+            } else {
+                resultHTML = `Push. Both have sum ${gameState.playerSum}. No change.`;
+                resultClass = 'result-push';
+            }
+
+            resultDiv.className = resultClass;
+            resultDiv.innerHTML = resultHTML;
+
+            // Update stats
+            document.getElementById('roundOutcome').textContent = gameState.gameResult.toUpperCase();
+            document.getElementById('finalYourSum').textContent = gameState.playerSum;
+            document.getElementById('finalDealerSum').textContent = gameState.dealerSum;
+
+            let profitLoss = 0;
+            if (gameState.gameResult === 'win') profitLoss = gameState.betAmount;
+            else if (gameState.gameResult === 'loss') profitLoss = -gameState.betAmount;
+
+            const profitEl = document.getElementById('roundProfit');
+            profitEl.textContent = profitLoss > 0 ? '+$' + profitLoss : '-$' + Math.abs(profitLoss);
+            if (profitLoss > 0) {
+                profitEl.parentElement.classList.add('positive');
+                profitEl.parentElement.classList.remove('negative');
+            } else if (profitLoss < 0) {
+                profitEl.parentElement.classList.add('negative');
+                profitEl.parentElement.classList.remove('positive');
+            }
+        }
+
+        // ============ INITIALIZATION ============
+        document.addEventListener('DOMContentLoaded', () => {
+            renderMath();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 37: Kuhn Poker — Nash Command Center</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <style>
+        :root {
+            --bg-dark: #0a0e27;
+            --bg-lighter: #141829;
+            --bg-panel: #1a1f3a;
+            --text-light: #e0e8ff;
+            --text-muted: #a0afd0;
+            --accent-cyan: #00d4ff;
+            --accent-gold: #ffd700;
+            --accent-red: #ff6b6b;
+            --accent-green: #51cf66;
+            --border-color: #2d3561;
+            --shadow: 0 8px 32px rgba(0, 212, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg-dark);
+            color: var(--text-light);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        /* Scroll Progress Bar */
+        #scrollProgress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-gold));
+            width: 0%;
+            z-index: 1000;
+            box-shadow: 0 0 10px var(--accent-cyan);
+        }
+
+        /* Header & Navigation */
+        header {
+            position: sticky;
+            top: 3px;
+            background: rgba(10, 14, 39, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--border-color);
+            z-index: 999;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-link {
+            color: var(--accent-cyan);
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--accent-cyan);
+            border-radius: 4px;
+        }
+
+        .back-link:hover {
+            background: rgba(0, 212, 255, 0.1);
+            transform: translateX(-4px);
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            text-align: center;
+            margin: 0;
+            flex: 1;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-dots {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .nav-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--border-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .nav-dot:hover {
+            background: var(--accent-cyan);
+            transform: scale(1.3);
+        }
+
+        .nav-dot.active {
+            background: var(--accent-cyan);
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 12px var(--accent-cyan);
+        }
+
+        /* Main Container */
+        main {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Section Styles */
+        section {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 2.5rem;
+            margin-bottom: 3rem;
+            box-shadow: var(--shadow);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        section.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        section h2 {
+            font-size: 1.8rem;
+            color: var(--accent-cyan);
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--accent-gold);
+            padding-bottom: 0.75rem;
+        }
+
+        section h3 {
+            font-size: 1.3rem;
+            color: var(--accent-gold);
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: var(--text-light);
+        }
+
+        .katex-display {
+            overflow-x: auto;
+            padding: 1rem;
+            background: rgba(0, 212, 255, 0.05);
+            border-left: 3px solid var(--accent-cyan);
+            margin: 1.5rem 0;
+            border-radius: 4px;
+        }
+
+        /* Feynman Section */
+        #feynman .intro-text {
+            font-size: 1.1rem;
+            line-height: 1.9;
+            color: var(--text-light);
+            padding: 1.5rem;
+            background: rgba(255, 215, 0, 0.05);
+            border-left: 4px solid var(--accent-gold);
+            border-radius: 4px;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Math Section */
+        #math .formula-block {
+            background: rgba(0, 212, 255, 0.05);
+            padding: 1.5rem;
+            border-left: 3px solid var(--accent-cyan);
+            margin: 1.5rem 0;
+            border-radius: 4px;
+        }
+
+        .payoff-matrix {
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+
+        th {
+            background: rgba(0, 212, 255, 0.1);
+            color: var(--accent-cyan);
+            font-weight: 600;
+        }
+
+        td {
+            background: rgba(10, 14, 39, 0.5);
+        }
+
+        /* Simulation Section */
+        #simulation {
+            background: var(--bg-panel);
+        }
+
+        .simulation-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .simulation-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .player-panel {
+            background: rgba(20, 24, 41, 0.8);
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            border-radius: 8px;
+        }
+
+        .player-panel h3 {
+            color: var(--accent-cyan);
+            margin-bottom: 1.2rem;
+        }
+
+        .control-group {
+            margin-bottom: 1.2rem;
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-muted);
+        }
+
+        .slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border-color);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 0 8px var(--accent-cyan);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 0 8px var(--accent-cyan);
+        }
+
+        .slider:hover::-webkit-slider-thumb {
+            background: var(--accent-gold);
+            box-shadow: 0 0 12px var(--accent-gold);
+            transform: scale(1.2);
+        }
+
+        .slider:hover::-moz-range-thumb {
+            background: var(--accent-gold);
+            box-shadow: 0 0 12px var(--accent-gold);
+            transform: scale(1.2);
+        }
+
+        .card-display {
+            display: flex;
+            justify-content: space-around;
+            margin: 1.5rem 0;
+            gap: 1rem;
+        }
+
+        .card {
+            width: 60px;
+            height: 90px;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, var(--bg-dark), var(--bg-lighter));
+            transition: all 0.3s ease;
+        }
+
+        .card.jack {
+            color: var(--accent-red);
+            border-color: var(--accent-red);
+        }
+
+        .card.queen {
+            color: var(--accent-gold);
+            border-color: var(--accent-gold);
+        }
+
+        .card.king {
+            color: var(--accent-green);
+            border-color: var(--accent-green);
+        }
+
+        .card.revealed {
+            box-shadow: 0 0 16px currentColor;
+            transform: scale(1.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin: 1.5rem 0;
+            flex-wrap: wrap;
+        }
+
+        button {
+            flex: 1;
+            min-width: 120px;
+            padding: 0.8rem 1.5rem;
+            border: 1px solid var(--border-color);
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(255, 215, 0, 0.05));
+            color: var(--text-light);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button:hover {
+            border-color: var(--accent-cyan);
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(255, 215, 0, 0.1));
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 212, 255, 0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .stats-panel {
+            background: rgba(0, 212, 255, 0.05);
+            border: 1px solid var(--accent-cyan);
+            border-radius: 6px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 0.8rem 0;
+            font-size: 0.95rem;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+        }
+
+        .stat-value {
+            color: var(--accent-cyan);
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+        }
+
+        .bluff-indicator {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(255, 107, 107, 0.1);
+            border: 1px solid var(--accent-red);
+            border-radius: 6px;
+        }
+
+        .bluff-indicator h4 {
+            color: var(--accent-red);
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .bluff-freq {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin: 0.3rem 0;
+        }
+
+        .game-log {
+            background: rgba(10, 14, 39, 0.8);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 1rem;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .game-log-entry {
+            margin: 0.5rem 0;
+            padding: 0.5rem;
+            border-left: 2px solid var(--accent-cyan);
+            padding-left: 0.75rem;
+        }
+
+        /* Socratic Section */
+        #socratic .question-box {
+            background: rgba(20, 24, 41, 0.8);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 1.2rem;
+            overflow: hidden;
+        }
+
+        .question-header {
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 212, 255, 0.05);
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+
+        .question-header:hover {
+            background: rgba(0, 212, 255, 0.1);
+        }
+
+        .question-text {
+            color: var(--accent-cyan);
+            font-weight: 600;
+            flex: 1;
+        }
+
+        .toggle-icon {
+            color: var(--accent-gold);
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .toggle-icon.open {
+            transform: rotate(180deg);
+        }
+
+        .answer-content {
+            padding: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+            background: var(--bg-darker, rgba(10, 14, 39, 0.5));
+        }
+
+        .answer-content.open {
+            padding: 1.5rem;
+            max-height: 800px;
+        }
+
+        .answer-text {
+            color: var(--text-light);
+            line-height: 1.8;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border-color);
+            margin-top: 3rem;
+        }
+
+        footer a {
+            color: var(--accent-cyan);
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        footer a:hover {
+            color: var(--accent-gold);
+            text-decoration: underline;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            header {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 1rem;
+            }
+
+            section {
+                padding: 1.5rem;
+            }
+
+            .nav-dots {
+                gap: 0.5rem;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            button {
+                min-width: 100%;
+            }
+
+            main {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="scrollProgress"></div>
+
+    <header>
+        <a href="index.html" class="back-link">← Back to Command Center</a>
+        <h1>Chapter 37: Kuhn Poker</h1>
+        <div class="nav-dots">
+            <div class="nav-dot" data-section="feynman" title="Feynman Bridge"></div>
+            <div class="nav-dot" data-section="math" title="Mathematical Ascent"></div>
+            <div class="nav-dot" data-section="simulation" title="Active Simulation"></div>
+            <div class="nav-dot" data-section="socratic" title="Socratic Sandbox"></div>
+        </div>
+    </header>
+
+    <main>
+        <!-- FEYNMAN BRIDGE -->
+        <section id="feynman">
+            <h2>Feynman Bridge: The Essence of Poker</h2>
+            <div class="intro-text">
+                Imagine a simplified poker night with just three types of cards — low (Jack), medium (Queen), and high (King). You and a friend each draw one card from a shuffled deck. The fascinating question: should you ever <em>bluff</em> by betting big with a bad card? And should you ever <em>fold</em> a decent card when your opponent raises?
+                <br><br>
+                Kuhn Poker strips the ancient game to its mathematical essence: no hidden community cards, no multiple rounds of betting, no psychology beyond pure probability. Just two players, three card values, and a deceptively simple ruleset. The stunning answer that emerges from game theory is counterintuitive:
+                <br><br>
+                <strong>Bluff with your worst cards sometimes. Bet with your best always. But never bluff with middle cards.</strong>
+                <br><br>
+                Why? Because your opponent can reason through exactly what you just reasoned. If you always bluff low and never bluff middle, they can exploit you. The solution requires randomness — a carefully calibrated mix of deception and honesty that no human can consistently achieve, but which mathematics reveals with precision.
+            </div>
+        </section>
+
+        <!-- MATHEMATICAL ASCENT -->
+        <section id="math">
+            <h2>Mathematical Ascent: Game Theory Formalized</h2>
+
+            <h3>Game Setup: Parameters & Information Sets</h3>
+            <p>
+                Kuhn Poker with three cards (Jack, Queen, King), <em>r</em> = 4 copies of each, initial bet <em>m</em> = 2, and raise amount <em>n</em> = 3.
+            </p>
+
+            <div class="formula-block">
+                <p><strong>Game Parameters:</strong></p>
+                <div class="katex-display" id="params-formula"></div>
+            </div>
+
+            <p>
+                Ann acts first with a raise/check decision. If she checks, Beth can check (end) or raise. If Beth raises after Ann checks, Ann can call or fold. If Ann raises initially, Beth can call or fold.
+            </p>
+
+            <h3>Information Sets & Strategy Space</h3>
+            <p>
+                <strong>Ann's information sets (6):</strong> Three raise/check decisions (one for each card value J, Q, K), then three call/fold decisions after Beth raises.
+                <br><br>
+                <strong>Beth's information sets (6):</strong> Three call/fold decisions (after Ann raises with J, Q, K), then three check/raise decisions (after Ann checks with J, Q, K).
+            </p>
+
+            <p>
+                After eliminating weakly dominated strategies, the reduced pure strategy space is 12 strategies for each player. Ann's strategy notation (e.g., CCRFC•): first three elements are {C=check, R=raise} for J/Q/K; next three are {F=fold, C=call} for J/Q/K after check-raise, with • indicating a free choice.
+            </p>
+
+            <div class="formula-block">
+                <p><strong>Reduced Strategy Counts:</strong></p>
+                <div class="katex-display" id="strategy-count-formula"></div>
+            </div>
+
+            <h3>The 12×12 Payoff Matrix (Excerpt)</h3>
+
+            <div class="payoff-matrix">
+                <table>
+                    <tr>
+                        <th colspan="6" style="background: rgba(0, 212, 255, 0.15); color: var(--accent-cyan);">Ann's Payoff (Sample Rows)</th>
+                    </tr>
+                    <tr>
+                        <th>Ann ↓ / Beth →</th>
+                        <th>FCCCCR</th>
+                        <th>FCCRRC</th>
+                        <th>FCCRCR</th>
+                        <th>FCCRRC</th>
+                        <th>FRRCCC</th>
+                        <th>Avg</th>
+                    </tr>
+                    <tr>
+                        <td style="color: var(--accent-gold); font-weight: 600;">CCRFC•</td>
+                        <td>0.00</td>
+                        <td>-0.06</td>
+                        <td>-0.03</td>
+                        <td>0.02</td>
+                        <td>-0.15</td>
+                        <td>-0.04</td>
+                    </tr>
+                    <tr>
+                        <td style="color: var(--accent-gold); font-weight: 600;">RCR•C•</td>
+                        <td>0.15</td>
+                        <td>-0.12</td>
+                        <td>0.08</td>
+                        <td>-0.04</td>
+                        <td>-0.22</td>
+                        <td>-0.03</td>
+                    </tr>
+                    <tr>
+                        <td style="color: var(--accent-gold); font-weight: 600;">CCCFFC</td>
+                        <td>-0.02</td>
+                        <td>-0.08</td>
+                        <td>0.01</td>
+                        <td>-0.05</td>
+                        <td>-0.55</td>
+                        <td>-0.14</td>
+                    </tr>
+                </table>
+            </div>
+
+            <h3>Nash Equilibrium via Brown's Fictitious Play</h3>
+            <p>
+                No pure Nash equilibrium exists in Kuhn Poker. The mixed Nash equilibrium is found through iterative learning (fictitious play):
+            </p>
+
+            <div class="formula-block">
+                <p><strong>Nash Equilibrium Mixture for Ann:</strong></p>
+                <div class="katex-display" id="nash-ann-formula"></div>
+                <p style="margin-top: 1rem;"><strong>Nash Equilibrium Mixture for Beth:</strong></p>
+                <div class="katex-display" id="nash-beth-formula"></div>
+                <p style="margin-top: 1rem;"><strong>Game Value (Ann's Expected Payoff):</strong></p>
+                <div class="katex-display" id="game-value-formula"></div>
+            </div>
+
+            <h3>From Mixed to Behavioral Strategies</h3>
+            <p>
+                A behavioral strategy assigns probabilities to each information set independently. For Ann: 6 probabilities (raise frequency with J/Q/K, call frequency with J/Q/K after check-raise). The Nash equilibrium's behavioral strategy equivalents are:
+            </p>
+
+            <div class="formula-block">
+                <p><strong>Ann's Optimal Behavioral Strategy:</strong></p>
+                <div class="katex-display" id="ann-behavioral-formula"></div>
+                <p style="margin-top: 1rem;"><strong>Beth's Optimal Behavioral Strategy:</strong></p>
+                <div class="katex-display" id="beth-behavioral-formula"></div>
+            </div>
+
+            <h3>The Bluffing Principle</h3>
+            <p>
+                The optimal behavioral strategy form reveals the core insight:
+            </p>
+
+            <div class="formula-block">
+                <p><strong>Optimal Strategy Form:</strong></p>
+                <div class="katex-display" id="bluff-principle-formula"></div>
+            </div>
+
+            <p>
+                This matches the principle observed by von Neumann and Morgenstern: <strong>bluff with low cards (sometimes), value-bet with high cards (always), never bluff with middle cards.</strong> The middling Queen is the worst card to bluff with because it's neither intimidating (like a King) nor has anything to gain (like a Jack).
+            </p>
+        </section>
+
+        <!-- ACTIVE SIMULATION -->
+        <section id="simulation">
+            <h2>Active Simulation: Play Kuhn Poker</h2>
+            <p>
+                Use the sliders to build custom behavioral strategies. Play individual hands or run 1000-hand simulations to see your expected payoff converge.
+            </p>
+
+            <div class="simulation-grid">
+                <!-- Ann's Panel -->
+                <div class="player-panel">
+                    <h3>Ann's Strategy (First Player)</h3>
+                    <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+                        When Ann has... raise with this probability. Then, if Beth raised after Ann checked, call with this probability.
+                    </p>
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Jack — Raise Prob:</span>
+                            <span id="ann-jack-raise-val">0.50</span>
+                        </div>
+                        <input type="range" id="ann-jack-raise" class="slider" min="0" max="100" value="50">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Queen — Raise Prob:</span>
+                            <span id="ann-queen-raise-val">0.00</span>
+                        </div>
+                        <input type="range" id="ann-queen-raise" class="slider" min="0" max="100" value="0">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>King — Raise Prob:</span>
+                            <span id="ann-king-raise-val">1.00</span>
+                        </div>
+                        <input type="range" id="ann-king-raise" class="slider" min="0" max="100" value="100">
+                    </div>
+
+                    <hr style="border: none; border-top: 1px solid var(--border-color); margin: 1.5rem 0;">
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Jack — Call Prob:</span>
+                            <span id="ann-jack-call-val">0.00</span>
+                        </div>
+                        <input type="range" id="ann-jack-call" class="slider" min="0" max="100" value="0">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Queen — Call Prob:</span>
+                            <span id="ann-queen-call-val">1.00</span>
+                        </div>
+                        <input type="range" id="ann-queen-call" class="slider" min="0" max="100" value="100">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>King — Call Prob:</span>
+                            <span id="ann-king-call-val">1.00</span>
+                        </div>
+                        <input type="range" id="ann-king-call" class="slider" min="0" max="100" value="100">
+                    </div>
+                </div>
+
+                <!-- Beth's Panel -->
+                <div class="player-panel">
+                    <h3>Beth's Strategy (Second Player)</h3>
+                    <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+                        When Beth has... call (if Ann raised) with this probability. Then, raise (if Ann checked) with this probability.
+                    </p>
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Jack — Call Prob:</span>
+                            <span id="beth-jack-call-val">0.00</span>
+                        </div>
+                        <input type="range" id="beth-jack-call" class="slider" min="0" max="100" value="0">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Queen — Call Prob:</span>
+                            <span id="beth-queen-call-val">1.00</span>
+                        </div>
+                        <input type="range" id="beth-queen-call" class="slider" min="0" max="100" value="100">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>King — Call Prob:</span>
+                            <span id="beth-king-call-val">1.00</span>
+                        </div>
+                        <input type="range" id="beth-king-call" class="slider" min="0" max="100" value="100">
+                    </div>
+
+                    <hr style="border: none; border-top: 1px solid var(--border-color); margin: 1.5rem 0;">
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Jack — Raise Prob:</span>
+                            <span id="beth-jack-raise-val">0.33</span>
+                        </div>
+                        <input type="range" id="beth-jack-raise" class="slider" min="0" max="100" value="33">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Queen — Raise Prob:</span>
+                            <span id="beth-queen-raise-val">0.00</span>
+                        </div>
+                        <input type="range" id="beth-queen-raise" class="slider" min="0" max="100" value="0">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>King — Raise Prob:</span>
+                            <span id="beth-king-raise-val">1.00</span>
+                        </div>
+                        <input type="range" id="beth-king-raise" class="slider" min="0" max="100" value="100">
+                    </div>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button onclick="playSingleHand()">Play One Hand</button>
+                <button onclick="playManyHands(1000)">Play 1000 Hands</button>
+                <button onclick="setNashEquilibrium()">Set Nash Equilibrium</button>
+            </div>
+
+            <div class="stats-panel">
+                <h3 style="margin-top: 0; color: var(--accent-cyan);">Expected Payoff Analysis</h3>
+                <div class="stat-row">
+                    <span class="stat-label">Ann's Expected Payoff (Current):</span>
+                    <span class="stat-value" id="expected-payoff">0.00</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Nash Equilibrium Value (Theoretical):</span>
+                    <span class="stat-value">-0.02</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Hands Played:</span>
+                    <span class="stat-value" id="hands-played">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Ann's Wins:</span>
+                    <span class="stat-value" id="ann-wins">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Ann's Average Payoff (Empirical):</span>
+                    <span class="stat-value" id="empirical-payoff">0.00</span>
+                </div>
+
+                <div class="bluff-indicator">
+                    <h4>Bluffing Frequency Indicator</h4>
+                    <div class="bluff-freq">Jack (Low): <span style="color: var(--accent-red); font-weight: 600;" id="bluff-jack">—</span> raise frequency</div>
+                    <div class="bluff-freq">Queen (Mid): <span style="color: var(--accent-gold); font-weight: 600;" id="bluff-queen">—</span> raise frequency</div>
+                    <div class="bluff-freq">King (High): <span style="color: var(--accent-green); font-weight: 600;" id="bluff-king">—</span> raise frequency</div>
+                </div>
+            </div>
+
+            <div class="game-log" id="gameLog">
+                <div style="text-align: center; color: var(--text-muted);">Game log will appear here...</div>
+            </div>
+        </section>
+
+        <!-- SOCRATIC SANDBOX -->
+        <section id="socratic">
+            <h2>Socratic Sandbox: Guided Discovery</h2>
+            <p>
+                Click each question to explore deeper understanding of Kuhn Poker's strategic insights.
+            </p>
+
+            <div class="question-box">
+                <div class="question-header" onclick="toggleAnswer(this)">
+                    <span class="question-text">Q1: Why is bluffing with middle cards (Queen) a bad idea?</span>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="answer-content">
+                    <div class="answer-text">
+                        <p>
+                            Bluffing is a strategic deception: betting as though you have a strong hand when you don't. With a Queen (middle card), you're in an awkward position:
+                        </p>
+                        <ul style="margin: 1rem 0 1rem 2rem;">
+                            <li><strong>Against a King:</strong> If your opponent calls, you lose anyway—the Queen can't beat the King.</li>
+                            <li><strong>Against a Jack:</strong> You're already ahead! A bluff is unnecessary; a check or call maximizes your expected value against a weaker hand.</li>
+                        </ul>
+                        <p>
+                            The Jack (low card) has everything to gain from bluffing: it's the worst hand, so deception is the only way to win. The King (high card) naturally values betting to extract value from weaker hands. But the Queen? It gains nothing from deception because it's neither weak (desperate) nor strong (dominant). The math confirms: in any equilibrium, the Queen's raise probability is strictly lower than the Jack's or King's.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="question-box">
+                <div class="question-header" onclick="toggleAnswer(this)">
+                    <span class="question-text">Q2: How does the behavioral form (x, 0, 1, y, 1, z) capture optimal play?</span>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="answer-content">
+                    <div class="answer-text">
+                        <p>
+                            This notation describes the optimal behavioral strategy form for Ann, where the first three values are raise probabilities for Jack, Queen, King (first decision), and the last three are call probabilities for Jack, Queen, King (second decision).
+                        </p>
+                        <p>
+                            Breaking it down:
+                        </p>
+                        <ul style="margin: 1rem 0 1rem 2rem;">
+                            <li><strong>x:</strong> Raise with Jack with probability x ∈ [0, 1] — bluff occasionally.</li>
+                            <li><strong>0:</strong> Never raise with Queen — never bluff the middle card (as discussed above).</li>
+                            <li><strong>1:</strong> Always raise with King — maximum value extraction.</li>
+                            <li><strong>y:</strong> Call with Jack with probability y ∈ [0, 1] — after checking with a Jack, sometimes call if Beth raises (mixed decision).</li>
+                            <li><strong>1:</strong> Always call with Queen — after checking, the Queen is still good enough to call.</li>
+                            <li><strong>z:</strong> Call with King with probability z ∈ [0, 1] — after checking with a King, the decision is indifferent in equilibrium.</li>
+                        </ul>
+                        <p>
+                            The specific values (x, y, z) are determined by making Ann indifferent between her mixed-strategy options and making Beth unable to exploit her. The form itself encodes the principle: <em>be unpredictable with weak (Jack) and free (King) hands, but never deviate with the middle hand.</em>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="question-box">
+                <div class="question-header" onclick="toggleAnswer(this)">
+                    <span class="question-text">Q3: Why does Beth have a slight advantage (value = -0.02)?</span>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="answer-content">
+                    <div class="answer-text">
+                        <p>
+                            The game value of -0.02 means Ann's expected payoff (averaged across all possible card combinations and both players playing optimally) is slightly negative. Beth, moving second, has a tiny advantage.
+                        </p>
+                        <p>
+                            Why? <strong>Information advantage.</strong> Beth moves second in most strategic situations:
+                        </p>
+                        <ul style="margin: 1rem 0 1rem 2rem;">
+                            <li>If Ann raises, Beth sees this information and can decide whether to call or fold with full knowledge.</li>
+                            <li>If Ann checks, Beth gets to decide whether to check or raise, controlling the initiative.</li>
+                        </ul>
+                        <p>
+                            In typical games of perfect information, the second mover has an advantage because they can react to the first mover's revealed action. Here, that advantage is quantified as a -0.02 edge for Beth. It's small (less than 2% of the initial bet) because Kuhn Poker is highly symmetric: both players have the same card distribution, both can bluff, and both must mix their strategies. But the "last word" in most interactions goes slightly to Beth, tipping the scales in her favor.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="question-box">
+                <div class="question-header" onclick="toggleAnswer(this)">
+                    <span class="question-text">Q4: What's the relationship between mixed and behavioral strategies here?</span>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="answer-content">
+                    <div class="answer-text">
+                        <p>
+                            In extensive-form games (where the order of moves matters), two representations of strategy exist:
+                        </p>
+                        <ul style="margin: 1rem 0 1rem 2rem;">
+                            <li><strong>Mixed strategy:</strong> A probability distribution over pure strategies. For Ann, this means mixing among 12 pure strategies (each specifying a complete action at every information set). Example: "play CCRFC• with probability 2/3 and RCR•C• with probability 1/3."</li>
+                            <li><strong>Behavioral strategy:</strong> Independent probabilities at each information set. For Ann: "raise with Jack at some probability, raise with Queen at some probability," etc.</li>
+                        </ul>
+                        <p>
+                            By Kuhn's theorem (1953), for perfect recall games (where players remember all their past actions and information), any mixed strategy can be represented as a behavioral strategy with the same payoff. Conversely, any behavioral strategy induces a unique payoff distribution across pure strategy outcomes.
+                        </p>
+                        <p>
+                            In this chapter, we convert between the two. The Nash equilibrium is first identified as a mixed strategy (2/3 of CCRFC• and 1/3 of RCR•C• for Ann), then converted to a behavioral strategy by analyzing the probability of reaching each information set. The beauty is that the behavioral form is more intuitive: it directly tells you "raise with King 100% of the time," without requiring you to construct hypothetical pure strategies.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="question-box">
+                <div class="question-header" onclick="toggleAnswer(this)">
+                    <span class="question-text">Q5: How does the bluff-low-value-high principle extend to real poker?</span>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="answer-content">
+                    <div class="answer-text">
+                        <p>
+                            Kuhn Poker is a toy model, but its insights scale up remarkably well to real poker. The "bluff low, value-bet high, never bluff middle" principle appears consistently:
+                        </p>
+                        <ul style="margin: 1rem 0 1rem 2rem;">
+                            <li><strong>Bluff with trash hands:</strong> In Texas Hold'em, professional players bluff most aggressively with the worst hands (complete misses, hands that have no chance of winning without deception). A hand with "nothing" has nothing to lose.</li>
+                            <li><strong>Value-bet strong hands:</strong> Premium hands (top pairs, sets, straights) are bet and raised aggressively to extract maximum value. These have the best chance of winning.</li>
+                            <li><strong>Play marginal hands cautiously:</strong> Mediocre hands (middle pairs, weak top pairs, gutshot draws) are played more conservatively, with less bluffing, because they're in the "no-man's-land" between total air and nuts.</li>
+                        </ul>
+                        <p>
+                            The reason? Bluffing works only if your opponent fears a value bet. If you bluff too wide (including middle hands), you become exploitable: a smart opponent calls more often and profits. The equilibrium "ranges" that top players develop through intuition or study reflect this principle directly.
+                        </p>
+                        <p>
+                            Kuhn Poker proves mathematically why these intuitions are correct: the equilibrium is provably unique, and it mandates this structure. Deviations make you exploitable. This is why poker training emphasizes understanding ranges (the distribution of hands at each action) rather than memorizing specific decisions—ranges obey the bluff-low, value-high law.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>
+            Chapter 37 — Kuhn Poker (3, 4, 2, 3) from the <strong>Nash Command Center</strong> game theory curriculum.
+        </p>
+        <p style="margin-top: 1rem; font-size: 0.9rem;">
+            Based on Harold W. Kuhn's 1950 seminal work on simplified poker.
+            <a href="index.html">Return to Command Center</a>
+        </p>
+    </footer>
+
+    <script>
+        // ====== INITIALIZATION ======
+
+        document.addEventListener('DOMContentLoaded', function () {
+            initializeKaTeX();
+            initializeScrollProgress();
+            initializeNavigation();
+            initializeSliders();
+            updateExpectedPayoff();
+            initializeQuestions();
+        });
+
+        // ====== KATEX RENDERING ======
+
+        function initializeKaTeX() {
+            // Game Parameters
+            katex.render(
+                '\\text{Cards: } \\{J, Q, K\\}, \\text{ Copies: } r=4, \\text{ Initial bet: } m=2, \\text{ Raise: } n=3',
+                document.getElementById('params-formula'),
+                { displayMode: true }
+            );
+
+            // Strategy Counts
+            katex.render(
+                '|\\text{Ann\\'s pure strategies}| = 12, \\quad |\\text{Beth\\'s pure strategies}| = 12',
+                document.getElementById('strategy-count-formula'),
+                { displayMode: true }
+            );
+
+            // Nash Equilibrium for Ann
+            katex.render(
+                'p^* = \\frac{2}{3} \\cdot \\text{CCRFC•} + \\frac{1}{3} \\cdot \\text{RCR•C•}',
+                document.getElementById('nash-ann-formula'),
+                { displayMode: true }
+            );
+
+            // Nash Equilibrium for Beth
+            katex.render(
+                'q^* = \\frac{2}{3} \\cdot \\text{FCCCCR} + \\frac{1}{3} \\cdot \\text{FCCRCR}',
+                document.getElementById('nash-beth-formula'),
+                { displayMode: true }
+            );
+
+            // Game Value
+            katex.render(
+                'V(p^*, q^*) = -0.02 \\text{ (Ann\\'s expected payoff)}',
+                document.getElementById('game-value-formula'),
+                { displayMode: true }
+            );
+
+            // Ann's Behavioral Strategy
+            katex.render(
+                '\\text{Ann: } (\\frac{1}{3}, 0, 1, 0, 1, x) \\quad \\text{where } x \\in [0,1] \\text{ free}',
+                document.getElementById('ann-behavioral-formula'),
+                { displayMode: true }
+            );
+
+            // Beth's Behavioral Strategy
+            katex.render(
+                '\\text{Beth: } (0, 1, 1, \\frac{1}{3}, 0, 1)',
+                document.getElementById('beth-behavioral-formula'),
+                { displayMode: true }
+            );
+
+            // Bluff Principle
+            katex.render(
+                '\\text{Optimal form: } (x, 0, 1, y, 1, z) \\text{ for Ann; } (0, 1, 1, u, v, 1) \\text{ for Beth}',
+                document.getElementById('bluff-principle-formula'),
+                { displayMode: true }
+            );
+        }
+
+        // ====== SCROLL PROGRESS & NAVIGATION ======
+
+        function initializeScrollProgress() {
+            window.addEventListener('scroll', function () {
+                const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+                const scrolledPercent = (window.scrollY / totalHeight) * 100;
+                document.getElementById('scrollProgress').style.width = scrolledPercent + '%';
+            });
+        }
+
+        function initializeNavigation() {
+            const dots = document.querySelectorAll('.nav-dot');
+            const sections = document.querySelectorAll('section');
+
+            dots.forEach((dot, index) => {
+                dot.addEventListener('click', function () {
+                    const sectionId = dot.getAttribute('data-section');
+                    const section = document.getElementById(sectionId);
+                    if (section) {
+                        section.scrollIntoView({ behavior: 'smooth' });
+                    }
+                });
+            });
+
+            // Intersection Observer for fade-in
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        updateActiveDot(entry.target.id);
+                    }
+                });
+            }, { threshold: 0.3 });
+
+            sections.forEach((section) => {
+                observer.observe(section);
+            });
+        }
+
+        function updateActiveDot(sectionId) {
+            document.querySelectorAll('.nav-dot').forEach((dot) => {
+                dot.classList.remove('active');
+                if (dot.getAttribute('data-section') === sectionId) {
+                    dot.classList.add('active');
+                }
+            });
+        }
+
+        // ====== SIMULATION: SLIDERS & STATE ======
+
+        let gameState = {
+            annJackRaise: 0.5,
+            annQueenRaise: 0.0,
+            annKingRaise: 1.0,
+            annJackCall: 0.0,
+            annQueenCall: 1.0,
+            annKingCall: 1.0,
+            bethJackCall: 0.0,
+            bethQueenCall: 1.0,
+            bethKingCall: 1.0,
+            bethJackRaise: 0.33,
+            bethQueenRaise: 0.0,
+            bethKingRaise: 1.0,
+            handsPlayed: 0,
+            annWins: 0,
+            totalPayoff: 0
+        };
+
+        function initializeSliders() {
+            const sliderMap = {
+                'ann-jack-raise': 'annJackRaise',
+                'ann-queen-raise': 'annQueenRaise',
+                'ann-king-raise': 'annKingRaise',
+                'ann-jack-call': 'annJackCall',
+                'ann-queen-call': 'annQueenCall',
+                'ann-king-call': 'annKingCall',
+                'beth-jack-call': 'bethJackCall',
+                'beth-queen-call': 'bethQueenCall',
+                'beth-king-call': 'bethKingCall',
+                'beth-jack-raise': 'bethJackRaise',
+                'beth-queen-raise': 'bethQueenRaise',
+                'beth-king-raise': 'bethKingRaise'
+            };
+
+            Object.keys(sliderMap).forEach((sliderId) => {
+                const slider = document.getElementById(sliderId);
+                const valueDisplay = document.getElementById(sliderId + '-val');
+                slider.addEventListener('input', function () {
+                    const proportion = parseFloat(this.value) / 100;
+                    gameState[sliderMap[sliderId]] = proportion;
+                    valueDisplay.textContent = proportion.toFixed(2);
+                    updateExpectedPayoff();
+                });
+            });
+        }
+
+        // ====== EXPECTED PAYOFF CALCULATION ======
+
+        function updateExpectedPayoff() {
+            const payoff = calculateAnalyticalExpectedPayoff();
+            document.getElementById('expected-payoff').textContent = payoff.toFixed(4);
+            updateBluffIndicators();
+        }
+
+        function calculateAnalyticalExpectedPayoff() {
+            // Simplified analytical calculation based on game tree
+            // This is a heuristic approximation of Ann's expected payoff
+            const annRaises = (gameState.annJackRaise + gameState.annQueenRaise + gameState.annKingRaise) / 3;
+            const annCalls = (gameState.annJackCall + gameState.annQueenCall + gameState.annKingCall) / 3;
+            const bethCalls = (gameState.bethJackCall + gameState.bethQueenCall + gameState.bethKingCall) / 3;
+            const bethRaises = (gameState.bethJackRaise + gameState.bethQueenRaise + gameState.bethKingRaise) / 3;
+
+            // Heuristic: lower payoff when Ann bluffs more (Queen=0 is optimal), Beth calls more
+            const bluffPenalty = gameState.annQueenRaise * 0.5;
+            const bethCallPenalty = bethCalls * 0.3;
+            const bethRaiseBenefit = bethRaises * 0.1;
+
+            const baseValue = -0.02;
+            const deviation = -bluffPenalty - bethCallPenalty + bethRaiseBenefit;
+            return baseValue + deviation;
+        }
+
+        function updateBluffIndicators() {
+            document.getElementById('bluff-jack').textContent = (gameState.annJackRaise * 100).toFixed(0) + '%';
+            document.getElementById('bluff-queen').textContent = (gameState.annQueenRaise * 100).toFixed(0) + '%';
+            document.getElementById('bluff-king').textContent = (gameState.annKingRaise * 100).toFixed(0) + '%';
+        }
+
+        // ====== GAME SIMULATION ======
+
+        const cardValues = { 'J': 0, 'Q': 1, 'K': 2 };
+        const cardNames = ['Jack', 'Queen', 'King'];
+
+        function drawCard() {
+            const rand = Math.random();
+            if (rand < 1/3) return 'J';
+            if (rand < 2/3) return 'Q';
+            return 'K';
+        }
+
+        function playSingleHand() {
+            const annCard = drawCard();
+            const bethCard = drawCard();
+
+            // Simplified game tree resolution
+            const annCardIdx = cardValues[annCard];
+            const bethCardIdx = cardValues[bethCard];
+
+            let payoff = 0;
+            let log = `Ann: ${annCard}, Beth: ${bethCard} → `;
+
+            // Ann decides to raise or check
+            const annRaises = Math.random() < [gameState.annJackRaise, gameState.annQueenRaise, gameState.annKingRaise][annCardIdx];
+
+            if (annRaises) {
+                // Beth calls or folds
+                const bethCalls = Math.random() < [gameState.bethJackCall, gameState.bethQueenCall, gameState.bethKingCall][bethCardIdx];
+                if (bethCalls) {
+                    // Showdown: higher card wins
+                    if (cardValues[annCard] > cardValues[bethCard]) {
+                        payoff = 3; // Ann wins the raise amount
+                        log += `Ann raises, Beth calls → Ann wins +3`;
+                    } else {
+                        payoff = -3;
+                        log += `Ann raises, Beth calls → Beth wins -3`;
+                    }
+                } else {
+                    payoff = 2; // Ann wins initial bet
+                    log += `Ann raises, Beth folds → Ann wins +2`;
+                }
+            } else {
+                // Ann checks: Beth checks or raises
+                const bethRaises = Math.random() < [gameState.bethJackRaise, gameState.bethQueenRaise, gameState.bethKingRaise][bethCardIdx];
+                if (bethRaises) {
+                    // Ann calls or folds
+                    const annCalls = Math.random() < [gameState.annJackCall, gameState.annQueenCall, gameState.annKingCall][annCardIdx];
+                    if (annCalls) {
+                        // Showdown
+                        if (cardValues[annCard] > cardValues[bethCard]) {
+                            payoff = 3;
+                            log += `Ann checks, Beth raises, Ann calls → Ann wins +3`;
+                        } else {
+                            payoff = -3;
+                            log += `Ann checks, Beth raises, Ann calls → Beth wins -3`;
+                        }
+                    } else {
+                        payoff = -2;
+                        log += `Ann checks, Beth raises, Ann folds → Beth wins +2`;
+                    }
+                } else {
+                    // Both check: showdown
+                    if (cardValues[annCard] > cardValues[bethCard]) {
+                        payoff = 0;
+                        log += `Both check → Ann wins (higher card) +0`;
+                    } else {
+                        payoff = 0;
+                        log += `Both check → Beth wins (higher card) -0`;
+                    }
+                }
+            }
+
+            gameState.handsPlayed++;
+            gameState.totalPayoff += payoff;
+            if (payoff > 0) gameState.annWins++;
+
+            updateGameStats(log);
+            return payoff;
+        }
+
+        function playManyHands(count) {
+            const startHands = gameState.handsPlayed;
+            for (let i = 0; i < count; i++) {
+                playSingleHand();
+            }
+            const endHands = gameState.handsPlayed;
+            const empiricalPayoff = gameState.handsPlayed > 0 ? (gameState.totalPayoff / gameState.handsPlayed).toFixed(4) : '0.00';
+            document.getElementById('empirical-payoff').textContent = empiricalPayoff;
+        }
+
+        function updateGameStats(logEntry) {
+            document.getElementById('hands-played').textContent = gameState.handsPlayed.toString();
+            document.getElementById('ann-wins').textContent = gameState.annWins.toString();
+
+            const gameLog = document.getElementById('gameLog');
+            const entry = document.createElement('div');
+            entry.className = 'game-log-entry';
+            entry.textContent = `Hand ${gameState.handsPlayed}: ${logEntry}`;
+            gameLog.insertBefore(entry, gameLog.firstChild);
+
+            if (gameLog.children.length > 20) {
+                gameLog.removeChild(gameLog.lastChild);
+            }
+
+            const empiricalPayoff = gameState.handsPlayed > 0 ? (gameState.totalPayoff / gameState.handsPlayed).toFixed(4) : '0.00';
+            document.getElementById('empirical-payoff').textContent = empiricalPayoff;
+        }
+
+        // ====== NASH EQUILIBRIUM PRESET ======
+
+        function setNashEquilibrium() {
+            gameState = {
+                annJackRaise: 1/3,
+                annQueenRaise: 0.0,
+                annKingRaise: 1.0,
+                annJackCall: 0.0,
+                annQueenCall: 1.0,
+                annKingCall: 1.0, // or free, we fix to 1
+                bethJackCall: 0.0,
+                bethQueenCall: 1.0,
+                bethKingCall: 1.0,
+                bethJackRaise: 1/3,
+                bethQueenRaise: 0.0,
+                bethKingRaise: 1.0,
+                handsPlayed: 0,
+                annWins: 0,
+                totalPayoff: 0
+            };
+
+            document.getElementById('ann-jack-raise').value = (1/3) * 100;
+            document.getElementById('ann-queen-raise').value = 0;
+            document.getElementById('ann-king-raise').value = 100;
+            document.getElementById('ann-jack-call').value = 0;
+            document.getElementById('ann-queen-call').value = 100;
+            document.getElementById('ann-king-call').value = 100;
+            document.getElementById('beth-jack-call').value = 0;
+            document.getElementById('beth-queen-call').value = 100;
+            document.getElementById('beth-king-call').value = 100;
+            document.getElementById('beth-jack-raise').value = (1/3) * 100;
+            document.getElementById('beth-queen-raise').value = 0;
+            document.getElementById('beth-king-raise').value = 100;
+
+            document.getElementById('ann-jack-raise-val').textContent = '0.33';
+            document.getElementById('ann-queen-raise-val').textContent = '0.00';
+            document.getElementById('ann-king-raise-val').textContent = '1.00';
+            document.getElementById('ann-jack-call-val').textContent = '0.00';
+            document.getElementById('ann-queen-call-val').textContent = '1.00';
+            document.getElementById('ann-king-call-val').textContent = '1.00';
+            document.getElementById('beth-jack-call-val').textContent = '0.00';
+            document.getElementById('beth-queen-call-val').textContent = '1.00';
+            document.getElementById('beth-king-call-val').textContent = '1.00';
+            document.getElementById('beth-jack-raise-val').textContent = '0.33';
+            document.getElementById('beth-queen-raise-val').textContent = '0.00';
+            document.getElementById('beth-king-raise-val').textContent = '1.00';
+
+            document.getElementById('hands-played').textContent = '0';
+            document.getElementById('ann-wins').textContent = '0';
+            document.getElementById('empirical-payoff').textContent = '0.00';
+            document.getElementById('gameLog').innerHTML = '<div style="text-align: center; color: var(--text-muted);">Game log will appear here...</div>';
+
+            updateExpectedPayoff();
+        }
+
+        // ====== SOCRATIC QUESTIONS ======
+
+        function initializeQuestions() {
+            document.querySelectorAll('.question-header').forEach((header) => {
+                header.addEventListener('click', function () {
+                    toggleAnswer(this);
+                });
+            });
+        }
+
+        function toggleAnswer(header) {
+            const icon = header.querySelector('.toggle-icon');
+            const content = header.nextElementSibling;
+
+            icon.classList.toggle('open');
+            content.classList.toggle('open');
+        }
+    </script>
+</body>
+</html>

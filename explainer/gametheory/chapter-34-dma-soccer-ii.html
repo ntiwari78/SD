@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 34 — DMA Soccer II | Nash Command Center</title>
+
+    <!-- KaTeX for mathematical rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0a0e27;
+            --bg-lighter: #141829;
+            --bg-panel: #1a1f3a;
+            --text-light: #e0e8ff;
+            --text-muted: #a0afd0;
+            --accent-cyan: #00d4ff;
+            --accent-gold: #ffd700;
+            --accent-red: #ff6b6b;
+            --accent-green: #51cf66;
+            --border-color: #2d3561;
+            --shadow: 0 8px 32px rgba(0, 212, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        /* Scroll Progress Bar */
+        #scrollProgress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-gold));
+            width: 0%;
+            z-index: 1000;
+            transition: width 0.1s ease-out;
+        }
+
+        /* Header & Navigation */
+        header {
+            position: sticky;
+            top: 3px;
+            background: linear-gradient(180deg, var(--bg-dark) 0%, rgba(10, 14, 39, 0.95) 100%);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 999;
+            padding: 1.5rem 2rem;
+            box-shadow: var(--shadow);
+        }
+
+        header h1 {
+            font-size: 1.8rem;
+            color: var(--accent-cyan);
+            margin-bottom: 1rem;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .back-link {
+            display: inline-block;
+            color: var(--accent-cyan);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+            border-bottom: 1px solid transparent;
+        }
+
+        .back-link:hover {
+            border-bottom-color: var(--accent-cyan);
+            transform: translateX(-4px);
+        }
+
+        nav.section-nav {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .nav-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: var(--border-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid var(--border-color);
+        }
+
+        .nav-dot.active {
+            background-color: var(--accent-cyan);
+            box-shadow: 0 0 15px var(--accent-cyan);
+            transform: scale(1.3);
+        }
+
+        .nav-dot:hover {
+            border-color: var(--accent-cyan);
+        }
+
+        /* Main Content */
+        main {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        section {
+            margin-bottom: 4rem;
+            padding: 2.5rem;
+            background: linear-gradient(135deg, var(--bg-panel) 0%, rgba(26, 31, 58, 0.5) 100%);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            opacity: 0;
+            animation: fadeInUp 0.8s ease forwards;
+            box-shadow: var(--shadow);
+        }
+
+        section h2 {
+            font-size: 2rem;
+            color: var(--accent-gold);
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--accent-cyan);
+            padding-bottom: 0.75rem;
+        }
+
+        section p {
+            margin-bottom: 1rem;
+            color: var(--text-light);
+        }
+
+        section p strong {
+            color: var(--accent-cyan);
+        }
+
+        .math-block {
+            background-color: rgba(0, 212, 255, 0.05);
+            border-left: 4px solid var(--accent-cyan);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        .math-block .katex-display {
+            margin: 0;
+        }
+
+        /* Simulation Section */
+        .sim-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .field-container {
+            background-color: #0d5c4d;
+            border: 2px solid var(--accent-green);
+            border-radius: 8px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .soccer-field {
+            width: 100%;
+            max-width: 300px;
+            aspect-ratio: 2 / 3;
+            background: linear-gradient(90deg, #0d5c4d 49%, #0d5c4d 51%, #0d5c4d 51%);
+            border: 3px solid var(--accent-green);
+            border-radius: 4px;
+            position: relative;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .soccer-field::before {
+            content: '';
+            position: absolute;
+            width: 30%;
+            height: 40%;
+            border: 2px solid var(--accent-green);
+            top: 30%;
+            right: 10%;
+        }
+
+        .soccer-field::after {
+            content: '';
+            position: absolute;
+            width: 30%;
+            height: 40%;
+            border: 2px solid var(--accent-green);
+            top: 30%;
+            left: 10%;
+        }
+
+        .goal-line {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background-color: var(--accent-green);
+            top: 50%;
+        }
+
+        .center-circle {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--accent-green);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .third-label {
+            position: absolute;
+            font-size: 0.75rem;
+            color: var(--accent-green);
+            opacity: 0.6;
+            font-weight: bold;
+        }
+
+        .third-1 { top: 5%; left: 5%; }
+        .third-2 { top: 5%; left: 45%; }
+        .third-3 { top: 5%; right: 5%; }
+
+        .ball {
+            width: 12px;
+            height: 12px;
+            background-color: var(--accent-gold);
+            border-radius: 50%;
+            position: absolute;
+            box-shadow: 0 0 10px var(--accent-gold);
+        }
+
+        .sim-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .control-group label {
+            font-weight: bold;
+            color: var(--accent-gold);
+            font-size: 0.95rem;
+        }
+
+        .control-group .info-text {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .direction-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 0.5rem;
+        }
+
+        button {
+            padding: 0.75rem 1.25rem;
+            background: linear-gradient(135deg, var(--accent-cyan), #0099cc);
+            color: var(--bg-dark);
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 212, 255, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.selected {
+            background: linear-gradient(135deg, var(--accent-gold), #ffaa00);
+            color: var(--bg-dark);
+            box-shadow: 0 0 20px var(--accent-gold);
+        }
+
+        button.danger {
+            background: linear-gradient(135deg, var(--accent-red), #cc0000);
+        }
+
+        .mode-toggle {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .mode-toggle button {
+            flex: 1;
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+        }
+
+        .score-display {
+            background-color: rgba(0, 212, 255, 0.1);
+            border: 2px solid var(--accent-cyan);
+            border-radius: 4px;
+            padding: 1rem;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .score-display .label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .game-state {
+            background-color: rgba(255, 215, 0, 0.05);
+            border: 1px solid var(--accent-gold);
+            border-radius: 4px;
+            padding: 1rem;
+            font-size: 0.95rem;
+            margin-top: 1rem;
+        }
+
+        .sim-results {
+            background-color: rgba(81, 207, 102, 0.05);
+            border: 2px solid var(--accent-green);
+            border-radius: 4px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .sim-results h4 {
+            color: var(--accent-green);
+            margin-bottom: 1rem;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .result-item {
+            background-color: var(--bg-panel);
+            padding: 0.75rem;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .result-item .value {
+            font-size: 1.5rem;
+            color: var(--accent-green);
+            font-weight: bold;
+        }
+
+        .result-item .label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.3rem;
+        }
+
+        /* Socratic Section */
+        .question-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .question-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+            padding: 1rem;
+            background-color: rgba(0, 212, 255, 0.05);
+            border-left: 4px solid var(--accent-cyan);
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .question-header:hover {
+            background-color: rgba(0, 212, 255, 0.1);
+            transform: translateX(4px);
+        }
+
+        .question-number {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            background-color: var(--accent-cyan);
+            color: var(--bg-dark);
+            border-radius: 50%;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .question-text {
+            flex: 1;
+            font-weight: 600;
+            color: var(--accent-gold);
+        }
+
+        .toggle-icon {
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+            color: var(--accent-cyan);
+        }
+
+        .toggle-icon.open {
+            transform: rotate(180deg);
+        }
+
+        .question-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            background-color: rgba(26, 31, 58, 0.5);
+            margin-top: 0;
+        }
+
+        .question-answer.open {
+            max-height: 1000px;
+            margin-top: 0.5rem;
+            padding: 1rem;
+            border-radius: 4px;
+        }
+
+        .question-answer p {
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .question-answer p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            main {
+                padding: 1rem;
+            }
+
+            section {
+                padding: 1.5rem;
+                margin-bottom: 2rem;
+            }
+
+            section h2 {
+                font-size: 1.5rem;
+            }
+
+            .sim-container {
+                grid-template-columns: 1fr;
+            }
+
+            header h1 {
+                font-size: 1.4rem;
+            }
+
+            nav.section-nav {
+                gap: 0.75rem;
+            }
+
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* KaTeX adjustments */
+        .katex {
+            font-size: 1.1em;
+        }
+
+        .katex-display {
+            padding: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="scrollProgress"></div>
+
+    <header>
+        <a href="index.html" class="back-link">← Back to Command Center</a>
+        <h1>Chapter 34 — DMA Soccer II</h1>
+        <p style="color: var(--text-muted); margin: 0; font-size: 0.95rem;">Multi-Round Simultaneous Games with Imperfect Information</p>
+        <nav class="section-nav">
+            <div class="nav-dot" data-section="0" title="Feynman Bridge"></div>
+            <div class="nav-dot" data-section="1" title="Mathematical Ascent"></div>
+            <div class="nav-dot" data-section="2" title="Active Simulation"></div>
+            <div class="nav-dot" data-section="3" title="Socratic Sandbox"></div>
+        </nav>
+    </header>
+
+    <main>
+        <!-- SECTION 1: Feynman Bridge -->
+        <section id="feynman">
+            <h2>Feynman Bridge: Playing Soccer With a Blindfold</h2>
+
+            <p>Imagine a championship soccer shootout, but with a twist: after each round, you get <strong>blindfolded</strong> before the next round starts. You can't remember whether the goalkeeper dove left or right. You can't recall your previous kicks. You and your opponent are playing chess moves that neither of you can see from the previous turn.</p>
+
+            <p>That's <strong>DMA Soccer II</strong>—a multi-round penalty kick game where information sets matter more than pure strategy.</p>
+
+            <h3 style="color: var(--accent-cyan); margin-top: 1.5rem; margin-bottom: 1rem; font-size: 1.3rem;">The Setup</h3>
+
+            <p>There are two players: the <strong>Kicker</strong> and the <strong>Goalkeeper</strong>. Each round (called a "third"), they play simultaneously:</p>
+
+            <ul style="margin-left: 1.5rem; margin-bottom: 1rem;">
+                <li>Kicker chooses: <strong>Left, Center, or Right</strong></li>
+                <li>Goalkeeper chooses: <strong>Left or Right</strong></li>
+                <li>If they match, it's a <strong>save</strong> (no goal)</li>
+                <li>If they don't match, it's a <strong>goal</strong></li>
+            </ul>
+
+            <p>The game typically has <strong>three thirds</strong> (like three penalty kicks in a shootout), and players accumulate goals across all thirds.</p>
+
+            <h3 style="color: var(--accent-cyan); margin-top: 1.5rem; margin-bottom: 1rem; font-size: 1.3rem;">The Blindfold: Information Sets</h3>
+
+            <p>Here's where it gets interesting. After each third, two things can happen:</p>
+
+            <ul style="margin-left: 1.5rem; margin-bottom: 1rem;">
+                <li><strong>"Full Information" mode:</strong> Both players remember exactly what happened. The Kicker knows the Goalkeeper saved or not. The Goalkeeper knows where the Kicker aimed. Everyone can adapt.</li>
+                <li><strong>"No Information" mode (the blindfold):</strong> Neither player knows what happened. They can't change strategy based on past outcomes. This creates an <strong>information set</strong>—a set of situations that look identical to the player, even though they're actually different.</li>
+            </ul>
+
+            <p>In game theory, an <strong>information set</strong> is like a poker player not seeing other players' cards—you must choose an action without knowing which "version" of the game you're actually in. In DMA Soccer with no information, players treat all thirds identically because they can't distinguish them.</p>
+
+            <h3 style="color: var(--accent-cyan); margin-top: 1.5rem; margin-bottom: 1rem; font-size: 1.3rem;">Resource Allocation: The (2,2) vs (3,1) Puzzle</h3>
+
+            <p>Suppose you're the Kicker and you have 4 attempts to distribute across 3 thirds. You could:</p>
+
+            <ul style="margin-left: 1.5rem; margin-bottom: 1rem;">
+                <li><strong>(2,2,0):</strong> Play hard in thirds 1 and 2, skip third 3 entirely</li>
+                <li><strong>(2,1,1):</strong> Spread evenly-ish</li>
+                <li><strong>(3,1,0):</strong> Go all-in on the first third, hope for a big lead</li>
+            </ul>
+
+            <p>This chapter reveals that how you split your resources matters differently depending on whether you know what happened before. With full information, you can react to the score. Without information, you're locked in to your initial commitment.</p>
+
+            <h3 style="color: var(--accent-cyan); margin-top: 1.5rem; margin-bottom: 1rem; font-size: 1.3rem;">Why This Matters</h3>
+
+            <p>DMA Soccer II teaches us that <strong>information is both a blessing and sometimes irrelevant</strong>. In some games, knowing the past helps you (classical game theory). In others, the structure of the game is so symmetric that information doesn't change the outcome. This mirrors real sports strategy: when should you "show your hand" early, and when should you keep your strategy hidden?</p>
+        </section>
+
+        <!-- SECTION 2: Mathematical Ascent -->
+        <section id="math">
+            <h2>Mathematical Ascent: Equilibrium in Multi-Round Games</h2>
+
+            <p>We'll build the mathematics of DMA Soccer II from the ground up: single-round payoff matrices, mixed strategy equilibria, backward induction, and expected value calculations.</p>
+
+            <h3 style="color: var(--accent-cyan); margin-top: 1.5rem; margin-bottom: 1rem; font-size: 1.3rem;">Single-Round Payoff Matrix</h3>
+
+            <p>In one third of play, the Kicker's payoff is the probability of scoring. The Goalkeeper's payoff is the probability of saving (= 1 − Kicker's payoff in symmetric zero-sum form).</p>
+
+            <div class="math-block">
+                <div id="matrix1"></div>
+            </div>
+
+            <p style="margin-top: 1rem;">In this matrix:</p>
+            <ul style="margin-left: 1.5rem; margin-bottom: 1rem;">
+                <li><strong>Rows:</strong> Kicker's pure strategies (L, C, R)</li>
+                <li><strong>Columns:</strong> Goalkeeper's pure strategies (L, R)</li>
+                <li><strong>Entries:</strong> Kicker's payoff (1 if goal, 0 if saved)</li>
+                <li>Goalkeeper gets (1 − entry) as payoff</li>
+            </ul>
+
+            <p>The Goalkeeper can only defend two zones; the Kicker can attack three. This asymmetry is crucial.</p>
+
+            <h3 style="color: var(--accent-cyan); margin-top: 1.5rem; margin-bottom: 1rem; font-size: 1.3rem;">Mixed Strategy Nash Equilibrium (Single Round)</h3>
+
+            <p>Both players must use mixed strategies in a symmetric equilibrium. Let:</p>
+
+            <div class="math-block">
+                <div id="mixture1"></div>
+            </div>
+
+            <p style="margin-top: 1rem;">The Kicker mixes: L with probability <em>p</em>, C with probability <em>q</em>, and R with probability (1−<em>p</em>−<em>q</em>).</p>
+
+            <p>The Goalkeeper mixes: L with probability <em>σ</em> and R with probability (1−<em>σ</em>).</p>
+
+            <p>At equilibrium, each player is indifferent between the actions in their support. For a symmetric soccer game where Center is always a goal:</p>
+
+            <div class="math-block">
+                <div id="mixture2"></div>
+            </div>
+
+            <p style="margin-top: 1rem;">Solving these indifference conditions yields the equilibrium probabilities and an expected payoff for the Kicker of <strong>1/2</strong> per round.</p>
+
+            <h3 style="color: var(--accent-cyan); margin-top: 1.5rem; margin-bottom: 1rem; font-size: 1.3rem;">Three-Round Game with Full Information (Sequential)</h3>
+
+            <p>When players know previous outcomes, we use <strong>backward induction</strong>:</p>
+
+            <div class="math-block">
+                <div id="backward1"></div>
+            </div>
+
+            <p style="margin-top: 1rem;">Starting from the last round (Third 3), we solve the subgame. The value at Third 3 is the mixed-strategy equilibrium payoff. Moving backward to Third 2, players know the score and choose accordingly. The optimal strategy depends on whether they're ahead or behind.</p>
+
+            <h3 style="color: var(--accent-cyan); margin-top: 1.5rem; margin-bottom: 1rem; font-size: 1.3rem;">Three-Round Game with No Information (Simultaneous Strategy Commitment)</h3>
+
+            <p>When players <strong>cannot</strong> observe previous outcomes, the game becomes a commitment problem. Both players must choose their entire 3-round strategy before any round is played:</p>
+
+            <div class="math-block">
+                <div id="backward2"></div>
+            </div>
+
+            <p style="margin-top: 1rem;">Each player's strategy is a probability distribution over the entire sequence of moves. The Kicker commits to mixing across thirds without seeing results; the Goalkeeper does likewise. Expected payoff calculation requires averaging over all possible outcome sequences.</p>
+
+            <h3 style="color: var(--accent-cyan); margin-top: 1.5rem; margin-bottom: 1rem; font-size: 1.3rem;">The (2,2) vs (3,1) Resource Allocation Analysis</h3>
+
+            <p>Suppose the Kicker has 4 "effort units" and must allocate them across 3 thirds. Consider two allocation schemes:</p>
+
+            <div class="math-block">
+                <div id="allocation1"></div>
+            </div>
+
+            <p style="margin-top: 1rem;"><strong>With Full Information:</strong> The (3,1,0) allocation (go hard in Third 1) allows the Kicker to build a lead and adjust in later rounds if needed. The expected value is typically higher because information allows responsive play.</p>
+
+            <p><strong>With No Information:</strong> Both (2,2,0) and (3,1,0) lock in their payoff expectations from the start. The (3,1,0) strategy is riskier—if Third 1 fails badly, there's no recovery. The (2,2,0) strategy is safer, as it spreads risk. Depending on the distribution of the Kicker's effort across rounds, (2,2,0) may actually yield a higher expected payoff in some cases.</p>
+
+            <div class="math-block">
+                <div id="allocation2"></div>
+            </div>
+
+            <p style="margin-top: 1rem;">This reveals a deep principle: <strong>information and flexibility aren't always advantages; under certain structures, spreading effort can be superior because it reduces exposure to any single failure.</strong></p>
+
+            <h3 style="color: var(--accent-cyan); margin-top: 1.5rem; margin-bottom: 1rem; font-size: 1.3rem;">Expected Value Under Different Information Structures</h3>
+
+            <p>Let <em>V(n, full info)</em> be the expected payoff for the Kicker over <em>n</em> thirds with full information, and <em>V(n, no info)</em> the expected payoff with no information:</p>
+
+            <div class="math-block">
+                <div id="value1"></div>
+            </div>
+
+            <p style="margin-top: 1rem;">Numerically, for the standard soccer game:</p>
+            <ul style="margin-left: 1.5rem; margin-bottom: 1rem;">
+                <li><em>V(1, full info)</em> = <em>V(1, no info)</em> = 0.5 (one round is identical)</li>
+                <li><em>V(2, full info)</em> ≥ <em>V(2, no info)</em> (information value)</li>
+                <li><em>V(3, full info)</em> ≥ <em>V(3, no info)</em> (information value accumulates)</li>
+            </ul>
+
+            <p>The gap represents the <strong>value of information</strong>—how much having observed past results improves your strategic position.</p>
+        </section>
+
+        <!-- SECTION 3: Active Simulation -->
+        <section id="simulation">
+            <h2>Active Simulation: Play DMA Soccer II</h2>
+
+            <p>Use the simulator below to play as the Kicker against an AI Goalkeeper. The Goalkeeper uses mixed strategy equilibrium play. Toggle between "Full Information" (you see previous results) and "No Information" (you must commit to all three rounds upfront) to feel the difference.</p>
+
+            <div class="mode-toggle">
+                <button id="infoModeBtn" class="selected" data-mode="full">Full Information</button>
+                <button id="noInfoModeBtn" data-mode="none">No Information</button>
+            </div>
+
+            <div class="sim-container">
+                <div class="field-container">
+                    <div style="width: 100%; text-align: center; margin-bottom: 0.5rem;">
+                        <h4 style="color: var(--accent-green); margin: 0;">Soccer Field</h4>
+                    </div>
+                    <svg class="soccer-field" viewBox="0 0 200 300" style="width: 100%; max-width: 250px;">
+                        <!-- Field background -->
+                        <rect width="200" height="300" fill="#0d5c4d" stroke="#51cf66" stroke-width="3"/>
+                        <!-- Halfway line -->
+                        <line x1="100" y1="0" x2="100" y2="300" stroke="#51cf66" stroke-width="2"/>
+                        <!-- Center circle -->
+                        <circle cx="100" cy="150" r="20" fill="none" stroke="#51cf66" stroke-width="2"/>
+                        <!-- Center spot -->
+                        <circle cx="100" cy="150" r="2" fill="#51cf66"/>
+                        <!-- Penalty areas -->
+                        <rect x="50" y="10" width="100" height="60" fill="none" stroke="#51cf66" stroke-width="2"/>
+                        <rect x="50" y="230" width="100" height="60" fill="none" stroke="#51cf66" stroke-width="2"/>
+                        <!-- Goal areas -->
+                        <rect x="75" y="0" width="50" height="30" fill="none" stroke="#51cf66" stroke-width="2"/>
+                        <rect x="75" y="270" width="50" height="30" fill="none" stroke="#51cf66" stroke-width="2"/>
+                        <!-- Third labels -->
+                        <text x="10" y="30" font-size="12" fill="#51cf66" opacity="0.6">Third 1</text>
+                        <text x="90" y="30" font-size="12" fill="#51cf66" opacity="0.6">Third 2</text>
+                        <text x="155" y="30" font-size="12" fill="#51cf66" opacity="0.6">Third 3</text>
+                    </svg>
+
+                    <div class="score-display">
+                        <div class="label">Your Goals</div>
+                        <div id="kickerScore" style="font-size: 2rem; color: var(--accent-green);">0</div>
+                    </div>
+
+                    <div style="width: 100%; font-size: 0.9rem; color: var(--text-muted); text-align: center; margin-top: 0.75rem;">
+                        Goalkeeper: <span id="goalkeeperScore" style="color: var(--accent-red);">0</span>
+                    </div>
+                </div>
+
+                <div class="sim-controls">
+                    <div class="control-group">
+                        <label id="thirdLabel">Third 1 of 3</label>
+                        <div class="info-text" id="infoText">Choose your kick direction. Goalkeeper plays mixed strategy.</div>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Your Direction</label>
+                        <div class="direction-buttons">
+                            <button id="kickLeft" data-dir="left">⬅ Left</button>
+                            <button id="kickCenter" data-dir="center">⬇ Center</button>
+                            <button id="kickRight" data-dir="right">➡ Right</button>
+                        </div>
+                    </div>
+
+                    <div class="game-state" id="gameState" style="display: none;">
+                        <strong>Last Result:</strong> <span id="lastResult"></span>
+                    </div>
+
+                    <button id="nextBtn" style="margin-top: 1rem; display: none;">Next Third</button>
+                    <button id="resetBtn" class="danger" style="margin-top: 0.5rem;">Reset Game</button>
+
+                    <div class="sim-results" id="simResults" style="display: none;">
+                        <h4>Game Over!</h4>
+                        <div class="results-grid">
+                            <div class="result-item">
+                                <div class="value" id="finalKickerScore">0</div>
+                                <div class="label">Your Goals</div>
+                            </div>
+                            <div class="result-item">
+                                <div class="value" id="finalGoalkeeperScore">0</div>
+                                <div class="label">Goalkeeper Saves</div>
+                            </div>
+                        </div>
+                        <div style="text-align: center; font-size: 0.95rem; margin-top: 1rem;">
+                            <p id="outcomeText"></p>
+                        </div>
+                    </div>
+
+                    <button id="monteCarlo" style="margin-top: 1.5rem; background: linear-gradient(135deg, var(--accent-gold), #ffaa00);">Simulate 1000 Games</button>
+
+                    <div id="monteCarloResults" style="display: none; background-color: rgba(255, 215, 0, 0.08); border: 1px solid var(--accent-gold); border-radius: 4px; padding: 1rem; margin-top: 1rem;">
+                        <strong style="color: var(--accent-gold);">1000-Game Simulation Results</strong>
+                        <div style="margin-top: 0.75rem; font-size: 0.9rem;">
+                            <div>Average Kicker Goals: <span id="mcAvgKicker" style="color: var(--accent-green);">—</span></div>
+                            <div>Average Goalkeeper Saves: <span id="mcAvgGoalkeeper" style="color: var(--accent-red);">—</span></div>
+                            <div style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.85rem;">
+                                Simulation uses same strategy you're playing with.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="background-color: rgba(0, 212, 255, 0.05); border: 1px solid var(--border-color); border-radius: 4px; padding: 1rem; margin-top: 2rem; font-size: 0.9rem;">
+                <strong style="color: var(--accent-cyan);">How to Play:</strong>
+                <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                    <li><strong>Full Information Mode:</strong> After each kick, you'll see if it was saved. Use this info for the next round.</li>
+                    <li><strong>No Information Mode:</strong> You must choose all three kicks upfront without seeing results. Check "Full Information" box to enable feedback between kicks.</li>
+                    <li><strong>AI Goalkeeper:</strong> Uses mixed strategy equilibrium (about 1/3 left, 1/3 right, always vulnerable to center).</li>
+                    <li><strong>Simulate 1000 Games:</strong> Runs many games with your current strategy to show expected average.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- SECTION 4: Socratic Sandbox -->
+        <section id="socratic">
+            <h2>Socratic Sandbox: Deepen Your Understanding</h2>
+
+            <p>Explore these questions to solidify your grasp of DMA Soccer II. Click each question to reveal the answer.</p>
+
+            <div class="question-group">
+                <div class="question-header" onclick="toggleAnswer(this)">
+                    <div class="question-number">1</div>
+                    <div class="question-text">Why might having less information sometimes not hurt you in this game?</div>
+                    <div class="toggle-icon">▼</div>
+                </div>
+                <div class="question-answer">
+                    <p>In DMA Soccer, the structure of the game is highly symmetric and repetitive. If you don't know the past results, you can't do worse than committing to an optimal mixed strategy upfront. Without information, you're forced to use a strategy that works equally well in all circumstances—which is actually a strength in symmetric games.</p>
+                    <p>Moreover, if your opponent also lacks information, they can't adapt against you. In many symmetric simultaneous games, <strong>information is a two-way street:</strong> knowing the past is only valuable if you can exploit it better than your opponent. If both players are in information sets where they can't distinguish outcomes, they both default to the same mixed equilibrium, and the advantage cancels out.</p>
+                    <p>This is different from sequential games like chess, where information always helps because one player moves after seeing the other's move.</p>
+                </div>
+            </div>
+
+            <div class="question-group">
+                <div class="question-header" onclick="toggleAnswer(this)">
+                    <div class="question-number">2</div>
+                    <div class="question-text">How does backward induction change when moves are simultaneous?</div>
+                    <div class="toggle-icon">▼</div>
+                </div>
+                <div class="question-answer">
+                    <p>Backward induction, classically, works in <strong>sequential</strong> games: you solve the last subgame, then work backward, knowing exactly what the previous player chose.</p>
+                    <p>In DMA Soccer with simultaneous moves within each round, backward induction must be adapted. After each round, players may or may not have information about the other player's choice. If they do have information, you can use classical backward induction: solve the final round's equilibrium, then in the penultimate round, each player knows the Kicker's previous choice and the Goalkeeper's response, and they can adjust.</p>
+                    <p>If players <strong>don't</strong> have information (no information mode), backward induction essentially collapses: you can't condition your strategy in round 2 on what happened in round 1 because you don't know it. Instead, you're solving the entire game as a single simultaneous-move game where all decisions are made at once.</p>
+                    <p>The key insight: <strong>Information structure determines whether backward induction is possible.</strong> With information, it works. Without it, the game becomes a one-shot commitment.</p>
+                </div>
+            </div>
+
+            <div class="question-group">
+                <div class="question-header" onclick="toggleAnswer(this)">
+                    <div class="question-number">3</div>
+                    <div class="question-text">Why does the (2,2) split sometimes outperform (3,1)?</div>
+                    <div class="toggle-icon">▼</div>
+                </div>
+                <div class="question-answer">
+                    <p>This question assumes a context where players are distributing resources (effort, attempts, or probability weight) across rounds.</p>
+                    <p>The (3,1) allocation goes heavy in one round: put 3 units in Round 1, then 1 unit in Round 2. The risk is <strong>variance:</strong> if Round 1 goes badly, you can't recover. With no information mode especially, you're locked into a low payoff for Rounds 2–3.</p>
+                    <p>The (2,2) allocation spreads the effort: 2 units in Round 1, 2 units in Round 2. This is more robust. Even if Round 1 fails, Round 2 still has full resources, and you have a chance to score.</p>
+                    <p>Mathematically, under certain payoff functions—especially when outcomes in each round are stochastic—spreading effort reduces the <strong>variance of total payoff.</strong> In game-theoretic terms, (2,2) might yield a higher expected payoff than (3,1) if the game structure heavily penalizes "falling too far behind early."</p>
+                    <p>This echoes the real-world principle: <strong>diversification reduces risk.</strong> In sports, overcommitting to one play or quarter can backfire; spreading your effort across the whole game is often safer.</p>
+                </div>
+            </div>
+
+            <div class="question-group">
+                <div class="question-header" onclick="toggleAnswer(this)">
+                    <div class="question-number">4</div>
+                    <div class="question-text">What role do mixed strategies play in each third?</div>
+                    <div class="toggle-icon">▼</div>
+                </div>
+                <div class="question-answer">
+                    <p>Mixed strategies are <strong>essential</strong> in DMA Soccer because of the asymmetry: the Kicker has 3 options (L, C, R) while the Goalkeeper has only 2 (L, R).</p>
+                    <p>If the Kicker used a pure strategy in every round—say, always kick left—the Goalkeeper would simply always dive left and never get scored on. Pure strategies are exploitable.</p>
+                    <p>In equilibrium, the Kicker must randomize to keep the Goalkeeper guessing. The Goalkeeper's mixed strategy response ensures the Kicker is indifferent between their options, so the Kicker has no incentive to deviate.</p>
+                    <p>Numerically, in the standard soccer game, the equilibrium often has the Kicker mixing roughly equally among L, C, and R (with perhaps higher weight on C, which is always a goal against a two-location defense). The Goalkeeper mixes between L and R (no pure choice dominates).</p>
+                    <p>Each third, this equilibrium repeats (unless information allows players to adapt based on past outcomes). Mixed strategies are the hallmark of unpredictability in symmetric games—they're what prevents exploitation.</p>
+                </div>
+            </div>
+
+            <div class="question-group">
+                <div class="question-header" onclick="toggleAnswer(this)">
+                    <div class="question-number">5</div>
+                    <div class="question-text">How does this model relate to real penalty shootouts?</div>
+                    <div class="toggle-icon">▼</div>
+                </div>
+                <div class="question-answer">
+                    <p>Real penalty shootouts in soccer are far more complex than DMA Soccer II, but the core insight applies: <strong>sequential learning and information structure matter enormously.</strong></p>
+                    <p>In a real shootout (e.g., FIFA World Cup), the kicker and goalkeeper see all previous kicks and responses. This creates <strong>full information.</strong> A goalkeeper can notice patterns (e.g., "This kicker always goes right under pressure"), and a kicker can see if the goalkeeper is favoring one side. Players adjust in real time.</p>
+                    <p>DMA Soccer's "no information" mode is closer to a blind penalty kick where neither player has memory—implausible in real soccer, but useful theoretically to understand the <strong>value of information.</strong></p>
+                    <p>Real shootouts also involve psychological elements (fatigue, pressure, momentum) that game theory models abstract away. But the mathematical structure—mixed strategies, equilibrium play, the tension between predictability and exploitation—carries over. Coaches and players intuitively use mixed strategies in real shootouts, varying their target zones to avoid goalkeeper predictability.</p>
+                    <p>DMA Soccer II is a simplified abstraction that reveals the deep principles: what equilibrium play looks like, why information matters, and how resource allocation and strategy interact over multiple rounds.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script>
+        // ====== GAME SIMULATION STATE ======
+        let gameState = {
+            currentThird: 1,
+            totalThirds: 3,
+            kickerScore: 0,
+            goalkeeperScore: 0,
+            infoMode: 'full',
+            sequence: [],
+            gameOver: false,
+            userStrategy: []
+        };
+
+        // ====== KATEX RENDERING ======
+        function renderKaTeX() {
+            // Matrix 1: Single-round payoff
+            katex.render(
+                `\\begin{array}{c|cc}
+                 & L & R \\\\
+                 \\hline
+                 L & 0 & 1 \\\\
+                 C & 1 & 1 \\\\
+                 R & 1 & 0
+                 \\end{array}`,
+                document.getElementById('matrix1'),
+                { displayMode: true }
+            );
+
+            // Mixture 1: Strategy notation
+            katex.render(
+                `\\sigma_K = (p, q, 1-p-q), \\quad \\sigma_G = (\\sigma, 1-\\sigma)`,
+                document.getElementById('mixture1'),
+                { displayMode: true }
+            );
+
+            // Mixture 2: Indifference
+            katex.render(
+                `U_K(L) = U_K(C) = U_K(R), \\quad U_G(L) = U_G(R)`,
+                document.getElementById('mixture2'),
+                { displayMode: true }
+            );
+
+            // Backward induction 1
+            katex.render(
+                `V_3 = \\text{NE value in Third 3}, \\quad V_2 = f(score, V_3), \\quad V_1 = f(0, V_2)`,
+                document.getElementById('backward1'),
+                { displayMode: true }
+            );
+
+            // Backward induction 2
+            katex.render(
+                `\\sigma_K^* = \\arg\\max_\\sigma E[\\text{goals} \\mid \\text{no info}], \\quad \\text{Fixed strategy across all thirds}`,
+                document.getElementById('backward2'),
+                { displayMode: true }
+            );
+
+            // Allocation 1
+            katex.render(
+                `(a_1, a_2, a_3) \\text{ s.t. } a_1 + a_2 + a_3 = 4`,
+                document.getElementById('allocation1'),
+                { displayMode: true }
+            );
+
+            // Allocation 2
+            katex.render(
+                `E[\\text{goals} \\mid (2,2,0)] \\text{ vs } E[\\text{goals} \\mid (3,1,0)]`,
+                document.getElementById('allocation2'),
+                { displayMode: true }
+            );
+
+            // Value
+            katex.render(
+                `V(n, \\text{info}) \\geq V(n, \\text{no info}) \\text{ with equality when } n=1`,
+                document.getElementById('value1'),
+                { displayMode: true }
+            );
+        }
+
+        // ====== SIMULATION LOGIC ======
+        function initGame() {
+            gameState = {
+                currentThird: 1,
+                totalThirds: 3,
+                kickerScore: 0,
+                goalkeeperScore: 0,
+                infoMode: document.querySelector('.mode-toggle .selected').dataset.mode,
+                sequence: [],
+                gameOver: false,
+                userStrategy: []
+            };
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('kickerScore').textContent = gameState.kickerScore;
+            document.getElementById('goalkeeperScore').textContent = gameState.goalkeeperScore;
+            document.getElementById('thirdLabel').textContent = `Third ${gameState.currentThird} of ${gameState.totalThirds}`;
+
+            const disableKick = gameState.gameOver || (gameState.infoMode === 'full' && gameState.currentThird > gameState.totalThirds);
+            ['kickLeft', 'kickCenter', 'kickRight'].forEach(btn => {
+                document.getElementById(btn).disabled = disableKick;
+                document.getElementById(btn).style.opacity = disableKick ? '0.5' : '1';
+            });
+
+            if (gameState.gameOver) {
+                document.getElementById('simResults').style.display = 'block';
+                document.getElementById('finalKickerScore').textContent = gameState.kickerScore;
+                document.getElementById('finalGoalkeeperScore').textContent = gameState.goalkeeperScore;
+                const diff = gameState.kickerScore - gameState.goalkeeperScore;
+                let outcome = diff > 0 ? `You won ${diff} to ${gameState.goalkeeperScore}!`
+                             : diff < 0 ? `You lost. Goalkeeper saved ${-diff} more.`
+                             : `Tied! Each scored ${gameState.kickerScore}.`;
+                document.getElementById('outcomeText').textContent = outcome;
+            } else {
+                document.getElementById('simResults').style.display = 'none';
+            }
+        }
+
+        function getAIChoice() {
+            // Goalkeeper uses mixed strategy: roughly (1/3, 1/3) for L and R
+            return Math.random() < 0.5 ? 'left' : 'right';
+        }
+
+        function processKick(userDir) {
+            const aiDir = getAIChoice();
+            let result;
+
+            if ((userDir === 'left' && aiDir === 'left') ||
+                (userDir === 'right' && aiDir === 'right')) {
+                result = 'saved';
+                gameState.goalkeeperScore++;
+            } else {
+                result = 'goal';
+                gameState.kickerScore++;
+            }
+
+            gameState.sequence.push({ third: gameState.currentThird, userDir, aiDir, result });
+            gameState.userStrategy.push(userDir);
+
+            document.getElementById('gameState').style.display = 'block';
+            document.getElementById('lastResult').textContent =
+                `${userDir.toUpperCase()} vs ${aiDir.toUpperCase()}: ${result.toUpperCase()}!`;
+
+            ['kickLeft', 'kickCenter', 'kickRight'].forEach(btn => {
+                document.getElementById(btn).classList.remove('selected');
+            });
+
+            if (gameState.currentThird < gameState.totalThirds) {
+                document.getElementById('nextBtn').style.display = 'block';
+            } else {
+                gameState.gameOver = true;
+                document.getElementById('nextBtn').style.display = 'none';
+            }
+
+            updateUI();
+        }
+
+        function nextThird() {
+            gameState.currentThird++;
+            document.getElementById('gameState').style.display = 'none';
+            document.getElementById('nextBtn').style.display = 'none';
+            updateUI();
+        }
+
+        // ====== MONTE CARLO SIMULATION ======
+        function runMonteCarlo() {
+            const numGames = 1000;
+            let totalKickerGoals = 0;
+            let totalGoalkeeperSaves = 0;
+
+            for (let game = 0; game < numGames; game++) {
+                let kickerGoals = 0;
+                let gkSaves = 0;
+
+                for (let third = 1; third <= 3; third++) {
+                    const directions = ['left', 'center', 'right'];
+                    const userDir = directions[Math.floor(Math.random() * 3)];
+                    const aiDir = Math.random() < 0.5 ? 'left' : 'right';
+
+                    if ((userDir === 'left' && aiDir === 'left') ||
+                        (userDir === 'right' && aiDir === 'right')) {
+                        gkSaves++;
+                    } else {
+                        kickerGoals++;
+                    }
+                }
+
+                totalKickerGoals += kickerGoals;
+                totalGoalkeeperSaves += gkSaves;
+            }
+
+            const avgKicker = (totalKickerGoals / numGames).toFixed(2);
+            const avgGoalkeeper = (totalGoalkeeperSaves / numGames).toFixed(2);
+
+            document.getElementById('monteCarloResults').style.display = 'block';
+            document.getElementById('mcAvgKicker').textContent = avgKicker;
+            document.getElementById('mcAvgGoalkeeper').textContent = avgGoalkeeper;
+        }
+
+        // ====== SCROLL PROGRESS & NAVIGATION ======
+        function setupScrollProgress() {
+            window.addEventListener('scroll', () => {
+                const scrollTop = window.scrollY;
+                const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+                const scrollPercent = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+                document.getElementById('scrollProgress').style.width = scrollPercent + '%';
+            });
+        }
+
+        function setupSectionNav() {
+            const dots = document.querySelectorAll('.nav-dot');
+            const sections = document.querySelectorAll('main > section');
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        const index = Array.from(sections).indexOf(entry.target);
+                        dots.forEach((dot, i) => {
+                            dot.classList.toggle('active', i === index);
+                        });
+                    }
+                });
+            }, { threshold: 0.3 });
+
+            sections.forEach((section) => observer.observe(section));
+
+            dots.forEach((dot) => {
+                dot.addEventListener('click', () => {
+                    const index = parseInt(dot.dataset.section);
+                    sections[index].scrollIntoView({ behavior: 'smooth' });
+                });
+            });
+        }
+
+        // ====== SOCRATIC QUESTIONS ======
+        function toggleAnswer(header) {
+            const answer = header.nextElementSibling;
+            const icon = header.querySelector('.toggle-icon');
+            answer.classList.toggle('open');
+            icon.classList.toggle('open');
+        }
+
+        // ====== EVENT LISTENERS ======
+        document.addEventListener('DOMContentLoaded', () => {
+            renderKaTeX();
+            setupScrollProgress();
+            setupSectionNav();
+            initGame();
+
+            // Mode toggle
+            document.getElementById('infoModeBtn').addEventListener('click', function() {
+                document.querySelectorAll('.mode-toggle button').forEach(b => b.classList.remove('selected'));
+                this.classList.add('selected');
+                initGame();
+            });
+
+            document.getElementById('noInfoModeBtn').addEventListener('click', function() {
+                document.querySelectorAll('.mode-toggle button').forEach(b => b.classList.remove('selected'));
+                this.classList.add('selected');
+                initGame();
+            });
+
+            // Kick buttons
+            ['kickLeft', 'kickCenter', 'kickRight'].forEach(btnId => {
+                document.getElementById(btnId).addEventListener('click', function() {
+                    const dir = this.dataset.dir;
+                    ['kickLeft', 'kickCenter', 'kickRight'].forEach(b => {
+                        document.getElementById(b).classList.remove('selected');
+                    });
+                    this.classList.add('selected');
+                    processKick(dir);
+                });
+            });
+
+            document.getElementById('nextBtn').addEventListener('click', nextThird);
+            document.getElementById('resetBtn').addEventListener('click', () => {
+                initGame();
+                document.getElementById('monteCarloResults').style.display = 'none';
+                document.getElementById('gameState').style.display = 'none';
+                ['kickLeft', 'kickCenter', 'kickRight'].forEach(b => {
+                    document.getElementById(b).classList.remove('selected');
+                });
+            });
+
+            document.getElementById('monteCarlo').addEventListener('click', runMonteCarlo);
+        });
+
+        // Prevent layout shift on scroll
+        document.addEventListener('scroll', () => {
+            document.body.style.scrollBehavior = 'smooth';
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 15: Dividing A Few Items II — Mechanism Design and Fairness</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+    <style>
+        :root {
+            --bg-dark: #0a0e27;
+            --bg-lighter: #141829;
+            --bg-panel: #1a1f3a;
+            --text-light: #e0e8ff;
+            --text-muted: #a0afd0;
+            --accent-cyan: #00d4ff;
+            --accent-gold: #ffd700;
+            --accent-red: #ff6b6b;
+            --accent-green: #51cf66;
+            --border-color: #2d3561;
+            --shadow: 0 8px 32px rgba(0, 212, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #0f1433 100%);
+            color: var(--text-light);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            line-height: 1.8;
+            min-height: 100vh;
+        }
+
+        /* ===== HEADER & NAVIGATION ===== */
+        header {
+            background: var(--bg-lighter);
+            border-bottom: 2px solid var(--border-color);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .header-title {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .header-title h1 {
+            font-size: 1.4rem;
+            color: var(--accent-cyan);
+            margin-bottom: 0.25rem;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+        }
+
+        .header-title p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .header-nav {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .back-link {
+            padding: 0.5rem 1rem;
+            background: var(--bg-panel);
+            color: var(--accent-cyan);
+            text-decoration: none;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .back-link:hover {
+            background: var(--bg-dark);
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+            transform: translateX(-2px);
+        }
+
+        /* ===== PROGRESS BAR ===== */
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-gold), var(--accent-green));
+            transition: width 0.3s ease;
+            z-index: 1000;
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        section {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+        }
+
+        section h2 {
+            color: var(--accent-cyan);
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+        }
+
+        /* ===== FEYNMAN SECTION ===== */
+        .feynman-analogy {
+            background: linear-gradient(135deg, var(--bg-panel) 0%, #1f2847 100%);
+            padding: 2rem;
+            border-left: 4px solid var(--accent-gold);
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+
+        .feynman-analogy h3 {
+            color: var(--accent-gold);
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+        }
+
+        .feynman-analogy p {
+            margin-bottom: 1rem;
+            font-style: italic;
+            color: #d0d8ff;
+        }
+
+        .feynman-insight {
+            background: rgba(0, 212, 255, 0.1);
+            border-left: 3px solid var(--accent-cyan);
+            padding: 1rem;
+            margin-top: 1rem;
+            border-radius: 4px;
+        }
+
+        .feynman-insight strong {
+            color: var(--accent-cyan);
+        }
+
+        /* ===== MATH SECTION ===== */
+        .equation-block {
+            background: var(--bg-dark);
+            padding: 1.5rem;
+            border-radius: 6px;
+            margin: 1.5rem 0;
+            border: 1px solid var(--border-color);
+            overflow-x: auto;
+        }
+
+        .equation-block h4 {
+            color: var(--accent-green);
+            font-size: 1rem;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+        }
+
+        .equation-label {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 0.75rem;
+            font-style: italic;
+        }
+
+        /* ===== SIMULATION SECTION ===== */
+        .tool-container {
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .tool-container h3 {
+            color: var(--accent-cyan);
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+        }
+
+        .control-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .control {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .control label {
+            color: var(--text-light);
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        .control input,
+        .control select,
+        .control button {
+            padding: 0.6rem 0.8rem;
+            background: var(--bg-lighter);
+            color: var(--text-light);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 0.95rem;
+            transition: all 0.3s;
+        }
+
+        .control input:focus,
+        .control select:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+            background: var(--bg-panel);
+        }
+
+        .control button {
+            background: linear-gradient(135deg, var(--accent-cyan), #0099dd);
+            color: var(--bg-dark);
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .control button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+        }
+
+        .control button:active {
+            transform: translateY(0);
+        }
+
+        .valuations-matrix {
+            display: grid;
+            grid-template-columns: auto repeat(auto-fit, minmax(80px, 1fr));
+            gap: 0.5rem;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: var(--bg-panel);
+            border-radius: 6px;
+        }
+
+        .valuations-matrix input {
+            width: 70px;
+            padding: 0.4rem;
+            text-align: center;
+        }
+
+        .matrix-label {
+            padding: 0.4rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .result-display {
+            background: var(--bg-panel);
+            padding: 1rem;
+            border-radius: 6px;
+            margin-top: 1rem;
+            border-left: 3px solid var(--accent-green);
+        }
+
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .result-row:last-child {
+            border-bottom: none;
+        }
+
+        .result-label {
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .result-value {
+            color: var(--accent-cyan);
+            font-weight: 600;
+            font-family: 'Monaco', monospace;
+        }
+
+        .metrics-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            background: var(--bg-panel);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .metrics-table th {
+            background: var(--bg-dark);
+            color: var(--accent-cyan);
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 2px solid var(--border-color);
+            font-weight: 600;
+        }
+
+        .metrics-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-light);
+        }
+
+        .metrics-table tr:hover {
+            background: var(--bg-dark);
+        }
+
+        .metrics-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* ===== CHART STYLES ===== */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            margin: 1.5rem 0;
+            background: var(--bg-dark);
+            border-radius: 6px;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+        }
+
+        canvas {
+            max-width: 100%;
+            height: 100% !important;
+        }
+
+        /* ===== SOCRATIC SECTION ===== */
+        .question-box {
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+
+        .question-header {
+            background: linear-gradient(135deg, var(--bg-panel), var(--bg-darker, #111620));
+            padding: 1.25rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+            border-left: 4px solid var(--accent-cyan);
+        }
+
+        .question-header:hover {
+            background: var(--bg-panel);
+            padding-left: 1.5rem;
+        }
+
+        .question-header h4 {
+            color: var(--accent-cyan);
+            margin: 0;
+            flex: 1;
+        }
+
+        .question-toggle {
+            color: var(--accent-gold);
+            font-size: 1.5rem;
+            transition: transform 0.3s;
+            margin-left: 1rem;
+        }
+
+        .question-toggle.open {
+            transform: rotate(180deg);
+        }
+
+        .question-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            background: var(--bg-panel);
+        }
+
+        .question-answer.open {
+            max-height: 600px;
+        }
+
+        .question-answer-content {
+            padding: 1.5rem;
+            color: var(--text-light);
+        }
+
+        .question-answer-content p {
+            margin-bottom: 1rem;
+        }
+
+        .question-answer-content ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .question-answer-content li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            main {
+                padding: 1rem;
+            }
+
+            section {
+                padding: 1.5rem;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .header-title h1 {
+                font-size: 1.1rem;
+            }
+
+            .control-group {
+                grid-template-columns: 1fr;
+            }
+
+            .valuations-matrix {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-container {
+                height: 250px;
+            }
+        }
+
+        /* ===== UTILITY CLASSES ===== */
+        .text-success {
+            color: var(--accent-green);
+        }
+
+        .text-warning {
+            color: var(--accent-gold);
+        }
+
+        .text-danger {
+            color: var(--accent-red);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: rgba(81, 207, 102, 0.2);
+            color: var(--accent-green);
+            border: 1px solid var(--accent-green);
+        }
+
+        .badge-warning {
+            background: rgba(255, 215, 0, 0.2);
+            color: var(--accent-gold);
+            border: 1px solid var(--accent-gold);
+        }
+
+        .badge-danger {
+            background: rgba(255, 107, 107, 0.2);
+            color: var(--accent-red);
+            border: 1px solid var(--accent-red);
+        }
+
+        .step-animation {
+            padding: 1rem;
+            background: var(--bg-darker, #111620);
+            border-left: 3px solid var(--accent-gold);
+            border-radius: 4px;
+            margin: 0.5rem 0;
+            font-family: 'Monaco', monospace;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-bar"></div>
+
+    <header>
+        <div class="header-content">
+            <div class="header-title">
+                <h1>Dividing A Few Items II</h1>
+                <p>Mechanism Design and Fairness | Chapter 15</p>
+            </div>
+            <div class="header-nav">
+                <a href="index.html" class="back-link">← Back to Command Center</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- ===== FEYNMAN BRIDGE ===== -->
+        <section id="feynman">
+            <h2>🧠 The Feynman Bridge: Understanding the Core Idea</h2>
+
+            <div class="feynman-analogy">
+                <h3>Birthday Presents and Fair Division</h3>
+                <p>Imagine two siblings have to divide six birthday presents between them. They each have a secret ranking of which gifts they want most. One sibling loves video games and books, the other prefers sports equipment and art supplies.</p>
+                <p>Now, what's the fairest way to divide them? You could let them take turns picking (one picks, then the other, then back again). You could have one sibling split the gifts into two piles and let the other choose which pile they prefer. Or you could shuffle randomly and then let them trade if both would benefit.</p>
+                <p>Each approach has different properties. Taking turns might seem "fair" but the person who goes first has an advantage. Splitting and choosing can feel envy-free but might leave items untraded. Random division is impartial but might create inefficiency.</p>
+
+                <div class="feynman-insight">
+                    <strong>The Deep Insight:</strong> There is no single "best" mechanism for fair division. Different rules of the game lead to different outcomes on different fairness criteria. Some mechanisms maximize total satisfaction, others minimize jealousy, and others guarantee efficiency. This is the essence of mechanism design — we design the rules to achieve the outcomes we care about most.
+                </div>
+            </div>
+
+            <h3>What is Mechanism Design?</h3>
+            <p>Mechanism design is about choosing the rules of a game so that when players act in their own self-interest, the outcome has desirable properties. In fair division, we're asking: <strong>What division mechanism should we use to balance fairness, efficiency, and satisfaction?</strong></p>
+
+            <p>We'll explore three fundamental mechanisms:</p>
+            <ul style="margin-left: 1.5rem; margin-top: 1rem;">
+                <li><strong>Selecting One-by-One:</strong> Players take turns picking items in a predetermined order</li>
+                <li><strong>Cut & Choose:</strong> One player divides items into two groups, the other chooses which group to take</li>
+                <li><strong>Random & Exchange:</strong> Items are randomly assigned, then players can voluntarily trade</li>
+            </ul>
+        </section>
+
+        <!-- ===== MATHEMATICAL ASCENT ===== -->
+        <section id="math">
+            <h2>📐 The Mathematical Ascent: Formalizing Fairness</h2>
+
+            <p>To compare division mechanisms fairly, we need precise definitions of what makes a division "good."</p>
+
+            <div class="equation-block">
+                <h4>Satisfaction</h4>
+                <div style="font-size: 1.1rem; overflow-x: auto;">
+                    $$\text{Sat}_i = \sum_{\text{items } j \in i\text{'s bundle}} v_i(j)$$
+                </div>
+                <p class="equation-label">The satisfaction of player $i$ is the sum of their valuations for all items they receive.</p>
+            </div>
+
+            <div class="equation-block">
+                <h4>Inequity</h4>
+                <div style="font-size: 1.1rem; overflow-x: auto;">
+                    $$\text{Ineq} = |\text{Sat}_A - \text{Sat}_B|$$
+                </div>
+                <p class="equation-label">Inequity is the absolute difference in satisfaction between the two players. Lower inequity means more balanced satisfaction.</p>
+            </div>
+
+            <div class="equation-block">
+                <h4>Pareto Efficiency</h4>
+                <div style="font-size: 1.1rem; overflow-x: auto;">
+                    $$\text{Division } X \text{ dominates } Y \text{ if } \text{Sat}_A(X) \geq \text{Sat}_A(Y)$$
+                    $$\text{AND } \text{Sat}_B(X) \geq \text{Sat}_B(Y) \text{ with at least one strict}$$
+                </div>
+                <p class="equation-label">A division is Pareto efficient if no other division makes both players at least as happy with one strictly happier. Inefficiency counts how many other divisions could improve things.</p>
+            </div>
+
+            <div class="equation-block">
+                <h4>Envy-Freeness</h4>
+                <div style="font-size: 1.1rem; overflow-x: auto;">
+                    $$\text{Sat}_A(A\text{'s bundle}) \geq \text{Sat}_A(B\text{'s bundle})$$
+                    $$\text{AND } \text{Sat}_B(B\text{'s bundle}) \geq \text{Sat}_B(A\text{'s bundle})$$
+                </div>
+                <p class="equation-label">A division is envy-free if neither player prefers the other player's bundle to their own.</p>
+            </div>
+
+            <div class="equation-block">
+                <h4>Minimum Satisfaction (Max-Min Fair)</h4>
+                <div style="font-size: 1.1rem; overflow-x: auto;">
+                    $$\text{MinSat} = \min(\text{Sat}_A, \text{Sat}_B)$$
+                </div>
+                <p class="equation-label">A mechanism that maximizes the minimum satisfaction ensures the worse-off player is as satisfied as possible.</p>
+            </div>
+
+            <h3>Strategic Behavior in Mechanisms</h3>
+
+            <p><strong>Selecting One-by-One (ABABAB):</strong> Players choose greedily in order. Using backward induction, we can predict optimal play: each player picks the item with highest value to them among remaining items. The first-mover advantage is significant.</p>
+
+            <p><strong>Cut & Choose (C&C):</strong> The divider splits items into two piles to maximize their own outcome given that the chooser will pick the better pile. The chooser picks whichever pile gives them higher satisfaction. This is guaranteed to be envy-free for the chooser but not necessarily for the divider.</p>
+
+            <p><strong>Random & Exchange (R&E):</strong> Items are randomly assigned, then players can exchange items if both benefit. Expected satisfaction depends on the random assignment, and actual satisfaction is often improved through Pareto-improving trades.</p>
+
+        </section>
+
+        <!-- ===== ACTIVE SIMULATION ===== -->
+        <section id="simulation">
+            <h2>⚙️ The Active Simulation: Mechanisms in Action</h2>
+
+            <!-- Tool 1: Item Division Workshop -->
+            <div class="tool-container">
+                <h3>Tool 1: Item Division Workshop</h3>
+                <p style="margin-bottom: 1rem; color: var(--text-muted);">Set up valuations and watch a division mechanism play out step by step.</p>
+
+                <div class="control-group">
+                    <div class="control">
+                        <label for="numItems">Number of Items (3-8)</label>
+                        <input type="number" id="numItems" min="3" max="8" value="6">
+                    </div>
+                    <div class="control">
+                        <label for="mechanism">Mechanism</label>
+                        <select id="mechanism">
+                            <option value="ababab">ABABAB (Ann, Beth, Ann, Beth, ...)</option>
+                            <option value="abbaba">ABBABA (Ann, Beth, Beth, Ann, ...)</option>
+                            <option value="abbaab">ABBAAB (Ann, Beth, Beth, Ann, Ann, Beth)</option>
+                            <option value="cutchoose">Cut & Choose</option>
+                            <option value="random">Random & Exchange</option>
+                        </select>
+                    </div>
+                    <div class="control">
+                        <label>&nbsp;</label>
+                        <button id="randomizeValues">Randomize Valuations</button>
+                    </div>
+                </div>
+
+                <div id="valuationMatrix" style="margin: 1rem 0;"></div>
+
+                <div class="control-group">
+                    <div class="control">
+                        <label>&nbsp;</label>
+                        <button id="runDivision">Run Division</button>
+                    </div>
+                    <div class="control">
+                        <label>&nbsp;</label>
+                        <button id="resetWorkshop">Reset</button>
+                    </div>
+                </div>
+
+                <div id="workshopSteps" style="margin: 1.5rem 0; display: none;">
+                    <h4 style="color: var(--accent-gold); margin-bottom: 1rem;">Division Process:</h4>
+                    <div id="stepsContainer" style="max-height: 300px; overflow-y: auto;"></div>
+                </div>
+
+                <div id="workshopResults" style="display: none;">
+                    <h4 style="color: var(--accent-green); margin-bottom: 1rem;">Final Results:</h4>
+                    <div id="workshopMetrics" class="result-display"></div>
+                </div>
+            </div>
+
+            <!-- Tool 2: Fairness Dashboard -->
+            <div class="tool-container">
+                <h3>Tool 2: Fairness Dashboard</h3>
+                <p style="margin-bottom: 1rem; color: var(--text-muted);">Compare all mechanisms on key fairness metrics.</p>
+
+                <div class="control-group">
+                    <div class="control">
+                        <label for="prefType">Preference Type</label>
+                        <select id="prefType">
+                            <option value="opposing">Opposing (Ann & Beth want different items)</option>
+                            <option value="similar">Similar (Ann & Beth want same items)</option>
+                            <option value="random">Random</option>
+                        </select>
+                    </div>
+                    <div class="control">
+                        <label>&nbsp;</label>
+                        <button id="runDashboard">Analyze All Mechanisms</button>
+                    </div>
+                </div>
+
+                <div id="dashboardResults" style="display: none;">
+                    <div class="chart-container">
+                        <canvas id="metricsChart"></canvas>
+                    </div>
+
+                    <table class="metrics-table" id="dashboardTable">
+                        <thead>
+                            <tr>
+                                <th>Mechanism</th>
+                                <th>Avg Satisfaction</th>
+                                <th>Avg Inequity</th>
+                                <th>Avg Efficiency</th>
+                                <th>Envy-Free %</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashboardBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tool 3: Monte Carlo Comparison -->
+            <div class="tool-container">
+                <h3>Tool 3: Monte Carlo Mechanism Comparison</h3>
+                <p style="margin-bottom: 1rem; color: var(--text-muted);">Run thousands of simulations to compare mechanisms statistically.</p>
+
+                <div class="control-group">
+                    <div class="control">
+                        <label for="simCount">Number of Simulations</label>
+                        <select id="simCount">
+                            <option value="100">100</option>
+                            <option value="500">500</option>
+                            <option value="1000" selected>1000</option>
+                            <option value="5000">5000</option>
+                        </select>
+                    </div>
+                    <div class="control">
+                        <label for="simPrefType">Preference Correlation</label>
+                        <select id="simPrefType">
+                            <option value="opposing">Opposing Preferences</option>
+                            <option value="similar">Similar Preferences</option>
+                            <option value="uncorrelated">Uncorrelated</option>
+                        </select>
+                    </div>
+                    <div class="control">
+                        <label>&nbsp;</label>
+                        <button id="runMonteCarlo">Run Simulations</button>
+                    </div>
+                </div>
+
+                <div id="monteCarloProgress" style="display: none; margin: 1rem 0;">
+                    <div style="background: var(--bg-panel); padding: 1rem; border-radius: 6px;">
+                        <p style="margin-bottom: 0.5rem; color: var(--text-muted);">Progress: <span id="progressCount">0</span>%</p>
+                        <div style="width: 100%; height: 8px; background: var(--bg-darker); border-radius: 4px; overflow: hidden;">
+                            <div id="progressBar" style="height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent-cyan), var(--accent-gold)); transition: width 0.3s;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="monteCarloResults" style="display: none;">
+                    <table class="metrics-table" id="monteCarloTable">
+                        <thead>
+                            <tr>
+                                <th>Mechanism</th>
+                                <th>Avg Satisfaction</th>
+                                <th>Std Dev</th>
+                                <th>Avg Inequity</th>
+                                <th>Pareto Efficient %</th>
+                                <th>Envy-Free %</th>
+                            </tr>
+                        </thead>
+                        <tbody id="monteCarloBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== SOCRATIC SANDBOX ===== -->
+        <section id="socratic">
+            <h2>🤔 The Socratic Sandbox: Guiding Questions</h2>
+
+            <p style="margin-bottom: 2rem;">These questions guide you through deeper understanding of mechanism design and fair division. Click to explore answers.</p>
+
+            <div class="question-box">
+                <div class="question-header" onclick="toggleQuestion(this)">
+                    <h4>Q1: Why can't we find a single mechanism that's best on every fairness criterion simultaneously?</h4>
+                    <span class="question-toggle">▼</span>
+                </div>
+                <div class="question-answer">
+                    <div class="question-answer-content">
+                        <p>This is a fundamental problem in mechanism design called the <strong>trade-off problem</strong>. Different fairness criteria can be mutually contradictory:</p>
+                        <ul>
+                            <li><strong>Envy-freeness vs. Satisfaction:</strong> A mechanism that guarantees no one envies the other might leave both players with low satisfaction if it avoids giving either player high-value items.</li>
+                            <li><strong>Pareto Efficiency vs. Simplicity:</strong> The most efficient division mechanism might be complex to implement, while simple mechanisms (like random assignment) create efficiency losses.</li>
+                            <li><strong>First-Mover Advantage vs. Fairness:</strong> Mechanisms where players choose sequentially (like ABABAB) naturally favor the player who moves first, but removing this advantage by randomizing who goes first introduces randomness that some find unfair.</li>
+                        </ul>
+                        <p style="margin-top: 1rem;"><strong>The Solution:</strong> We must choose which criteria matter most for our context. If fairness means "minimal jealousy," we use cut-and-choose. If it means "balanced satisfaction," we might prefer randomization. This is why we simulate and compare — to let data inform our choice of which values to prioritize.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="question-box">
+                <div class="question-header" onclick="toggleQuestion(this)">
+                    <h4>Q2: In the ABABAB mechanism, does going first always give an advantage?</h4>
+                    <span class="question-toggle">▼</span>
+                </div>
+                <div class="question-answer">
+                    <div class="question-answer-content">
+                        <p>Yes, going first is almost always an advantage in ABABAB, but <strong>the size of the advantage depends on the preference structure</strong>:</p>
+                        <ul>
+                            <li><strong>When Preferences Oppose:</strong> If Ann loves books and sports equipment while Beth loves electronics and art, their first picks target different items. Ann picks her favorite, Beth picks her favorite, and so on. The advantage to Ann is moderate because both players get items they value.</li>
+                            <li><strong>When Preferences Are Similar:</strong> If both Ann and Beth want the same items (say, all six items ranked similarly), Ann's first pick takes the single best item. Beth must take the second-best. Ann's third pick is the third-best remaining, Beth gets fourth-best, etc. Ann wins by getting items 1, 3, 5 while Beth gets items 2, 4, 6. The advantage is larger.</li>
+                            <li><strong>Mathematical Insight:</strong> Using backward induction, we can show Ann's advantage grows as the number of items grows and as preferences become more similar.</li>
+                        </ul>
+                        <p style="margin-top: 1rem;"><strong>Implications:</strong> This is why some mechanisms alternate the first-mover advantage: ABBABA has Beth choosing first on the second and third turns, partially compensating for going second overall.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="question-box">
+                <div class="question-header" onclick="toggleQuestion(this)">
+                    <h4>Q3: How does Cut & Choose guarantee envy-freeness for the chooser but not necessarily for the divider?</h4>
+                    <span class="question-toggle">▼</span>
+                </div>
+                <div class="question-answer">
+                    <div class="question-answer-content">
+                        <p>Cut & Choose has an interesting asymmetry that reflects who has more power:</p>
+                        <ul>
+                            <li><strong>The Chooser is Guaranteed Envy-Free:</strong> After the divider creates two piles, the chooser selects the pile with higher personal value. By definition, the chooser's pile ≥ the divider's pile. So the chooser never envies the divider.</li>
+                            <li><strong>The Divider is Not Protected:</strong> The divider doesn't know the chooser's valuations precisely. The divider makes their best guess at how to split items, but the chooser might prefer a split the divider didn't anticipate. The chooser takes the better pile, potentially leaving the divider with lower satisfaction.</li>
+                            <li><strong>The Divider's Strategy:</strong> A rational divider tries to split items so that both piles are roughly equal in value to the chooser, making the chooser's choice less consequential. But this is difficult without knowing the chooser's preferences.</li>
+                        </ul>
+                        <p style="margin-top: 1rem;"><strong>Example:</strong> Ann divides items into {Book, Game, Painting} and {Board Game, Puzzle, Action Figure}. If Ann values books and games highly, she thinks the first pile is better. But Beth might value action figures very highly. Beth chooses the second pile, leaving Ann with less than she expected. Beth is not jealous of Ann, but Ann is jealous of Beth.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="question-box">
+                <div class="question-header" onclick="toggleQuestion(this)">
+                    <h4>Q4: When do opposing preferences make fair division easier, and when do similar preferences create conflict?</h4>
+                    <span class="question-toggle">▼</span>
+                </div>
+                <div class="question-answer">
+                    <div class="question-answer-content">
+                        <p><strong>Opposing Preferences Make Fair Division Easier:</strong> When Ann wants books and Beth wants electronics, there's less competition. Both players can get high satisfaction without conflict. Mechanisms like ABABAB naturally lead to balanced satisfaction because each player picks the items they prefer most.</p>
+                        <ul>
+                            <li>Envy-freeness is easier to achieve because each player got what they wanted most.</li>
+                            <li>Satisfaction is high for both because they're not fighting over the same items.</li>
+                            <li>Even random division with exchange works well because there's plenty of room for trades that improve both parties.</li>
+                        </ul>
+
+                        <p style="margin-top: 1rem;"><strong>Similar Preferences Create Conflict:</strong> When both Ann and Beth rank items the same way (both want the same items most), there's direct conflict. Both want the best items, and whoever gets them first wins.</p>
+                        <ul>
+                            <li>In ABABAB, first-mover advantage is huge: Ann gets item 1, 3, 5 while Beth gets 2, 4, 6.</li>
+                            <li>Envy-freeness becomes hard to achieve because each player clearly prefers the other's bundle.</li>
+                            <li>Random & Exchange mechanisms suffer because there are few trades that benefit both (if Beth's random items are low-ranked for Beth, Beth doesn't want any of Ann's higher-ranked items because they're also low-ranked).</li>
+                        </ul>
+
+                        <p style="margin-top: 1rem;"><strong>When Does Cut & Choose Shine?</strong> Cut & Choose works better with similar preferences than sequential selection, because the divider can create a fair split without knowing the chooser's exact preferences. But the divider still risks poor satisfaction.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="question-box">
+                <div class="question-header" onclick="toggleQuestion(this)">
+                    <h4>Q5: How can Monte Carlo simulation help us choose between mechanisms when theoretical analysis is too complex?</h4>
+                    <span class="question-toggle">▼</span>
+                </div>
+                <div class="question-answer">
+                    <div class="question-answer-content">
+                        <p><strong>Why Theory Alone Isn't Enough:</strong> Theoretical analysis of division mechanisms becomes intractable when:</p>
+                        <ul>
+                            <li>You have many items and many players</li>
+                            <li>Preferences have complex structures</li>
+                            <li>You want to compare multiple mechanisms fairly</li>
+                            <li>You need to know not just the best case, but typical and worst cases</li>
+                        </ul>
+
+                        <p style="margin-top: 1rem;"><strong>How Monte Carlo Simulation Helps:</strong></p>
+                        <ul>
+                            <li><strong>Generate Random Instances:</strong> Create 1000+ different preference profiles, either opposing, similar, or uncorrelated.</li>
+                            <li><strong>Run Each Mechanism:</strong> Apply all division mechanisms to each preference profile and compute metrics.</li>
+                            <li><strong>Aggregate Statistics:</strong> Calculate average satisfaction, standard deviation, Pareto efficiency rate, envy-free rate across all instances.</li>
+                            <li><strong>Statistical Significance:</strong> The standard deviation tells you whether differences between mechanisms are meaningful or just noise.</li>
+                            <li><strong>Context-Dependent Insights:</strong> You discover that mechanism A is best for opposing preferences while B is best for similar preferences — practical wisdom that theory alone might miss.</li>
+                        </ul>
+
+                        <p style="margin-top: 1rem;"><strong>Example Trade-Off:</strong> You might find that Random & Exchange has higher average satisfaction than Cut & Choose, but Cut & Choose is envy-free more often. Monte Carlo lets you see this trade-off empirically and decide which metric matters to you.</p>
+
+                        <p style="margin-top: 1rem;"><strong>The Computational Argument:</strong> Simulations are cheap (computers can run thousands in seconds), while proving theoretical guarantees requires sophisticated mathematical machinery. For practical mechanism design, simulation-driven discovery often leads to better real-world choices than elegant theory alone.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/auto-render.min.js" defer></script>
+
+    <script>
+        // ===== GLOBAL UTILITIES =====
+        document.addEventListener('DOMContentLoaded', () => {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false},
+                ]
+            });
+            setupProgressBar();
+            setupToolOneWorkshop();
+            setupToolTwoDashboard();
+            setupToolThreeMonteCarlo();
+        });
+
+        // Progress Bar
+        function setupProgressBar() {
+            const progressBar = document.querySelector('.progress-bar');
+            window.addEventListener('scroll', () => {
+                const scrollPercentage = (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100;
+                progressBar.style.width = scrollPercentage + '%';
+            });
+        }
+
+        // Socratic Toggle
+        function toggleQuestion(header) {
+            const answer = header.nextElementSibling;
+            answer.classList.toggle('open');
+            header.querySelector('.question-toggle').classList.toggle('open');
+        }
+
+        // ===== UTILITY FUNCTIONS =====
+        function generateRandomValueations(numItems) {
+            const ann = Array.from({length: numItems}, () => Math.floor(Math.random() * 100) + 1);
+            const beth = Array.from({length: numItems}, () => Math.floor(Math.random() * 100) + 1);
+            return {ann, beth};
+        }
+
+        function generateOpposingPreferences(numItems) {
+            // Ann's ranking determines Beth's inverse ranking
+            const ann = Array.from({length: numItems}, (_, i) => numItems - i);
+            const beth = Array.from({length: numItems}, (_, i) => i + 1);
+            return {ann, beth};
+        }
+
+        function generateSimilarPreferences(numItems) {
+            const ranking = Array.from({length: numItems}, (_, i) => numItems - i);
+            return {ann: [...ranking], beth: [...ranking]};
+        }
+
+        // ===== DIVISION MECHANISMS =====
+        function runABABAB(valuations, numItems) {
+            const ann = [...valuations.ann];
+            const beth = [...valuations.beth];
+            const remaining = Array.from({length: numItems}, (_, i) => i);
+            const annBucket = [];
+            const bethBucket = [];
+            const steps = [];
+
+            let turn = 0; // 0 for Ann, 1 for Beth
+            while (remaining.length > 0) {
+                if (turn === 0) {
+                    // Ann's turn
+                    const bestIdx = remaining.reduce((maxIdx, currIdx, idx) =>
+                        ann[remaining[idx]] > ann[remaining[maxIdx]] ? idx : maxIdx, 0);
+                    const item = remaining[bestIdx];
+                    annBucket.push(item);
+                    steps.push(`Ann picks item ${item + 1} (value: ${ann[item]})`);
+                    remaining.splice(bestIdx, 1);
+                } else {
+                    // Beth's turn
+                    const bestIdx = remaining.reduce((maxIdx, currIdx, idx) =>
+                        beth[remaining[idx]] > beth[remaining[maxIdx]] ? idx : maxIdx, 0);
+                    const item = remaining[bestIdx];
+                    bethBucket.push(item);
+                    steps.push(`Beth picks item ${item + 1} (value: ${beth[item]})`);
+                    remaining.splice(bestIdx, 1);
+                }
+                turn = 1 - turn;
+            }
+
+            return {ann: annBucket, beth: bethBucket, steps};
+        }
+
+        function runABBABA(valuations, numItems) {
+            const ann = [...valuations.ann];
+            const beth = [...valuations.beth];
+            const remaining = Array.from({length: numItems}, (_, i) => i);
+            const annBucket = [];
+            const bethBucket = [];
+            const steps = [];
+            const order = [0, 1, 1, 0, 0, 1].slice(0, numItems); // A, B, B, A, A, B
+
+            for (let turn of order) {
+                if (turn === 0) {
+                    const bestIdx = remaining.reduce((maxIdx, currIdx, idx) =>
+                        ann[remaining[idx]] > ann[remaining[maxIdx]] ? idx : maxIdx, 0);
+                    const item = remaining[bestIdx];
+                    annBucket.push(item);
+                    steps.push(`Ann picks item ${item + 1} (value: ${ann[item]})`);
+                    remaining.splice(bestIdx, 1);
+                } else {
+                    const bestIdx = remaining.reduce((maxIdx, currIdx, idx) =>
+                        beth[remaining[idx]] > beth[remaining[maxIdx]] ? idx : maxIdx, 0);
+                    const item = remaining[bestIdx];
+                    bethBucket.push(item);
+                    steps.push(`Beth picks item ${item + 1} (value: ${beth[item]})`);
+                    remaining.splice(bestIdx, 1);
+                }
+            }
+
+            return {ann: annBucket, beth: bethBucket, steps};
+        }
+
+        function runABBAAB(valuations, numItems) {
+            const ann = [...valuations.ann];
+            const beth = [...valuations.beth];
+            const remaining = Array.from({length: numItems}, (_, i) => i);
+            const annBucket = [];
+            const bethBucket = [];
+            const steps = [];
+            const order = [0, 1, 1, 0, 0, 1].slice(0, numItems);
+
+            for (let turn of order) {
+                if (turn === 0) {
+                    const bestIdx = remaining.reduce((maxIdx, currIdx, idx) =>
+                        ann[remaining[idx]] > ann[remaining[maxIdx]] ? idx : maxIdx, 0);
+                    const item = remaining[bestIdx];
+                    annBucket.push(item);
+                    steps.push(`Ann picks item ${item + 1} (value: ${ann[item]})`);
+                    remaining.splice(bestIdx, 1);
+                } else {
+                    const bestIdx = remaining.reduce((maxIdx, currIdx, idx) =>
+                        beth[remaining[idx]] > beth[remaining[maxIdx]] ? idx : maxIdx, 0);
+                    const item = remaining[bestIdx];
+                    bethBucket.push(item);
+                    steps.push(`Beth picks item ${item + 1} (value: ${beth[item]})`);
+                    remaining.splice(bestIdx, 1);
+                }
+            }
+
+            return {ann: annBucket, beth: bethBucket, steps};
+        }
+
+        function runCutChoose(valuations, numItems) {
+            // Divider (Ann) tries to create equal piles
+            const ann = [...valuations.ann];
+            const beth = [...valuations.beth];
+
+            // Divider splits items into two piles of roughly equal size
+            const items = Array.from({length: numItems}, (_, i) => i);
+            const pile1 = items.slice(0, Math.floor(numItems / 2));
+            const pile2 = items.slice(Math.floor(numItems / 2));
+
+            const steps = [];
+            steps.push(`Ann divides items into two piles...`);
+            steps.push(`Pile 1: Items ${pile1.map(i => i + 1).join(', ')}`);
+            steps.push(`Pile 2: Items ${pile2.map(i => i + 1).join(', ')}`);
+
+            // Chooser (Beth) picks the pile with higher value
+            const pile1Value = pile1.reduce((sum, i) => sum + beth[i], 0);
+            const pile2Value = pile2.reduce((sum, i) => sum + beth[i], 0);
+
+            let annBucket, bethBucket;
+            if (pile1Value >= pile2Value) {
+                bethBucket = pile1;
+                annBucket = pile2;
+                steps.push(`Beth chooses Pile 1 (value: ${pile1Value} > ${pile2Value})`);
+            } else {
+                bethBucket = pile2;
+                annBucket = pile1;
+                steps.push(`Beth chooses Pile 2 (value: ${pile2Value} > ${pile1Value})`);
+            }
+
+            return {ann: annBucket, beth: bethBucket, steps};
+        }
+
+        function runRandomExchange(valuations, numItems) {
+            const ann = [...valuations.ann];
+            const beth = [...valuations.beth];
+            const items = Array.from({length: numItems}, (_, i) => i);
+
+            // Random assignment
+            const annBucket = [];
+            const bethBucket = [];
+            items.forEach((item, idx) => {
+                if (Math.random() < 0.5) {
+                    annBucket.push(item);
+                } else {
+                    bethBucket.push(item);
+                }
+            });
+
+            // Ensure both have at least one item
+            if (annBucket.length === 0) annBucket.push(items[0]);
+            if (bethBucket.length === 0) bethBucket.push(items[1]);
+
+            const steps = [];
+            steps.push(`Random assignment: Ann gets items ${annBucket.map(i => i + 1).join(', ')}`);
+            steps.push(`Beth gets items ${bethBucket.map(i => i + 1).join(', ')}`);
+
+            // Try to find Pareto-improving swaps
+            let improved = true;
+            while (improved) {
+                improved = false;
+                for (let ai = 0; ai < annBucket.length; ai++) {
+                    for (let bi = 0; bi < bethBucket.length; bi++) {
+                        const annItem = annBucket[ai];
+                        const bethItem = bethBucket[bi];
+                        const annGain = beth[bethItem] - beth[annItem];
+                        const bethGain = ann[annItem] - ann[bethItem];
+
+                        if (annGain > 0 && bethGain > 0) {
+                            [annBucket[ai], bethBucket[bi]] = [bethBucket[bi], annBucket[ai]];
+                            steps.push(`Swap: Ann gives item ${annItem + 1}, Beth gives item ${bethItem + 1}`);
+                            improved = true;
+                        }
+                    }
+                }
+            }
+
+            return {ann: annBucket, beth: bethBucket, steps};
+        }
+
+        // Metrics Calculation
+        function calculateMetrics(valuations, annBucket, bethBucket) {
+            const satA = annBucket.reduce((sum, i) => sum + valuations.ann[i], 0);
+            const satB = bethBucket.reduce((sum, i) => sum + valuations.beth[i], 0);
+            const inequity = Math.abs(satA - satB);
+
+            // Envy-free check
+            const annEnviesBeth = bethBucket.reduce((sum, i) => sum + valuations.ann[i], 0) > satA;
+            const bethEnviesAnn = annBucket.reduce((sum, i) => sum + valuations.beth[i], 0) > satB;
+            const envyFree = !annEnviesBeth && !bethEnviesAnn;
+
+            // Pareto efficiency (simplified: count possible dominating divisions)
+            const totalItems = annBucket.length + bethBucket.length;
+            const allItems = Array.from({length: totalItems}, (_, i) => i);
+            let dominatingCount = 0;
+
+            // Check all possible 2-allocations
+            for (let mask = 0; mask < (1 << totalItems); mask++) {
+                const alt_ann = [];
+                const alt_beth = [];
+                for (let i = 0; i < totalItems; i++) {
+                    if (mask & (1 << i)) alt_ann.push(i);
+                    else alt_beth.push(i);
+                }
+
+                const alt_satA = alt_ann.reduce((sum, i) => sum + valuations.ann[i], 0);
+                const alt_satB = alt_beth.reduce((sum, i) => sum + valuations.beth[i], 0);
+
+                if (alt_satA >= satA && alt_satB >= satB && (alt_satA > satA || alt_satB > satB)) {
+                    dominatingCount++;
+                }
+            }
+
+            return {satA, satB, inequity, envyFree, efficiency: dominatingCount, minSat: Math.min(satA, satB)};
+        }
+
+        // ===== TOOL 1: ITEM DIVISION WORKSHOP =====
+        function setupToolOneWorkshop() {
+            const numItemsInput = document.getElementById('numItems');
+            const mechanismSelect = document.getElementById('mechanism');
+            const randomizeBtn = document.getElementById('randomizeValues');
+            const runBtn = document.getElementById('runDivision');
+            const resetBtn = document.getElementById('resetWorkshop');
+
+            function updateMatrix() {
+                const numItems = parseInt(numItemsInput.value);
+                const matrix = document.getElementById('valuationMatrix');
+                let html = '<div class="valuations-matrix">';
+                html += '<div class="matrix-label">Item</div>';
+                for (let i = 1; i <= numItems; i++) {
+                    html += `<div class="matrix-label">Item ${i}</div>`;
+                }
+                html += '<div class="matrix-label">Ann</div>';
+                for (let i = 0; i < numItems; i++) {
+                    html += `<input type="number" id="valAnn${i}" min="0" max="100" value="${Math.floor(Math.random() * 100) + 1}">`;
+                }
+                html += '<div class="matrix-label">Beth</div>';
+                for (let i = 0; i < numItems; i++) {
+                    html += `<input type="number" id="valBeth${i}" min="0" max="100" value="${Math.floor(Math.random() * 100) + 1}">`;
+                }
+                html += '</div>';
+                matrix.innerHTML = html;
+            }
+
+            function getValuations() {
+                const numItems = parseInt(numItemsInput.value);
+                const ann = [];
+                const beth = [];
+                for (let i = 0; i < numItems; i++) {
+                    ann.push(parseInt(document.getElementById(`valAnn${i}`).value) || 0);
+                    beth.push(parseInt(document.getElementById(`valBeth${i}`).value) || 0);
+                }
+                return {ann, beth};
+            }
+
+            numItemsInput.addEventListener('change', updateMatrix);
+            randomizeBtn.addEventListener('click', updateMatrix);
+
+            runBtn.addEventListener('click', () => {
+                const numItems = parseInt(numItemsInput.value);
+                const mechanism = mechanismSelect.value;
+                const valuations = getValuations();
+
+                let result;
+                if (mechanism === 'ababab') result = runABABAB(valuations, numItems);
+                else if (mechanism === 'abbaba') result = runABBABA(valuations, numItems);
+                else if (mechanism === 'abbaab') result = runABBAAB(valuations, numItems);
+                else if (mechanism === 'cutchoose') result = runCutChoose(valuations, numItems);
+                else if (mechanism === 'random') result = runRandomExchange(valuations, numItems);
+
+                // Display steps
+                const stepsDiv = document.getElementById('workshopSteps');
+                const stepsContainer = document.getElementById('stepsContainer');
+                stepsContainer.innerHTML = result.steps.map((step, idx) =>
+                    `<div class="step-animation">Step ${idx + 1}: ${step}</div>`
+                ).join('');
+                stepsDiv.style.display = 'block';
+
+                // Calculate and display metrics
+                const metrics = calculateMetrics(valuations, result.ann, result.beth);
+                const metricsDiv = document.getElementById('workshopMetrics');
+                metricsDiv.innerHTML = `
+                    <div class="result-row">
+                        <span class="result-label">Ann's Satisfaction</span>
+                        <span class="result-value">${metrics.satA}</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Beth's Satisfaction</span>
+                        <span class="result-value">${metrics.satB}</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Inequity (Difference)</span>
+                        <span class="result-value">${metrics.inequity}</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Min Satisfaction</span>
+                        <span class="result-value">${metrics.minSat}</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Envy-Free?</span>
+                        <span class="result-value ${metrics.envyFree ? 'text-success' : 'text-danger'}">${metrics.envyFree ? 'Yes ✓' : 'No ✗'}</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Pareto Efficient?</span>
+                        <span class="result-value ${metrics.efficiency === 0 ? 'text-success' : 'text-danger'}">${metrics.efficiency === 0 ? 'Yes ✓' : 'No ✗'}</span>
+                    </div>
+                `;
+                document.getElementById('workshopResults').style.display = 'block';
+            });
+
+            resetBtn.addEventListener('click', () => {
+                document.getElementById('workshopSteps').style.display = 'none';
+                document.getElementById('workshopResults').style.display = 'none';
+            });
+
+            updateMatrix();
+        }
+
+        // ===== TOOL 2: FAIRNESS DASHBOARD =====
+        function setupToolTwoDashboard() {
+            const prefTypeSelect = document.getElementById('prefType');
+            const runBtn = document.getElementById('runDashboard');
+
+            runBtn.addEventListener('click', () => {
+                const prefType = prefTypeSelect.value;
+                const numItems = 6;
+                const mechanisms = ['ababab', 'abbaba', 'cutchoose', 'random'];
+                const results = {ababab: [], abbaba: [], cutchoose: [], random: []};
+
+                // Generate 100 preference sets
+                for (let sim = 0; sim < 100; sim++) {
+                    let valuations;
+                    if (prefType === 'opposing') valuations = generateOpposingPreferences(numItems);
+                    else if (prefType === 'similar') valuations = generateSimilarPreferences(numItems);
+                    else valuations = generateRandomValueations(numItems);
+
+                    for (let mech of mechanisms) {
+                        let result;
+                        if (mech === 'ababab') result = runABABAB(valuations, numItems);
+                        else if (mech === 'abbaba') result = runABBABA(valuations, numItems);
+                        else if (mech === 'cutchoose') result = runCutChoose(valuations, numItems);
+                        else if (mech === 'random') result = runRandomExchange(valuations, numItems);
+
+                        const metrics = calculateMetrics(valuations, result.ann, result.beth);
+                        results[mech].push({
+                            satA: metrics.satA,
+                            satB: metrics.satB,
+                            inequity: metrics.inequity,
+                            envyFree: metrics.envyFree ? 1 : 0,
+                            efficiency: metrics.efficiency
+                        });
+                    }
+                }
+
+                // Aggregate results
+                const aggregated = {};
+                for (let mech of mechanisms) {
+                    const data = results[mech];
+                    aggregated[mech] = {
+                        avgSat: (data.reduce((sum, d) => sum + (d.satA + d.satB) / 2, 0) / data.length).toFixed(1),
+                        avgInequity: (data.reduce((sum, d) => sum + d.inequity, 0) / data.length).toFixed(1),
+                        avgEfficiency: (data.reduce((sum, d) => sum + d.efficiency, 0) / data.length).toFixed(1),
+                        envyFreeRate: ((data.reduce((sum, d) => sum + d.envyFree, 0) / data.length) * 100).toFixed(1)
+                    };
+                }
+
+                // Display table
+                const tbody = document.getElementById('dashboardBody');
+                tbody.innerHTML = mechanisms.map(mech => {
+                    const agg = aggregated[mech];
+                    const mechNames = {ababab: 'ABABAB', abbaba: 'ABBABA', cutchoose: 'Cut & Choose', random: 'Random & Exchange'};
+                    return `
+                        <tr>
+                            <td><strong>${mechNames[mech]}</strong></td>
+                            <td>${agg.avgSat}</td>
+                            <td>${agg.avgInequity}</td>
+                            <td>${agg.avgEfficiency}</td>
+                            <td>${agg.envyFreeRate}%</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                document.getElementById('dashboardResults').style.display = 'block';
+            });
+        }
+
+        // ===== TOOL 3: MONTE CARLO COMPARISON =====
+        function setupToolThreeMonteCarlo() {
+            const simCountSelect = document.getElementById('simCount');
+            const simPrefTypeSelect = document.getElementById('simPrefType');
+            const runBtn = document.getElementById('runMonteCarlo');
+
+            runBtn.addEventListener('click', async () => {
+                const simCount = parseInt(simCountSelect.value);
+                const prefType = simPrefTypeSelect.value;
+                const numItems = 6;
+                const mechanisms = ['ababab', 'abbaba', 'cutchoose', 'random'];
+                const results = {ababab: [], abbaba: [], cutchoose: [], random: []};
+
+                document.getElementById('monteCarloProgress').style.display = 'block';
+
+                for (let sim = 0; sim < simCount; sim++) {
+                    // Update progress
+                    const progress = Math.floor((sim / simCount) * 100);
+                    document.getElementById('progressCount').textContent = progress;
+                    document.getElementById('progressBar').style.width = progress + '%';
+
+                    let valuations;
+                    if (prefType === 'opposing') valuations = generateOpposingPreferences(numItems);
+                    else if (prefType === 'similar') valuations = generateSimilarPreferences(numItems);
+                    else valuations = generateRandomValueations(numItems);
+
+                    for (let mech of mechanisms) {
+                        let result;
+                        if (mech === 'ababab') result = runABABAB(valuations, numItems);
+                        else if (mech === 'abbaba') result = runABBABA(valuations, numItems);
+                        else if (mech === 'cutchoose') result = runCutChoose(valuations, numItems);
+                        else if (mech === 'random') result = runRandomExchange(valuations, numItems);
+
+                        const metrics = calculateMetrics(valuations, result.ann, result.beth);
+                        results[mech].push({
+                            sat: (metrics.satA + metrics.satB) / 2,
+                            inequity: metrics.inequity,
+                            envyFree: metrics.envyFree ? 1 : 0,
+                            efficiency: metrics.efficiency
+                        });
+                    }
+
+                    // Yield to browser
+                    if (sim % 100 === 0) await new Promise(r => setTimeout(r, 0));
+                }
+
+                document.getElementById('progressCount').textContent = '100';
+                document.getElementById('progressBar').style.width = '100%';
+
+                // Calculate statistics
+                const statistics = {};
+                for (let mech of mechanisms) {
+                    const data = results[mech];
+                    const sats = data.map(d => d.sat);
+                    const avgSat = sats.reduce((a, b) => a + b, 0) / sats.length;
+                    const stdDev = Math.sqrt(sats.reduce((sum, val) => sum + Math.pow(val - avgSat, 2), 0) / sats.length);
+                    const avgInequity = (data.reduce((sum, d) => sum + d.inequity, 0) / data.length).toFixed(1);
+                    const paretoRate = ((data.reduce((sum, d) => sum + (d.efficiency === 0 ? 1 : 0), 0) / data.length) * 100).toFixed(1);
+                    const envyFreeRate = ((data.reduce((sum, d) => sum + d.envyFree, 0) / data.length) * 100).toFixed(1);
+
+                    statistics[mech] = {
+                        avgSat: avgSat.toFixed(1),
+                        stdDev: stdDev.toFixed(1),
+                        avgInequity,
+                        paretoRate,
+                        envyFreeRate
+                    };
+                }
+
+                // Display table
+                const tbody = document.getElementById('monteCarloBody');
+                tbody.innerHTML = mechanisms.map(mech => {
+                    const stats = statistics[mech];
+                    const mechNames = {ababab: 'ABABAB', abbaba: 'ABBABA', cutchoose: 'Cut & Choose', random: 'Random & Exchange'};
+                    return `
+                        <tr>
+                            <td><strong>${mechNames[mech]}</strong></td>
+                            <td>${stats.avgSat}</td>
+                            <td>${stats.stdDev}</td>
+                            <td>${stats.avgInequity}</td>
+                            <td>${stats.paretoRate}%</td>
+                            <td>${stats.envyFreeRate}%</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                document.getElementById('monteCarloResults').style.display = 'block';
+                document.getElementById('monteCarloProgress').style.display = 'none';
+            });
+        }
+    </script>
+</body>
+</html>

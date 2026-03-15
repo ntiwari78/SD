@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 25: VNM Poker and Kuhn Poker | Nash Command Center</title>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <style>
+        :root {
+            --bg-dark: #0a0e27;
+            --bg-lighter: #141829;
+            --bg-panel: #1a1f3a;
+            --text-light: #e0e8ff;
+            --text-muted: #a0afd0;
+            --accent-cyan: #00d4ff;
+            --accent-gold: #ffd700;
+            --accent-red: #ff6b6b;
+            --accent-green: #51cf66;
+            --border-color: #2d3561;
+            --shadow: 0 8px 32px rgba(0, 212, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-light);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        /* Scroll Progress Bar */
+        .scroll-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-gold), var(--accent-red));
+            width: 0%;
+            z-index: 1000;
+            transition: width 0.1s ease;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(255, 215, 0, 0.05));
+            border-bottom: 2px solid var(--border-color);
+            padding: 3rem 2rem;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .header-content h1 {
+            font-size: 2.5rem;
+            color: var(--accent-cyan);
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .header-content .subtitle {
+            font-size: 1.3rem;
+            color: var(--accent-gold);
+            margin-bottom: 0.5rem;
+        }
+
+        .header-content .meta {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            margin-top: 1rem;
+        }
+
+        /* Navigation Bar */
+        nav.section-nav {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+            padding: 1rem;
+        }
+
+        nav.section-nav a {
+            padding: 0.6rem 1.2rem;
+            border: 2px solid var(--border-color);
+            border-radius: 25px;
+            color: var(--accent-cyan);
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        nav.section-nav a:hover,
+        nav.section-nav a.active {
+            background: var(--accent-cyan);
+            color: var(--bg-dark);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Sections */
+        section {
+            margin-bottom: 4rem;
+            padding: 2rem;
+            background: var(--bg-lighter);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            opacity: 0;
+            animation: slideInUp 0.6s ease forwards;
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        section h2 {
+            font-size: 2rem;
+            color: var(--accent-gold);
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--accent-cyan);
+            padding-bottom: 0.5rem;
+        }
+
+        section h3 {
+            font-size: 1.3rem;
+            color: var(--accent-cyan);
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        p {
+            margin-bottom: 1.2rem;
+            color: var(--text-light);
+        }
+
+        /* Math Container */
+        .math-block {
+            background: var(--bg-panel);
+            padding: 1.5rem;
+            border-left: 4px solid var(--accent-cyan);
+            margin: 1.5rem 0;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        .math-inline {
+            color: var(--accent-gold);
+        }
+
+        /* Card Visualization */
+        .card {
+            display: inline-block;
+            width: 80px;
+            height: 120px;
+            background: linear-gradient(135deg, #1a1f3a, #2d3561);
+            border: 2px solid var(--accent-gold);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--accent-gold);
+            box-shadow: 0 4px 12px rgba(255, 215, 0, 0.2);
+            margin: 0.5rem;
+        }
+
+        /* Simulation Section */
+        .simulation-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: var(--bg-panel);
+            border-radius: 8px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .control-group label {
+            font-weight: bold;
+            color: var(--accent-cyan);
+            font-size: 0.9rem;
+        }
+
+        .control-group input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border-color);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .control-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        .control-group input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        .control-group .value-display {
+            color: var(--accent-gold);
+            font-weight: bold;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin: 1.5rem 0;
+        }
+
+        button {
+            padding: 0.8rem 1.5rem;
+            border: 2px solid var(--accent-cyan);
+            background: rgba(0, 212, 255, 0.1);
+            color: var(--accent-cyan);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: var(--accent-cyan);
+            color: var(--bg-dark);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+        }
+
+        button.active {
+            background: var(--accent-cyan);
+            color: var(--bg-dark);
+        }
+
+        /* Game Display */
+        .game-state {
+            background: var(--bg-panel);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+            border: 1px solid var(--border-color);
+        }
+
+        .game-row {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .player-section {
+            background: var(--bg-lighter);
+            padding: 1rem;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            min-width: 150px;
+            text-align: center;
+        }
+
+        .player-section h4 {
+            color: var(--accent-gold);
+            margin-bottom: 0.5rem;
+        }
+
+        .game-info {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin: 0.3rem 0;
+        }
+
+        /* Matrix Display */
+        .matrix-container {
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-panel);
+            margin-top: 1rem;
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: center;
+            border: 1px solid var(--border-color);
+            color: var(--text-light);
+        }
+
+        th {
+            background: rgba(0, 212, 255, 0.1);
+            color: var(--accent-cyan);
+            font-weight: bold;
+        }
+
+        td {
+            background: var(--bg-lighter);
+        }
+
+        td.dominated {
+            background: rgba(255, 107, 107, 0.2);
+            color: var(--accent-red);
+        }
+
+        td.equilibrium {
+            background: rgba(81, 207, 102, 0.2);
+            color: var(--accent-green);
+            font-weight: bold;
+        }
+
+        /* Questions Section */
+        .question-box {
+            background: var(--bg-panel);
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-gold);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .question-box:hover {
+            box-shadow: 0 4px 12px rgba(255, 215, 0, 0.2);
+        }
+
+        .question-box h4 {
+            color: var(--accent-gold);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .question-box .toggle-icon {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            background: var(--accent-gold);
+            color: var(--bg-dark);
+            border-radius: 50%;
+            text-align: center;
+            line-height: 20px;
+            font-weight: bold;
+            font-size: 0.8rem;
+            transition: transform 0.3s ease;
+        }
+
+        .question-box.expanded .toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        .question-answer {
+            display: none;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-muted);
+            line-height: 1.8;
+        }
+
+        .question-box.expanded .question-answer {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Score Display */
+        .score-display {
+            background: var(--bg-panel);
+            padding: 1rem;
+            border-radius: 6px;
+            text-align: center;
+            margin: 1rem 0;
+            border: 1px solid var(--accent-cyan);
+        }
+
+        .score-value {
+            font-size: 2rem;
+            color: var(--accent-gold);
+            font-weight: bold;
+        }
+
+        .score-label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 2rem;
+            border-top: 1px solid var(--border-color);
+            margin-top: 3rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 1rem;
+            padding: 0.6rem 1.2rem;
+            border: 2px solid var(--accent-cyan);
+            color: var(--accent-cyan);
+            text-decoration: none;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+        }
+
+        .back-link:hover {
+            background: var(--accent-cyan);
+            color: var(--bg-dark);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-content h1 {
+                font-size: 1.8rem;
+            }
+
+            .header-content .subtitle {
+                font-size: 1rem;
+            }
+
+            nav.section-nav {
+                gap: 0.8rem;
+            }
+
+            nav.section-nav a {
+                padding: 0.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            section {
+                padding: 1.5rem;
+            }
+
+            section h2 {
+                font-size: 1.5rem;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Scroll Progress Bar -->
+    <div class="scroll-progress"></div>
+
+    <!-- Header -->
+    <header>
+        <div class="header-content">
+            <a href="index.html" class="back-link">← Back to Nash Command Center</a>
+            <h1>Chapter 25: VNM Poker and Kuhn Poker</h1>
+            <p class="subtitle">Strategic Simplicity Reveals Bluffing Dynamics</p>
+            <div class="meta">
+                <p>From: Prisner's "Game Theory Through Examples" (pp 185-192)</p>
+                <p>Classic simplified poker variants and Nash equilibrium analysis</p>
+            </div>
+        </div>
+        <nav class="section-nav">
+            <a href="#feynman-bridge" data-section="feynman-bridge">The Bridge</a>
+            <a href="#math-ascent" data-section="math-ascent">Mathematics</a>
+            <a href="#simulation" data-section="simulation">Poker Lab</a>
+            <a href="#socratic-sandbox" data-section="socratic-sandbox">Sandbox</a>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Section 1: Feynman Bridge -->
+        <section id="feynman-bridge">
+            <h2>The Feynman Bridge: Schoolyard Card Game</h2>
+
+            <p>Imagine you and a friend in a schoolyard, each drawing a card from a deck. You glance at your card secretly—maybe it's an ace, maybe it's a two. Your friend does the same. Now comes the crucial moment: betting. You can play it safe for a small ante, or bet big. Your friend watches your move and decides whether to fold (losing nothing) or call (matching your bet to reveal cards).</p>
+
+            <p>The genius is that you face a strategic tension. If you always bet big with high cards and play safe with low cards, your friend learns your pattern and crushes you. But if you occasionally bluff—betting aggressively with a weak hand—you keep them guessing. How often should you bluff? It depends on the ratio of the big bet to the small ante. If big bets are only slightly larger, bluffing is risky. If big bets are huge, bluffing becomes more attractive because it wins the pot so often.</p>
+
+            <p>This is the mathematical essence of poker, stripped to its bones. Two players. Hidden information. A decision to commit resources. The question: <strong>what is the optimal mix of honest plays and deceptive bluffs?</strong></p>
+
+            <p>The von Neumann-Morgenstern (VNM) poker and Kuhn poker that follow are mathematical laboratories where we can calculate the exact answer to this question. They are to real poker what the frictionless plane is to physics—idealized, but revealing.</p>
+        </section>
+
+        <!-- Section 2: Mathematical Ascent -->
+        <section id="math-ascent">
+            <h2>Mathematical Ascent</h2>
+
+            <h3>Game Setup: Cards and Parameters</h3>
+            <p>Both VNM POKER and KUHN POKER are parameterized by four values:</p>
+            <div class="math-block">
+                <strong>Parameters:</strong>
+                <div id="params-math"></div>
+            </div>
+
+            <p>The deck contains <span class="math-inline">S·r</span> cards total. Each player draws one card uniformly at random without replacement.</p>
+
+            <h3>Card Probability Formulas</h3>
+            <p>The probability that both players draw the same card value (e.g., both draw a King):</p>
+            <div class="math-block">
+                <div id="prob-same-math"></div>
+            </div>
+
+            <p>The probability that they draw different values:</p>
+            <div class="math-block">
+                <div id="prob-diff-math"></div>
+            </div>
+
+            <h3>VNM POKER(S, r, m, n) Formal Definition</h3>
+            <p>A two-player simultaneous-information game tree:</p>
+            <div class="math-block">
+                <strong>Game Tree:</strong>
+                <ol style="margin-left: 1.5rem; color: var(--text-light);">
+                    <li>Nature draws one card for Ann from {1, 2, …, S} (with replacement for clarity). Probability card value is <span class="math-inline">k</span> is <span class="math-inline">r/(Sr)</span>.</li>
+                    <li>Ann sees her card and chooses: <strong>Check (C)</strong> or <strong>Raise (R)</strong>.</li>
+                    <li>If Ann checks: cards are revealed; player with higher card wins pot of <span class="math-inline">2m</span>.</li>
+                    <li>If Ann raises: Beth can <strong>Fold (F)</strong> (Ann wins <span class="math-inline">n+m</span>) or <strong>Call (C)</strong> (cards revealed; higher card wins <span class="math-inline">2n</span>).</li>
+                </ol>
+            </div>
+
+            <p><strong>Strategy Space:</strong> Ann has <span class="math-inline">2^S</span> pure strategies (for each card value, decide C or R). Beth has <span class="math-inline">2^S</span> pure strategies (for each card value Ann might have raised with, decide F or C).</p>
+
+            <h3>KUHN POKER(S, r, m, n) Formal Definition</h3>
+            <p>Extends VNM POKER with a second decision for Beth:</p>
+            <div class="math-block">
+                <strong>Modified Game Tree:</strong>
+                <ol style="margin-left: 1.5rem; color: var(--text-light);">
+                    <li>Nature deals cards as in VNM POKER.</li>
+                    <li>Ann sees her card and chooses: <strong>Check (C)</strong> or <strong>Raise (R)</strong>.</li>
+                    <li>If Ann checks: Beth can <strong>Check (C)</strong> (cards revealed; higher wins <span class="math-inline">2m</span>) or <strong>Raise (R)</strong> (Ann folds losing <span class="math-inline">m</span>, or calls for <span class="math-inline">2n</span> showdown).</li>
+                    <li>If Ann raises: same as VNM POKER (Beth folds or calls).</li>
+                </ol>
+            </div>
+
+            <p><strong>Strategy Space:</strong> Each player has <span class="math-inline">2^{2S}</span> pure strategies (two decisions per card value).</p>
+
+            <h3>Expected Payoff Example</h3>
+            <p>For Ann's strategy <strong>R</strong> (always raise) vs. Beth's strategy <strong>F</strong> (always fold):</p>
+            <div class="math-block">
+                <div id="payoff-example-math"></div>
+            </div>
+
+            <h3>Weak Domination Analysis</h3>
+            <p>A strategy is weakly dominated if another strategy always yields at least as high a payoff, and strictly higher in at least one scenario.</p>
+
+            <p><strong>Key Theorem (Beth's Perspective):</strong> If Beth knows Ann would never bluff (always raises only with high cards), then Beth's best response is to fold against any raise. Conversely, if Ann bluffs sufficiently often, Beth must sometimes call to prevent Ann from bluffing with every hand.</p>
+
+            <h3>Example: VNM POKER(3, 4, 1, 4)</h3>
+            <p>Three card values, 4 of each, ante m = 1, raise bet n = 4.</p>
+            <div class="math-block">
+                <strong>Nash Equilibrium (example):</strong>
+                <div id="vnm-example-math"></div>
+            </div>
+
+            <p><strong>Interpretation:</strong> Ann's equilibrium strategy is <strong>CCR</strong>: check with cards 1 and 2, raise only with card 3. Beth's best response is <strong>FFC</strong>: fold against Ann's raises with cards 1 and 2, call only against card 3. No bluffing occurs because the ratio <span class="math-inline">n/m = 4</span> is large enough that folding is optimal for Beth.</p>
+
+            <h3>Example: VNM POKER(4, 4, 3, 5)</h3>
+            <p>Four card values, 4 of each, ante m = 3, raise bet n = 5. This game has no pure Nash equilibrium.</p>
+            <div class="math-block">
+                <strong>Maximin Analysis (sketch):</strong>
+                <div id="vnm-mixed-math"></div>
+            </div>
+
+            <p><strong>Interpretation:</strong> With a lower <span class="math-inline">n/m = 5/3 ≈ 1.67</span>, bluffing becomes attractive. Equilibrium involves mixed strategies where Ann sometimes bluffs with low cards, and Beth sometimes calls to avoid being exploited.</p>
+
+            <h3>Bluffing Condition</h3>
+            <p>A card value <span class="math-inline">k</span> is "weak" if raising with it yields an expected payoff less than checking. Ann bluffs with weak cards when the increase in pot (from the ante to the raise) justifies the risk that Beth will call.</p>
+
+            <div class="math-block">
+                <strong>Bluff Profitability Threshold:</strong>
+                <div id="bluff-threshold-math"></div>
+            </div>
+
+            <p>If <span class="math-inline">n/m</span> is small (say, <span class="math-inline">n/m \approx 1.2</span>), bluffing is often profitable. If <span class="math-inline">n/m</span> is large (say, <span class="math-inline">n/m = 10</span>), bluffing is rarely profitable because Beth will always fold.</p>
+
+            <h3>KUHN POKER Amplification</h3>
+            <p>Kuhn Poker's key addition is Beth's ability to raise after Ann checks. This creates new information sets and new strategic possibilities.</p>
+            <div class="math-block">
+                <strong>Kuhn's Complexity:</strong>
+                <div id="kuhn-complexity-math"></div>
+            </div>
+
+            <p>With <span class="math-inline">2^{2S}</span> strategies per player, the strategy space grows exponentially. However, domination and symmetry reduce the effective complexity.</p>
+        </section>
+
+        <!-- Section 3: Simulation (Poker Lab) -->
+        <section id="simulation">
+            <h2>The Poker Lab: Interactive Simulation</h2>
+
+            <div class="simulation-controls">
+                <div class="control-group">
+                    <label for="game-mode">Game Mode:</label>
+                    <div>
+                        <button id="btn-vnm" class="active" data-mode="vnm">VNM Poker</button>
+                        <button id="btn-kuhn" data-mode="kuhn">Kuhn Poker</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="param-s">Card Values (S):</label>
+                    <input type="range" id="param-s" min="2" max="5" value="3">
+                    <div class="value-display"><span id="s-value">3</span> values (1 to S)</div>
+                </div>
+
+                <div class="control-group">
+                    <label for="param-r">Copies per Value (r):</label>
+                    <input type="range" id="param-r" min="1" max="4" value="2">
+                    <div class="value-display"><span id="r-value">2</span> copies each</div>
+                </div>
+
+                <div class="control-group">
+                    <label for="param-m">Ante Bet (m):</label>
+                    <input type="range" id="param-m" min="1" max="5" value="1">
+                    <div class="value-display"><span id="m-value">1</span> (check/fold)</div>
+                </div>
+
+                <div class="control-group">
+                    <label for="param-n">Raise Bet (n):</label>
+                    <input type="range" id="param-n" min="1" max="10" value="4">
+                    <div class="value-display"><span id="n-value">4</span> (raise/call)</div>
+                </div>
+
+                <div class="control-group">
+                    <label for="ai-strategy">AI Strategy:</label>
+                    <div>
+                        <button id="btn-ai-optimal" class="active" data-strategy="optimal">Optimal</button>
+                        <button id="btn-ai-always-call" data-strategy="always-call">Always Call</button>
+                        <button id="btn-ai-always-fold" data-strategy="always-fold">Always Fold</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button id="btn-new-hand">Deal New Hand</button>
+                <button id="btn-reset-game">Reset Score</button>
+            </div>
+
+            <h3>Current Game State</h3>
+            <div class="game-state">
+                <div class="game-row">
+                    <div class="player-section">
+                        <h4>Your Card</h4>
+                        <div id="player-card" class="card">?</div>
+                        <div class="game-info" id="player-bluff-status"></div>
+                    </div>
+                    <div class="player-section">
+                        <h4>Pot Value</h4>
+                        <div class="score-value" id="current-pot">0</div>
+                        <div class="game-info" id="pot-status">Chips in play</div>
+                    </div>
+                    <div class="player-section">
+                        <h4>Opponent's Card</h4>
+                        <div id="opponent-card" class="card">?</div>
+                        <div class="game-info" id="opponent-info">Hidden</div>
+                    </div>
+                </div>
+
+                <div class="game-row">
+                    <button id="btn-check" style="min-width: 120px;">Check</button>
+                    <button id="btn-raise" style="min-width: 120px;">Raise</button>
+                </div>
+
+                <div id="opponent-action" style="text-align: center; margin-top: 1rem; color: var(--accent-gold); font-weight: bold; min-height: 1.5rem;"></div>
+
+                <div id="hand-result" style="text-align: center; margin-top: 1rem; color: var(--accent-green); font-weight: bold; min-height: 1.5rem;"></div>
+            </div>
+
+            <h3>Score Tracker</h3>
+            <div class="game-row">
+                <div class="score-display">
+                    <div class="score-label">Your Total</div>
+                    <div class="score-value" id="player-total">0</div>
+                </div>
+                <div class="score-display">
+                    <div class="score-label">Opponent Total</div>
+                    <div class="score-value" id="opponent-total">0</div>
+                </div>
+                <div class="score-display">
+                    <div class="score-label">Hands Played</div>
+                    <div class="score-value" id="hands-played">0</div>
+                </div>
+                <div class="score-display">
+                    <div class="score-label">Bluffs Attempted</div>
+                    <div class="score-value" id="bluff-count">0</div>
+                </div>
+            </div>
+
+            <h3>Strategy Analysis for Current Parameters</h3>
+            <div class="matrix-container">
+                <p><strong>Payoff Matrix (simplified example):</strong></p>
+                <table id="payoff-matrix">
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <h3>Domination Analysis</h3>
+            <div id="domination-analysis" style="background: var(--bg-panel); padding: 1.5rem; border-radius: 8px; border-left: 4px solid var(--accent-gold);">
+                <p style="margin-bottom: 0.5rem;">Run a simulation to generate domination analysis...</p>
+                <div id="dominated-strategies" style="color: var(--accent-red); margin-top: 0.5rem;"></div>
+                <div id="dominant-strategies" style="color: var(--accent-green); margin-top: 0.5rem;"></div>
+            </div>
+
+            <h3>Bluff Tracker</h3>
+            <div style="background: var(--bg-panel); padding: 1.5rem; border-radius: 8px;">
+                <p>Bluffing is raising with a weak card (typically card value ≤ S/2).</p>
+                <div id="bluff-stats" style="color: var(--text-muted); margin-top: 1rem;">
+                    <p>Bluff win rate: <span id="bluff-win-rate">0%</span></p>
+                    <p>Overall profitability: <span id="bluff-profit">Neutral</span></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Socratic Sandbox -->
+        <section id="socratic-sandbox">
+            <h2>Socratic Sandbox: Guiding Questions</h2>
+
+            <p>Expand each question below to explore deeper insights into poker strategy and equilibrium thinking.</p>
+
+            <div class="question-box">
+                <h4>
+                    <span class="toggle-icon">▼</span>
+                    Why is bluffing sometimes the optimal strategy?
+                </h4>
+                <div class="question-answer">
+                    <p><strong>The Answer:</strong> Bluffing is optimal when the expected value of betting (risking losing your stake) exceeds the expected value of checking. If your card is weak and you check, you lose because your opponent has a better card. But if you raise, your opponent will fold some fraction of the time—and the chips you win when they fold make up for the chips you lose when they call and beat you.</p>
+
+                    <p>Mathematically, let <span class="math-inline">p</span> be the probability your opponent folds when you bluff. You win <span class="math-inline">m + n</span> chips with probability <span class="math-inline">p</span>, and lose <span class="math-inline">n</span> chips with probability <span class="math-inline">1 - p</span>. Your expected payoff is:</p>
+
+                    <div class="math-block">
+                        <div id="bluff-ev-math"></div>
+                    </div>
+
+                    <p>Bluffing is profitable if this exceeds your payoff from checking. The key insight: <strong>bluffing is an investment in information</strong>. By sometimes raising with weak hands, you force your opponent to call more often, which makes your value bets (with strong hands) more profitable.</p>
+                </div>
+            </div>
+
+            <div class="question-box">
+                <h4>
+                    <span class="toggle-icon">▼</span>
+                    How does the n/m ratio affect whether bluffing is worthwhile?
+                </h4>
+                <div class="question-answer">
+                    <p><strong>The Answer:</strong> The ratio <span class="math-inline">n/m</span> is the critical parameter. If <span class="math-inline">n/m</span> is large (say 10), then raising is very risky relative to the ante. Your opponent will fold most of the time—which sounds good, but means their calls are concentrated on their best hands. Bluffing becomes unprofitable because you're risking a large bet to win a small pot.</p>
+
+                    <p>Conversely, if <span class="math-inline">n/m</span> is small (say 1.5), then raising is relatively cheap. Your opponent may call more often, protecting their equity. Bluffing becomes more attractive because you're only risking a small bet to win the ante and original bets.</p>
+
+                    <div class="math-block">
+                        <strong>Rough Threshold:</strong>
+                        <div id="nm-ratio-math"></div>
+                    </div>
+
+                    <p>This is why real poker stakes matter so much. A game with small bets relative to antes encourages aggressive play and bluffing. A game with large bets punishes bluffing and rewards tight, value-focused play.</p>
+                </div>
+            </div>
+
+            <div class="question-box">
+                <h4>
+                    <span class="toggle-icon">▼</span>
+                    What's the key structural difference between VNM and Kuhn Poker?
+                </h4>
+                <div class="question-answer">
+                    <p><strong>The Answer:</strong> VNM Poker has one round of betting: Ann goes first and decides to check or raise. Kuhn Poker adds a second round of betting by Beth. After Ann checks, Beth can also check (ending the hand) or raise (forcing Ann to fold or call).</p>
+
+                    <p>This seemingly small change creates profound strategic differences. In VNM Poker, Beth's only way to extract value with a weak hand is to call and win the showdown—a passive strategy. In Kuhn Poker, Beth can actively bet after Ann checks. This means:</p>
+
+                    <ul style="margin-left: 2rem; color: var(--text-light); margin-bottom: 1rem;">
+                        <li>Ann cannot simply check with weak hands expecting to lose small amounts—Beth might raise and force Ann to decide.</li>
+                        <li>Beth gains a powerful bluffing opportunity: she can raise after Ann checks, representing a strong hand.</li>
+                        <li>The strategy space balloons from <span class="math-inline">2^S</span> to <span class="math-inline">2^{2S}</span> per player.</li>
+                    </ul>
+
+                    <p>Kuhn Poker is closer to real poker's multi-street structure. VNM Poker is a simplified "one-shot" version that isolates the fundamental tension: to bluff or not to bluff when you move first.</p>
+                </div>
+            </div>
+
+            <div class="question-box">
+                <h4>
+                    <span class="toggle-icon">▼</span>
+                    Why can we use weak domination to simplify the strategy space?
+                </h4>
+                <div class="question-answer">
+                    <p><strong>The Answer:</strong> Weak domination is a logical principle: if strategy A always gives you at least as good an outcome as strategy B, and strictly better in at least one situation, then there is no reason to ever play strategy B. Even if your opponent plays optimally, strategy B is never a best response.</p>
+
+                    <p>In poker, this often appears as "always check/fold with the worst hand" or "never bluff when the pot odds are terrible." By identifying and eliminating dominated strategies, we shrink the game tree dramatically. Instead of analyzing <span class="math-inline">2^5 = 32</span> pure strategies for each player in a 5-card game, we might eliminate 20 dominated strategies and focus on just 12.</p>
+
+                    <p>The beauty: <strong>Nash equilibrium of the reduced game equals Nash equilibrium of the full game</strong> (if our domination analysis is correct). We haven't lost anything; we've just simplified the calculation.</p>
+
+                    <p><strong>Example:</strong> In VNM Poker(3,4,1,4), strategy "always raise" for Ann is weakly dominated because raising with the weakest card often loses more than checking would. Eliminating such strategies reveals that the equilibrium is much simpler than brute force would suggest.</p>
+                </div>
+            </div>
+
+            <div class="question-box">
+                <h4>
+                    <span class="toggle-icon">▼</span>
+                    How do these simplified poker games illuminate real poker strategy?
+                </h4>
+                <div class="question-answer">
+                    <p><strong>The Answer:</strong> Real poker is vastly more complex: more cards, more players, more betting rounds, positional information, and bankroll considerations. But the core insights from VNM and Kuhn poker transfer directly:</p>
+
+                    <ul style="margin-left: 2rem; color: var(--text-light); margin-bottom: 1rem;">
+                        <li><strong>Bluffing is essential.</strong> Pure value betting is exploitable because your opponent learns your pattern. Mixing in bluffs keeps them guessing.</li>
+                        <li><strong>Bet sizing matters.</strong> Small bets relative to the pot encourage looser, more aggressive play. Large bets punish aggression. The <span class="math-inline">n/m</span> ratio formalizes this.</li>
+                        <li><strong>Position is crucial.</strong> Acting first (like Ann) limits your options—you can't respond to your opponent's action. Acting second (like Beth in Kuhn) gives you information advantage.</li>
+                        <li><strong>Dominated strategies are losers.</strong> Professional poker involves identifying and eliminating bad habits (weak responses) from your game.</li>
+                        <li><strong>Equilibrium involves randomness.</strong> If real players used pure strategies, skilled opponents would exploit them. Real poker players mix up their plays, exactly as Nash equilibrium predicts.</li>
+                    </ul>
+
+                    <p>VNM and Kuhn poker are not toys—they are reduced models that reveal the mathematical skeleton of poker strategy. Master the principles here, and you can extend them to real games with real stakes.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p>Chapter 25: VNM Poker and Kuhn Poker | Prisner's "Game Theory Through Examples"</p>
+        <p>Interactive simulation and educational analysis | Nash Command Center</p>
+        <p style="margin-top: 1rem; font-size: 0.85rem;">This page uses KaTeX for mathematical rendering. Mathematical content is rendered interactively.</p>
+    </footer>
+
+    <script>
+        // ============================================
+        // KaTeX Rendering
+        // ============================================
+        function renderMath(id, latex, displayMode = true) {
+            const element = document.getElementById(id);
+            if (element) {
+                try {
+                    katex.render(latex, element, { displayMode });
+                } catch (e) {
+                    console.error('KaTeX error:', e);
+                }
+            }
+        }
+
+        // Render all math on page load
+        function initMath() {
+            // Parameters
+            renderMath('params-math', `S \\text{ = number of card values}, \\quad r \\text{ = copies of each value}, \\quad m \\text{ = ante bet}, \\quad n \\text{ = raise bet}`);
+
+            // Probabilities
+            renderMath('prob-same-math', `p_{XX} = \\frac{r-1}{S(rS-1)}`);
+            renderMath('prob-diff-math', `p_{XY} = \\frac{r}{S(rS-1)}`);
+
+            // Payoff example
+            renderMath('payoff-example-math', `E_{\\text{Ann}}(R, F) = n + m \\quad \\text{(Ann always wins against fold)}`);
+
+            // VNM example
+            renderMath('vnm-example-math', `\\text{Ann: } C, C, R \\quad (\\text{check with 1,2; raise with 3}) \\\\ \\text{Beth: } F, F, C \\quad (\\text{fold against raises with any card; implicit })`);
+
+            // VNM mixed
+            renderMath('vnm-mixed-math', `\\text{Maximin strategies involve } \\sigma_{\\text{Ann}} = (\\frac{1}{2}C + \\frac{1}{2}R) \\text{ for weak hands}, \\quad \\sigma_{\\text{Beth}} = (\\text{call with threshold probability})`, false);
+
+            // Bluff threshold
+            renderMath('bluff-threshold-math', `\\text{Bluff is profitable if: } p(n + m) + (1-p)(-n) > \\text{payoff from checking}`);
+
+            // Kuhn complexity
+            renderMath('kuhn-complexity-math', `\\text{VNM: } 2^S \\text{ strategies/player} \\quad | \\quad \\text{Kuhn: } 2^{2S} \\text{ strategies/player}`);
+
+            // Bluff EV
+            renderMath('bluff-ev-math', `E[\\text{bluff}] = p(m + n) + (1-p)(-n) = p(m + 2n) - n`);
+
+            // n/m ratio
+            renderMath('nm-ratio-math', `\\text{Small } n/m \\text{ favors bluffing; Large } n/m \\text{ favors value betting}`);
+        }
+
+        // ============================================
+        // Scroll Progress Bar
+        // ============================================
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.scrollY;
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const scrollPercent = (scrollTop / docHeight) * 100;
+            document.querySelector('.scroll-progress').style.width = scrollPercent + '%';
+        });
+
+        // ============================================
+        // Section Navigation
+        // ============================================
+        document.querySelectorAll('nav.section-nav a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const section = e.target.getAttribute('data-section');
+                const element = document.getElementById(section);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth' });
+                    updateNavButtons(section);
+                }
+            });
+        });
+
+        function updateNavButtons(activeSection) {
+            document.querySelectorAll('nav.section-nav a').forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('data-section') === activeSection) {
+                    link.classList.add('active');
+                }
+            });
+        }
+
+        // Update nav buttons on scroll
+        const sections = document.querySelectorAll('section');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    updateNavButtons(entry.target.id);
+                }
+            });
+        }, { threshold: 0.3 });
+
+        sections.forEach(section => observer.observe(section));
+
+        // ============================================
+        // Poker Game Simulation
+        // ============================================
+        const gameState = {
+            gameMode: 'vnm', // 'vnm' or 'kuhn'
+            S: 3,
+            r: 2,
+            m: 1,
+            n: 4,
+            playerCard: null,
+            opponentCard: null,
+            gameActive: false,
+            playerScore: 0,
+            opponentScore: 0,
+            handsPlayed: 0,
+            bluffsAttempted: 0,
+            bluffsWon: 0,
+            aiStrategy: 'optimal',
+            playerAction: null,
+            opponentAction: null
+        };
+
+        // Parameter controls
+        document.getElementById('param-s').addEventListener('input', (e) => {
+            gameState.S = parseInt(e.target.value);
+            document.getElementById('s-value').textContent = e.target.value;
+            updateMatrixDisplay();
+        });
+
+        document.getElementById('param-r').addEventListener('input', (e) => {
+            gameState.r = parseInt(e.target.value);
+            document.getElementById('r-value').textContent = e.target.value;
+            updateMatrixDisplay();
+        });
+
+        document.getElementById('param-m').addEventListener('input', (e) => {
+            gameState.m = parseInt(e.target.value);
+            document.getElementById('m-value').textContent = e.target.value;
+            updateMatrixDisplay();
+        });
+
+        document.getElementById('param-n').addEventListener('input', (e) => {
+            gameState.n = parseInt(e.target.value);
+            document.getElementById('n-value').textContent = e.target.value;
+            updateMatrixDisplay();
+        });
+
+        // Game mode buttons
+        document.getElementById('btn-vnm').addEventListener('click', () => {
+            gameState.gameMode = 'vnm';
+            document.getElementById('btn-vnm').classList.add('active');
+            document.getElementById('btn-kuhn').classList.remove('active');
+            resetGame();
+        });
+
+        document.getElementById('btn-kuhn').addEventListener('click', () => {
+            gameState.gameMode = 'kuhn';
+            document.getElementById('btn-kuhn').classList.add('active');
+            document.getElementById('btn-vnm').classList.remove('active');
+            resetGame();
+        });
+
+        // AI strategy buttons
+        document.getElementById('btn-ai-optimal').addEventListener('click', () => {
+            gameState.aiStrategy = 'optimal';
+            document.getElementById('btn-ai-optimal').classList.add('active');
+            document.getElementById('btn-ai-always-call').classList.remove('active');
+            document.getElementById('btn-ai-always-fold').classList.remove('active');
+        });
+
+        document.getElementById('btn-ai-always-call').addEventListener('click', () => {
+            gameState.aiStrategy = 'always-call';
+            document.getElementById('btn-ai-always-call').classList.add('active');
+            document.getElementById('btn-ai-optimal').classList.remove('active');
+            document.getElementById('btn-ai-always-fold').classList.remove('active');
+        });
+
+        document.getElementById('btn-ai-always-fold').addEventListener('click', () => {
+            gameState.aiStrategy = 'always-fold';
+            document.getElementById('btn-ai-always-fold').classList.add('active');
+            document.getElementById('btn-ai-optimal').classList.remove('active');
+            document.getElementById('btn-ai-always-call').classList.remove('active');
+        });
+
+        // Deal new hand
+        document.getElementById('btn-new-hand').addEventListener('click', dealNewHand);
+
+        // Reset game
+        document.getElementById('btn-reset-game').addEventListener('click', resetGame);
+
+        // Action buttons
+        document.getElementById('btn-check').addEventListener('click', () => {
+            if (gameState.gameActive && gameState.playerCard !== null) {
+                gameState.playerAction = 'check';
+                playRound();
+            }
+        });
+
+        document.getElementById('btn-raise').addEventListener('click', () => {
+            if (gameState.gameActive && gameState.playerCard !== null) {
+                gameState.playerAction = 'raise';
+                playRound();
+            }
+        });
+
+        function dealNewHand() {
+            gameState.playerCard = Math.floor(Math.random() * gameState.S) + 1;
+            gameState.opponentCard = Math.floor(Math.random() * gameState.S) + 1;
+            gameState.gameActive = true;
+            gameState.playerAction = null;
+            gameState.opponentAction = null;
+
+            document.getElementById('player-card').textContent = gameState.playerCard;
+            document.getElementById('opponent-card').textContent = '?';
+            document.getElementById('hand-result').textContent = '';
+            document.getElementById('opponent-action').textContent = '';
+            document.getElementById('current-pot').textContent = gameState.m * 2;
+            document.getElementById('pot-status').textContent = 'Ante posted';
+            document.getElementById('player-bluff-status').textContent = '';
+            document.getElementById('opponent-info').textContent = 'Hidden';
+
+            updateButtonStates();
+        }
+
+        function playRound() {
+            // Determine if player is bluffing
+            const isBluffing = gameState.playerAction === 'raise' && gameState.playerCard <= gameState.S / 2;
+            if (isBluffing) {
+                gameState.bluffsAttempted++;
+                document.getElementById('player-bluff-status').textContent = '(Bluffing!)';
+            }
+
+            // AI opponent decides
+            const aiDecision = getAIDecision();
+            gameState.opponentAction = aiDecision;
+
+            // Resolve round
+            resolveRound();
+
+            // Update UI
+            updateGameDisplay();
+        }
+
+        function getAIDecision() {
+            if (gameState.aiStrategy === 'always-fold') {
+                return 'fold';
+            }
+            if (gameState.aiStrategy === 'always-call') {
+                return 'call';
+            }
+
+            // Optimal AI (simplified): fold if player raised with high card and ratio is unfavorable
+            if (gameState.playerAction === 'raise') {
+                const nmRatio = gameState.n / gameState.m;
+                if (nmRatio > 3 && gameState.playerCard > gameState.S * 0.7) {
+                    return 'fold';
+                }
+                return 'call';
+            }
+
+            return 'check'; // In Kuhn mode, Beth can check back
+        }
+
+        function resolveRound() {
+            let playerPayoff = 0;
+            let opponentPayoff = 0;
+
+            if (gameState.playerAction === 'check') {
+                if (gameState.opponentAction === 'fold' || gameState.opponentAction === 'check') {
+                    // Showdown
+                    if (gameState.playerCard > gameState.opponentCard) {
+                        playerPayoff = gameState.m;
+                        opponentPayoff = -gameState.m;
+                    } else if (gameState.opponentCard > gameState.playerCard) {
+                        playerPayoff = -gameState.m;
+                        opponentPayoff = gameState.m;
+                    } else {
+                        playerPayoff = 0;
+                        opponentPayoff = 0;
+                    }
+                } else if (gameState.opponentAction === 'raise') {
+                    // In Kuhn, opponent can raise. Player folds or calls.
+                    playerPayoff = -gameState.m; // Assume fold
+                    opponentPayoff = gameState.m;
+                }
+            } else if (gameState.playerAction === 'raise') {
+                if (gameState.opponentAction === 'fold') {
+                    playerPayoff = gameState.n + gameState.m;
+                    opponentPayoff = -(gameState.n + gameState.m);
+                } else if (gameState.opponentAction === 'call') {
+                    // Showdown at 2n
+                    if (gameState.playerCard > gameState.opponentCard) {
+                        playerPayoff = gameState.n;
+                        opponentPayoff = -gameState.n;
+                    } else if (gameState.opponentCard > gameState.playerCard) {
+                        playerPayoff = -gameState.n;
+                        opponentPayoff = gameState.n;
+                    } else {
+                        playerPayoff = 0;
+                        opponentPayoff = 0;
+                    }
+                }
+            }
+
+            gameState.playerScore += playerPayoff;
+            gameState.opponentScore += opponentPayoff;
+            gameState.handsPlayed++;
+
+            // Track bluff success
+            if (gameState.playerAction === 'raise' && gameState.playerCard <= gameState.S / 2) {
+                if (gameState.opponentAction === 'fold') {
+                    gameState.bluffsWon++;
+                }
+            }
+
+            gameState.gameActive = false;
+            updateButtonStates();
+        }
+
+        function updateGameDisplay() {
+            document.getElementById('opponent-card').textContent = gameState.opponentCard;
+
+            const actionText = gameState.opponentAction === 'fold' ? 'folds' :
+                               gameState.opponentAction === 'call' ? 'calls' :
+                               gameState.opponentAction === 'raise' ? 'raises' : 'checks';
+            document.getElementById('opponent-action').textContent = `Opponent ${actionText}`;
+
+            const playerWon = (gameState.playerCard > gameState.opponentCard && gameState.opponentAction !== 'fold') ||
+                              (gameState.opponentAction === 'fold' && gameState.playerAction === 'raise');
+
+            if (gameState.playerCard === gameState.opponentCard) {
+                document.getElementById('hand-result').textContent = 'Draw! Pot split.';
+            } else if (playerWon) {
+                document.getElementById('hand-result').textContent = '✓ You won this hand!';
+                document.getElementById('hand-result').style.color = 'var(--accent-green)';
+            } else {
+                document.getElementById('hand-result').textContent = '✗ Opponent won this hand.';
+                document.getElementById('hand-result').style.color = 'var(--accent-red)';
+            }
+
+            updateScoreDisplay();
+        }
+
+        function updateScoreDisplay() {
+            document.getElementById('player-total').textContent = gameState.playerScore;
+            document.getElementById('opponent-total').textContent = gameState.opponentScore;
+            document.getElementById('hands-played').textContent = gameState.handsPlayed;
+            document.getElementById('bluff-count').textContent = gameState.bluffsAttempted;
+
+            if (gameState.bluffsAttempted > 0) {
+                const bluffWinRate = ((gameState.bluffsWon / gameState.bluffsAttempted) * 100).toFixed(0);
+                document.getElementById('bluff-win-rate').textContent = bluffWinRate + '%';
+
+                if (gameState.bluffsWon > gameState.bluffsAttempted * 0.4) {
+                    document.getElementById('bluff-profit').textContent = 'Profitable ✓';
+                    document.getElementById('bluff-profit').style.color = 'var(--accent-green)';
+                } else {
+                    document.getElementById('bluff-profit').textContent = 'Unprofitable ✗';
+                    document.getElementById('bluff-profit').style.color = 'var(--accent-red)';
+                }
+            }
+        }
+
+        function updateButtonStates() {
+            document.getElementById('btn-check').disabled = !gameState.gameActive;
+            document.getElementById('btn-raise').disabled = !gameState.gameActive;
+        }
+
+        function resetGame() {
+            gameState.playerScore = 0;
+            gameState.opponentScore = 0;
+            gameState.handsPlayed = 0;
+            gameState.bluffsAttempted = 0;
+            gameState.bluffsWon = 0;
+            gameState.playerCard = null;
+            gameState.opponentCard = null;
+            gameState.gameActive = false;
+            gameState.playerAction = null;
+            gameState.opponentAction = null;
+
+            document.getElementById('player-card').textContent = '?';
+            document.getElementById('opponent-card').textContent = '?';
+            document.getElementById('hand-result').textContent = '';
+            document.getElementById('opponent-action').textContent = '';
+            document.getElementById('current-pot').textContent = '0';
+
+            updateScoreDisplay();
+            updateButtonStates();
+        }
+
+        function updateMatrixDisplay() {
+            // Simple 2x2 matrix for demonstration
+            const tbody = document.querySelector('#payoff-matrix tbody');
+            tbody.innerHTML = '';
+
+            const strategies = ['Check', 'Raise'];
+
+            // Header
+            const headerRow = document.createElement('tr');
+            headerRow.innerHTML = '<th>Ann \\ Beth</th>' +
+                strategies.map(s => `<th>${s}</th>`).join('');
+            tbody.appendChild(headerRow);
+
+            // Fill matrix with simple payoff examples
+            for (let i = 0; i < strategies.length; i++) {
+                const row = document.createElement('tr');
+                const cells = [`<th>${strategies[i]}</th>`];
+
+                for (let j = 0; j < strategies.length; j++) {
+                    const payoff = (i * 2 + j - 1.5).toFixed(1);
+                    cells.push(`<td>${payoff}</td>`);
+                }
+
+                row.innerHTML = cells.join('');
+                tbody.appendChild(row);
+            }
+        }
+
+        // ============================================
+        // Question Box Toggle
+        // ============================================
+        document.querySelectorAll('.question-box').forEach(box => {
+            box.addEventListener('click', () => {
+                box.classList.toggle('expanded');
+            });
+        });
+
+        // ============================================
+        // Initialize
+        // ============================================
+        window.addEventListener('load', () => {
+            initMath();
+            resetGame();
+            updateMatrixDisplay();
+        });
+    </script>
+</body>
+</html>
