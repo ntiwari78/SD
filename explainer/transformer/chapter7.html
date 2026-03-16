@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 7: Decoder Models & Seq2Seq — GPT & T5</title>
+
+    <!-- KaTeX for Math Rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #1a1f35;
+            --bg-tertiary: #252d47;
+            --accent: #ec4899;
+            --accent-light: #f472b6;
+            --text-primary: #f0f3ff;
+            --text-secondary: #a8adc5;
+            --text-tertiary: #7a7f9e;
+            --border: #3a4258;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+
+        body {
+            font-family: Inter, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Sticky Navbar */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            background: rgba(10, 14, 26, 0.7);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        nav a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        nav a:hover {
+            color: var(--accent-light);
+        }
+
+        .nav-title {
+            font-family: Space Grotesk, sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            flex-grow: 1;
+            margin-left: 2rem;
+        }
+
+        .level-dots {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--border);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .dot:hover {
+            background: var(--accent-light);
+            transform: scale(1.3);
+        }
+
+        .dot.active {
+            background: var(--accent);
+            transform: scale(1.4);
+        }
+
+        /* Main Container */
+        main {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        section {
+            margin-bottom: 4rem;
+            scroll-margin-top: 80px;
+        }
+
+        h1 {
+            font-family: Space Grotesk, sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        h2 {
+            font-family: Space Grotesk, sans-serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+
+        h3 {
+            font-family: Space Grotesk, sans-serif;
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: var(--accent-light);
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+            line-height: 1.8;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+            font-style: italic;
+        }
+
+        /* Cards */
+        .card {
+            background: rgba(26, 31, 53, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+        }
+
+        .card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 30px rgba(236, 72, 153, 0.1);
+        }
+
+        /* Interactive Demo Boxes */
+        .demo-box {
+            background: rgba(37, 45, 71, 0.5);
+            border: 2px solid var(--accent);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .demo-title {
+            font-family: Space Grotesk, sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 1rem;
+        }
+
+        .button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-family: Inter, sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.95rem;
+        }
+
+        .button:hover {
+            background: var(--accent-light);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(236, 72, 153, 0.3);
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: Inter, sans-serif;
+            margin-bottom: 1rem;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 10px rgba(236, 72, 153, 0.3);
+        }
+
+        /* Code Blocks */
+        .code-block {
+            background: var(--bg-secondary);
+            border-left: 4px solid var(--accent);
+            border-radius: 8px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            font-family: JetBrains Mono, monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            white-space: pre;
+        }
+
+        .code-title {
+            font-family: Space Grotesk, sans-serif;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+        }
+
+        code {
+            color: var(--text-primary);
+        }
+
+        .keyword { color: #ec4899; }
+        .string { color: #10b981; }
+        .comment { color: #7a7f9e; }
+        .number { color: #f59e0b; }
+        .function { color: #60a5fa; }
+
+        /* Math */
+        .katex-display {
+            margin: 1.5rem 0;
+            background: rgba(37, 45, 71, 0.3);
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        /* Canvas Containers */
+        .canvas-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+        }
+
+        th, td {
+            border: 1px solid var(--border);
+            padding: 1rem;
+            text-align: left;
+        }
+
+        th {
+            background: rgba(236, 72, 153, 0.1);
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: rgba(236, 72, 153, 0.05);
+        }
+
+        /* Expandable Sections */
+        .expandable {
+            margin: 1rem 0;
+        }
+
+        .expandable-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            cursor: pointer;
+            padding: 1rem;
+            background: rgba(236, 72, 153, 0.05);
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .expandable-header:hover {
+            background: rgba(236, 72, 153, 0.1);
+        }
+
+        .expandable-toggle {
+            font-size: 1.2rem;
+            transition: transform 0.3s;
+            color: var(--accent);
+        }
+
+        .expandable-toggle.active {
+            transform: rotate(180deg);
+        }
+
+        .expandable-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            padding-left: 1rem;
+        }
+
+        .expandable-content.active {
+            max-height: 2000px;
+            padding: 1rem;
+            background: rgba(37, 45, 71, 0.5);
+            border-radius: 0 0 8px 8px;
+        }
+
+        /* Utility */
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            h2 {
+                font-size: 1.4rem;
+            }
+
+            nav {
+                flex-wrap: wrap;
+                gap: 1rem;
+            }
+
+            .nav-title {
+                width: 100%;
+                margin: 0.5rem 0;
+            }
+
+            main {
+                padding: 0 1rem;
+            }
+        }
+
+        .token-box {
+            display: inline-block;
+            background: var(--accent);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            margin: 0.25rem;
+            font-family: JetBrains Mono, monospace;
+            font-weight: 600;
+            animation: tokenAppear 0.5s ease-out;
+        }
+
+        @keyframes tokenAppear {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .comparison-bar {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: rgba(37, 45, 71, 0.3);
+            border-radius: 8px;
+        }
+
+        .bar-label {
+            min-width: 120px;
+            font-weight: 600;
+        }
+
+        .bar-value {
+            flex-grow: 1;
+            background: linear-gradient(90deg, var(--accent), var(--accent-light));
+            height: 30px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            padding: 0 1rem;
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .bar-text {
+            min-width: 80px;
+            text-align: right;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <a href="index.html">← Back</a>
+        <div class="nav-title">Module 7: Decoder Models & Seq2Seq</div>
+        <div class="level-dots">
+            <div class="dot active" data-level="1"></div>
+            <div class="dot" data-level="2"></div>
+            <div class="dot" data-level="3"></div>
+            <div class="dot" data-level="4"></div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Hero Section -->
+        <section id="hero">
+            <h1>Decoder Models & Seq2Seq Architecture</h1>
+            <p class="subtitle">From GPT-1 to GPT-3: Autoregressive generation, in-context learning, and the T5 text-to-text framework</p>
+        </section>
+
+        <!-- LEVEL 1: The Feynman Bridge -->
+        <section id="level-1" class="level-section">
+            <h2>⚡ Level 1: The Feynman Bridge (Zero Jargon)</h2>
+            <p>Let's start with a simple analogy to understand decoder models and sequence-to-sequence architectures.</p>
+
+            <!-- Analogy -->
+            <div class="card">
+                <h3>Analogy: The Storyteller vs The Editor vs The Translator</h3>
+                <p><strong>Encoder (BERT) = Editor:</strong> Reads the entire document all at once, understands context from all directions (both left and right). Like an editor reviewing a complete manuscript.</p>
+                <p><strong>Decoder (GPT) = Storyteller:</strong> Writes one word at a time, can only see what came before (like writing a story left to right, never peeking ahead). Each new word builds on the previous ones.</p>
+                <p><strong>Encoder-Decoder (T5) = Translator:</strong> First reads the entire source text (encoder), then writes the translation word by word (decoder). Best of both worlds: full understanding, sequential generation.</p>
+            </div>
+
+            <!-- Demo 1: Autoregressive Text Generator -->
+            <div class="demo-box">
+                <div class="demo-title">🎬 Interactive Demo 1: Autoregressive Token Generator</div>
+                <p>Watch as tokens are generated one at a time. Notice how each new token can only "see" the tokens that came before it.</p>
+                <input type="text" class="input-field" id="prompt-input" placeholder="Enter a prompt (e.g., 'The future of AI')">
+                <button class="button" onclick="generateTokens()">Generate Tokens</button>
+                <div id="token-output" style="margin-top: 1rem;"></div>
+                <div class="canvas-container" style="margin-top: 1.5rem;">
+                    <canvas id="causalMaskCanvas" width="400" height="300"></canvas>
+                </div>
+            </div>
+
+            <!-- Demo 2: GPT Scale Explorer -->
+            <div class="demo-box">
+                <div class="demo-title">📊 Interactive Demo 2: GPT Scale Explorer</div>
+                <p>Compare the massive scale differences across GPT models. Notice how larger models enable better few-shot learning.</p>
+                <div id="scale-comparison"></div>
+            </div>
+
+            <!-- Demo 3: T5 Task Formatter -->
+            <div class="demo-box">
+                <div class="demo-title">🔄 Interactive Demo 3: Text-to-Text Machine (T5 Framework)</div>
+                <p>T5 demonstrates that ALL NLP tasks are just transforming one text string into another. Pick a task, see how input is formatted.</p>
+                <select class="input-field" id="task-select" onchange="updateT5Demo()">
+                    <option value="translation">Translation: English → German</option>
+                    <option value="summarization">Summarization</option>
+                    <option value="sentiment">Sentiment Classification</option>
+                    <option value="qa">Question Answering</option>
+                    <option value="grammar">Grammar Check</option>
+                </select>
+                <textarea class="input-field" id="task-input" rows="3" placeholder="Enter text here..."></textarea>
+                <button class="button" onclick="formatT5Task()">Format as T5 Input</button>
+                <div id="t5-output" style="margin-top: 1rem; padding: 1rem; background: rgba(16, 185, 129, 0.1); border-radius: 8px; display: none;">
+                    <div style="color: var(--text-secondary); font-size: 0.9rem;">T5 Input:</div>
+                    <div id="t5-input-formatted" style="font-family: JetBrains Mono; margin-top: 0.5rem;"></div>
+                    <div style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 1rem;">Expected Output:</div>
+                    <div id="t5-output-formatted" style="font-family: JetBrains Mono; margin-top: 0.5rem;"></div>
+                </div>
+            </div>
+
+            <!-- Key Intuitions -->
+            <div class="card">
+                <h3>🧠 Key Intuitions</h3>
+                <ul style="margin-left: 1.5rem;">
+                    <li><strong>GPT (Autoregressive):</strong> "Given everything you've read so far, predict the next word" — P(w_t | w_{t-1}, ..., w_1)</li>
+                    <li><strong>Zero-shot:</strong> "Here's a task description. Do it." (no examples)</li>
+                    <li><strong>One-shot:</strong> "Here's one example. Now do the same for this input."</li>
+                    <li><strong>Few-shot:</strong> "Here are several examples (K = 10-100). Now do the same for this input."</li>
+                    <li><strong>T5 Framework:</strong> "Every NLP task is just transforming one text string into another" — same model, same loss, different task prefix</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- LEVEL 2: Interactive Schematic -->
+        <section id="level-2" class="level-section">
+            <h2>🔬 Level 2: Interactive Schematic (Full Math with KaTeX)</h2>
+
+            <!-- GPT Family -->
+            <h3>GPT Family: Evolution from GPT-1 to GPT-3</h3>
+
+            <div class="card">
+                <h3>GPT-1: Generative Pre-Training (2018)</h3>
+                <p><strong>Architecture:</strong> Stack of 12 transformer decoder layers, 12 masked self-attention heads, d_model = 768, d_ff = 3072, learned positional embeddings.</p>
+
+                <p><strong>Pre-training objective (Causal Language Modeling):</strong></p>
+                <div class="katex-display">$$L_1(U) = -\sum_{t} \log P(w_t | w_{t-1}, \ldots, w_{t-k}; \Theta)$$</div>
+
+                <p><strong>Supervised fine-tuning objective:</strong></p>
+                <div class="katex-display">$$L_2(C) = -\sum_{(x,y)} \log P(y | x; W)$$</div>
+
+                <p><strong>Combined objective:</strong></p>
+                <div class="katex-display">$$L_{total} = L_2(C) + \lambda L_1(C)$$</div>
+
+                <p><strong>Training data:</strong> BooksCorpus + 1B Word Benchmark (~7,000 unique books)</p>
+            </div>
+
+            <div class="card">
+                <h3>GPT-2: Zero-Shot Transfer (2019)</h3>
+                <p><strong>Key advancement:</strong> Scaled up to 1.542B parameters, 48 layers, and proved zero-shot learning without task-specific fine-tuning.</p>
+
+                <p><strong>Architecture modifications from GPT-1:</strong></p>
+                <ul style="margin-left: 1.5rem;">
+                    <li><strong>Pre-LayerNorm:</strong> Layer norm applied BEFORE attention and FFN (not after)</li>
+                    <li><strong>Final LayerNorm:</strong> Extra layer norm after the final decoder block</li>
+                    <li><strong>Residual scaling:</strong> Residual layer weights initialized with 1/√N scaling</li>
+                    <li><strong>Tokenization:</strong> BPE (Byte-Pair Encoding) with 50,257 vocabulary</li>
+                </ul>
+
+                <p><strong>Pre-LayerNorm vs Post-LayerNorm:</strong></p>
+                <div class="katex-display">$$\text{Post-LN (Standard):} \quad x + \text{Sublayer}(\text{LayerNorm}(x))$$</div>
+                <div class="katex-display">$$\text{Pre-LN (GPT-2):} \quad \text{LayerNorm}(x + \text{Sublayer}(x)) \text{ — norm applied before sublayer}$$</div>
+
+                <p><strong>Result:</strong> Achieved state-of-the-art on 7/8 benchmarks without any fine-tuning.</p>
+            </div>
+
+            <div class="card">
+                <h3>GPT-3: In-Context Learning at Scale (2020)</h3>
+                <p><strong>Breakthrough:</strong> 175B parameters enable powerful in-context learning with no gradient updates needed.</p>
+
+                <p><strong>Model Specifications:</strong></p>
+                <ul style="margin-left: 1.5rem;">
+                    <li>96 decoder layers</li>
+                    <li>d_model = 12,288</li>
+                    <li>96 attention heads, d_k = d_v = 128</li>
+                    <li>d_ff = 4 × d_model = 49,152</li>
+                    <li>Training: 300B tokens, context window = 2048</li>
+                    <li>Attention pattern: Alternating dense and locally banded sparse attention (Sparse Transformer)</li>
+                </ul>
+
+                <p><strong>In-Context Learning Paradigm:</strong></p>
+                <div class="katex-display">$$\text{Zero-shot:} \quad P(y \mid \text{task description})$$</div>
+                <div class="katex-display">$$\text{One-shot:} \quad P(y \mid \text{task description}, x_1 \rightarrow y_1)$$</div>
+                <div class="katex-display">$$\text{Few-shot:} \quad P(y \mid \text{task description}, x_1 \rightarrow y_1, \ldots, x_K \rightarrow y_K)$$</div>
+
+                <p>Crucially: <strong>No gradient updates during evaluation</strong> — pure in-context learning from the prompt.</p>
+            </div>
+
+            <!-- GPT Model Comparison Table -->
+            <div class="card">
+                <h3>📊 GPT Family Comparison Dashboard</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Parameters</th>
+                            <th>Layers</th>
+                            <th>d_model</th>
+                            <th>Heads</th>
+                            <th>Context</th>
+                            <th>Training Data</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>GPT-1</td>
+                            <td>117M</td>
+                            <td>12</td>
+                            <td>768</td>
+                            <td>12</td>
+                            <td>512</td>
+                            <td>BooksCorpus</td>
+                        </tr>
+                        <tr>
+                            <td>GPT-2 Small</td>
+                            <td>124M</td>
+                            <td>12</td>
+                            <td>768</td>
+                            <td>12</td>
+                            <td>1024</td>
+                            <td>WebText (40GB)</td>
+                        </tr>
+                        <tr>
+                            <td>GPT-2 Medium</td>
+                            <td>355M</td>
+                            <td>24</td>
+                            <td>1024</td>
+                            <td>16</td>
+                            <td>1024</td>
+                            <td>WebText (40GB)</td>
+                        </tr>
+                        <tr>
+                            <td>GPT-2 Large</td>
+                            <td>774M</td>
+                            <td>36</td>
+                            <td>1280</td>
+                            <td>20</td>
+                            <td>1024</td>
+                            <td>WebText (40GB)</td>
+                        </tr>
+                        <tr>
+                            <td>GPT-2</td>
+                            <td>1.5B</td>
+                            <td>48</td>
+                            <td>1600</td>
+                            <td>25</td>
+                            <td>1024</td>
+                            <td>WebText (40GB)</td>
+                        </tr>
+                        <tr>
+                            <td>GPT-3 Small</td>
+                            <td>125M</td>
+                            <td>12</td>
+                            <td>768</td>
+                            <td>12</td>
+                            <td>2048</td>
+                            <td>Common Crawl + Books + Wikipedia (300B tokens)</td>
+                        </tr>
+                        <tr>
+                            <td>GPT-3 Medium</td>
+                            <td>350M</td>
+                            <td>24</td>
+                            <td>1024</td>
+                            <td>16</td>
+                            <td>2048</td>
+                            <td>Common Crawl + Books + Wikipedia (300B tokens)</td>
+                        </tr>
+                        <tr>
+                            <td>GPT-3 Large</td>
+                            <td>1.3B</td>
+                            <td>24</td>
+                            <td>2048</td>
+                            <td>16</td>
+                            <td>2048</td>
+                            <td>Common Crawl + Books + Wikipedia (300B tokens)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>GPT-3 XL</strong></td>
+                            <td><strong>2.7B</strong></td>
+                            <td><strong>32</strong></td>
+                            <td><strong>2560</strong></td>
+                            <td><strong>32</strong></td>
+                            <td><strong>2048</strong></td>
+                            <td><strong>Common Crawl + Books + Wikipedia (300B tokens)</strong></td>
+                        </tr>
+                        <tr>
+                            <td>GPT-3 2.7B</td>
+                            <td>2.7B</td>
+                            <td>32</td>
+                            <td>2560</td>
+                            <td>32</td>
+                            <td>2048</td>
+                            <td>Common Crawl + Books + Wikipedia (300B tokens)</td>
+                        </tr>
+                        <tr>
+                            <td>GPT-3 13B</td>
+                            <td>13B</td>
+                            <td>40</td>
+                            <td>5120</td>
+                            <td>40</td>
+                            <td>2048</td>
+                            <td>Common Crawl + Books + Wikipedia (300B tokens)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>GPT-3 175B</strong></td>
+                            <td><strong>175B</strong></td>
+                            <td><strong>96</strong></td>
+                            <td><strong>12288</strong></td>
+                            <td><strong>96</strong></td>
+                            <td><strong>2048</strong></td>
+                            <td><strong>Common Crawl + Books + Wikipedia (300B tokens)</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- T5 and Text-to-Text -->
+            <h3>T5: Text-to-Text Transfer Transformer</h3>
+
+            <div class="card">
+                <h3>The T5 Philosophy: All Tasks Are Text-to-Text</h3>
+                <p>T5's key insight: <strong>reframe every NLP task as transforming an input text string to an output text string.</strong></p>
+
+                <ul style="margin-left: 1.5rem;">
+                    <li>Translation: "translate English to German: The house is wonderful." → "Das Haus ist wunderbar."</li>
+                    <li>Summarization: "summarize: Long article text..." → "Summary text..."</li>
+                    <li>Sentiment: "sst2 sentence: This movie was fantastic!" → "positive"</li>
+                    <li>Question Answering: "question: What is the capital of France? context: Paris is..." → "Paris"</li>
+                    <li>Grammar Correction: "cola sentence: The boy run to store." → "The boy runs to the store."</li>
+                </ul>
+
+                <p><strong>Architecture:</strong> Standard encoder-decoder transformer</p>
+                <ul style="margin-left: 1.5rem;">
+                    <li>Encoder: Fully visible self-attention (every position sees all positions)</li>
+                    <li>Decoder: Causal self-attention (position i only sees positions ≤ i)</li>
+                    <li>Cross-attention: Decoder attends to encoder outputs</li>
+                </ul>
+
+                <p><strong>Pre-training Objective: Span Corruption</strong></p>
+                <div class="katex-display">$$\text{Input: "The quick } \langle\text{X}\rangle \text{ fox jumps } \langle\text{Y}\rangle\text{"}$$</div>
+                <div class="katex-display">$$\text{Target: "}\langle\text{X}\rangle \text{ brown } \langle\text{Y}\rangle \text{ over the lazy dog"}$$</div>
+
+                <p><strong>Benefit:</strong> Same model, same loss function, same hyperparameters for ALL tasks.</p>
+            </div>
+
+            <div class="card">
+                <h3>ByT5: Operating at the Byte Level</h3>
+                <p><strong>Innovation:</strong> Tokenization-free model that operates directly on raw UTF-8 bytes (256 embeddings + 3 special tokens).</p>
+
+                <ul style="margin-left: 1.5rem;">
+                    <li><strong>No SentencePiece tokenization</strong> — eliminates vocabulary bottleneck</li>
+                    <li><strong>Asymmetric encoder-decoder:</strong> Encoder has 3× more layers (byte sequences are longer)</li>
+                    <li><strong>Noise robustness:</strong> Tested on 6 types: deletions, mutations, duplications, capitalization changes, uppercasing, random casing</li>
+                    <li><strong>Multilingual:</strong> Works directly with any UTF-8 text</li>
+                </ul>
+
+                <p><strong>Trade-off:</strong> Byte sequences are ~4× longer than token sequences, so inference is slower but robustness increases.</p>
+            </div>
+
+            <div class="card">
+                <h3>ELECTRA: Efficient Pretraining via Discriminator (§5.3)</h3>
+                <p><strong>Problem with MLM:</strong> BERT masks only 15% of tokens, so the model learns from only 15% of the data per iteration. Inefficient.</p>
+
+                <p><strong>ELECTRA Solution: Replaced Token Detection (RTD)</strong></p>
+                <ol style="margin-left: 1.5rem;">
+                    <li><strong>Generator (small MLM):</strong> Corrupt input by replacing masked positions with random tokens: $x^{\text{masked}} = \text{REPLACE}(x, m, [\text{MASK}])$, learns $P_G(x_t | x^{\text{masked}})$</li>
+                    <li><strong>Create corruption:</strong> Sample replacements from generator: $x^c = \text{REPLACE}(x, m, \hat{x}_i)$ where $\hat{x}_i \sim P_G(x_i | x^{\text{masked}})$</li>
+                    <li><strong>Discriminator (ELECTRA):</strong> Binary classification — is each token original or replaced? Learns from ALL tokens, not just 15%</li>
+                </ol>
+
+                <p><strong>Result:</strong> ~4× more sample efficient than BERT. The discriminator learns richer representations because it processes every token.</p>
+            </div>
+
+            <!-- Causal Mask Visualizer -->
+            <div class="demo-box">
+                <div class="demo-title">🎨 Interactive: Causal Mask Visualizer</div>
+                <p>Adjust sequence length and see how the causal (lower-triangular) attention mask prevents future tokens from being visible:</p>
+                <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                    <label>Sequence Length: <input type="range" id="seqLenSlider" min="2" max="16" value="8" onchange="drawCausalMask()"></label>
+                    <span id="seqLenDisplay">8</span>
+                </div>
+                <div class="canvas-container">
+                    <canvas id="causalMaskCanvas2" width="500" height="500"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- LEVEL 3: Engineer's Sandbox -->
+        <section id="level-3" class="level-section">
+            <h2>⚙️ Level 3: Engineer's Sandbox (PyTorch/HuggingFace Code)</h2>
+
+            <!-- Code Block 1 -->
+            <div class="card">
+                <div class="code-title">💾 Code Block 1: Causal Self-Attention from Scratch</div>
+                <div class="code-block"><span class="keyword">import</span> torch
+<span class="keyword">import</span> torch.nn <span class="keyword">as</span> nn
+<span class="keyword">import</span> torch.nn.functional <span class="keyword">as</span> F
+
+<span class="keyword">class</span> <span class="function">CausalSelfAttention</span>(nn.Module):
+    <span class="string">"""GPT-style masked self-attention — tokens only attend to the past"""</span>
+    <span class="keyword">def</span> <span class="function">__init__</span>(<span class="keyword">self</span>, d_model, n_heads, max_seq_len=<span class="number">2048</span>):
+        <span class="keyword">super</span>().__init__()
+        <span class="keyword">self</span>.d_model = d_model
+        <span class="keyword">self</span>.n_heads = n_heads
+        <span class="keyword">self</span>.d_k = d_model // n_heads
+
+        <span class="comment"># Combined projection for Q, K, V</span>
+        <span class="keyword">self</span>.W_qkv = nn.Linear(d_model, <span class="number">3</span> * d_model)
+        <span class="keyword">self</span>.W_o = nn.Linear(d_model, d_model)
+
+        <span class="comment"># Causal mask: lower triangular</span>
+        mask = torch.tril(torch.ones(max_seq_len, max_seq_len))
+        <span class="keyword">self</span>.register_buffer(<span class="string">'mask'</span>,
+                                     mask.view(<span class="number">1</span>, <span class="number">1</span>, max_seq_len, max_seq_len))
+
+    <span class="keyword">def</span> <span class="function">forward</span>(<span class="keyword">self</span>, x):
+        B, T, D = x.shape
+        qkv = <span class="keyword">self</span>.W_qkv(x)
+        Q, K, V = qkv.chunk(<span class="number">3</span>, dim=-<span class="number">1</span>)
+
+        <span class="comment"># Reshape for multi-head: (B,T,D) → (B,heads,T,d_k)</span>
+        Q = Q.view(B, T, <span class="keyword">self</span>.n_heads, <span class="keyword">self</span>.d_k).transpose(<span class="number">1</span>, <span class="number">2</span>)
+        K = K.view(B, T, <span class="keyword">self</span>.n_heads, <span class="keyword">self</span>.d_k).transpose(<span class="number">1</span>, <span class="number">2</span>)
+        V = V.view(B, T, <span class="keyword">self</span>.n_heads, <span class="keyword">self</span>.d_k).transpose(<span class="number">1</span>, <span class="number">2</span>)
+
+        <span class="comment"># Scaled dot-product with causal mask</span>
+        scores = torch.matmul(Q, K.transpose(-<span class="number">2</span>, -<span class="number">1</span>)) / (<span class="keyword">self</span>.d_k ** <span class="number">0.5</span>)
+        scores = scores.masked_fill(
+            <span class="keyword">self</span>.mask[:, :, :T, :T] == <span class="number">0</span>, float(<span class="string">'-inf'</span>))
+        attn = F.softmax(scores, dim=-<span class="number">1</span>)
+
+        out = torch.matmul(attn, V)
+        out = out.transpose(<span class="number">1</span>, <span class="number">2</span>).contiguous().view(B, T, D)
+        <span class="keyword">return</span> <span class="keyword">self</span>.W_o(out)</div>
+            </div>
+
+            <p style="font-style: italic; color: var(--text-secondary); margin-top: 1rem;">⚡ Key: The causal mask ensures position i can only attend to positions ≤ i, preventing information leakage from future tokens during autoregressive generation.</p>
+        </section>
+
+        <!-- Code Block 2 -->
+        <div class="card">
+            <div class="code-title">💾 Code Block 2: GPT-2 Text Generation with HuggingFace</div>
+            <div class="code-block"><span class="keyword">from</span> transformers <span class="keyword">import</span> GPT2LMHeadModel, GPT2Tokenizer
+<span class="keyword">import</span> torch
+
+tokenizer = GPT2Tokenizer.from_pretrained(<span class="string">'gpt2'</span>)
+model = GPT2LMHeadModel.from_pretrained(<span class="string">'gpt2'</span>)
+model.eval()
+
+<span class="keyword">def</span> <span class="function">generate_text</span>(prompt, max_new_tokens=<span class="number">50</span>,
+                     temperature=<span class="number">0.8</span>, top_k=<span class="number">40</span>):
+    <span class="string">"""Autoregressive generation with sampling controls"""</span>
+    input_ids = tokenizer.encode(prompt, return_tensors=<span class="string">'pt'</span>)
+
+    <span class="keyword">with</span> torch.no_grad():
+        output = model.generate(
+            input_ids,
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,    <span class="comment"># Higher = more random</span>
+            top_k=top_k,               <span class="comment"># Sample from k most likely</span>
+            do_sample=<span class="keyword">True</span>,
+            pad_token_id=tokenizer.eos_token_id
+        )
+
+    <span class="keyword">return</span> tokenizer.decode(output[<span class="number">0</span>], skip_special_tokens=<span class="keyword">True</span>)
+
+<span class="comment"># Example: zero-shot task</span>
+print(generate_text(<span class="string">"Translate to French: Hello, how are you?"</span>))</div>
+            </div>
+
+            <p style="margin-top: 1rem;"><strong>Decoding Strategies:</strong></p>
+            <ul style="margin-left: 1.5rem;">
+                <li><strong>Greedy:</strong> Always pick highest-probability token (deterministic but repetitive)</li>
+                <li><strong>Top-k:</strong> Sample from k most likely tokens (k=40 common)</li>
+                <li><strong>Top-p (nucleus):</strong> Sample from smallest set with cumulative prob ≥ p</li>
+                <li><strong>Temperature:</strong> Scale logits before softmax (T < 1 = focused, T > 1 = diverse)</li>
+                <li><strong>Beam search:</strong> Maintain k best partial sequences</li>
+            </ul>
+        </section>
+
+        <!-- Code Block 3 -->
+        <div class="card">
+            <div class="code-title">💾 Code Block 3: T5 Text-to-Text — One Model, Many Tasks</div>
+            <div class="code-block"><span class="keyword">from</span> transformers <span class="keyword">import</span> T5Tokenizer, T5ForConditionalGeneration
+
+tokenizer = T5Tokenizer.from_pretrained(<span class="string">'t5-base'</span>)
+model = T5ForConditionalGeneration.from_pretrained(<span class="string">'t5-base'</span>)
+
+<span class="keyword">def</span> <span class="function">t5_generate</span>(input_text, max_length=<span class="number">128</span>):
+    <span class="string">"""T5 text-to-text: prepend task prefix, get text output"""</span>
+    inputs = tokenizer(input_text, return_tensors=<span class="string">"pt"</span>,
+                       max_length=<span class="number">512</span>, truncation=<span class="keyword">True</span>)
+    outputs = model.generate(**inputs, max_length=max_length,
+                             num_beams=<span class="number">4</span>)
+    <span class="keyword">return</span> tokenizer.decode(outputs[<span class="number">0</span>],
+                                skip_special_tokens=<span class="keyword">True</span>)
+
+<span class="comment"># ALL tasks use the SAME model — just change the prefix!</span>
+tasks = {
+    <span class="string">"Translation"</span>: <span class="string">"translate English to German: The house is wonderful."</span>,
+    <span class="string">"Summarization"</span>: <span class="string">"summarize: The transformer architecture..."</span>,
+    <span class="string">"Sentiment"</span>: <span class="string">"sst2 sentence: This movie was fantastic!"</span>,
+}
+
+<span class="keyword">for</span> task_name, input_text <span class="keyword">in</span> tasks.items():
+    result = t5_generate(input_text)
+    print(<span class="string">f"{task_name}: {result}"</span>)</div>
+            </div>
+
+            <p style="margin-top: 1rem; font-style: italic; color: var(--text-secondary);">💡 Insight: By framing everything as text-to-text, T5 uses the same architecture, loss function, and hyperparameters for ALL tasks. Transfer learning between tasks becomes natural.</p>
+        </section>
+
+        <!-- Code Block 4 -->
+        <div class="card">
+            <div class="code-title">💾 Code Block 4: Building a Mini GPT Decoder Block</div>
+            <div class="code-block"><span class="keyword">class</span> <span class="function">GPTBlock</span>(nn.Module):
+    <span class="string">"""Single GPT-2 style decoder block with Pre-LayerNorm"""</span>
+    <span class="keyword">def</span> <span class="function">__init__</span>(<span class="keyword">self</span>, d_model, n_heads, d_ff, dropout=<span class="number">0.1</span>):
+        <span class="keyword">super</span>().__init__()
+        <span class="comment"># Pre-LayerNorm (GPT-2 style)</span>
+        <span class="keyword">self</span>.ln1 = nn.LayerNorm(d_model)
+        <span class="keyword">self</span>.ln2 = nn.LayerNorm(d_model)
+
+        <span class="keyword">self</span>.attn = CausalSelfAttention(d_model, n_heads)
+        <span class="keyword">self</span>.ffn = nn.Sequential(
+            nn.Linear(d_model, d_ff),
+            nn.GELU(),  <span class="comment"># GPT uses GELU, not ReLU</span>
+            nn.Linear(d_ff, d_model),
+            nn.Dropout(dropout)
+        )
+        <span class="keyword">self</span>.dropout = nn.Dropout(dropout)
+
+    <span class="keyword">def</span> <span class="function">forward</span>(<span class="keyword">self</span>, x):
+        <span class="comment"># Pre-LN + Residual for attention</span>
+        x = x + <span class="keyword">self</span>.dropout(<span class="keyword">self</span>.attn(<span class="keyword">self</span>.ln1(x)))
+        <span class="comment"># Pre-LN + Residual for FFN</span>
+        x = x + <span class="keyword">self</span>.ffn(<span class="keyword">self</span>.ln2(x))
+        <span class="keyword">return</span> x
+
+<span class="keyword">class</span> <span class="function">MiniGPT</span>(nn.Module):
+    <span class="keyword">def</span> <span class="function">__init__</span>(<span class="keyword">self</span>, vocab_size, d_model=<span class="number">768</span>, n_heads=<span class="number">12</span>,
+             n_layers=<span class="number">12</span>, d_ff=<span class="number">3072</span>, dropout=<span class="number">0.1</span>):
+        <span class="keyword">super</span>().__init__()
+        <span class="keyword">self</span>.token_embed = nn.Embedding(vocab_size, d_model)
+        <span class="keyword">self</span>.pos_embed = nn.Embedding(<span class="number">1024</span>, d_model)
+
+        <span class="keyword">self</span>.blocks = nn.ModuleList([
+            GPTBlock(d_model, n_heads, d_ff, dropout)
+            <span class="keyword">for</span> _ <span class="keyword">in</span> range(n_layers)
+        ])
+
+        <span class="keyword">self</span>.ln_f = nn.LayerNorm(d_model)
+        <span class="keyword">self</span>.head = nn.Linear(d_model, vocab_size, bias=<span class="keyword">False</span>)
+        <span class="comment"># Weight tying</span>
+        <span class="keyword">self</span>.head.weight = <span class="keyword">self</span>.token_embed.weight
+
+    <span class="keyword">def</span> <span class="function">forward</span>(<span class="keyword">self</span>, idx):
+        B, T = idx.shape
+        tok_emb = <span class="keyword">self</span>.token_embed(idx)
+        pos_emb = <span class="keyword">self</span>.pos_embed(torch.arange(T, device=idx.device))
+        x = tok_emb + pos_emb
+
+        <span class="keyword">for</span> block <span class="keyword">in</span> <span class="keyword">self</span>.blocks:
+            x = block(x)
+
+        x = <span class="keyword">self</span>.ln_f(x)
+        <span class="keyword">return</span> <span class="keyword">self</span>.head(x)  <span class="comment"># (B, T, vocab_size)</span></div>
+            </div>
+
+            <p style="margin-top: 1rem;"><strong>🎯 Model Sizes (matching the paper):</strong></p>
+            <ul style="margin-left: 1.5rem;">
+                <li><strong>GPT-1:</strong> d=768, h=12, L=12, d_ff=3072 → ~117M params</li>
+                <li><strong>GPT-2:</strong> d=1600, h=25, L=48, d_ff=6400 → ~1.5B params</li>
+                <li><strong>GPT-3:</strong> d=12288, h=96, L=96, d_ff=49152 → ~175B params</li>
+            </ul>
+        </div>
+
+        </section>
+
+        <!-- LEVEL 4: Socratic Sandbox -->
+        <section id="level-4" class="level-section">
+            <h2>🤔 Level 4: Socratic Sandbox (Model Failure Scenarios)</h2>
+            <p>These diagnostic questions reveal common pitfalls and deep understanding of how decoder models work.</p>
+
+            <!-- Q1 -->
+            <div class="expandable">
+                <div class="expandable-header">
+                    <span class="expandable-toggle">▼</span>
+                    <div>
+                        <strong>Q1:</strong> Your GPT-2 model generates fluent text but keeps repeating phrases in loops ("The cat sat on the mat. The cat sat on the mat..."). You're using greedy decoding. What's causing this and how do you fix it?
+                    </div>
+                </div>
+                <div class="expandable-content">
+                    <p><strong>Answer:</strong></p>
+                    <p>Greedy decoding always picks the highest-probability token, creating repetition loops when the model enters a high-probability cycle. This is because certain token sequences have very high co-occurrence in the training data, so once the model generates them, it becomes trapped in a local probability maximum.</p>
+
+                    <p><strong>Solutions:</strong></p>
+                    <ul style="margin-left: 1.5rem;">
+                        <li><strong>Top-k sampling:</strong> Restrict to k most likely tokens (k=40 is common). Reduces extreme probabilities.</li>
+                        <li><strong>Nucleus (Top-p) sampling:</strong> Sample from smallest set with cumulative probability ≥ p (p=0.9 common). More adaptive than top-k.</li>
+                        <li><strong>Temperature scaling:</strong> Divide logits by T before softmax (T > 1 increases diversity, T < 1 increases focus). T=1 is no change.</li>
+                        <li><strong>Repetition penalty:</strong> Downweight tokens that have already been generated. Directly penalizes repetition.</li>
+                        <li><strong>Beam search:</strong> Maintain k best partial sequences and rescore with coverage penalties.</li>
+                    </ul>
+
+                    <p><strong>Code example:</strong></p>
+                    <div class="code-block"><span class="comment"># Problem: greedy decoding</span>
+output = model.generate(input_ids, max_new_tokens=<span class="number">50</span>)
+
+<span class="comment"># Solution: top-k + temperature</span>
+output = model.generate(input_ids, max_new_tokens=<span class="number">50</span>,
+                        top_k=<span class="number">40</span>, temperature=<span class="number">0.9</span>,
+                        do_sample=<span class="keyword">True</span>)
+
+<span class="comment"># Solution: repetition penalty</span>
+output = model.generate(input_ids, max_new_tokens=<span class="number">50</span>,
+                        repetition_penalty=<span class="number">1.5</span>)</div>
+                </div>
+            </div>
+
+            <!-- Q2 -->
+            <div class="expandable">
+                <div class="expandable-header">
+                    <span class="expandable-toggle">▼</span>
+                    <div>
+                        <strong>Q2:</strong> You fine-tune T5-base on summarization and achieve great ROUGE scores. But when you try to also use it for translation (with "translate" prefix), translation quality is terrible. What happened?
+                    </div>
+                </div>
+                <div class="expandable-content">
+                    <p><strong>Answer: Catastrophic Forgetting</strong></p>
+                    <p>Fine-tuning on a single task causes the model to overfit to that task's loss landscape, forgetting pre-trained capabilities. The model's weights shifted to optimize for summarization, destroying translation ability. T5 was pre-trained on many tasks, but single-task fine-tuning erases that multi-task knowledge.</p>
+
+                    <p><strong>Why it happens:</strong></p>
+                    <ul style="margin-left: 1.5rem;">
+                        <li>Gradient updates only optimize for the current task</li>
+                        <li>Cross-entropy loss on summarization pulls weights away from translation optima</li>
+                        <li>The model has no incentive to preserve translation capability</li>
+                    </ul>
+
+                    <p><strong>Solutions:</strong></p>
+                    <ul style="margin-left: 1.5rem;">
+                        <li><strong>Multi-task fine-tuning:</strong> Mix summarization + translation data in the training set. Model learns both simultaneously.</li>
+                        <li><strong>Adapter layers:</strong> Freeze pre-trained weights, only train small adapter modules for each task. Preserves original knowledge.</li>
+                        <li><strong>LoRA (Low-Rank Adaptation):</strong> Freeze most weights, train small low-rank updates. Minimal memory overhead.</li>
+                        <li><strong>Prompt tuning:</strong> Only learn soft prompts, freeze all model weights. Extreme parameter efficiency.</li>
+                        <li><strong>Continual learning:</strong> Fine-tune sequentially but use experience replay or elastic weight consolidation to protect previous tasks.</li>
+                    </ul>
+
+                    <p><strong>Best practice:</strong> Always validate on the original pre-trained task distribution during fine-tuning to catch catastrophic forgetting early.</p>
+                </div>
+            </div>
+
+            <!-- Q3 -->
+            <div class="expandable">
+                <div class="expandable-header">
+                    <span class="expandable-toggle">▼</span>
+                    <div>
+                        <strong>Q3:</strong> You're using GPT-3 with few-shot prompting for sentiment analysis. With 5 examples in one order, accuracy is 85%. Reordering those examples drops accuracy to 65%. Why is the model so sensitive to example ordering?
+                    </div>
+                </div>
+                <div class="expandable-content">
+                    <p><strong>Answer: Position-Dependent In-Context Learning</strong></p>
+                    <p>GPT-3's in-context learning has strong <strong>recency bias</strong> — the model weights later examples more heavily because they appear closer to the input being classified. Additionally, if the last few examples happen to be all positive, the model becomes biased toward predicting positive regardless of the actual input.</p>
+
+                    <p><strong>Why this happens:</strong></p>
+                    <ul style="margin-left: 1.5rem;">
+                        <li><strong>Causal attention:</strong> Position i can only attend to positions ≤ i, so later examples have more influence on the final prediction</li>
+                        <li><strong>No explicit example symmetry:</strong> The model treats examples as part of a sequence, not as a balanced set</li>
+                        <li><strong>Shallow in-context learning:</strong> The model doesn't learn "meta-patterns" from examples; it infers mostly from surface co-occurrences</li>
+                    </ul>
+
+                    <p><strong>Solutions:</strong></p>
+                    <ul style="margin-left: 1.5rem;">
+                        <li><strong>Multiple orderings + ensemble:</strong> Try 5-10 random orderings, average predictions. Reduces order sensitivity.</li>
+                        <li><strong>Balanced example placement:</strong> Place diverse examples at the end (closer to the test input). Put extreme/outlier examples first.</li>
+                        <li><strong>Balanced class ordering:</strong> Alternate positive/negative examples. Avoid clustering all examples of one class.</li>
+                        <li><strong>Explicit task description:</strong> Prepend a clear task description so the model doesn't over-rely on example patterns.</li>
+                        <li><strong>More examples (scaling):</strong> Increase K from 5 to 50. The benefit of additional examples often overcomes ordering noise.</li>
+                    </ul>
+
+                    <p><strong>Empirical finding (from GPT-3 paper):</strong> Performance variance due to example ordering ranges from 1-5% on average, but can spike to 20%+ on adversarial orderings for difficult tasks.</p>
+                </div>
+            </div>
+
+            <!-- Q4 -->
+            <div class="expandable">
+                <div class="expandable-header">
+                    <span class="expandable-toggle">▼</span>
+                    <div>
+                        <strong>Q4:</strong> You've built a ByT5 model for multilingual text processing. It handles noisy user input well but is 4× slower than mT5 at inference time on the same hardware. Why?
+                    </div>
+                </div>
+                <div class="expandable-content">
+                    <p><strong>Answer: Quadratic Attention Complexity</strong></p>
+                    <p>ByT5 operates on raw UTF-8 bytes, making sequences ~4× longer than token sequences (tokens compress multiple bytes). Since self-attention is O(T²) in sequence length, processing time increases quadratically.</p>
+
+                    <p><strong>Why byte sequences are longer:</strong></p>
+                    <ul style="margin-left: 1.5rem;">
+                        <li>Most UTF-8 characters = 2-4 bytes each</li>
+                        <li>mT5 uses SentencePiece tokenization which compresses: "hello" = 1 token, but 5 bytes</li>
+                        <li>ByT5 "hello" = 5 bytes to process individually</li>
+                    </ul>
+
+                    <p><strong>Attention complexity:</strong></p>
+                    <div class="katex-display">$$\text{Time} = O(T^2 \cdot d)$$</div>
+                    <div class="katex-display">$$\text{If } T_{\text{bytes}} = 4 \times T_{\text{tokens}}, \text{ then Time increases by } 16\times$$</div>
+
+                    <p><strong>Why ByT5 still works:</strong> The 3:1 encoder-decoder ratio helps. Encoder has 3× more layers to process longer byte sequences, but decoder is smaller for shorter output. Still doesn't fully compensate.</p>
+
+                    <p><strong>Solutions:</strong></p>
+                    <ul style="margin-left: 1.5rem;">
+                        <li><strong>Use heavier encoder, lighter decoder:</strong> Asymmetry exploits that encoder input is long but output is shorter</li>
+                        <li><strong>Batch efficiently:</strong> Batch size of 1 is expensive; increase batch size to amortize overhead</li>
+                        <li><strong>Sparse attention:</strong> Use local attention or sparse patterns to reduce T² complexity</li>
+                        <li><strong>Fall back to mT5 for latency-critical:</strong> Use ByT5 for robustness (training), mT5 for production (inference)</li>
+                        <li><strong>Hierarchical byte compression:</strong> Pre-compress bytes into sub-word units before ByT5 processing</li>
+                    </ul>
+
+                    <p><strong>Trade-off:</strong> ByT5 trades latency for robustness to typos, noise, and unknown scripts. Accept 4× slower inference for better multilingual handling.</p>
+                </div>
+            </div>
+
+            <!-- Q5 -->
+            <div class="expandable">
+                <div class="expandable-header">
+                    <span class="expandable-toggle">▼</span>
+                    <div>
+                        <strong>Q5:</strong> You train a GPT-style model and notice it generates grammatically correct text but frequently states false facts with high confidence ("The capital of Australia is Sydney"). The training data contains correct information. What's happening?
+                    </div>
+                </div>
+                <div class="expandable-content">
+                    <p><strong>Answer: Hallucination via Statistical Co-occurrence</strong></p>
+                    <p>The causal language model optimizes for P(next_token | context), not factual accuracy. It learns statistical co-occurrences, not truth. "Sydney" and "Australia" have very high co-occurrence in training data (Sydney is mentioned in Australian contexts frequently), even though the capital is Canberra.</p>
+
+                    <p><strong>Why this happens:</strong></p>
+                    <ul style="margin-left: 1.5rem;">
+                        <li><strong>No explicit fact-checking mechanism:</strong> The model has no knowledge graph, no access to truth values</li>
+                        <li><strong>Optimization mismatch:</strong> Training objective (perplexity) ≠ truth objective (factual accuracy)</li>
+                        <li><strong>Frequency bias:</strong> Sydney appears more frequently in text about Australia than Canberra does</li>
+                        <li><strong>Confidence from familiarity:</strong> Familiar token sequences get high probability, even if factually wrong</li>
+                    </ul>
+
+                    <p><strong>This is the "hallucination problem":</strong> The model outputs false information with high confidence, making it dangerous for knowledge-intensive tasks.</p>
+
+                    <p><strong>Solutions:</strong></p>
+                    <ul style="margin-left: 1.5rem;">
+                        <li><strong>Retrieval-Augmented Generation (RAG):</strong> Retrieve relevant documents, condition generation on retrieved context. Model can only say what's in the retrieved docs.</li>
+                        <li><strong>Knowledge grounding:</strong> Augment model with external knowledge bases (DBpedia, Wikidata). Verify generations against knowledge graphs.</li>
+                        <li><strong>Fact-checking post-processing:</strong> After generation, run a fact-checking model to filter false claims.</li>
+                        <li><strong>RLHF (Reinforcement Learning from Human Feedback):</strong> Train a reward model that scores factual accuracy, use it to align generations. Reduces hallucinations significantly.</li>
+                        <li><strong>Constrained decoding:</strong> Restrict generation to facts in a curated knowledge base. Most restrictive but safest.</li>
+                    </ul>
+
+                    <p><strong>Key insight:</strong> Language modeling ≠ knowledge. Even 175B parameter models like GPT-3 don't "know" facts; they reproduce statistical patterns. Closing this gap requires either external knowledge or explicit training for factuality.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary -->
+        <section id="summary">
+            <div class="card" style="background: linear-gradient(135deg, rgba(236, 72, 153, 0.1), rgba(244, 114, 182, 0.05));">
+                <h2 style="margin-top: 0;">Summary: From GPT to T5</h2>
+                <p><strong>GPT Family (Decoder-only):</strong> Autoregressive models that generate text one token at a time. GPT-1 introduced generative pre-training + fine-tuning. GPT-2 proved zero-shot transfer at scale. GPT-3 enabled few-shot in-context learning at 175B parameters.</p>
+
+                <p><strong>T5 (Encoder-Decoder):</strong> Unified text-to-text framework that reframes all NLP as string transformation. Same model, same loss, different task prefixes. Remarkably simple and generalizable.</p>
+
+                <p><strong>Key Technical Insights:</strong></p>
+                <ul style="margin-left: 1.5rem;">
+                    <li>Causal masking prevents future information leakage, enabling online generation</li>
+                    <li>Pre-LayerNorm (GPT-2 style) stabilizes training better than post-LayerNorm</li>
+                    <li>Scale (parameters + training data) dramatically improves few-shot learning</li>
+                    <li>In-context learning requires no gradient updates — pure statistical inference</li>
+                    <li>ELECTRA's discriminator learns from all tokens (4× efficiency vs. BERT's 15% masking)</li>
+                    <li>Text-to-text framing enables multi-task learning with zero architecture changes</li>
+                </ul>
+
+                <p><strong>Next Steps:</strong> Apply these architectures to real tasks. Start with HuggingFace pre-trained models. Experiment with different decoding strategies, prompting techniques, and adaptation methods (LoRA, adapters) on your own data.</p>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // KaTeX auto-render initialization
+        document.addEventListener('DOMContentLoaded', function() {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false},
+                    {left: '\\[', right: '\\]', display: true},
+                    {left: '\\(', right: '\\)', display: false}
+                ]
+            });
+        });
+
+        // Level navigation
+        document.querySelectorAll('.dot').forEach((dot, index) => {
+            dot.addEventListener('click', () => {
+                const level = dot.dataset.level;
+                const section = document.getElementById(`level-${level}`);
+                if (section) {
+                    section.scrollIntoView({ behavior: 'smooth' });
+                }
+                updateDots(level);
+            });
+        });
+
+        function updateDots(level) {
+            document.querySelectorAll('.dot').forEach(dot => {
+                dot.classList.remove('active');
+                if (dot.dataset.level === level) {
+                    dot.classList.add('active');
+                }
+            });
+        }
+
+        // Expandable sections
+        document.querySelectorAll('.expandable-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const toggle = header.querySelector('.expandable-toggle');
+                const content = header.nextElementSibling;
+                toggle.classList.toggle('active');
+                content.classList.toggle('active');
+            });
+        });
+
+        // Demo 1: Autoregressive Token Generator
+        function generateTokens() {
+            const prompt = document.getElementById('prompt-input').value || 'The future of AI is';
+            const tokens = prompt.split(/\s+/);
+            let output = '<div>';
+
+            tokens.forEach((token, idx) => {
+                output += `<div class="token-box" style="animation-delay: ${idx * 0.1}s;">${token}</div>`;
+            });
+
+            output += '</div><p style="margin-top: 1rem; color: var(--text-secondary); font-size: 0.9rem;">Each token can only see tokens to its LEFT. The causal attention mask enforces this constraint.</p>';
+
+            document.getElementById('token-output').innerHTML = output;
+            drawCausalMask();
+        }
+
+        function drawCausalMask() {
+            const canvas = document.getElementById('causalMaskCanvas');
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            const size = 300;
+            const cellSize = size / 8;
+
+            ctx.fillStyle = '#1a1f35';
+            ctx.fillRect(0, 0, size, size);
+
+            // Draw grid
+            ctx.strokeStyle = 'rgba(148,163,184,0.15)';
+            ctx.lineWidth = 1;
+
+            for (let i = 0; i <= 8; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * cellSize, 0);
+                ctx.lineTo(i * cellSize, size);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(0, i * cellSize);
+                ctx.lineTo(size, i * cellSize);
+                ctx.stroke();
+            }
+
+            // Draw lower triangular (causal mask)
+            ctx.fillStyle = 'rgba(236, 72, 153, 0.3)';
+            for (let i = 0; i < 8; i++) {
+                for (let j = 0; j <= i; j++) {
+                    ctx.fillRect(j * cellSize, i * cellSize, cellSize, cellSize);
+                }
+            }
+
+            // Add labels
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '12px Inter';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            for (let i = 0; i < 8; i++) {
+                ctx.fillText(`${i}`, i * cellSize + cellSize / 2, -10);
+                ctx.fillText(`${i}`, -15, i * cellSize + cellSize / 2);
+            }
+        }
+
+        // Demo 2: GPT Scale Comparison
+        function initScaleComparison() {
+            const container = document.getElementById('scale-comparison');
+            const models = [
+                { name: 'GPT-1', params: 0.117 },
+                { name: 'GPT-2', params: 1.5 },
+                { name: 'GPT-3\nSmall', params: 0.125 },
+                { name: 'GPT-3\nMedium', params: 0.35 },
+                { name: 'GPT-3\n175B', params: 175 }
+            ];
+
+            const maxParams = 175;
+            let html = '<div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 1.5rem;">';
+
+            models.forEach(model => {
+                const percentage = (model.params / maxParams) * 100;
+                html += `
+                    <div>
+                        <div class="bar-value" style="height: ${Math.max(50, percentage * 1.5)}px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 0.5rem;">
+                            <span style="padding-bottom: 0.5rem; color: white; font-weight: 600;">${model.params}B</span>
+                        </div>
+                        <div style="text-align: center; font-weight: 600; color: var(--accent);">${model.name}</div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // Demo 3: T5 Task Formatter
+        function formatT5Task() {
+            const taskSelect = document.getElementById('task-select');
+            const taskInput = document.getElementById('task-input');
+            const task = taskSelect.value;
+            const text = taskInput.value || '[Your text here]';
+
+            let formatted = '';
+            let output = '';
+
+            switch(task) {
+                case 'translation':
+                    formatted = `translate English to German: ${text}`;
+                    output = '[German translation would appear here]';
+                    break;
+                case 'summarization':
+                    formatted = `summarize: ${text}`;
+                    output = '[Summary would appear here]';
+                    break;
+                case 'sentiment':
+                    formatted = `sst2 sentence: ${text}`;
+                    output = '[positive/negative/neutral]';
+                    break;
+                case 'qa':
+                    formatted = `question: ${text}`;
+                    output = '[Answer would appear here]';
+                    break;
+                case 'grammar':
+                    formatted = `cola sentence: ${text}`;
+                    output = '[Corrected sentence would appear here]';
+                    break;
+            }
+
+            document.getElementById('t5-input-formatted').textContent = formatted;
+            document.getElementById('t5-output-formatted').textContent = output;
+            document.getElementById('t5-output').style.display = 'block';
+        }
+
+        function updateT5Demo() {
+            const output = document.getElementById('t5-output');
+            output.style.display = 'none';
+        }
+
+        function drawCausalMask() {
+            const seqLen = parseInt(document.getElementById('seqLenSlider').value);
+            document.getElementById('seqLenDisplay').textContent = seqLen;
+
+            const canvas = document.getElementById('causalMaskCanvas2');
+            const ctx = canvas.getContext('2d');
+            const padding = 50;
+            const size = canvas.width - 2 * padding;
+            const cellSize = size / seqLen;
+
+            ctx.fillStyle = '#0a0e1a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw grid
+            ctx.strokeStyle = 'rgba(148,163,184,0.15)';
+            ctx.lineWidth = 1;
+
+            for (let i = 0; i <= seqLen; i++) {
+                const pos = padding + i * cellSize;
+                ctx.beginPath();
+                ctx.moveTo(pos, padding);
+                ctx.lineTo(pos, padding + size);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(padding, pos);
+                ctx.lineTo(padding + size, pos);
+                ctx.stroke();
+            }
+
+            // Draw lower triangular (causal mask)
+            ctx.fillStyle = 'rgba(236, 72, 153, 0.3)';
+            for (let i = 0; i < seqLen; i++) {
+                for (let j = 0; j <= i; j++) {
+                    ctx.fillRect(
+                        padding + j * cellSize,
+                        padding + i * cellSize,
+                        cellSize,
+                        cellSize
+                    );
+                }
+            }
+
+            // Add labels
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = 'bold 12px Inter';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            for (let i = 0; i < seqLen; i++) {
+                const pos = padding + i * cellSize + cellSize / 2;
+                ctx.fillText(`${i}`, pos, padding - 15);
+                ctx.fillText(`${i}`, padding - 20, pos);
+            }
+
+            // Add legend
+            ctx.fillStyle = '#e2e8f0';
+            ctx.font = '12px Inter';
+            ctx.textAlign = 'left';
+            ctx.fillText('Position i can attend to positions ≤ i (shaded region)', padding, padding + size + 35);
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            initScaleComparison();
+            drawCausalMask();
+        });
+    </script>
+</body>
+</html>

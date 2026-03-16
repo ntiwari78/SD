@@ -1,0 +1,1737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 6: Efficient & Modified Transformers | Transformers for ML</title>
+
+    <!-- KaTeX for Math Rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+    <style>
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #1a1f35;
+            --bg-tertiary: #252d47;
+            --accent: #8b5cf6;
+            --accent-light: #a78bfa;
+            --text-primary: #f0f4f8;
+            --text-secondary: #b0bcc4;
+            --border-color: #3a4555;
+            --code-bg: #161b28;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, #0f1423 100%);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Navbar */
+        .navbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(10, 14, 26, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+        }
+
+        .navbar-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .navbar a {
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 0.9rem;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .navbar a:hover {
+            background: rgba(139, 92, 246, 0.1);
+            color: var(--accent-light);
+        }
+
+        .navbar-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .level-dots {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--border-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .dot.active {
+            background: var(--accent);
+            transform: scale(1.3);
+        }
+
+        .dot:hover {
+            background: var(--accent-light);
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Header */
+        .header {
+            margin-bottom: 3rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        /* Level Sections */
+        .level {
+            margin-bottom: 4rem;
+            scroll-margin-top: 100px;
+        }
+
+        .level-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--accent);
+        }
+
+        .level-number {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent);
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(139, 92, 246, 0.1);
+            border-radius: 12px;
+        }
+
+        .level-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .level-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-top: 0.5rem;
+        }
+
+        /* Cards */
+        .card {
+            background: rgba(26, 31, 53, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--accent);
+            background: rgba(26, 31, 53, 1);
+            transform: translateY(-2px);
+        }
+
+        .card h3 {
+            font-family: 'Space Grotesk', sans-serif;
+            color: var(--accent);
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+
+        .card h4 {
+            font-family: 'Space Grotesk', sans-serif;
+            color: var(--accent-light);
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            font-size: 1.1rem;
+        }
+
+        .card p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            line-height: 1.7;
+        }
+
+        /* Interactive Demos */
+        .demo-container {
+            background: rgba(22, 27, 40, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .demo-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .demo-button {
+            padding: 0.75rem 1.5rem;
+            background: rgba(139, 92, 246, 0.2);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+        }
+
+        .demo-button:hover {
+            background: rgba(139, 92, 246, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .demo-button.active {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        .demo-canvas {
+            width: 100%;
+            max-width: 600px;
+            height: auto;
+            margin: 1rem auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--code-bg);
+        }
+
+        .demo-info {
+            background: rgba(16, 185, 129, 0.1);
+            border-left: 3px solid var(--success);
+            padding: 1rem;
+            border-radius: 6px;
+            margin-top: 1rem;
+            color: var(--success);
+            font-size: 0.95rem;
+        }
+
+        /* Tables */
+        .table-container {
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background: rgba(139, 92, 246, 0.15);
+            color: var(--accent);
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid var(--accent);
+        }
+
+        td {
+            padding: 0.9rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        tr:hover {
+            background: rgba(139, 92, 246, 0.05);
+        }
+
+        /* Code Blocks */
+        .code-block {
+            background: var(--code-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            white-space: pre;
+        }
+
+        .code-block code {
+            color: var(--text-secondary);
+        }
+
+        .keyword {
+            color: #ff7b7b;
+        }
+
+        .string {
+            color: #90ee90;
+        }
+
+        .comment {
+            color: #6b7280;
+        }
+
+        .function {
+            color: #60a5fa;
+        }
+
+        .number {
+            color: #fbbf24;
+        }
+
+        /* Math Rendering */
+        .katex {
+            color: var(--accent);
+        }
+
+        .math-block {
+            background: rgba(139, 92, 246, 0.05);
+            border-left: 3px solid var(--accent);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+
+        /* Questions Section */
+        .question {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .question:hover {
+            background: rgba(139, 92, 246, 0.15);
+        }
+
+        .question-text {
+            font-weight: 600;
+            color: var(--accent);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .question-toggle {
+            font-size: 1.5rem;
+            color: var(--accent);
+            transition: transform 0.3s ease;
+        }
+
+        .question.open .question-toggle {
+            transform: rotate(180deg);
+        }
+
+        .question-answer {
+            display: none;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        .question.open .question-answer {
+            display: block;
+        }
+
+        /* Slider */
+        .slider-container {
+            margin: 1.5rem 0;
+            padding: 1rem;
+            background: rgba(139, 92, 246, 0.05);
+            border-radius: 8px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border-color);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s ease;
+        }
+
+        .slider-output {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--code-bg);
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--success);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .navbar-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .level-title {
+                font-size: 1.3rem;
+            }
+
+            .demo-controls {
+                flex-direction: column;
+            }
+
+            .demo-button {
+                width: 100%;
+            }
+
+            .question-text {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .level {
+            animation: fadeIn 0.5s ease;
+        }
+
+        /* Utility */
+        .highlight {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+        }
+
+        .success-badge {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            display: inline-block;
+        }
+
+        .formula-description {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="navbar-content">
+            <a href="index.html">← Back to Index</a>
+            <div class="navbar-title">Module 6: Efficient & Modified Transformers</div>
+            <div class="level-dots">
+                <div class="dot active" onclick="jumpToLevel(1)" title="Feynman Bridge"></div>
+                <div class="dot" onclick="jumpToLevel(2)" title="Interactive Schematic"></div>
+                <div class="dot" onclick="jumpToLevel(3)" title="Engineer's Sandbox"></div>
+                <div class="dot" onclick="jumpToLevel(4)" title="Socratic Sandbox"></div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>Efficient & Modified Transformers</h1>
+            <p>Explore architectural innovations and efficiency techniques that scale transformers to handle longer sequences with reduced computational cost.</p>
+        </div>
+
+        <!-- LEVEL 1: The Feynman Bridge -->
+        <div id="level-1" class="level">
+            <div class="level-header">
+                <div class="level-number">1</div>
+                <div>
+                    <div class="level-title">The Feynman Bridge</div>
+                    <div class="level-subtitle">Zero Jargon • Speed Reading for AI</div>
+                </div>
+            </div>
+
+            <!-- Analogy Card -->
+            <div class="card">
+                <h3>🧠 The Speed Reading Analogy</h3>
+                <p>
+                    Imagine reading a 1,000-word document where every word needs to reference every other word to understand meaning. That's <span class="highlight">500,000 comparisons</span> for full attention. It's exhausting and slow.
+                </p>
+                <p>
+                    Efficient transformers are like speed reading techniques: instead of comparing every word to every other word, you might:
+                </p>
+                <ul style="margin-left: 1.5rem; color: var(--text-secondary); line-height: 2;">
+                    <li>Read each paragraph + its neighbors (sliding window)</li>
+                    <li>Skim random passages for context (random attention)</li>
+                    <li>Always reference the introduction and conclusion (global attention)</li>
+                    <li>Use a hash table to group similar ideas together (LSH)</li>
+                    <li>Compress redundant comparisons into a kernel function (FAVOR+)</li>
+                </ul>
+                <p style="margin-top: 1.5rem;">
+                    The result: <span class="highlight">same understanding, dramatically faster</span>. That's the core idea behind Longformer, Reformer, Performer, and BigBird.
+                </p>
+            </div>
+
+            <!-- Demo 1: Attention Patterns -->
+            <div class="card">
+                <h3>🎨 Interactive Demo 1: Attention Pattern Visualizer</h3>
+                <p>Click the buttons below to see how different efficient attention mechanisms "look" — which positions each token pays attention to.</p>
+
+                <div class="demo-container">
+                    <div class="demo-controls">
+                        <button class="demo-button active" onclick="visualizePattern('full', event)">Full Attention</button>
+                        <button class="demo-button" onclick="visualizePattern('sliding', event)">Sliding Window</button>
+                        <button class="demo-button" onclick="visualizePattern('dilated', event)">Dilated Window</button>
+                        <button class="demo-button" onclick="visualizePattern('longformer', event)">Longformer</button>
+                        <button class="demo-button" onclick="visualizePattern('bigbird', event)">BigBird</button>
+                    </div>
+                    <canvas id="attention-canvas" class="demo-canvas" width="500" height="500"></canvas>
+                    <div class="demo-info" id="pattern-info">
+                        <strong>Full Attention:</strong> Every position attends to every other position. Dense coverage, but quadratic cost O(L²).
+                    </div>
+                </div>
+            </div>
+
+            <!-- Demo 2: Memory Cost Calculator -->
+            <div class="card">
+                <h3>💾 Interactive Demo 2: Memory Cost Calculator</h3>
+                <p>Drag the slider to see how memory usage scales with sequence length for different architectures.</p>
+
+                <div class="demo-container">
+                    <div class="slider-container">
+                        <div class="slider-label">
+                            <span>Sequence Length (L):</span>
+                            <span id="seq-length-display">512</span>
+                        </div>
+                        <input type="range" id="seq-length-slider" min="512" max="65536" value="512" step="512" oninput="updateMemoryCalc()">
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Architecture</th>
+                                    <th>Time Complexity</th>
+                                    <th>Memory @ L=<span id="mem-l">512</span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="memory-table">
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <canvas id="memory-chart" class="demo-canvas" width="500" height="300"></canvas>
+                </div>
+            </div>
+
+            <!-- Architecture Analogies -->
+            <div class="card">
+                <h3>🏗️ Modified Architectures: Simple Analogies</h3>
+
+                <h4>Funnel-Transformer</h4>
+                <p>
+                    <strong>Analogy:</strong> "Reading an article, then summarizing paragraph by paragraph, then page by page."
+                    As you move through the network, sequences shrink (pooling) so later layers work with compressed information. This reduces computation while preserving important patterns.
+                </p>
+
+                <h4>DeLighT</h4>
+                <p>
+                    <strong>Analogy:</strong> "Expanding your thinking before compressing to an answer."
+                    Each layer first expands to a higher dimension (think deeply), then compresses back (focus on key insights). This lets small models achieve surprising expressiveness.
+                </p>
+
+                <h4>RealFormer</h4>
+                <p>
+                    <strong>Analogy:</strong> "Remembering which parts of a book you highlighted in previous read-throughs."
+                    Current layer's attention logits are mixed with previous layer's attention patterns. This creates residual connections that help the model re-focus on important information across layers.
+                </p>
+
+                <h4>Universal Transformers</h4>
+                <p>
+                    <strong>Analogy:</strong> "Re-reading difficult paragraphs until you understand."
+                    The model applies the same layer multiple times (recurrence in depth) but can dynamically decide when to stop re-processing. Hard problems get more compute; easy tokens skip early.
+                </p>
+
+                <h4>Transformer-XL</h4>
+                <p>
+                    <strong>Analogy:</strong> "Remembering what you read in previous chapters while reading the current one."
+                    When processing segment N, the model has access to cached hidden states from segment N-1. No forgetting at segment boundaries. This enables learning very long-range dependencies (up to millions of tokens).
+                </p>
+            </div>
+
+            <div class="demo-info">
+                <strong>💡 Key Insight:</strong> Modern efficient transformers achieve 95%+ of full attention's performance with 10–100× better scaling. The trade-off: slightly reduced expressiveness for dramatically improved speed and memory.
+            </div>
+        </div>
+
+        <!-- LEVEL 2: Interactive Schematic -->
+        <div id="level-2" class="level">
+            <div class="level-header">
+                <div class="level-number">2</div>
+                <div>
+                    <div class="level-title">Interactive Schematic</div>
+                    <div class="level-subtitle">Full Math with KaTeX</div>
+                </div>
+            </div>
+
+            <!-- Section A: Architectural Modifications -->
+            <div class="card">
+                <h3>§5.1 Architectural Modifications</h3>
+
+                <h4>1. Funnel-Transformer: Progressive Pooling</h4>
+                <p>
+                    Funnel-Transformer applies progressive pooling between transformer blocks to reduce sequence length. The query comes from pooled representations while key and value come from un-pooled sequences.
+                </p>
+                <div class="math-block">
+                    <p><strong>Pooling Operation:</strong></p>
+                    $$h'_i = \text{Pool}(h_{2i-1:2i+1})$$
+                    <div class="formula-description">Every two consecutive hidden states are pooled into one (e.g., via convolution or average), reducing T → T/2.</div>
+                </div>
+                <div class="math-block">
+                    <p><strong>Attention Complexity:</strong></p>
+                    $$\text{Complexity} = O(d \cdot T'^2 + T \cdot d^2)$$
+                    <div class="formula-description">Where T' = T/2^k for k pooling stages. Time complexity becomes O((T/4)² · d) instead of O(T² · d).</div>
+                </div>
+
+                <h4>2. DeLighT: Grouped Linear Transformations</h4>
+                <p>
+                    DeLighT uses grouped linear transformations (GLT) to expand dimension then contract, achieving higher expressiveness with fewer parameters than standard dense layers.
+                </p>
+                <div class="math-block">
+                    <p><strong>Transformation:</strong></p>
+                    $$\text{GLT}(x) = W_{\text{down}}(\sigma(W_{\text{up}}(x)))$$
+                    <div class="formula-description">
+                        Input x ∈ ℝ^d first expands to ℝ^{d·r} (r = expansion ratio, e.g. 4), applies activation σ, then contracts back to ℝ^d. Total parameters: 2ddr ≈ 2d²r, compared to d² for standard dense layer (when r < 1).
+                    </div>
+                </div>
+
+                <h4>3. RealFormer: Residual Attention</h4>
+                <p>
+                    RealFormer adds previous layer's attention logits to current layer's pre-softmax scores, allowing the model to learn cumulative attention patterns across depth.
+                </p>
+                <div class="math-block">
+                    <p><strong>Accumulated Attention:</strong></p>
+                    $$A^{(n)} = A^{(n-1)} + Q^{(n)}(K^{(n)})^T$$
+                    <div class="formula-description">
+                        Attention matrix at layer n incorporates attention matrix from layer n-1 before softmax normalization. This creates explicit residual connections in the attention mechanism.
+                    </div>
+                </div>
+                <div class="math-block">
+                    <p><strong>Output:</strong></p>
+                    $$\text{Attn}^{(n)} = \text{softmax}(A^{(n)}/\sqrt{d_k}) V^{(n)}$$
+                </div>
+
+                <h4>4. Universal Transformers: Recurrent Depth with Halting</h4>
+                <p>
+                    Universal Transformers apply the same layer recurrently while using Adaptive Computation Time (ACT) to dynamically halt processing per token.
+                </p>
+                <div class="math-block">
+                    <p><strong>Halting Probability:</strong></p>
+                    $$p_t^{(n)} = \sigma(W_h h_t^{(n)} + b_h)$$
+                    <div class="formula-description">
+                        At each recurrence step n and token position t, compute probability that this token is "done" processing and should not process further.
+                    </div>
+                </div>
+                <div class="math-block">
+                    <p><strong>Halting Mechanism:</strong></p>
+                    $$\text{halt}_t^{(n)} = \begin{cases} 1 & \text{if } p_t^{(n)} > \tau \text{ or } \sum p_t < 1 \\ 0 & \text{otherwise} \end{cases}$$
+                    <div class="formula-description">
+                        Token halts when cumulative probability exceeds 1.0 or probability crosses threshold τ. This enables adaptive depth per token, reducing wasted compute on "easy" tokens.
+                    </div>
+                </div>
+
+                <h4>5. Transformer-XL: Segment-Level Recurrence & Relative Positional Encoding</h4>
+                <p>
+                    Transformer-XL introduces segment-level recurrence (caching hidden states across segments) and relative positional encoding to handle very long sequences.
+                </p>
+                <div class="math-block">
+                    <p><strong>Segment Recurrence:</strong></p>
+                    $$\tilde{h}_{t+1}^{(l)} = [\text{StopGradient}(h_t^{(l)}); h_{t+1}^{(l)}]$$
+                    <div class="formula-description">
+                        Hidden states from segment t are concatenated to segment t+1 (with gradients stopped to avoid backpropagation through all segments). Enables attention across segment boundaries without quadratic memory.
+                    </div>
+                </div>
+                <div class="math-block">
+                    <p><strong>Relative Positional Encoding (Decomposition):</strong></p>
+                    $$q_i k_j^T = (e_i + p_i) W_q W_k^T (e_j + p_j)^T$$
+                    <p style="margin-top: 0.5rem;">Expand into four terms:</p>
+                    $$= e_i W_q W_{k,E}^T e_j^T + e_i W_q W_{k,R}^T R_{i-j}^T + u W_{k,E}^T e_j^T + v W_{k,R}^T R_{i-j}^T$$
+                    <div class="formula-description">
+                        u and v are learnable biases. W_{k,E} and W_{k,R} are separate projections for content and relative position. R_{i-j} is relative distance encoding (sinusoidal). This allows the model to learn different attention patterns based on absolute content vs. relative position.
+                    </div>
+                </div>
+                <div class="math-block">
+                    <p><strong>Final Attention (Eq 5.20):</strong></p>
+                    $$\text{Attn}_t^{(n)} = \text{softmax}(A_t^{(n)} / \sqrt{d_k}) V_t^{(n)}$$
+                    <div class="formula-description">
+                        Standard softmax normalization of accumulated scores across current and cached segments.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section B: Efficient Attention Mechanisms -->
+            <div class="card">
+                <h3>§5.2 Efficient Attention Mechanisms</h3>
+
+                <h4>Complexity Review & Memory Table</h4>
+                <p>Standard scaled dot-product attention has quadratic complexity:</p>
+                <div class="math-block">
+                    $$\text{Attention Complexity} = O(L^2 \cdot d_k + L^2 \cdot d_v) = O(L^2 \cdot d)$$
+                </div>
+                <p style="margin-top: 1rem;">Memory usage for attention matrix alone (L² floats):</p>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Sequence Length (L)</th>
+                                <th>Attention Matrix Size</th>
+                                <th>Memory (float32)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>600</td>
+                                <td>600 × 600</td>
+                                <td>1.4 MB</td>
+                            </tr>
+                            <tr>
+                                <td>1,000</td>
+                                <td>1000 × 1000</td>
+                                <td>4 MB</td>
+                            </tr>
+                            <tr>
+                                <td>4,096</td>
+                                <td>4096 × 4096</td>
+                                <td>64 MB</td>
+                            </tr>
+                            <tr>
+                                <td>20,000</td>
+                                <td>20000 × 20000</td>
+                                <td>1.6 GB</td>
+                            </tr>
+                            <tr>
+                                <td>65,536</td>
+                                <td>65536 × 65536</td>
+                                <td>16.4 GB</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h4>6. Longformer: Sliding Window + Global Attention</h4>
+                <p>
+                    Longformer combines sliding window attention (local context) with global attention (specific important tokens attend to everything).
+                </p>
+                <div class="math-block">
+                    <p><strong>Sliding Window Attention:</strong></p>
+                    $$\text{Complexity} = O(L \cdot w)$$
+                    <div class="formula-description">
+                        Each position attends to w/2 positions before and after (window size w). For w=256 and L=4096, this is 1M comparisons vs 16M for full attention.
+                    </div>
+                </div>
+                <div class="math-block">
+                    <p><strong>Dilated Sliding Window:</strong></p>
+                    $$\text{Positions attended: } [i - w, i - 2w, i - 3w, ..., i, ..., i + 3w, i + 2w, i + w]$$
+                    <div class="formula-description">
+                        Skip d positions between attention points (dilation d). Extends effective context from w to w·(1 + d) with same number of comparisons.
+                    </div>
+                </div>
+                <div class="math-block">
+                    <p><strong>Global Attention:</strong></p>
+                    $$\text{Attn}(\text{global}) = \text{softmax}(Q_g (K)^T / \sqrt{d_k}) V$$
+                    <div class="formula-description">
+                        Separate Q_g, K_g, V_g for global tokens (e.g., [CLS] in classification tasks). These tokens can attend to all positions, and all positions can attend to them.
+                    </div>
+                </div>
+
+                <h4>7. Reformer: Locality-Sensitive Hashing (LSH) Attention</h4>
+                <p>
+                    Reformer uses LSH to group similar vectors into buckets, computing attention only within buckets. Q = K for efficiency.
+                </p>
+                <div class="math-block">
+                    <p><strong>LSH Hash Function:</strong></p>
+                    $$h(x) = \arg\max([x R_1; -x R_2]) \in [1, ..., n_{\text{buckets}}]$$
+                    <div class="formula-description">
+                        Project vector x by random matrices R₁, R₂, then take argmax of concatenation. Similar vectors hash to same bucket with high probability.
+                    </div>
+                </div>
+                <div class="math-block">
+                    <p><strong>Masked Attention within Buckets:</strong></p>
+                    $$a_i = \sum_j \exp(q_i k_j^T / \sqrt{d_k} - m(i, S_i) - \log Z(i, S_i)) v_j$$
+                    <div class="formula-description">
+                        m(i, S_i) masks out-of-bucket positions; Z(i, S_i) normalizes only in-bucket scores. Complexity O(L log L) for multi-round hashing.
+                    </div>
+                </div>
+                <div class="math-block">
+                    <p><strong>Reversible Residual Layers (Memory Efficiency):</strong></p>
+                    $$y_1 = x_1 + F(x_2), \quad y_2 = x_2 + G(y_1)$$
+                    <div class="formula-description">
+                        Instead of storing activations for backprop, recompute from outputs using inverses. Reduces memory from O(L·d) to O(d) for activations.
+                    </div>
+                </div>
+
+                <h4>8. Performer: FAVOR+ (Fast Attention with Positive Features)</h4>
+                <p>
+                    Performer approximates attention as kernel product, enabling near-linear complexity through feature maps.
+                </p>
+                <div class="math-block">
+                    <p><strong>Kernel Approximation:</strong></p>
+                    $$A_{ij} = \exp(q_i k_j^T) \approx \langle \phi(q_i^T) \phi(k_j^T) \rangle$$
+                    <div class="formula-description">
+                        Approximate exponential attention using inner product of random feature maps φ. Complexity: O(L·r·d_k) where r is feature dimension, typically much smaller than L.
+                    </div>
+                </div>
+                <div class="math-block">
+                    <p><strong>FAVOR+ Feature Map:</strong></p>
+                    $$\exp(q \cdot k^T) = \mathbb{E}_\omega[\cosh(\omega^T(q + k))]$$
+                    <div class="formula-description">
+                        Expectation over random ω sampled from standard normal. φ uses random projections and cosine/sine basis to approximate this expectation numerically.
+                    </div>
+                </div>
+                <div class="math-block">
+                    <p><strong>Complexity:</strong></p>
+                    $$\text{Time: } O(L \cdot r \cdot d_k), \quad \text{Memory: } O(L \cdot r)$$
+                    <div class="formula-description">
+                        Near-linear in L when r << L. Trades accuracy for speed compared to full attention.
+                    </div>
+                </div>
+
+                <h4>9. BigBird: Block-Sparse Attention</h4>
+                <p>
+                    BigBird combines three attention types (random, sliding window, global) into a block-sparse pattern that is computationally efficient on GPUs.
+                </p>
+                <div class="math-block">
+                    <p><strong>Attention as Graph:</strong></p>
+                    $$\text{Adjacency matrix } A \in \{0,1\}^{L \times L}$$
+                    <div class="formula-description">
+                        Represent attention as directed graph where edge (i,j) means token i attends to token j.
+                    </div>
+                </div>
+                <div class="math-block">
+                    <p><strong>Three Components:</strong></p>
+                    <p style="margin-top: 0.5rem;">
+                        <strong>Random (Erdős-Rényi):</strong> Each token randomly attends to r other tokens.<br/>
+                        <strong>Sliding Window (Watts-Strogatz):</strong> Each token attends to w neighbors (local structure).<br/>
+                        <strong>Global:</strong> G internal tokens or g external tokens attend to all positions and vice versa.
+                    </p>
+                </div>
+                <div class="math-block">
+                    <p><strong>Combined Complexity:</strong></p>
+                    $$\text{Total Attention Edges} = O(r \cdot L + w \cdot L + g \cdot L) = O(L)$$
+                    <div class="formula-description">
+                        Linear in L. BigBird is Turing-complete and a universal approximator despite sparse connectivity.
+                    </div>
+                </div>
+
+                <h4>10. Linformer: Linear Complexity via Low-Rank Projection</h4>
+                <p>
+                    Linformer projects key and value to lower rank, reducing quadratic attention to linear.
+                </p>
+                <div class="math-block">
+                    <p><strong>Low-Rank Projection:</strong></p>
+                    $$K' = K R, \quad V' = V R$$
+                    <div class="formula-description">
+                        Project K, V ∈ ℝ^{L×d} to ℝ^{k×d} using projection matrix R ∈ ℝ^{L×k}, where k << L.
+                    </div>
+                </div>
+                <div class="math-block">
+                    <p><strong>Attention:</strong></p>
+                    $$\bar{A}_{ij} = \text{softmax}(Q_i (K')^T / \sqrt{d_k/h}) \in \mathbb{R}^{L \times k}$$
+                    <div class="formula-description">
+                        Instead of L × L attention matrix, compute L × k, dramatically reducing memory and computation.
+                    </div>
+                </div>
+                <div class="math-block">
+                    <p><strong>Complexity:</strong></p>
+                    $$\text{Time: } O(L \cdot k \cdot d_k + L \cdot d_k \cdot d_v), \quad \text{Memory: } O(L \cdot k)$$
+                    <div class="formula-description">
+                        Linear in L when k is small constant. Different parameter sharing strategies (headwise, layerwise, etc.) balance expressiveness and efficiency.
+                    </div>
+                </div>
+
+                <h4>11. Talking-Heads Attention</h4>
+                <p>
+                    Talking-Heads projects attention logits and weights across attention heads, enabling communication between heads.
+                </p>
+                <div class="math-block">
+                    <p><strong>Three Head Types:</strong></p>
+                    <p style="margin-top: 0.5rem;">
+                        h_k, h_v: project queries and keys/values across heads.<br/>
+                        h: project attention logits (pre-softmax) and weights (post-softmax) across heads.
+                    </p>
+                </div>
+                <div class="math-block">
+                    <p><strong>Logits Projection:</strong></p>
+                    $$A'_{head} = W_\alpha A_{head}$$
+                    <div class="formula-description">
+                        W_α ∈ ℝ^{n_heads × n_heads} learns cross-head interactions. Applied before softmax.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section C: Other Modifications -->
+            <div class="card">
+                <h3>§5.3 Other Modifications</h3>
+
+                <h4>12. Clustered Attention: LSH + k-means</h4>
+                <div class="math-block">
+                    <p><strong>Clustering:</strong></p>
+                    $$\text{Clusters } C_1, ..., C_M = \text{k-means}(Q)$$
+                    <div class="formula-description">
+                        Cluster queries into M clusters using k-means. Compute centroid query matrix Q^c.
+                    </div>
+                </div>
+                <div class="math-block">
+                    <p><strong>Attention:</strong></p>
+                    $$\text{Attn} = \text{softmax}(Q Q^{c,T}) \cdot \text{softmax}(Q^c K^T) V$$
+                    <div class="formula-description">
+                        First attend to cluster centroids, then within clusters. Complexity O(C·L·d_k + L·C·d_v).
+                    </div>
+                </div>
+
+                <h4>13. Luna: Linear Unified Nested Attention</h4>
+                <div class="math-block">
+                    <p><strong>Two-Step Attention:</strong></p>
+                    $$Y_P = \text{Attn}(P, C) \quad \text{(Packing, } O(l \cdot m) \text{)}$$
+                    $$Y_X = \text{Attn}(X, Y_P) \quad \text{(Unpacking, } O(l \cdot n) \text{)}$$
+                    <div class="formula-description">
+                        P: packed representation; C: context; X: input (length n); m: packed length. Total complexity O(lm + ln), linear in input length.
+                    </div>
+                </div>
+
+                <h4>14. ELECTRA: Replaced Token Detection</h4>
+                <p>ELECTRA uses a generator-discriminator approach: the generator produces MLM predictions, the discriminator detects replaced tokens.</p>
+                <div class="math-block">
+                    <p><strong>Generator (MLM-style):</strong></p>
+                    $$P_G(x_t | x_{-t}) = \text{softmax}(W_g h_t^G)$$
+                    <div class="formula-description">
+                        Small model predicts masked tokens. Sample replacements: x'_t ~ P_G(· | x_{-t}).
+                    </div>
+                </div>
+                <div class="math-block">
+                    <p><strong>Discriminator (Token-level Classification):</strong></p>
+                    $$P_D(x_t \text{ replaced} | x') = \sigma(w_d^T h_t^D)$$
+                    <div class="formula-description">
+                        Binary classification for each token: original or replaced. Larger model (becomes final model) learns from 100% of tokens, not just 15% masked tokens.
+                    </div>
+                </div>
+
+                <h4>15. Switch Transformer: Mixture of Experts with Hard Routing</h4>
+                <div class="math-block">
+                    <p><strong>Expert Routing:</strong></p>
+                    $$\text{Expert}(x) = \arg\max(\text{softmax}(W_r \cdot x)) \in [1, ..., n_e]$$
+                    <div class="formula-description">
+                        Each token routed to exactly one expert via hard max. Routing matrix W_r learned end-to-end.
+                    </div>
+                </div>
+                <div class="math-block">
+                    <p><strong>Scaling:</strong></p>
+                    $$\text{Tokens per expert: } L / n_e \quad \text{(capacity factor c)}$$
+                    <div class="formula-description">
+                        Distribute tokens evenly across experts. Auxiliary loss encourages balanced load to avoid expert starvation.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Complexity Comparison Table -->
+            <div class="card">
+                <h3>📊 Complexity Comparison Table</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th onclick="sortTable(this)">Model</th>
+                                <th onclick="sortTable(this)">Time Complexity</th>
+                                <th onclick="sortTable(this)">Memory</th>
+                                <th onclick="sortTable(this)">Max Context</th>
+                            </tr>
+                        </thead>
+                        <tbody id="complexity-table">
+                            <tr>
+                                <td>Standard Transformer</td>
+                                <td>O(L² · d)</td>
+                                <td>O(L²)</td>
+                                <td>4,096</td>
+                            </tr>
+                            <tr>
+                                <td>Longformer</td>
+                                <td>O(L · w · d)</td>
+                                <td>O(L · w)</td>
+                                <td>4,096</td>
+                            </tr>
+                            <tr>
+                                <td>Reformer</td>
+                                <td>O(L · log L · d)</td>
+                                <td>O(L)</td>
+                                <td>32,768</td>
+                            </tr>
+                            <tr>
+                                <td>Performer</td>
+                                <td>O(L · r · d)</td>
+                                <td>O(L · r)</td>
+                                <td>32,768</td>
+                            </tr>
+                            <tr>
+                                <td>BigBird</td>
+                                <td>O(L · d)</td>
+                                <td>O(L)</td>
+                                <td>4,096</td>
+                            </tr>
+                            <tr>
+                                <td>Linformer</td>
+                                <td>O(L · k · d)</td>
+                                <td>O(L · k)</td>
+                                <td>32,768</td>
+                            </tr>
+                            <tr>
+                                <td>Transformer-XL</td>
+                                <td>O(L² · d)</td>
+                                <td>O(L · d)</td>
+                                <td>1,000,000+</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-secondary);">
+                    <strong>Legend:</strong> L = sequence length, d = hidden dimension, w = window size, r = feature rank, k = projection rank. Click column headers to sort.
+                </p>
+            </div>
+
+            <!-- Attention Pattern Designer -->
+            <div class="card">
+                <h3>🎛️ Attention Pattern Designer</h3>
+                <p>Compose your own attention pattern by toggling components. Watch the adjacency matrix update in real-time.</p>
+                <div class="demo-container">
+                    <div class="demo-controls">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); cursor: pointer;">
+                            <input type="checkbox" id="toggle-sliding" onchange="updateDesigner()" checked>
+                            Sliding Window (w=8)
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); cursor: pointer;">
+                            <input type="checkbox" id="toggle-random" onchange="updateDesigner()">
+                            Random (r=2)
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); cursor: pointer;">
+                            <input type="checkbox" id="toggle-global" onchange="updateDesigner()">
+                            Global Tokens (g=2)
+                        </label>
+                    </div>
+                    <canvas id="designer-canvas" class="demo-canvas" width="400" height="400"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- LEVEL 3: Engineer's Sandbox -->
+        <div id="level-3" class="level">
+            <div class="level-header">
+                <div class="level-number">3</div>
+                <div>
+                    <div class="level-title">Engineer's Sandbox</div>
+                    <div class="level-subtitle">PyTorch & HuggingFace Code</div>
+                </div>
+            </div>
+
+            <!-- Code Block 1: Sliding Window -->
+            <div class="card">
+                <h3>Code Block 1: Sliding Window Attention from Scratch</h3>
+                <p>Implement Longformer-style sliding window attention to understand the efficiency trade-off.</p>
+
+                <div class="code-block"><code><span class="keyword">import</span> torch
+<span class="keyword">import</span> torch.nn <span class="keyword">as</span> nn
+<span class="keyword">import</span> torch.nn.functional <span class="keyword">as</span> F
+
+<span class="keyword">class</span> <span class="function">SlidingWindowAttention</span>(nn.Module):
+    <span class="string">"""Longformer-style sliding window attention"""</span>
+    <span class="keyword">def</span> <span class="function">__init__</span>(<span class="keyword">self</span>, d_model, n_heads, window_size):
+        <span class="keyword">super</span>().__init__()
+        <span class="keyword">self</span>.d_model = d_model
+        <span class="keyword">self</span>.n_heads = n_heads
+        <span class="keyword">self</span>.window_size = window_size  <span class="comment"># one-sided</span>
+        <span class="keyword">self</span>.d_k = d_model // n_heads
+
+        <span class="keyword">self</span>.W_q = nn.Linear(d_model, d_model)
+        <span class="keyword">self</span>.W_k = nn.Linear(d_model, d_model)
+        <span class="keyword">self</span>.W_v = nn.Linear(d_model, d_model)
+        <span class="keyword">self</span>.W_o = nn.Linear(d_model, d_model)
+
+    <span class="keyword">def</span> <span class="function">forward</span>(<span class="keyword">self</span>, x):
+        B, L, D = x.shape
+        <span class="comment"># Project Q, K, V</span>
+        Q = <span class="keyword">self</span>.W_q(x).view(B, L, <span class="keyword">self</span>.n_heads, <span class="keyword">self</span>.d_k).transpose(<span class="number">1</span>, <span class="number">2</span>)
+        K = <span class="keyword">self</span>.W_k(x).view(B, L, <span class="keyword">self</span>.n_heads, <span class="keyword">self</span>.d_k).transpose(<span class="number">1</span>, <span class="number">2</span>)
+        V = <span class="keyword">self</span>.W_v(x).view(B, L, <span class="keyword">self</span>.n_heads, <span class="keyword">self</span>.d_k).transpose(<span class="number">1</span>, <span class="number">2</span>)
+
+        <span class="comment"># Build sliding window mask: O(L*w) instead of O(L²)</span>
+        w = <span class="keyword">self</span>.window_size
+        mask = torch.zeros(L, L, device=x.device, dtype=torch.bool)
+        <span class="keyword">for</span> i <span class="keyword">in</span> range(L):
+            start = max(<span class="number">0</span>, i - w)
+            end = min(L, i + w + <span class="number">1</span>)
+            mask[i, start:end] = True
+
+        <span class="comment"># Compute attention with mask</span>
+        scores = torch.matmul(Q, K.transpose(<span class="number">-2</span>, <span class="number">-1</span>)) / (<span class="keyword">self</span>.d_k ** <span class="number">0.5</span>)
+        scores = scores.masked_fill(~mask.unsqueeze(<span class="number">0</span>).unsqueeze(<span class="number">0</span>), <span class="keyword">float</span>(<span class="string">'-inf'</span>))
+        attn = F.softmax(scores, dim=<span class="number">-1</span>)
+
+        out = torch.matmul(attn, V)
+        out = out.transpose(<span class="number">1</span>, <span class="number">2</span>).contiguous().view(B, L, D)
+        <span class="keyword">return</span> <span class="keyword">self</span>.W_o(out)
+
+<span class="comment"># ⚡ OPTIMIZATION NOTE:</span>
+<span class="comment"># Real Longformer uses custom CUDA kernels for true O(L*w) memory.</span>
+<span class="comment"># Dense mask above is O(L²) in memory; use for L < 8192 tokens.</span></code></div>
+
+                <div class="demo-info">
+                    <strong>Key Insight:</strong> This implementation is educational but not production-optimized. Dense mask creation is O(L²) in memory. Real Longformer uses block-sparse CUDA ops for true O(L·w) memory usage.
+                </div>
+            </div>
+
+            <!-- Code Block 2: LSH Attention -->
+            <div class="card">
+                <h3>Code Block 2: LSH Attention (Reformer-style)</h3>
+                <p>Simplified implementation showing how Locality-Sensitive Hashing groups similar vectors for efficient attention.</p>
+
+                <div class="code-block"><code><span class="keyword">class</span> <span class="function">LSHAttention</span>(nn.Module):
+    <span class="string">"""Simplified Reformer-style LSH attention"""</span>
+    <span class="keyword">def</span> <span class="function">__init__</span>(<span class="keyword">self</span>, d_model, n_hashes=<span class="number">4</span>, n_buckets=<span class="number">32</span>):
+        <span class="keyword">super</span>().__init__()
+        <span class="keyword">self</span>.d_model = d_model
+        <span class="keyword">self</span>.n_hashes = n_hashes
+        <span class="keyword">self</span>.n_buckets = n_buckets
+        <span class="comment"># Random projection matrix for hashing</span>
+        <span class="keyword">self</span>.register_buffer(<span class="string">'R'</span>, torch.randn(d_model, n_buckets // <span class="number">2</span>))
+
+    <span class="keyword">def</span> <span class="function">hash_vectors</span>(<span class="keyword">self</span>, x):
+        <span class="string">"""LSH: h(x) = argmax([xR; -xR])"""</span>
+        projected = x @ <span class="keyword">self</span>.R
+        hashes = torch.cat([projected, -projected], dim=<span class="number">-1</span>)
+        <span class="keyword">return</span> hashes.argmax(dim=<span class="number">-1</span>)
+
+    <span class="keyword">def</span> <span class="function">forward</span>(<span class="keyword">self</span>, x):
+        B, L, D = x.shape
+        <span class="comment"># In Reformer, Q = K for efficiency</span>
+        qk = x
+        v = x
+
+        all_attn = torch.zeros_like(x)
+
+        <span class="keyword">for</span> r <span class="keyword">in</span> range(<span class="keyword">self</span>.n_hashes):
+            R = torch.randn_like(<span class="keyword">self</span>.R)
+            projected = qk @ R
+            buckets = torch.cat([projected, -projected], dim=<span class="number">-1</span>).argmax(dim=<span class="number">-1</span>)
+
+            <span class="comment"># Sort by bucket, attend within buckets</span>
+            sorted_idx = buckets.argsort(dim=<span class="number">-1</span>)
+            sorted_qk = torch.gather(qk, <span class="number">1</span>, sorted_idx.unsqueeze(<span class="number">-1</span>).expand(<span class="number">-1</span>,<span class="number">-1</span>,D))
+            sorted_v = torch.gather(v, <span class="number">1</span>, sorted_idx.unsqueeze(<span class="number">-1</span>).expand(<span class="number">-1</span>,<span class="number">-1</span>,D))
+
+            <span class="comment"># Chunk into blocks and compute local attention</span>
+            chunk_size = max(<span class="number">1</span>, L // (<span class="keyword">self</span>.n_buckets // <span class="number">2</span>))
+            <span class="keyword">for</span> start <span class="keyword">in</span> range(<span class="number">0</span>, L, chunk_size):
+                end = min(start + chunk_size, L)
+                q_chunk = sorted_qk[:, start:end]
+                kv_start = max(<span class="number">0</span>, start - chunk_size)
+                k_chunk = sorted_qk[:, kv_start:end]
+                v_chunk = sorted_v[:, kv_start:end]
+
+                scores = torch.matmul(q_chunk, k_chunk.transpose(<span class="number">-2</span>,<span class="number">-1</span>))
+                scores = scores / (D ** <span class="number">0.5</span>)
+                weights = F.softmax(scores, dim=<span class="number">-1</span>)
+                chunk_out = torch.matmul(weights, v_chunk)
+
+                orig_idx = sorted_idx[:, start:end]
+                all_attn.scatter_add_(<span class="number">1</span>, orig_idx.unsqueeze(<span class="number">-1</span>).expand(<span class="number">-1</span>,<span class="number">-1</span>,D), chunk_out)
+
+        <span class="keyword">return</span> all_attn / <span class="keyword">self</span>.n_hashes
+
+<span class="comment"># 🔑 Complexity: O(L log L) because LSH groups similar vectors.</span>
+<span class="comment"># Multi-round hashing reduces approximation error.</span></code></div>
+            </div>
+
+            <!-- Code Block 3: Longformer for Long Docs -->
+            <div class="card">
+                <h3>Code Block 3: Longformer for Long Document Classification</h3>
+                <p>Use pretrained Longformer to classify documents up to 4,096 tokens (vs BERT's 512).</p>
+
+                <div class="code-block"><code><span class="keyword">from</span> transformers <span class="keyword">import</span> LongformerTokenizer, LongformerForSequenceClassification
+<span class="keyword">import</span> torch
+
+<span class="comment"># Load tokenizer and model for 4,096 token documents</span>
+tokenizer = LongformerTokenizer.from_pretrained(<span class="string">'allenai/longformer-base-4096'</span>)
+model = LongformerForSequenceClassification.from_pretrained(
+    <span class="string">'allenai/longformer-base-4096'</span>, num_labels=<span class="number">2</span>
+)
+
+<span class="comment"># Classify a long document (~2000 tokens)</span>
+long_text = <span class="string">"This is a very long document... "</span> * <span class="number">500</span>
+inputs = tokenizer(long_text, return_tensors=<span class="string">"pt"</span>,
+                   max_length=<span class="number">4096</span>, truncation=True, padding=<span class="string">"max_length"</span>)
+
+<span class="comment"># Set global attention on [CLS] token for classification</span>
+global_attention_mask = torch.zeros_like(inputs[<span class="string">'input_ids'</span>])
+global_attention_mask[:, <span class="number">0</span>] = <span class="number">1</span>  <span class="comment"># CLS token gets global attention</span>
+
+outputs = model(**inputs, global_attention_mask=global_attention_mask)
+logits = outputs.logits
+prediction = torch.argmax(logits, dim=<span class="number">-1</span>)
+
+<span class="comment"># 💡 TIP: Global attention tokens are task-specific:</span>
+<span class="comment"># - Classification: [CLS] token</span>
+<span class="comment"># - QA: all question tokens</span>
+<span class="comment"># - Summarization: beginning-of-doc tokens</span></code></div>
+            </div>
+
+            <!-- Code Block 4: ELECTRA -->
+            <div class="card">
+                <h3>Code Block 4: ELECTRA—Replaced Token Detection</h3>
+                <p>ELECTRA training learns from 100% of tokens (not just 15% masked like BERT), making it 4x more sample-efficient.</p>
+
+                <div class="code-block"><code><span class="keyword">from</span> transformers <span class="keyword">import</span> ElectraTokenizer, ElectraForPreTraining
+<span class="keyword">import</span> torch
+
+tokenizer = ElectraTokenizer.from_pretrained(<span class="string">'google/electra-small-discriminator'</span>)
+model = ElectraForPreTraining.from_pretrained(<span class="string">'google/electra-small-discriminator'</span>)
+
+<span class="comment"># Simulate replaced token detection</span>
+sentence = <span class="string">"The chef prepared a delicious meal for the guests"</span>
+inputs = tokenizer(sentence, return_tensors=<span class="string">"pt"</span>)
+
+<span class="comment"># In real ELECTRA, generator replaces some tokens.</span>
+<span class="comment"># Here we simulate: "delicious" → "horrible"</span>
+fake_inputs = tokenizer(<span class="string">"The chef prepared a horrible meal for the guests"</span>,
+                        return_tensors=<span class="string">"pt"</span>)
+
+<span class="keyword">with</span> torch.no_grad():
+    outputs = model(**fake_inputs)
+    predictions = torch.sigmoid(outputs.logits)
+
+tokens = tokenizer.convert_ids_to_tokens(fake_inputs[<span class="string">'input_ids'</span>][<span class="number">0</span>])
+<span class="keyword">print</span>(<span class="string">"Token | P(replaced)"</span>)
+<span class="keyword">for</span> token, score <span class="keyword">in</span> zip(tokens, predictions[<span class="number">0</span>]):
+    flag = <span class="string">" ⚠️ REPLACED"</span> <span class="keyword">if</span> score > <span class="number">0.5</span> <span class="keyword">else</span> <span class="string">""</span>
+    <span class="keyword">print</span>(f<span class="string">"{token:15s} {score:.3f}{flag}"</span>)
+
+<span class="comment"># 🎯 ELECTRA advantage: learns from ALL tokens, not just masked 15%.</span>
+<span class="comment"># This makes it ~4x more sample-efficient than BERT.</span></code></div>
+            </div>
+
+            <div class="demo-info">
+                <strong>💡 Production Tips:</strong> For real implementations, use official Hugging Face implementations (Longformer, Reformer, Performer, etc.) which include optimizations like flash attention, gradient checkpointing, and custom CUDA kernels. The code above is for understanding the algorithms.
+            </div>
+        </div>
+
+        <!-- LEVEL 4: Socratic Sandbox -->
+        <div id="level-4" class="level">
+            <div class="level-header">
+                <div class="level-number">4</div>
+                <div>
+                    <div class="level-title">Socratic Sandbox</div>
+                    <div class="level-subtitle">Model Failure Scenarios & Diagnostics</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>🧩 Diagnostic Questions</h3>
+                <p>Expand each question to see detailed explanations and solutions for common failure modes.</p>
+
+                <div class="question" onclick="toggleQuestion(this)">
+                    <div class="question-text">
+                        Q1: Longformer fails on cross-paragraph reasoning
+                        <span class="question-toggle">▼</span>
+                    </div>
+                    <div class="question-answer">
+                        <p><strong>Scenario:</strong> Your Longformer model performs well on QA tasks asking about single paragraphs, but fails when questions require cross-paragraph reasoning across 20+ pages. Window size is 256 tokens.</p>
+                        <p style="margin-top: 1rem;"><strong>Root Cause:</strong> The sliding window is too small to propagate information between distant paragraphs. Even with global attention on question tokens, the window can't bridge gaps between passages that are 500+ tokens apart.</p>
+                        <p style="margin-top: 1rem;"><strong>Solutions:</strong></p>
+                        <ul style="margin-left: 1.5rem; margin-top: 0.5rem; line-height: 2;">
+                            <li><strong>Increase window size:</strong> Change w from 256 to 512 or 1024. Trade: higher memory/compute but better long-range coverage.</li>
+                            <li><strong>Add global attention tokens:</strong> Mark paragraph boundary tokens or section headers as global. They attend to everything, acting as "bridges" between passages.</li>
+                            <li><strong>Use dilated sliding window:</strong> In upper layers, use dilation d=2 or d=4 to extend effective context from w to w·(1+d).</li>
+                            <li><strong>Hybrid approach:</strong> Sliding window for lower layers (computational efficiency), larger windows or global attention in upper layers (information flow).</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="question" onclick="toggleQuestion(this)">
+                    <div class="question-text">
+                        Q2: Reformer predictions are inconsistent at inference
+                        <span class="question-toggle">▼</span>
+                    </div>
+                    <div class="question-answer">
+                        <p><strong>Scenario:</strong> Your Reformer model trains well, but at inference, running the same input twice produces different outputs. Prediction probabilities vary by ±10%.</p>
+                        <p style="margin-top: 1rem;"><strong>Root Cause:</strong> LSH is stochastic. The random projection matrices R used for hashing change each forward pass. With few hash rounds (n_hashes=1 or 2), different tokens may hash to different buckets across runs, changing which vectors attend to each other.</p>
+                        <p style="margin-top: 1rem;"><strong>Solutions:</strong></p>
+                        <ul style="margin-left: 1.5rem; margin-top: 0.5rem; line-height: 2;">
+                            <li><strong>Increase n_hashes:</strong> Use n_hashes=8 or 16 instead of 1–2. Multiple hash rounds ensure consistent token pairings even if individual hashes differ. Complexity: O(L log L · n_hashes).</li>
+                            <li><strong>Use deterministic hashing at inference:</strong> Seed random number generator with fixed value before forward pass. Trades off stochasticity for reproducibility.</li>
+                            <li><strong>Average multiple runs:</strong> For critical decisions, run the model 5–10 times and average predictions. Reduces variance.</li>
+                            <li><strong>Fine-tune with higher n_hashes:</strong> If trained with n_hashes=2, fine-tune with n_hashes=8 at inference to match distribution shift.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="question" onclick="toggleQuestion(this)">
+                    <div class="question-text">
+                        Q3: Performer accuracy degrades when extending to longer sequences
+                        <span class="question-toggle">▼</span>
+                    </div>
+                    <div class="question-answer">
+                        <p><strong>Scenario:</strong> Performer trained on 512 tokens works well. When you extend to 4,096 tokens at inference (using the same model), performance drops 5–15% despite "linear complexity" claims.</p>
+                        <p style="margin-top: 1rem;"><strong>Root Cause:</strong> FAVOR+ kernel approximation error grows with sequence length. The random features ω were calibrated for shorter sequences. The approximation exp(q·k^T) ≈ ⟨φ(q)^T φ(k)⟩ becomes less accurate as the distribution of dot products shifts—longer sequences have more outliers.</p>
+                        <p style="margin-top: 1rem;"><strong>Solutions:</strong></p>
+                        <ul style="margin-left: 1.5rem; margin-top: 0.5rem; line-height: 2;">
+                            <li><strong>Increase feature dimension r:</strong> Use more random features (e.g., r=256 instead of 64). Better approximation of kernel, higher O(L·r) cost but still subquadratic.</li>
+                            <li><strong>Periodically resample ω:</strong> During inference, resample random projection matrices every 512 tokens. Keeps approximation error bounded.</li>
+                            <li><strong>Fine-tune on longer sequences:</strong> Train on L=4,096 instead of L=512. Model adapts to distribution shift in dot products.</li>
+                            <li><strong>Hybrid FAVOR+/full attention:</strong> Use FAVOR+ in lower layers, full attention in upper layers. Lower layers capture local patterns (FAVOR+ is good), upper layers benefit from precise long-range attention.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="question" onclick="toggleQuestion(this)">
+                    <div class="question-text">
+                        Q4: Switch Transformer quality drops despite same training FLOPs
+                        <span class="question-toggle">▼</span>
+                    </div>
+                    <div class="question-answer">
+                        <p><strong>Scenario:</strong> You switch from 12-layer standard Transformer to 12-layer Switch Transformer with 128 experts per layer. Training FLOPS are identical (each token still routes to 1 expert ≈ equivalent FFN compute), but translation quality drops 2–3 BLEU.</p>
+                        <p style="margin-top: 1rem;"><strong>Root Cause:</strong> Load imbalance. Not all experts are used equally. Some experts become "superstars" receiving 10–20% of tokens while others get <1%. This means:</p>
+                        <ul style="margin-left: 1.5rem; margin-top: 0.5rem; line-height: 1.8;">
+                            <li>Popular experts have limited capacity → bottleneck → dropped tokens or reduced expressiveness</li>
+                            <li>Unused experts waste parameters</li>
+                            <li>No incentive for load balancing if all tokens route to same expert</li>
+                        </ul>
+                        <p style="margin-top: 1rem;"><strong>Solutions:</strong></p>
+                        <ul style="margin-left: 1.5rem; margin-top: 0.5rem; line-height: 2;">
+                            <li><strong>Add auxiliary load-balancing loss:</strong> Penalize imbalance: L_aux = α · (variance of expert counts). Forces uniform load.</li>
+                            <li><strong>Use expert dropout:</strong> Randomly drop some expert outputs during training. Prevents over-reliance on popular experts.</li>
+                            <li><strong>Tune capacity factor c:</strong> If c=1.0, each expert handles L/n_e tokens. Too small → dropped tokens; too large → empty experts. Use c=1.25–1.5.</li>
+                            <li><strong>Reduce number of experts:</strong> Try 32 or 64 experts per layer instead of 128. Easier to load-balance; still better than dense FFN.</li>
+                            <li><strong>Soft routing (weighted average):</strong> Instead of hard routing to 1 expert, route to top-2 or top-4 with learned weights. More flexible but higher compute.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="question" onclick="toggleQuestion(this)">
+                    <div class="question-text">
+                        Q5: BigBird fails on code understanding despite working on NLI
+                        <span class="question-toggle">▼</span>
+                    </div>
+                    <div class="question-answer">
+                        <p><strong>Scenario:</strong> BigBird with random attention, sliding window (w=3), and global tokens works well on English NLI (MNLI, etc.). But when applied to code understanding (bracket matching, scoping), accuracy drops 10–20%.</p>
+                        <p style="margin-top: 1rem;"><strong>Root Cause:</strong> BigBird's sparsity is probabilistic/statistical, not deterministic. Code requires precise long-range pairing (e.g., matching opening and closing brackets separated by hundreds of tokens). Random attention provides coverage in expectation, not guarantee. Sliding window covers only local context. Global tokens aggregate but don't precisely pair.</p>
+                        <ul style="margin-left: 1.5rem; margin-top: 0.5rem; line-height: 1.8;">
+                            <li>Random attention: bracket at position 100 might attend to position 350 with probability 1/L, but not guaranteed.</li>
+                            <li>Sliding window w=3: covers [i-3...i+3] only; can't bridge jumps of 200+ tokens between matched pairs.</li>
+                            <li>Global tokens: collect information but don't encode *which* brackets match *which*.</li>
+                        </ul>
+                        <p style="margin-top: 1rem;"><strong>Solutions:</strong></p>
+                        <ul style="margin-left: 1.5rem; margin-top: 0.5rem; line-height: 2;">
+                            <li><strong>Use standard full attention for code:</strong> Code is small (< 2K tokens). Full attention is fine. O(4M) << O(16G) for longer text, but much more accurate.</li>
+                            <li><strong>Longformer with structured global attention:</strong> Mark bracket/delimiter tokens as global. They attend to everything, enabling precise matching.</li>
+                            <li><strong>Hybrid sparse+dense:</strong> Lower layers use BigBird sparsity (efficiency). Upper layers switch to full attention for precise reasoning.</li>
+                            <li><strong>Synthetic pre-training:</strong> Pre-train on synthetic code (generated bracket matching sequences) to prime the model to track long-range dependencies before fine-tuning on real code.</li>
+                            <li><strong>Fine-tune with larger window:</strong> Increase w from 3 to 64 or 128 for code tasks specifically. Accept higher compute for better accuracy.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="demo-info">
+                <strong>🎯 Lesson:</strong> Efficiency trade-offs are real. Sparse attention saves compute but loses expressiveness. Always profile your specific task: if accuracy drop > 2%, dense attention or hybrid approaches may be worth the extra compute.
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border-color); text-align: center; color: var(--text-secondary);">
+            <p>Module 6: Efficient & Modified Transformers | Transformers for Machine Learning: A Deep Dive</p>
+            <p style="margin-top: 0.5rem; font-size: 0.9rem;">© 2024 • <a href="index.html" style="color: var(--accent); text-decoration: none;">Back to Index</a></p>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let currentLevel = 1;
+
+        // Jump to level and update dots
+        function jumpToLevel(level) {
+            currentLevel = level;
+            document.getElementById(`level-${level}`).scrollIntoView({ behavior: 'smooth' });
+            updateDots();
+        }
+
+        // Update level indicator dots
+        function updateDots() {
+            document.querySelectorAll('.dot').forEach((dot, idx) => {
+                dot.classList.toggle('active', idx + 1 === currentLevel);
+            });
+        }
+
+        // Toggle question expansion
+        function toggleQuestion(el) {
+            el.classList.toggle('open');
+        }
+
+        // Attention Pattern Visualizer
+        let currentPattern = 'full';
+
+        function visualizePattern(pattern, event) {
+            currentPattern = pattern;
+            document.querySelectorAll('.demo-button').forEach(btn => btn.classList.remove('active'));
+            if (event && event.target) {
+                event.target.classList.add('active');
+            }
+
+            const descriptions = {
+                'full': 'Full Attention: Every position attends to every other position. Dense coverage, but quadratic cost O(L²).',
+                'sliding': 'Sliding Window: Each position attends only to nearby neighbors (e.g., ±8 tokens). Linear in L but limited long-range.',
+                'dilated': 'Dilated Window: Band diagonal with gaps (dilation d). Extends effective context without quadratic cost.',
+                'longformer': 'Longformer: Combines sliding window with global attention on key tokens (e.g., [CLS]). Best of both worlds.',
+                'bigbird': 'BigBird: Sliding window + random connections + global tokens. Block-sparse for GPU efficiency.'
+            };
+
+            document.getElementById('pattern-info').textContent = descriptions[pattern];
+            drawAttentionPattern(pattern);
+        }
+
+        function drawAttentionPattern(pattern) {
+            const canvas = document.getElementById('attention-canvas');
+            const ctx = canvas.getContext('2d');
+            const L = 16;  // Grid size
+            const cellSize = canvas.width / L;
+
+            ctx.fillStyle = '#161b28';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#3a4555';
+
+            // Draw grid
+            for (let i = 0; i <= L; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * cellSize, 0);
+                ctx.lineTo(i * cellSize, canvas.height);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(0, i * cellSize);
+                ctx.lineTo(canvas.width, i * cellSize);
+                ctx.stroke();
+            }
+
+            // Draw attention pattern
+            for (let i = 0; i < L; i++) {
+                for (let j = 0; j < L; j++) {
+                    let shouldAttend = false;
+
+                    if (pattern === 'full') {
+                        shouldAttend = true;
+                    } else if (pattern === 'sliding') {
+                        shouldAttend = Math.abs(i - j) <= 3;
+                    } else if (pattern === 'dilated') {
+                        shouldAttend = Math.abs(i - j) <= 3 && (Math.abs(i - j) % 2 === 0 || Math.abs(i - j) === 1);
+                    } else if (pattern === 'longformer') {
+                        shouldAttend = Math.abs(i - j) <= 3 || i < 2 || j < 2;  // sliding + global
+                    } else if (pattern === 'bigbird') {
+                        shouldAttend = Math.abs(i - j) <= 3 || Math.random() < 0.3 || i < 1 || j < 1;
+                    }
+
+                    if (shouldAttend) {
+                        ctx.fillStyle = '#8b5cf6';
+                        ctx.fillRect(j * cellSize + 2, i * cellSize + 2, cellSize - 4, cellSize - 4);
+                    }
+                }
+            }
+        }
+
+        // Memory Calculator
+        function updateMemoryCalc() {
+            const L = parseInt(document.getElementById('seq-length-slider').value);
+            document.getElementById('seq-length-display').textContent = L.toLocaleString();
+            document.getElementById('mem-l').textContent = L.toLocaleString();
+
+            // Complexity calculations
+            const models = [
+                { name: 'Standard', time: 'O(L² · d)', mem: ((L * L * 4) / (1024 * 1024)).toFixed(2) + ' MB' },
+                { name: 'Longformer', time: 'O(L · w · d)', mem: ((L * 256 * 4) / (1024 * 1024)).toFixed(2) + ' MB' },
+                { name: 'Reformer', time: 'O(L · log L · d)', mem: ((L * 4) / 1024).toFixed(2) + ' MB' },
+                { name: 'Performer', time: 'O(L · r · d)', mem: ((L * 64 * 4) / (1024 * 1024)).toFixed(2) + ' MB' },
+                { name: 'BigBird', time: 'O(L · d)', mem: ((L * 4) / 1024).toFixed(2) + ' MB' }
+            ];
+
+            const table = document.getElementById('memory-table');
+            table.innerHTML = models.map(m =>
+                `<tr><td>${m.name}</td><td>${m.time}</td><td>${m.mem}</td></tr>`
+            ).join('');
+
+            drawMemoryChart(L);
+        }
+
+        function drawMemoryChart(L) {
+            const canvas = document.getElementById('memory-chart');
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#161b28';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const lengths = [512, 1024, 4096, 16384, 65536];
+            const colors = ['#8b5cf6', '#ec4899', '#06b6d4', '#10b981', '#f59e0b'];
+
+            const maxMemory = Math.max(
+                Math.max(...lengths.map(l => l * l * 4 / (1024 * 1024 * 1024)))
+            );
+
+            const padding = 40;
+            const width = canvas.width - 2 * padding;
+            const height = canvas.height - 2 * padding;
+
+            // Draw axes
+            ctx.strokeStyle = '#3a4555';
+            ctx.beginPath();
+            ctx.moveTo(padding, canvas.height - padding);
+            ctx.lineTo(canvas.width - padding, canvas.height - padding);
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, canvas.height - padding);
+            ctx.stroke();
+
+            // Draw lines for different models
+            const models = [
+                { name: 'Standard O(L²)', fn: l => l * l * 4 / (1024 * 1024 * 1024), color: colors[0] },
+                { name: 'Longformer O(L·w)', fn: l => l * 256 * 4 / (1024 * 1024 * 1024), color: colors[1] },
+                { name: 'Reformer O(L)', fn: l => l * 4 / (1024 * 1024), color: colors[2] }
+            ];
+
+            models.forEach(model => {
+                ctx.strokeStyle = model.color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+
+                lengths.forEach((len, idx) => {
+                    const mem = model.fn(len);
+                    const x = padding + (idx / (lengths.length - 1)) * width;
+                    const y = canvas.height - padding - (mem / maxMemory) * height;
+
+                    if (idx === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+            });
+        }
+
+        // Attention Pattern Designer
+        function updateDesigner() {
+            const canvas = document.getElementById('designer-canvas');
+            const ctx = canvas.getContext('2d');
+            const L = 12;
+            const cellSize = canvas.width / L;
+
+            ctx.fillStyle = '#161b28';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Grid
+            ctx.strokeStyle = '#3a4555';
+            for (let i = 0; i <= L; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * cellSize, 0);
+                ctx.lineTo(i * cellSize, canvas.height);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(0, i * cellSize);
+                ctx.lineTo(canvas.width, i * cellSize);
+                ctx.stroke();
+            }
+
+            const sliding = document.getElementById('toggle-sliding').checked;
+            const random = document.getElementById('toggle-random').checked;
+            const global_ = document.getElementById('toggle-global').checked;
+
+            for (let i = 0; i < L; i++) {
+                for (let j = 0; j < L; j++) {
+                    let shouldAttend = false;
+
+                    if (sliding && Math.abs(i - j) <= 2) shouldAttend = true;
+                    if (random && Math.random() < 0.2) shouldAttend = true;
+                    if (global_ && (i < 2 || j < 2)) shouldAttend = true;
+
+                    if (shouldAttend) {
+                        ctx.fillStyle = '#a78bfa';
+                        ctx.fillRect(j * cellSize + 2, i * cellSize + 2, cellSize - 4, cellSize - 4);
+                    }
+                }
+            }
+        }
+
+        // Table sorting
+        function sortTable(th) {
+            const table = th.closest('table');
+            const rows = Array.from(table.querySelectorAll('tbody tr'));
+            const colIndex = Array.from(th.parentNode.children).indexOf(th);
+
+            rows.sort((a, b) => {
+                const aVal = a.children[colIndex].textContent;
+                const bVal = b.children[colIndex].textContent;
+                return aVal.localeCompare(bVal);
+            });
+
+            rows.forEach(row => table.querySelector('tbody').appendChild(row));
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', function() {
+            visualizePattern('full');
+            updateMemoryCalc();
+            updateDesigner();
+
+            // Auto-detect level on scroll
+            const levels = [1, 2, 3, 4];
+            window.addEventListener('scroll', () => {
+                for (let level of levels) {
+                    const el = document.getElementById(`level-${level}`);
+                    const rect = el.getBoundingClientRect();
+                    if (rect.top < window.innerHeight / 2) {
+                        currentLevel = level;
+                        updateDots();
+                    }
+                }
+            });
+
+            // Render KaTeX
+            if (window.renderMathInElement) {
+                renderMathInElement(document.body, {
+                    delimiters: [
+                        { left: '$$', right: '$$', display: true },
+                        { left: '$', right: '$', display: false }
+                    ]
+                });
+            }
+        });
+    </script>
+</body>
+</html>

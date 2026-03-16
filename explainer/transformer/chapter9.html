@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 9: Interpretability & Explainability of Transformers</title>
+
+    <!-- KaTeX for Math Rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #1a1f35;
+            --bg-tertiary: #252d47;
+            --accent: #f43f5e;
+            --accent-light: #f87171;
+            --text-primary: #f0f3ff;
+            --text-secondary: #a8adc5;
+            --text-tertiary: #7a7f9e;
+            --border: #3a4258;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+
+        body {
+            font-family: Inter, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Sticky Navbar */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            background: rgba(10, 14, 26, 0.7);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        nav a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        nav a:hover {
+            color: var(--accent-light);
+        }
+
+        .nav-title {
+            font-family: Space Grotesk, sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            flex-grow: 1;
+            margin-left: 2rem;
+        }
+
+        .level-dots {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--border);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .dot:hover {
+            background: var(--accent-light);
+            transform: scale(1.3);
+        }
+
+        .dot.active {
+            background: var(--accent);
+            transform: scale(1.4);
+        }
+
+        /* Main Container */
+        main {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        section {
+            margin-bottom: 4rem;
+            scroll-margin-top: 80px;
+        }
+
+        h1 {
+            font-family: Space Grotesk, sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        h2 {
+            font-family: Space Grotesk, sans-serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+
+        h3 {
+            font-family: Space Grotesk, sans-serif;
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: var(--accent-light);
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+            line-height: 1.8;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+            font-style: italic;
+        }
+
+        /* Cards */
+        .card {
+            background: rgba(26, 31, 53, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+        }
+
+        .card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 30px rgba(244, 63, 94, 0.1);
+        }
+
+        /* Interactive Demo Boxes */
+        .demo-box {
+            background: rgba(37, 45, 71, 0.5);
+            border: 2px solid var(--accent);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .demo-title {
+            font-family: Space Grotesk, sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 1rem;
+        }
+
+        .button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-family: Inter, sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.95rem;
+        }
+
+        .button:hover {
+            background: var(--accent-light);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(244, 63, 94, 0.3);
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: Inter, sans-serif;
+            margin-bottom: 1rem;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 10px rgba(244, 63, 94, 0.3);
+        }
+
+        /* Code Blocks */
+        .code-block {
+            background: var(--bg-secondary);
+            border-left: 4px solid var(--accent);
+            border-radius: 8px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            font-family: JetBrains Mono, monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            white-space: pre;
+        }
+
+        .code-title {
+            font-family: Space Grotesk, sans-serif;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+        }
+
+        code {
+            color: var(--text-primary);
+        }
+
+        .keyword { color: #f43f5e; }
+        .string { color: #10b981; }
+        .comment { color: #7a7f9e; }
+        .number { color: #f59e0b; }
+        .function { color: #60a5fa; }
+
+        /* Math */
+        .katex-display {
+            margin: 1.5rem 0;
+            background: rgba(37, 45, 71, 0.3);
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        /* Canvas Containers */
+        .canvas-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+        }
+
+        th, td {
+            border: 1px solid var(--border);
+            padding: 1rem;
+            text-align: left;
+        }
+
+        th {
+            background: rgba(244, 63, 94, 0.1);
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: rgba(244, 63, 94, 0.05);
+        }
+
+        /* Expandable Sections */
+        .expandable {
+            margin: 1rem 0;
+        }
+
+        .expandable-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            cursor: pointer;
+            padding: 1rem;
+            background: rgba(244, 63, 94, 0.05);
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .expandable-header:hover {
+            background: rgba(244, 63, 94, 0.1);
+        }
+
+        .expandable-toggle {
+            font-size: 1.2rem;
+            transition: transform 0.3s;
+            color: var(--accent);
+        }
+
+        .expandable-toggle.active {
+            transform: rotate(180deg);
+        }
+
+        .expandable-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            padding-left: 1rem;
+        }
+
+        .expandable-content.active {
+            max-height: 2000px;
+            padding: 1rem;
+            background: rgba(37, 45, 71, 0.5);
+            border-radius: 0 0 8px 8px;
+        }
+
+        /* Utility */
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            h2 {
+                font-size: 1.4rem;
+            }
+
+            nav {
+                flex-wrap: wrap;
+                gap: 1rem;
+            }
+
+            .nav-title {
+                width: 100%;
+                margin: 0.5rem 0;
+            }
+
+            main {
+                padding: 0 1rem;
+            }
+        }
+
+        .token-box {
+            display: inline-block;
+            background: var(--accent);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            margin: 0.25rem;
+            font-family: JetBrains Mono, monospace;
+            font-weight: 600;
+            animation: tokenAppear 0.5s ease-out;
+        }
+
+        @keyframes tokenAppear {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .heatmap-cell {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            margin: 0.25rem;
+            border-radius: 4px;
+            font-weight: 600;
+            font-family: JetBrains Mono, monospace;
+            color: white;
+        }
+
+        ul {
+            margin-left: 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <a href="index.html">← Back</a>
+        <div class="nav-title">Module 9: Interpretability & Explainability</div>
+        <div class="level-dots">
+            <div class="dot active" data-level="1"></div>
+            <div class="dot" data-level="2"></div>
+            <div class="dot" data-level="3"></div>
+            <div class="dot" data-level="4"></div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Hero Section -->
+        <section id="hero">
+            <h1>Interpretability & Explainability of Transformers</h1>
+            <p class="subtitle">Opening the black box: Why models predict what they predict, and how to verify you can trust them</p>
+        </section>
+
+        <!-- LEVEL 1: The Feynman Bridge -->
+        <section id="level-1" class="level-section">
+            <h2>⚡ Level 1: The Feynman Bridge (Zero Jargon)</h2>
+            <p>Let's start with a simple analogy to understand why interpretability matters and how we can see inside a transformer's decision-making.</p>
+
+            <!-- Analogy -->
+            <div class="card">
+                <h3>Analogy: The Doctor Diagnosis Problem</h3>
+                <p>Imagine you ask a doctor for a diagnosis. You wouldn't just accept "you have condition X" — you'd want to know WHY. "What symptoms led to that conclusion? How confident are you? Can you show me the lab results?"</p>
+                <p>Interpretability is asking the same questions of AI models. A transformer's predictions are only as trustworthy as your ability to understand them. Especially in high-stakes domains (healthcare, finance, hiring), you need to open the black box and see the model's reasoning.</p>
+                <p><strong>Four pillars of explainability:</strong></p>
+                <ul>
+                    <li><strong>Confidence:</strong> How certain is the model? A prediction of 0.51 is very different from 0.99.</li>
+                    <li><strong>Safety:</strong> Can the model harm users? Does it avoid unintended consequences?</li>
+                    <li><strong>Trust:</strong> Can humans rely on this model? Are explanations truthful and faithful to the decision?</li>
+                    <li><strong>Ethics:</strong> Is the model violating ethical principles? Is it biased?</li>
+                </ul>
+            </div>
+
+            <!-- Interactive Component 1: Explainability Taxonomy Explorer -->
+            <div class="demo-box">
+                <div class="demo-title">🌳 Interactive Component 1: Explainability Taxonomy Tree</div>
+                <p>Explainability methods fall into three categories. Click to explore what each does:</p>
+                <div id="taxonomy-tree" style="margin-top: 1rem;"></div>
+            </div>
+
+            <!-- Interactive Component 2: Token Attribution Simulator -->
+            <div class="demo-box">
+                <div class="demo-title">🔍 Interactive Component 2: Token Attribution Simulator</div>
+                <p>Watch which words the model "focuses on" for sentiment classification. Try different explanation methods to see how they give different views of the same decision.</p>
+                <textarea class="input-field" id="sentiment-input" rows="2" placeholder="Enter a sentence (or use default)">The movie was absolutely terrible but the acting was brilliant</textarea>
+                <div style="margin-bottom: 1rem;">
+                    <label><strong>Explanation Method:</strong></label>
+                    <select class="input-field" id="method-select" onchange="updateSaliency()">
+                        <option value="attention">Attention Weights</option>
+                        <option value="gradient">Gradient-Based Saliency</option>
+                        <option value="lime">LIME (Local Approximation)</option>
+                    </select>
+                </div>
+                <button class="button" onclick="runSaliencyDemo()">Compute Attributions</button>
+                <div id="heatmap-output" style="margin-top: 1.5rem;"></div>
+            </div>
+
+            <!-- Key Intuitions -->
+            <div class="card">
+                <h3>🧠 Key Intuitions</h3>
+                <ul>
+                    <li><strong>Saliency maps:</strong> "Highlighting which parts of the input the model looked at most"</li>
+                    <li><strong>LIME:</strong> "Building a simple, understandable model that mimics the big model's behavior locally"</li>
+                    <li><strong>SHAP:</strong> "Using game theory to fairly assign credit to each input feature"</li>
+                    <li><strong>Probing:</strong> "Testing what a model has learned by giving it pop quizzes on linguistic structure"</li>
+                    <li><strong>Attention ≠ Explanation:</strong> "Just because the model 'looked' at something doesn't mean that's why it decided"</li>
+                    <li><strong>No silver bullet:</strong> Different methods highlight different aspects. Use multiple approaches.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- LEVEL 2: Interactive Schematic -->
+        <section id="level-2" class="level-section">
+            <h2>🔬 Level 2: Interactive Schematic (Full Math with KaTeX)</h2>
+
+            <!-- Traits of Explainable Systems -->
+            <h3>§9.1 Traits of Explainable Systems</h3>
+            <div class="card">
+                <p><strong>Explainable systems must have four properties:</strong></p>
+                <ul>
+                    <li><strong>Confidence:</strong> Quantify certainty in predictions via probability scores or confidence intervals</li>
+                    <li><strong>Safety:</strong> Avoid harmful, unintended actions; safety mechanisms should be transparent</li>
+                    <li><strong>Trust:</strong> Build user confidence through transparent, faithful explanations</li>
+                    <li><strong>Ethics:</strong> Respect ethical principles; explanations should reveal potential biases</li>
+                </ul>
+            </div>
+
+            <!-- Related Areas -->
+            <h3>§9.2 Related Areas: Fairness, Bias, Adversarial Robustness</h3>
+            <div class="card">
+                <p><strong>Fairness types:</strong></p>
+                <ul>
+                    <li><strong>Group fairness (Demographic Parity):</strong> P(ŷ=1 | A=0) = P(ŷ=1 | A=1) for sensitive attribute A</li>
+                    <li><strong>Individual fairness:</strong> Similar individuals get similar treatment regardless of protected attributes</li>
+                </ul>
+                <p><strong>Fairness techniques:</strong></p>
+                <ul>
+                    <li><strong>Pre-processing:</strong> Clean/augment training data to remove bias before training</li>
+                    <li><strong>In-process constraints:</strong> Add fairness terms to loss function during training</li>
+                    <li><strong>Post-processing:</strong> Adjust predictions after training to satisfy fairness constraints</li>
+                </ul>
+            </div>
+
+            <!-- Explainability Taxonomy -->
+            <h3>§9.3 Explainability Taxonomy</h3>
+
+            <!-- Visualization Methods -->
+            <h3>A. Visualization Methods — Backpropagation-Based</h3>
+
+            <div class="card">
+                <h3>1. Layer-wise Relevance Propagation (LRP)</h3>
+                <p><strong>Idea:</strong> Decompose model's prediction into relevance scores for each input feature using Taylor expansion.</p>
+
+                <p><strong>Deep Taylor Decomposition:</strong></p>
+                <div class="katex-display">$$f(x) = f(\hat{x}) + \nabla_{\hat{x}}f \cdot (x - \hat{x}) + \varepsilon \quad \text{(Eq 9.1)}$$</div>
+
+                <p><strong>Per-input relevance:</strong></p>
+                <div class="katex-display">$$r_i = \left(\frac{\partial f}{\partial x_i}\bigg|_{\hat{x}}\right) \cdot (x_i - \hat{x}_i) \quad \text{(Eq 9.2)}$$</div>
+
+                <p><strong>Multi-layer propagation:</strong></p>
+                <div class="katex-display">$$r_i^l = \sum_j r_{i,j}^l \quad \text{propagate relevance backwards through layers} \quad \text{(Eq 9.3)}$$</div>
+            </div>
+
+            <div class="card">
+                <h3>2. DeepLIFT: Relevance via Reference Comparison</h3>
+                <p><strong>Idea:</strong> Compare input to reference baseline (e.g., zero vector or masking tokens). Attribution is input change minus reference change, scaled by gradients.</p>
+
+                <p><strong>Delta term:</strong></p>
+                <div class="katex-display">$$\Delta t = f(x) - f(x') \quad \text{where } x' \text{ is reference} \quad \text{(Eq 9.4)}$$</div>
+
+                <p><strong>Relevance decomposition:</strong></p>
+                <div class="katex-display">$$\Delta t = \sum_{i=1}^{N} R_{\Delta x_i \Delta t} \quad \text{(Eq 9.5)}$$</div>
+
+                <p><strong>Key advantage:</strong> Avoids vanishing gradient problems common in raw backpropagation.</p>
+            </div>
+
+            <div class="card">
+                <h3>3. Integrated Gradients (IG): Axiomatic Attribution</h3>
+                <p><strong>Idea:</strong> Integrate gradients along straight-line path from baseline x' to input x. Satisfies sensitivity and implementation invariance axioms.</p>
+
+                <div class="katex-display">$$IG_i(x) = (x_i - x'_i) \int_0^1 \frac{\partial f(x' + \alpha(x - x'))}{\partial x_i} d\alpha \quad \text{(Eq 9.6)}$$</div>
+
+                <p><strong>Interpretation:</strong> How much each feature contributes to the model's output as you gradually "increase" that feature from the baseline.</p>
+
+                <p><strong>In practice:</strong> Approximate integral with Riemann sum (sample 50-100 points along the path).</p>
+            </div>
+
+            <!-- Perturbation-Based Visualization -->
+            <h3>B. Visualization Methods — Perturbation-Based</h3>
+
+            <div class="card">
+                <h3>1. Representation Erasure</h3>
+                <p><strong>Method:</strong> Erase or zero out input representations, measure drop in output score. Largest drops = most important features.</p>
+                <ul>
+                    <li>Iteratively remove words from input, measure impact on prediction</li>
+                    <li>Word with largest impact = most salient</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>2. Meaningful Perturbation</h3>
+                <p><strong>Method:</strong> Perturb input in semantic-preserving ways: constant replacement, Gaussian noise, blur.</p>
+                <div class="katex-display">$$D(x, f) = \{x \in X_d \mid f(x) = 1\} \quad \text{(Eq 9.7)}$$</div>
+            </div>
+
+            <div class="card">
+                <h3>3. Prediction Difference Analysis</h3>
+                <p><strong>Method:</strong> Measure how prediction changes when feature is removed. Compare prediction WITH vs WITHOUT feature.</p>
+
+                <p><strong>Conditional probability:</strong></p>
+                <div class="katex-display">$$p(c|x_{-i}) = \sum_{x_i} p(x_i|x_{-i}) p(c|x_{-i}, x_i) \quad \text{(Eq 9.8)}$$</div>
+
+                <p><strong>Difference score:</strong></p>
+                <div class="katex-display">$$\text{Diff}_i(c|x) = \log_2(\text{odds}(c|x)) - \log_2(\text{odds}(c|x_{-i})) \quad \text{(Eq 9.9)}$$</div>
+            </div>
+
+            <!-- Model Distillation -->
+            <h3>C. Model Distillation — Local Approximation</h3>
+
+            <div class="card">
+                <h3>1. LIME: Local Interpretable Model-Agnostic Explanations</h3>
+                <p><strong>Objective:</strong> Fit a simple, interpretable model (linear regression, decision tree) that locally approximates the complex model around a specific input.</p>
+
+                <div class="katex-display">$$\zeta(x) = \arg\min_{h \in \mathcal{H}} L(f, h, \pi_x(z)) + \Omega(h) \quad \text{(Eq 9.10)}$$</div>
+
+                <p><strong>Components:</strong></p>
+                <ul>
+                    <li><strong>L:</strong> Loss function measuring how well h approximates f (usually cross-entropy)</li>
+                    <li><strong>π_x:</strong> Kernel weighting samples by proximity to x (Gaussian kernel common)</li>
+                    <li><strong>Ω(h):</strong> Regularization penalty on model complexity (number of features, tree depth)</li>
+                </ul>
+
+                <p><strong>Why it works:</strong> Linear models are interpretable. By fitting a local linear approximation, LIME reveals which features matter near x without needing to understand the global model.</p>
+            </div>
+
+            <div class="card">
+                <h3>2. SHAP: SHapley Additive exPlanations</h3>
+                <p><strong>Idea:</strong> Use Shapley values from cooperative game theory to assign fair credit to each feature.</p>
+
+                <div class="katex-display">$$\phi_j(f) = \frac{|S|!(d-|S|-1)!}{d!} [f(S \cup \{x_j\}) - f(S)] \quad \text{(Eq 9.11)}$$</div>
+
+                <p><strong>Interpretation:</strong> For each feature, compute its average marginal contribution across all possible coalitions of features.</p>
+
+                <p><strong>Key properties:</strong></p>
+                <ul>
+                    <li><strong>Local accuracy:</strong> Contributions sum to model output: Σ φ_j = f(x) - f(baseline)</li>
+                    <li><strong>Missingness:</strong> Unused features get zero contribution</li>
+                    <li><strong>Consistency:</strong> If feature's contribution increases, its Shapley value increases</li>
+                </ul>
+
+                <p><strong>Challenge:</strong> Computing true Shapley values is exponential in number of features. SHAP uses approximations (KernelSHAP, TreeSHAP) for efficiency.</p>
+            </div>
+
+            <div class="card">
+                <h3>3. Anchors: High-Precision If-Then Rules</h3>
+                <p><strong>Idea:</strong> Find minimal set of features (anchor) such that model's prediction is stable (high precision) when other features vary.</p>
+
+                <div class="katex-display">$$\mathbb{E}_{D(z|A)}[1_{f(x)=f(z)}] \geq \tau, \quad A(x) = 1 \quad \text{(Eq 9.12)}$$</div>
+
+                <p><strong>Probabilistic guarantee:</strong></p>
+                <div class="katex-display">$$\Pr[\rho(A) \geq \tau] \geq 1 - \delta \quad \text{(Eq 9.13)}$$</div>
+
+                <p><strong>Coverage (how general is the rule):</strong></p>
+                <div class="katex-display">$$\text{cov}(A) = \mathbb{E}_{D(z)}[A(z)] \quad \text{(Eq 9.14)}$$</div>
+
+                <p><strong>Optimization:</strong></p>
+                <div class="katex-display">$$\max_{A \in \mathcal{A}'} \text{cov}(A) \quad \text{subject to } \rho(A) \geq \tau \quad \text{(Eq 9.15)}$$</div>
+            </div>
+
+            <!-- Intrinsic Methods -->
+            <h3>D. Intrinsic Methods — Probing</h3>
+
+            <div class="card">
+                <h3>Probing Classifiers: Testing Learned Representations</h3>
+                <p><strong>Idea:</strong> Insert a simple classifier on top of frozen transformer layers. Train the classifier on auxiliary linguistic tasks (POS tagging, NER, dependency parsing). Which layer achieves highest accuracy?</p>
+
+                <p><strong>Method:</strong></p>
+                <ol>
+                    <li>Freeze transformer weights</li>
+                    <li>Extract hidden representations from each layer</li>
+                    <li>Train linear probes (or small MLPs) on each layer</li>
+                    <li>Measure accuracy on target task</li>
+                </ol>
+
+                <p><strong>Typical findings (for BERT on English):</strong></p>
+                <ul>
+                    <li><strong>Lower layers (1-6):</strong> High accuracy on surface/syntactic tasks (POS, parsing)</li>
+                    <li><strong>Middle layers (6-10):</strong> Peak accuracy on semantic tasks (NER, SRL)</li>
+                    <li><strong>Upper layers (10-12):</strong> Declining accuracy as representations become task-specific</li>
+                </ul>
+
+                <p><strong>Control tasks (Hewitt & Liang):</strong> To verify probes aren't just memorizing, always include control tasks with random labels. If accuracy on random labels is high, your probe is too powerful and doesn't measure what's in the representations.</p>
+            </div>
+
+            <!-- Attention Probing -->
+            <h3>E. Intrinsic Methods — Attention Visualization</h3>
+
+            <div class="card">
+                <h3>1. Attention Matrices & BertViz</h3>
+                <p><strong>Tool:</strong> BertViz library provides three visualization types:</p>
+                <ul>
+                    <li><strong>Model view:</strong> 3D attention across all layers and heads</li>
+                    <li><strong>Attention-head view:</strong> Single layer, compare different heads</li>
+                    <li><strong>Query-key view:</strong> Show which queries attend to which keys</li>
+                </ul>
+            </div>
+
+            <!-- Attention and Explanation Section -->
+            <h3>§9.4 Attention and Explanation: Do Attention Weights Explain Decisions?</h3>
+
+            <div class="card">
+                <h3>"Attention is Not an Explanation" (Jain & Wallace, 2019)</h3>
+                <p><strong>Finding:</strong> Attention weights are often a poor proxy for feature importance. The model might attend to one word but make its decision based on another.</p>
+
+                <p><strong>Gradient-based importance (more faithful than attention):</strong></p>
+                <div class="katex-display">$$g_t = \left| \sum_{w=1}^{|V|} \mathbb{1}[x_{tw}=1] \frac{\partial y}{\partial x_{tw}} \right| \quad \text{(Eq 9.16)}$$</div>
+
+                <p><strong>Test: Correlation between attention and importance:</strong></p>
+                <div class="katex-display">$$\tau_g = \text{Kendall's } \tau(α, g) \quad \text{(Eq 9.17)}$$</div>
+
+                <p><strong>Empirical result:</strong> Correlation is consistently LOW across datasets, often 0.2-0.4. Sometimes statistically insignificant.</p>
+
+                <p><strong>Adversarial counter-example:</strong> Find different attention weights that produce the same prediction using adversarial training with Jensen-Shannon divergence loss.</p>
+            </div>
+
+            <div class="card">
+                <h3>"Attention is Not Not an Explanation" (Wiegreffe & Pinter, 2019)</h3>
+                <p><strong>Counter-argument:</strong> The question is task-dependent. Some tasks have attention that correlates with importance, others don't.</p>
+
+                <p><strong>Three requirements for attention to be faithful:</strong></p>
+                <ol>
+                    <li>Attention must be necessary for the prediction (can't fool the model by manipulating attention)</li>
+                    <li>Attention must be hard to manipulate (adversarial training shouldn't easily find different attention)</li>
+                    <li>Must work in uncontextualized settings (attention patterns should be stable)</li>
+                </ol>
+
+                <p><strong>Finding:</strong> Some tasks meet these criteria, others don't. Task design matters.</p>
+            </div>
+
+            <!-- Attention Flow -->
+            <h3>§9.5 Quantifying Attention Flow (Abnar & Zuidema, 2020)</h3>
+
+            <div class="card">
+                <h3>Attention Rollout: Aggregating Multi-Layer Attention</h3>
+                <p><strong>Simple approach:</strong> Multiply attention matrices across layers to see cumulative information flow from earlier to later layers.</p>
+
+                <div class="katex-display">$$\tilde{A}(l_i) = A(l_i) \cdot \tilde{A}(l_{i-1}) \quad \text{for } i > 0, \quad \tilde{A}(l_0) = A(l_0) \quad \text{(Eq 9.18)}$$</div>
+
+                <p><strong>With residual connections:</strong></p>
+                <div class="katex-display">$$A' = 0.5 \cdot W_{\text{att}} + 0.5 \cdot I \cdot A \quad \text{then multiply} \quad \text{(Eq 9.19)}$$</div>
+
+                <p><strong>Key insight:</strong> Residual connections act as "skip highways" — information can bypass layers entirely. Rollout accounts for this.</p>
+            </div>
+
+            <div class="card">
+                <h3>Attention Flow: Information Bottlenecks</h3>
+                <p><strong>Idea:</strong> Model attention as a flow network. Information flows from token to token through a directed acyclic graph (DAG).</p>
+
+                <p><strong>Method:</strong></p>
+                <ol>
+                    <li>For each edge (i,j) in the attention graph, compute capacity = attention weight</li>
+                    <li>Run max-flow algorithm from source [CLS] token to sink (target token)</li>
+                    <li>Bottleneck edges (minimum capacity) limit total flow</li>
+                </ol>
+
+                <p><strong>Empirical finding:</strong> Rollout often overestimates contributions of early-layer tokens. Flow reveals that information is bottlenecked by function words (prepositions, articles) which act as information hubs.</p>
+            </div>
+
+            <!-- Methods Comparison Table -->
+            <h3>Methods Comparison Table</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Category</th>
+                        <th>Scope</th>
+                        <th>Model-Agnostic?</th>
+                        <th>Key Strength</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>LRP</td>
+                        <td>Visualization</td>
+                        <td>Local</td>
+                        <td>No</td>
+                        <td>Layer-wise decomposition</td>
+                    </tr>
+                    <tr>
+                        <td>DeepLIFT</td>
+                        <td>Visualization</td>
+                        <td>Local</td>
+                        <td>No</td>
+                        <td>Reference-based comparison</td>
+                    </tr>
+                    <tr>
+                        <td>Integrated Gradients</td>
+                        <td>Visualization</td>
+                        <td>Local</td>
+                        <td>No</td>
+                        <td>Axiomatic guarantees</td>
+                    </tr>
+                    <tr>
+                        <td>LIME</td>
+                        <td>Distillation</td>
+                        <td>Local</td>
+                        <td>Yes</td>
+                        <td>Simple local explanations</td>
+                    </tr>
+                    <tr>
+                        <td>SHAP</td>
+                        <td>Distillation</td>
+                        <td>Local</td>
+                        <td>Yes</td>
+                        <td>Game-theoretic fairness</td>
+                    </tr>
+                    <tr>
+                        <td>Anchors</td>
+                        <td>Distillation</td>
+                        <td>Local</td>
+                        <td>Yes</td>
+                        <td>High-precision rules</td>
+                    </tr>
+                    <tr>
+                        <td>Attention Rollout</td>
+                        <td>Intrinsic</td>
+                        <td>Global</td>
+                        <td>No</td>
+                        <td>Multi-layer aggregation</td>
+                    </tr>
+                    <tr>
+                        <td>Attention Flow</td>
+                        <td>Intrinsic</td>
+                        <td>Global</td>
+                        <td>No</td>
+                        <td>Bottleneck detection</td>
+                    </tr>
+                    <tr>
+                        <td>Probing</td>
+                        <td>Intrinsic</td>
+                        <td>Global</td>
+                        <td>No</td>
+                        <td>Layer-specific analysis</td>
+                    </tr>
+                </tbody>
+            </table>
+
+        </section>
+
+        <!-- LEVEL 3: Engineer's Sandbox -->
+        <section id="level-3" class="level-section">
+            <h2>⚙️ Level 3: Engineer's Sandbox (PyTorch/HuggingFace Code)</h2>
+
+            <div class="card">
+                <div class="code-title">💾 Code Block 1: Integrated Gradients for BERT</div>
+                <div class="code-block"><span class="keyword">import</span> torch
+<span class="keyword">from</span> transformers <span class="keyword">import</span> BertTokenizer, BertForSequenceClassification
+
+<span class="keyword">def</span> <span class="function">integrated_gradients</span>(model, tokenizer, text, target_class, steps=<span class="number">50</span>):
+    <span class="string">"""Compute Integrated Gradients attribution for BERT"""</span>
+    model.eval()
+
+    inputs = tokenizer(text, return_tensors=<span class="string">"pt"</span>,
+                       padding=<span class="keyword">True</span>, truncation=<span class="keyword">True</span>)
+    input_ids = inputs[<span class="string">"input_ids"</span>]
+
+    <span class="comment"># Baseline: all [PAD] tokens</span>
+    baseline_ids = torch.zeros_like(input_ids)
+
+    <span class="comment"># Get embeddings</span>
+    embeddings = model.bert.embeddings.word_embeddings
+    input_embeds = embeddings(input_ids)
+    baseline_embeds = embeddings(baseline_ids)
+
+    <span class="comment"># Interpolate: baseline + α * (input - baseline) for α in [0, 1]</span>
+    scaled_inputs = [baseline_embeds + (float(i) / steps) *
+                     (input_embeds - baseline_embeds)
+                     <span class="keyword">for</span> i <span class="keyword">in</span> range(steps + <span class="number">1</span>)]
+
+    <span class="comment"># Compute gradients at each step</span>
+    grads = []
+    <span class="keyword">for</span> scaled_input <span class="keyword">in</span> scaled_inputs:
+        scaled_input.requires_grad_(<span class="keyword">True</span>)
+        outputs = model(inputs_embeds=scaled_input,
+                       attention_mask=inputs[<span class="string">"attention_mask"</span>])
+        target_score = outputs.logits[<span class="number">0</span>, target_class]
+        target_score.backward()
+        grads.append(scaled_input.grad.detach())
+
+    <span class="comment"># Average gradients and compute IG</span>
+    avg_grads = torch.stack(grads).mean(dim=<span class="number">0</span>)
+    ig = (input_embeds - baseline_embeds) * avg_grads
+
+    <span class="comment"># Sum across embedding dimension</span>
+    attributions = ig.sum(dim=-<span class="number">1</span>).squeeze()
+    tokens = tokenizer.convert_ids_to_tokens(input_ids[<span class="number">0</span>])
+
+    <span class="keyword">return</span> list(zip(tokens, attributions.tolist()))
+
+<span class="comment"># Usage</span>
+model = BertForSequenceClassification.from_pretrained(
+    <span class="string">"bert-base-uncased"</span>, num_labels=<span class="number">2</span>)
+tokenizer = BertTokenizer.from_pretrained(<span class="string">"bert-base-uncased"</span>)
+attrs = integrated_gradients(model, tokenizer,
+    <span class="string">"The movie was great"</span>, target_class=<span class="number">1</span>)
+
+<span class="keyword">for</span> token, score <span class="keyword">in</span> attrs:
+    bar = <span class="string">'█'</span> * int(abs(score) * <span class="number">50</span>)
+    print(<span class="string">f"{token:>15}: {bar} ({score:.4f})"</span>)</div>
+            </div>
+
+            <div class="card">
+                <div class="code-title">💾 Code Block 2: LIME for Text Classification</div>
+                <div class="code-block"><span class="keyword">from</span> lime.lime_text <span class="keyword">import</span> LimeTextExplainer
+<span class="keyword">from</span> transformers <span class="keyword">import</span> pipeline
+<span class="keyword">import</span> numpy <span class="keyword">as</span> np
+
+<span class="comment"># Load sentiment classifier</span>
+classifier = pipeline(<span class="string">"sentiment-analysis"</span>,
+    model=<span class="string">"distilbert-base-uncased-finetuned-sst-2-english"</span>)
+
+<span class="keyword">def</span> <span class="function">predict_proba</span>(texts):
+    <span class="string">"""Wrapper: return (prob_neg, prob_pos) for LIME"""</span>
+    results = classifier(texts, top_k=<span class="number">2</span>)
+    probs = []
+    <span class="keyword">for</span> result <span class="keyword">in</span> results:
+        sorted_result = sorted(result, key=<span class="keyword">lambda</span> x: x[<span class="string">'label'</span>])
+        probs.append([r[<span class="string">'score'</span>] <span class="keyword">for</span> r <span class="keyword">in</span> sorted_result])
+    <span class="keyword">return</span> np.array(probs)
+
+<span class="comment"># Create explainer</span>
+explainer = LimeTextExplainer(
+    class_names=[<span class="string">"NEGATIVE"</span>, <span class="string">"POSITIVE"</span>])
+
+text = <span class="string">"The movie had terrible acting but amazing plot"</span>
+explanation = explainer.explain_instance(text, predict_proba,
+                                          num_features=<span class="number">10</span>)
+
+print(<span class="string">"Prediction probabilities:"</span>, predict_proba([text]))
+print(<span class="string">"\\nTop LIME features:"</span>)
+<span class="keyword">for</span> feature, weight <span class="keyword">in</span> explanation.as_list():
+    direction = <span class="string">"→ POSITIVE"</span> <span class="keyword">if</span> weight > <span class="number">0</span> <span class="keyword">else</span> <span class="string">"→ NEGATIVE"</span>
+    print(<span class="string">f"  '{feature}': {weight:.4f} {direction}"</span>)</div>
+            </div>
+
+            <div class="card">
+                <div class="code-title">💾 Code Block 3: Attention Rollout Implementation</div>
+                <div class="code-block"><span class="keyword">import</span> torch
+<span class="keyword">import</span> numpy <span class="keyword">as</span> np
+<span class="keyword">from</span> transformers <span class="keyword">import</span> BertModel, BertTokenizer
+
+<span class="keyword">def</span> <span class="function">attention_rollout</span>(model, tokenizer, text):
+    <span class="string">"""
+    Attention Rollout: recursively multiply attention
+    matrices to see cumulative information flow.
+    """</span>
+    inputs = tokenizer(text, return_tensors=<span class="string">"pt"</span>)
+    outputs = model(**inputs, output_attentions=<span class="keyword">True</span>)
+
+    <span class="comment"># Stack: (num_layers, num_heads, seq_len, seq_len)</span>
+    attentions = torch.stack(outputs.attentions)
+
+    <span class="comment"># Average across heads</span>
+    att_mat = attentions.mean(dim=<span class="number">1</span>)
+
+    <span class="comment"># Add residual connections (identity matrix)</span>
+    residual_att = torch.eye(att_mat.size(-<span class="number">1</span>))
+    aug_att = att_mat + residual_att
+    aug_att = aug_att / aug_att.sum(dim=-<span class="number">1</span>, keepdim=<span class="keyword">True</span>)
+
+    <span class="comment"># Recursive multiplication: Ã(l) = A(l) · Ã(l-1)</span>
+    rollout = aug_att[<span class="number">0</span>]
+    <span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">1</span>, aug_att.size(<span class="number">0</span>)):
+        rollout = torch.matmul(aug_att[i], rollout)
+
+    <span class="comment"># Get CLS token's attention to all tokens</span>
+    cls_attention = rollout[<span class="number">0</span>, <span class="number">0</span>, :]
+    tokens = tokenizer.convert_ids_to_tokens(inputs[<span class="string">"input_ids"</span>][<span class="number">0</span>])
+
+    <span class="keyword">return</span> list(zip(tokens, cls_attention.tolist()))
+
+<span class="comment"># Usage</span>
+model = BertModel.from_pretrained(<span class="string">"bert-base-uncased"</span>)
+tokenizer = BertTokenizer.from_pretrained(<span class="string">"bert-base-uncased"</span>)
+
+text = <span class="string">"The cat sat on the mat"</span>
+rollout_scores = attention_rollout(model, tokenizer, text)
+
+print(<span class="string">"Attention Rollout (CLS → tokens):"</span>)
+<span class="keyword">for</span> token, score <span class="keyword">in</span> rollout_scores:
+    bar = <span class="string">'█'</span> * int(score * <span class="number">50</span>)
+    print(<span class="string">f"  {token:>10}: {bar} ({score:.4f})"</span>)</div>
+            </div>
+
+            <div class="card">
+                <div class="code-title">💾 Code Block 4: Probing Classifier for Linguistic Tasks</div>
+                <div class="code-block"><span class="keyword">import</span> torch
+<span class="keyword">import</span> torch.nn <span class="keyword">as</span> nn
+<span class="keyword">from</span> transformers <span class="keyword">import</span> BertModel, BertTokenizer
+
+<span class="keyword">class</span> <span class="function">ProbingClassifier</span>(nn.Module):
+    <span class="string">"""
+    Simple probing classifier: freeze BERT,
+    train only the probe on auxiliary tasks.
+    """</span>
+    <span class="keyword">def</span> <span class="function">__init__</span>(<span class="keyword">self</span>, hidden_size=<span class="number">768</span>, num_classes=<span class="number">10</span>):
+        <span class="keyword">super</span>().__init__()
+        <span class="keyword">self</span>.probe = nn.Linear(hidden_size, num_classes)
+
+    <span class="keyword">def</span> <span class="function">forward</span>(<span class="keyword">self</span>, hidden_states):
+        <span class="keyword">return</span> <span class="keyword">self</span>.probe(hidden_states)
+
+<span class="keyword">def</span> <span class="function">extract_layer_reps</span>(model, tokenizer, text, layer_idx):
+    <span class="string">"""Extract hidden representations from a specific layer"""</span>
+    inputs = tokenizer(text, return_tensors=<span class="string">"pt"</span>)
+    <span class="keyword">with</span> torch.no_grad():
+        outputs = model(**inputs, output_hidden_states=<span class="keyword">True</span>)
+    <span class="comment"># hidden_states: tuple of (num_layers+1,)</span>
+    <span class="comment"># each: (batch, seq_len, hidden_size)</span>
+    <span class="keyword">return</span> outputs.hidden_states[layer_idx]
+
+<span class="comment"># Benchmark: check accuracy across layers</span>
+model = BertModel.from_pretrained(<span class="string">"bert-base-uncased"</span>)
+tokenizer = BertTokenizer.from_pretrained(<span class="string">"bert-base-uncased"</span>)
+
+text = <span class="string">"The quick brown fox jumps"</span>
+print(<span class="string">"Layer representations shape:"</span>)
+<span class="keyword">for</span> layer <span class="keyword">in</span> [<span class="number">0</span>, <span class="number">3</span>, <span class="number">6</span>, <span class="number">9</span>, <span class="number">12</span>]:
+    reps = extract_layer_reps(model, tokenizer, text, layer)
+    print(<span class="string">f"  Layer {layer:>2}: {reps.shape}"</span>)
+
+<span class="comment"># Typically: probe top-1 accuracy by layer on POS tagging</span>
+<span class="comment"># Layer 0-3: ~85-90% (surface syntax)</span>
+<span class="comment"># Layer 6-9: ~92-94% (semantic)</span>
+<span class="comment"># Layer 12: ~88-90% (task-specific)</span></div>
+            </div>
+        </section>
+
+        <!-- LEVEL 4: Socratic Sandbox -->
+        <section id="level-4" class="level-section">
+            <h2>🤔 Level 4: Socratic Sandbox (Model Failure Scenarios)</h2>
+            <p>These diagnostic questions reveal common pitfalls in interpretability and explainability.</p>
+
+            <!-- Scenario 1 -->
+            <div class="expandable">
+                <div class="expandable-header">
+                    <span class="expandable-toggle">▼</span>
+                    <div>
+                        <strong>Scenario 1: Conflicting Explanations</strong><br/>
+                        <span style="font-size: 0.9rem; color: var(--text-secondary);">You run LIME and attention rollout on the same BERT model for sentiment. LIME highlights "terrible" as most negative. Attention rollout shows model attends most to "but". Both methods use the same model, same input. Which is correct?</span>
+                    </div>
+                </div>
+                <div class="expandable-content">
+                    <p><strong>Root Cause:</strong> Different methods capture different aspects. LIME measures feature importance via local perturbation. Attention rollout shows where the model "looks" but not what drives the decision.</p>
+
+                    <p><strong>The Answer:</strong> Both can be correct — they're answering different questions. LIME: "Which features are important?" Attention: "Where does information flow?" A word can be looked at without being decision-relevant.</p>
+
+                    <p><strong>What to do:</strong></p>
+                    <ul>
+                        <li>Use LIME for "why did it decide?" — more faithful to actual decision</li>
+                        <li>Use attention for "where does it look?" — useful for debugging but not explanation</li>
+                        <li>Compare multiple methods; consistency across methods increases confidence</li>
+                        <li>For high-stakes decisions, prefer perturbation-based methods (LIME, SHAP, Anchors) over attention</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Scenario 2 -->
+            <div class="expandable">
+                <div class="expandable-header">
+                    <span class="expandable-toggle">▼</span>
+                    <div>
+                        <strong>Scenario 2: LIME Instability</strong><br/>
+                        <span style="font-size: 0.9rem; color: var(--text-secondary);">You run LIME twice on identical inputs. First run: features [A, B, C] are most important. Second run: features [A, D, E] are important. Your team wants to deploy for medical diagnosis where you must legally justify predictions.</span>
+                    </div>
+                </div>
+                <div class="expandable-content">
+                    <p><strong>Root Cause:</strong> LIME samples perturbations randomly. Different samples → different local linear approximations → different feature importance. This randomness is unacceptable for medical/legal applications.</p>
+
+                    <p><strong>The Problem:</strong> You cannot justify "We decided X because of feature Y" if feature Y changes between runs.</p>
+
+                    <p><strong>Solutions:</strong></p>
+                    <ul>
+                        <li><strong>Increase num_samples:</strong> More perturbations → more stable estimates. Increase from default 1000 to 5000-10000.</li>
+                        <li><strong>Use SHAP instead:</strong> SHAP computes Shapley values deterministically (once you fix random seed). More stable than LIME.</li>
+                        <li><strong>Use Anchors:</strong> Anchors produce deterministic if-then rules. Best for legal/medical justification.</li>
+                        <li><strong>Ensemble multiple methods:</strong> Run LIME 10 times, average results. Reduces variance.</li>
+                        <li><strong>Fix random seed:</strong> For reproducibility, always set np.random.seed() and torch.manual_seed()</li>
+                    </ul>
+
+                    <p><strong>Best Practice for Medical AI:</strong> Use Anchors or TreeSHAP. Both produce deterministic, rule-based explanations that are reproducible and legally defensible.</p>
+                </div>
+            </div>
+
+            <!-- Scenario 3 -->
+            <div class="expandable">
+                <div class="expandable-header">
+                    <span class="expandable-toggle">▼</span>
+                    <div>
+                        <strong>Scenario 3: The Probing Confounder</strong><br/>
+                        <span style="font-size: 0.9rem; color: var(--text-secondary);">Your probing classifier achieves 92% accuracy on POS tagging using BERT Layer 6. You conclude "Layer 6 encodes POS information." A colleague challenges: "Your probe itself might be learning POS tagging from scratch, not detecting it in BERT's representations."</span>
+                    </div>
+                </div>
+                <div class="expandable-content">
+                    <p><strong>Root Cause:</strong> The probing confounder (Hewitt & Liang, 2019). A sufficiently powerful probe can learn tasks from random representations. High accuracy doesn't prove the representation contains the information — it might just be memorizing.</p>
+
+                    <p><strong>How to verify:</strong> Control task method. Train your probe on random labels:</p>
+                    <ul>
+                        <li>Task accuracy: 92%</li>
+                        <li>Control accuracy (random labels): 50% (random guessing)</li>
+                        <li>Selectivity = 92% - 50% = 42% ✓ (good — proves it's reading from representations)</li>
+                    </ul>
+
+                    <p>If control accuracy is also 92%, your probe is too powerful and doesn't measure anything.</p>
+
+                    <p><strong>Solutions:</strong></p>
+                    <ul>
+                        <li><strong>Use control tasks:</strong> Always include random-label controls. Selectivity = task accuracy - control accuracy.</li>
+                        <li><strong>Use weaker probes:</strong> Replace neural probes with linear probes. Linear models can't memorize as easily.</li>
+                        <li><strong>Cross-dataset validation:</strong> Train probe on one dataset, test on another. Poor transfer = overfitting to training task.</li>
+                        <li><strong>Proper baseline:</strong> Report task accuracy, control accuracy, and selectivity together.</li>
+                    </ul>
+
+                    <p><strong>Takeaway:</strong> High probing accuracy alone is not sufficient. Always validate with controls.</p>
+                </div>
+            </div>
+
+            <!-- Scenario 4 -->
+            <div class="expandable">
+                <div class="expandable-header">
+                    <span class="expandable-toggle">▼</span>
+                    <div>
+                        <strong>Scenario 4: Attention Rollout vs Flow Disagreement</strong><br/>
+                        <span style="font-size: 0.9rem; color: var(--text-secondary);">For BERT doing NER, attention rollout says the entity "Paris" contributes 80% to predicting LOCATION. But attention flow shows much of the information flows through "in" (as in "conference in Paris"). Which is correct?</span>
+                    </div>
+                </div>
+                <div class="expandable-content">
+                    <p><strong>Root Cause:</strong> Attention rollout multiplies matrices naively. Flow uses max-flow algorithm, which accounts for information bottlenecks.</p>
+
+                    <p><strong>Why they disagree:</strong> Rollout says "Paris is attended to 5 times across layers, so 5× contribution." But Flow recognizes that all 5 paths converge through "in" — a single bottleneck. The preposition "in" is the true hub.</p>
+
+                    <p><strong>Which is right?</strong> Flow is more accurate for understanding information propagation. Rollout tends to overestimate contributions of frequently-attended tokens.</p>
+
+                    <p><strong>What to do:</strong></p>
+                    <ul>
+                        <li>Use Flow for understanding information highways in the model</li>
+                        <li>Use Rollout for speed (simpler computation, good for interactive visualization)</li>
+                        <li>Compare both: if they agree, high confidence. If they disagree, investigate bottlenecks.</li>
+                        <li>For linguistic analysis, Flow reveals that function words often act as information hubs despite being semantically "less important"</li>
+                    </ul>
+
+                    <p><strong>Key Insight:</strong> Rollout ≠ Information Importance. Many multiplications ≠ high contribution if paths converge.</p>
+                </div>
+            </div>
+
+            <!-- Scenario 5 -->
+            <div class="expandable">
+                <div class="expandable-header">
+                    <span class="expandable-toggle">▼</span>
+                    <div>
+                        <strong>Scenario 5: Adversarial Explanation Fragility</strong><br/>
+                        <span style="font-size: 0.9rem; color: var(--text-secondary);">An adversary adds a period to "The movie was fantastic" → "The movie was fantastic." Prediction stays POSITIVE with 99% confidence. Saliency map completely changes — now highlights different words. What does this reveal?</span>
+                    </div>
+                </div>
+                <div class="expandable-content">
+                    <p><strong>Root Cause:</strong> Gradient-based explanations are fragile. Small input changes that don't affect the prediction can dramatically change gradients. The loss landscape is complex.</p>
+
+                    <p><strong>Why this happens:</strong> Gradients measure local sensitivity. A point on a plateau has near-zero gradient, but moving slightly can jump to a steep cliff. Same prediction, very different gradients.</p>
+
+                    <p><strong>What this reveals:</strong></p>
+                    <ul>
+                        <li>Gradient-based explanations capture local geometry, not the model's global reasoning</li>
+                        <li>The model's prediction is stable (adding period doesn't change output)</li>
+                        <li>But the gradient path to that prediction is fragile (easily perturbed)</li>
+                        <li>This is NOT necessarily a flaw — it's an inherent property of how neural networks work</li>
+                    </ul>
+
+                    <p><strong>Solutions & Best Practices:</strong></p>
+                    <ul>
+                        <li><strong>Use perturbation methods instead:</strong> LIME, SHAP, Anchors don't rely on gradients. More robust to small input changes.</li>
+                        <li><strong>Average over multiple explanations:</strong> Slightly perturb input, generate explanations, average. Reduces fragility.</li>
+                        <li><strong>Use SmoothGrad:</strong> Compute gradients with added noise, average. Smooths out noise-induced changes.</li>
+                        <li><strong>Verify with alternate methods:</strong> If gradient-based and perturbation-based methods agree, explanation is likely faithful.</li>
+                        <li><strong>For adversarial robustness:</strong> Use adversarial training to make gradients more stable.</li>
+                    </ul>
+
+                    <p><strong>Takeaway:</strong> Don't rely on any single explanation method. Use multiple methods; agreement = confidence.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary -->
+        <section id="summary">
+            <div class="card" style="background: linear-gradient(135deg, rgba(244, 63, 94, 0.1), rgba(248, 113, 113, 0.05));">
+                <h2 style="margin-top: 0;">Summary: Opening the Black Box</h2>
+
+                <p><strong>The Core Challenge:</strong> Transformers make powerful predictions but often hide their reasoning. In high-stakes domains (healthcare, hiring, finance), you cannot deploy a model you don't understand.</p>
+
+                <p><strong>Three Main Approach Families:</strong></p>
+                <ul>
+                    <li><strong>Visualization Methods:</strong> Backpropagation-based (LRP, DeepLIFT, Integrated Gradients) or perturbation-based (erasure, meaningful perturbation). Good for understanding which inputs matter locally.</li>
+                    <li><strong>Model Distillation:</strong> LIME, SHAP, Anchors. Fit interpretable models that approximate the complex model. SHAP uses game theory for fairness; Anchors produces rule-based explanations.</li>
+                    <li><strong>Intrinsic Methods:</strong> Probing and attention visualization. Reveal what different layers learn and where information flows. Use control tasks to avoid confounders.</li>
+                </ul>
+
+                <p><strong>Key Technical Insights:</strong></p>
+                <ul>
+                    <li>Attention ≠ Explanation: Models can attend to words without them being decision-relevant (Jain & Wallace, 2019)</li>
+                    <li>Different methods answer different questions: LIME answers "why?" Attention answers "where?"</li>
+                    <li>Gradient-based explanations are fragile to small input perturbations; use perturbation-based methods for robustness</li>
+                    <li>Probing accuracy alone is insufficient; always use control tasks to verify representations actually contain the information</li>
+                    <li>Attention rollout can overestimate contributions; information flow (max-flow algorithm) reveals bottlenecks</li>
+                </ul>
+
+                <p><strong>Four Traits of Trustworthy AI:</strong> Confidence (quantified uncertainty), Safety (no harmful actions), Trust (faithful explanations), Ethics (no discrimination).</p>
+
+                <p><strong>Best Practices for Deployment:</strong> Use multiple explanation methods. Compare them. If they agree, high confidence. If they disagree, investigate further. For legal/medical applications, prefer Anchors or TreeSHAP over LIME. Always report control baselines for probing studies.</p>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // KaTeX auto-render
+        document.addEventListener('DOMContentLoaded', function() {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false},
+                    {left: '\\[', right: '\\]', display: true},
+                    {left: '\\(', right: '\\)', display: false}
+                ]
+            });
+        });
+
+        // Level navigation
+        document.querySelectorAll('.dot').forEach((dot, index) => {
+            dot.addEventListener('click', () => {
+                const level = dot.dataset.level;
+                const section = document.getElementById(`level-${level}`);
+                if (section) {
+                    section.scrollIntoView({ behavior: 'smooth' });
+                }
+                updateDots(level);
+            });
+        });
+
+        function updateDots(level) {
+            document.querySelectorAll('.dot').forEach(dot => {
+                dot.classList.remove('active');
+                if (dot.dataset.level === level) {
+                    dot.classList.add('active');
+                }
+            });
+        }
+
+        // Expandable sections
+        document.querySelectorAll('.expandable-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const toggle = header.querySelector('.expandable-toggle');
+                const content = header.nextElementSibling;
+                toggle.classList.toggle('active');
+                content.classList.toggle('active');
+            });
+        });
+
+        // Taxonomy Tree
+        function drawTaxonomyTree() {
+            const canvas = document.createElement('div');
+            canvas.innerHTML = `
+                <div style="font-family: Inter; line-height: 1.8;">
+                    <div style="margin-bottom: 1rem;">
+                        <strong style="color: var(--accent);">1. Visualization Methods</strong>
+                        <div style="margin-left: 1.5rem; color: var(--text-secondary);">
+                            <strong>Backpropagation-based:</strong> LRP, DeepLIFT, Integrated Gradients<br/>
+                            → How much each input feature contributes to the output<br/>
+                            <strong>Perturbation-based:</strong> Erasure, Meaningful Perturbation, Prediction Difference<br/>
+                            → Remove/change inputs, measure output change
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <strong style="color: var(--accent);">2. Model Distillation</strong>
+                        <div style="margin-left: 1.5rem; color: var(--text-secondary);">
+                            <strong>Local Approximation:</strong> LIME, SHAP, Anchors<br/>
+                            → Fit simple, interpretable models near input x<br/>
+                            LIME: linear regression | SHAP: Shapley values (game theory) | Anchors: high-precision rules
+                        </div>
+                    </div>
+                    <div>
+                        <strong style="color: var(--accent);">3. Intrinsic Methods</strong>
+                        <div style="margin-left: 1.5rem; color: var(--text-secondary);">
+                            <strong>Probing:</strong> Train classifiers on intermediate layer outputs<br/>
+                            → What linguistic information does each layer encode?<br/>
+                            <strong>Attention:</strong> Visualization, Rollout, Flow<br/>
+                            → Where does information flow through the network?
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('taxonomy-tree').appendChild(canvas);
+        }
+
+        // Saliency Demo
+        function runSaliencyDemo() {
+            const input = document.getElementById('sentiment-input').value ||
+                'The movie was absolutely terrible but the acting was brilliant';
+
+            const words = input.split(/\s+/);
+            const scores = [0.1, 0.85, 0.3, 0.15, 0.9, 0.6, 0.2, 0.7, 0.25];
+
+            let html = '<div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">';
+            words.forEach((word, i) => {
+                const score = scores[i % scores.length];
+                const intensity = Math.round(score * 255);
+                const color = `rgb(${intensity}, ${120}, ${150})`;
+                const lightness = 100 - (score * 50);
+
+                html += `<div class="heatmap-cell" style="background: ${color}; opacity: ${0.5 + score * 0.5};">
+                    ${word}<br/><span style="font-size: 0.8rem;">${score.toFixed(2)}</span>
+                </div>`;
+            });
+            html += '</div>';
+            html += '<p style="margin-top: 1rem; color: var(--text-secondary); font-size: 0.9rem;">Darker/redder = higher attribution. "terrible" and "brilliant" are most salient for sentiment.</p>';
+
+            document.getElementById('heatmap-output').innerHTML = html;
+        }
+
+        function updateSaliency() {
+            runSaliencyDemo();
+        }
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            drawTaxonomyTree();
+        });
+    </script>
+</body>
+</html>

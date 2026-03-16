@@ -1,0 +1,1501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 4: Encoder Models — The BERT Family | Transformer Architecture</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+    <style>
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #1a1f35;
+            --bg-tertiary: #252d47;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --text-tertiary: #94a3b8;
+            --accent: #f59e0b;
+            --accent-light: #fcd34d;
+            --border: #404855;
+            --success: #10b981;
+            --error: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            letter-spacing: 0.3px;
+        }
+
+        /* Sticky Navbar */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(10, 14, 26, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(245, 158, 11, 0.2);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 3rem;
+        }
+
+        .nav-back {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        .nav-back:hover {
+            transform: translateX(-4px);
+            color: var(--accent-light);
+        }
+
+        .nav-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            flex-grow: 1;
+        }
+
+        .nav-dots {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+
+        .nav-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--bg-tertiary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .nav-dot.active {
+            background: var(--accent);
+            box-shadow: 0 0 12px rgba(245, 158, 11, 0.6);
+            border-color: var(--accent-light);
+        }
+
+        .nav-dot:hover {
+            background: var(--accent);
+            transform: scale(1.2);
+        }
+
+        /* Main Content Sections */
+        main {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        section {
+            min-height: 100vh;
+            padding: 5rem 3rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        section:nth-child(1) { background: linear-gradient(135deg, rgba(245, 158, 11, 0.05) 0%, transparent 100%); }
+        section:nth-child(2) { background: linear-gradient(135deg, rgba(245, 158, 11, 0.03) 0%, transparent 100%); }
+        section:nth-child(3) { background: linear-gradient(135deg, transparent 0%, rgba(245, 158, 11, 0.03) 100%); }
+        section:nth-child(4) { background: linear-gradient(135deg, transparent 0%, rgba(245, 158, 11, 0.05) 100%); }
+
+        .section-header {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .section-subtitle {
+            font-size: 1.3rem;
+            color: var(--text-secondary);
+            margin-bottom: 3rem;
+            font-weight: 500;
+        }
+
+        /* Cards and Layout */
+        .card {
+            background: rgba(26, 31, 53, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 1.5rem 0;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--accent-light), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: rgba(245, 158, 11, 0.5);
+            background: rgba(26, 31, 53, 0.8);
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        .card h3 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+
+        .card h4 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.1rem;
+            margin: 1.5rem 0 0.75rem 0;
+            color: var(--accent-light);
+        }
+
+        p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        /* Interactive Elements */
+        .interactive-box {
+            background: rgba(37, 45, 71, 0.8);
+            border: 2px solid rgba(245, 158, 11, 0.3);
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 2rem 0;
+            position: relative;
+        }
+
+        .interactive-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.2rem;
+            color: var(--accent);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .interactive-title::before {
+            content: '⚡';
+            font-size: 1.3rem;
+        }
+
+        button, .btn {
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            color: #000;
+            border: none;
+            border-radius: 6px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+        }
+
+        button:hover, .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(245, 158, 11, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        /* Sentence Tokenizer */
+        .token-container {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin: 1.5rem 0;
+        }
+
+        .token {
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid rgba(245, 158, 11, 0.5);
+            color: var(--text-primary);
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .token:hover {
+            background: rgba(245, 158, 11, 0.3);
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .token.masked {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.5);
+            color: #fca5a5;
+        }
+
+        .token.random {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: rgba(59, 130, 246, 0.5);
+            color: #93c5fd;
+        }
+
+        /* Prediction Probabilities */
+        .prediction-box {
+            background: rgba(37, 45, 71, 0.6);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .prediction-item {
+            display: flex;
+            gap: 1rem;
+            margin: 1rem 0;
+            align-items: center;
+        }
+
+        .prediction-label {
+            font-family: 'JetBrains Mono', monospace;
+            width: 80px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .prediction-bar {
+            flex: 1;
+            height: 24px;
+            background: rgba(100, 100, 130, 0.4);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .prediction-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent-light));
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 0.5rem;
+            transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            color: #000;
+            font-weight: 600;
+            font-size: 0.8rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Masking Strategy Visualizer */
+        .masking-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .masking-cell {
+            background: rgba(37, 45, 71, 0.8);
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            padding: 1rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .masking-cell.keep {
+            border-color: rgba(16, 185, 129, 0.5);
+        }
+
+        .masking-cell.mask {
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+
+        .masking-cell.random {
+            border-color: rgba(59, 130, 246, 0.5);
+        }
+
+        .masking-label {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            margin-top: 0.5rem;
+            text-transform: uppercase;
+        }
+
+        /* Comparison Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            background: rgba(37, 45, 71, 0.5);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--accent);
+            font-weight: 600;
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 2px solid var(--accent);
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        td:first-child {
+            color: var(--accent-light);
+            font-weight: 500;
+        }
+
+        /* Code Blocks */
+        .code-block {
+            background: #0d1117;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0;
+            margin: 2rem 0;
+            overflow: hidden;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+        }
+
+        .code-header {
+            background: rgba(245, 158, 11, 0.1);
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-weight: 500;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .code-content {
+            overflow-x: auto;
+            padding: 1.5rem;
+            line-height: 1.6;
+            white-space: pre;
+        }
+
+        .code-line {
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .code-line-num {
+            color: var(--text-tertiary);
+            margin-right: 1.5rem;
+            min-width: 3rem;
+            text-align: right;
+            user-select: none;
+        }
+
+        .code-line-content {
+            flex: 1;
+            color: #d4d4d4;
+        }
+
+        .keyword { color: #569cd6; }
+        .string { color: #ce9178; }
+        .comment { color: #6a9955; }
+        .function { color: #dcdcaa; }
+        .number { color: #b5cea8; }
+        .opt { color: #4ec9b0; font-weight: 600; }
+
+        /* Collapsible */
+        .collapsible {
+            background: rgba(37, 45, 71, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+
+        .collapsible-header {
+            padding: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+
+        .collapsible-header:hover {
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .collapsible-title {
+            font-weight: 600;
+            color: var(--accent);
+            font-family: 'Space Grotesk', sans-serif;
+            flex-grow: 1;
+        }
+
+        .collapsible-arrow {
+            color: var(--accent);
+            transition: transform 0.3s ease;
+            font-size: 1.2rem;
+        }
+
+        .collapsible.open .collapsible-arrow {
+            transform: rotate(180deg);
+        }
+
+        .collapsible-content {
+            display: none;
+            padding: 0 1.5rem 1.5rem 1.5rem;
+            border-top: 1px solid var(--border);
+            background: rgba(10, 14, 26, 0.5);
+        }
+
+        .collapsible.open .collapsible-content {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* SVG Embeddings Visualization */
+        .svg-container {
+            display: flex;
+            justify-content: center;
+            margin: 2rem 0;
+        }
+
+        svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Math Display */
+        .katex-display {
+            margin: 1.5rem 0;
+            padding: 1rem;
+            background: rgba(37, 45, 71, 0.6);
+            border-left: 3px solid var(--accent);
+            border-radius: 4px;
+        }
+
+        .math-inline {
+            background: rgba(245, 158, 11, 0.1);
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            section {
+                padding: 3rem 1.5rem;
+            }
+
+            .section-header {
+                font-size: 2rem;
+            }
+
+            nav {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 1rem;
+            }
+
+            .nav-title {
+                font-size: 1.1rem;
+            }
+
+            .nav-dots {
+                width: 100%;
+                justify-content: center;
+            }
+
+            table {
+                font-size: 0.85rem;
+            }
+
+            th, td {
+                padding: 0.75rem;
+            }
+
+            .code-content {
+                padding: 1rem;
+                font-size: 0.75rem;
+            }
+        }
+
+        /* Utility Classes */
+        .flex { display: flex; }
+        .gap-1 { gap: 0.5rem; }
+        .gap-2 { gap: 1rem; }
+        .mt-2 { margin-top: 1rem; }
+        .mb-2 { margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <a href="index.html" class="nav-back">← Back to Hub</a>
+        <div class="nav-title">Module 4: Encoder Models — BERT</div>
+        <div class="nav-dots">
+            <div class="nav-dot active" onclick="scrollToSection(0)"></div>
+            <div class="nav-dot" onclick="scrollToSection(1)"></div>
+            <div class="nav-dot" onclick="scrollToSection(2)"></div>
+            <div class="nav-dot" onclick="scrollToSection(3)"></div>
+        </div>
+    </nav>
+
+    <main>
+        <!-- LEVEL 1: The Feynman Bridge -->
+        <section id="level-1">
+            <h1 class="section-header">The Mad Libs Machine</h1>
+            <p class="section-subtitle">Understanding BERT through analogy and interaction</p>
+
+            <div class="card">
+                <h3>What is BERT? The Core Analogy</h3>
+                <p>Imagine you're playing Mad Libs — someone hides a word in a sentence and asks you to guess it from <strong>all the context around it</strong>. That's BERT.</p>
+                <p>Unlike GPT (which reads left-to-right only, like reading a book), BERT reads the entire sentence in both directions simultaneously. It's like having eyes on both sides of your head.</p>
+                <p><strong>The Technical Name:</strong> BERT = <strong>B</strong>idirectional <strong>E</strong>ncoder <strong>R</strong>epresentations from <strong>T</strong>ransformers. But you don't need to remember the name — just remember: "it understands context from both sides."</p>
+            </div>
+
+            <!-- MLM Interactive Demo -->
+            <div class="interactive-box">
+                <div class="interactive-title">Masked Language Model (MLM) Demo</div>
+                <p>Click on any token to mask it and watch BERT predict what word should go there:</p>
+
+                <div class="token-container" id="token-container">
+                    <!-- Populated by JavaScript -->
+                </div>
+
+                <button onclick="resetMasking()">Reset</button>
+
+                <div id="prediction-results">
+                    <!-- Populated when a token is clicked -->
+                </div>
+            </div>
+
+            <!-- Special Tokens Card -->
+            <div class="card">
+                <h3>Special Tokens: The Punctuation of AI</h3>
+                <h4>[CLS] — The "Summary Badge"</h4>
+                <p>BERT adds a special [CLS] token at the start of every sentence. Think of it as a badge that summarizes the entire sentence into a single representation. This is what you use for classification tasks (sentiment, NLI, etc.).</p>
+                <h4>[SEP] — The "Chapter Divider"</h4>
+                <p>When BERT sees two sentences, it uses [SEP] to mark where one sentence ends and another begins. This helps BERT understand sentence boundaries.</p>
+                <h4>[MASK] — The Hidden Word</h4>
+                <p>During pre-training, BERT replaces ~15% of words with [MASK]. Its job is to predict what the original word was. This teaches BERT to understand context deeply.</p>
+            </div>
+
+            <!-- NSP Interactive Demo -->
+            <div class="interactive-box">
+                <div class="interactive-title">Next Sentence Prediction (NSP) Demo</div>
+                <p>Does Sentence B logically follow Sentence A? Think of it as a story coherence checker.</p>
+
+                <div id="nsp-demo" style="margin: 1.5rem 0;">
+                    <div class="card">
+                        <p><strong>Sentence A:</strong> "I went to the grocery store yesterday afternoon."</p>
+                        <p><strong>Sentence B:</strong> <span id="nsp-b-text">I bought milk and eggs.</span></p>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin: 1rem 0;">
+                    <button onclick="checkNSP(true)">Follows</button>
+                    <button onclick="checkNSP(false)">Random</button>
+                    <button onclick="changeNSPSentence()">Show Different Pair</button>
+                </div>
+
+                <div id="nsp-result" style="display: none;">
+                    <div class="prediction-box" id="nsp-feedback"></div>
+                </div>
+            </div>
+
+            <!-- Embeddings Visualization -->
+            <div class="card">
+                <h3>How BERT Represents Input</h3>
+                <p>Each token becomes a vector (a list of 768 numbers for BERT-Base). These 768 numbers come from three components that are added together:</p>
+
+                <div class="svg-container">
+                    <svg width="500" height="300" viewBox="0 0 500 300">
+                        <!-- Token Layer -->
+                        <g id="token-layer">
+                            <rect x="50" y="20" width="100" height="60" fill="rgba(245, 158, 11, 0.3)" stroke="#f59e0b" stroke-width="2"/>
+                            <text x="100" y="55" text-anchor="middle" fill="#fcd34d" font-size="12" font-weight="bold">Token Embedding</text>
+                            <text x="100" y="70" text-anchor="middle" fill="#cbd5e1" font-size="10">"the" → [0.2, -0.5, ...]</text>
+                        </g>
+
+                        <!-- Segment Layer -->
+                        <g id="segment-layer">
+                            <rect x="200" y="20" width="100" height="60" fill="rgba(59, 130, 246, 0.3)" stroke="#3b82f6" stroke-width="2"/>
+                            <text x="250" y="55" text-anchor="middle" fill="#93c5fd" font-size="12" font-weight="bold">Segment ID</text>
+                            <text x="250" y="70" text-anchor="middle" fill="#cbd5e1" font-size="10">Sent A: 0, Sent B: 1</text>
+                        </g>
+
+                        <!-- Position Layer -->
+                        <g id="position-layer">
+                            <rect x="350" y="20" width="100" height="60" fill="rgba(16, 185, 129, 0.3)" stroke="#10b981" stroke-width="2"/>
+                            <text x="400" y="55" text-anchor="middle" fill="#a7f3d0" font-size="12" font-weight="bold">Position</text>
+                            <text x="400" y="70" text-anchor="middle" fill="#cbd5e1" font-size="10">Position 2 → [0.1, 0.3, ...]</text>
+                        </g>
+
+                        <!-- Plus Signs -->
+                        <text x="155" y="55" font-size="24" fill="#f59e0b" font-weight="bold">+</text>
+                        <text x="305" y="55" font-size="24" fill="#f59e0b" font-weight="bold">+</text>
+
+                        <!-- Arrow Down -->
+                        <line x1="250" y1="100" x2="250" y2="140" stroke="#f59e0b" stroke-width="2"/>
+                        <polygon points="250,150 245,140 255,140" fill="#f59e0b"/>
+
+                        <!-- Output -->
+                        <rect x="150" y="160" width="200" height="80" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="2" rx="4"/>
+                        <text x="250" y="185" text-anchor="middle" fill="#fcd34d" font-size="13" font-weight="bold">Final Token Representation</text>
+                        <text x="250" y="205" text-anchor="middle" fill="#cbd5e1" font-size="11">768-dimensional vector</text>
+                        <text x="250" y="222" text-anchor="middle" fill="#cbd5e1" font-size="10" font-family="JetBrains Mono">[0.15, -0.42, 0.08, ...]</text>
+                    </svg>
+                </div>
+
+                <p style="margin-top: 1rem;"><strong>Math formula:</strong></p>
+                <div class="katex-display">
+                    $$\text{Input}_i = E_{\text{token}_i} + E_{\text{segment}_i} + E_{\text{position}_i}$$
+                </div>
+            </div>
+
+            <!-- Fine-tuning Concept -->
+            <div class="card">
+                <h3>Fine-tuning: Specialization After General Learning</h3>
+                <p>BERT is like a college student who learns general knowledge first. Then they apply to medical school and specialize in medicine.</p>
+                <ol style="margin-left: 2rem; color: var(--text-secondary);">
+                    <li><strong>Pre-training Phase:</strong> BERT learns English on 3.3 billion words. It learns grammar, facts, relationships.</li>
+                    <li><strong>Fine-tuning Phase:</strong> You take pre-trained BERT and train it on your specific task (sentiment analysis, NER, QA, etc.) with your labeled data.</li>
+                    <li><strong>Why it works:</strong> The general knowledge transfers. BERT doesn't start from scratch on your task.</li>
+                </ol>
+                <p style="margin-top: 1rem;">This is why you need surprisingly little data to fine-tune BERT (100-1000 examples vs millions for training from scratch).</p>
+            </div>
+        </section>
+
+        <!-- LEVEL 2: Interactive Schematic -->
+        <section id="level-2">
+            <h1 class="section-header">The Mathematical Architecture</h1>
+            <p class="section-subtitle">Deep dive into BERT's structure and variants</p>
+
+            <!-- BERT Architecture -->
+            <div class="card">
+                <h3>§3.1 BERT Architecture</h3>
+                <p>BERT is an encoder-only transformer with multiple stacked layers. Each layer applies multi-head self-attention to understand relationships between tokens.</p>
+
+                <h4>Model Sizes</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Layers (L)</th>
+                            <th>Hidden Size (H)</th>
+                            <th>Attention Heads (A)</th>
+                            <th>Parameters</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>BERT-Base</td>
+                            <td>12</td>
+                            <td>768</td>
+                            <td>12</td>
+                            <td>110M</td>
+                        </tr>
+                        <tr>
+                            <td>BERT-Large</td>
+                            <td>24</td>
+                            <td>1024</td>
+                            <td>16</td>
+                            <td>340M</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p style="margin-top: 1rem;"><strong>Key insight:</strong> BERT-Base is typically "good enough" for most tasks. BERT-Large provides marginal improvements but needs more compute and memory.</p>
+            </div>
+
+            <!-- Pre-training Objectives -->
+            <div class="card">
+                <h3>§3.1.2 Pre-Training Objectives</h3>
+
+                <h4>Objective 1: Masked Language Modeling (MLM)</h4>
+                <p>BERT's primary goal. During pre-training, 15% of tokens are masked. BERT tries to predict them from context.</p>
+
+                <div class="katex-display">
+                    $$\mathcal{L}_{\text{MLM}} = -\sum_{i \in \mathcal{M}} \log P(x_i \mid \mathbf{x}_{\setminus\mathcal{M}})$$
+                </div>
+
+                <p>Where <span class="math-inline">$\mathcal{M}$</span> is the set of masked token positions and <span class="math-inline">$\mathbf{x}_{\setminus\mathcal{M}}$</span> is the context.</p>
+
+                <!-- Masking Strategy Visualizer -->
+                <div style="margin-top: 1.5rem;">
+                    <p><strong>The 80/10/10 Masking Heuristic:</strong></p>
+                    <div class="masking-grid" id="masking-grid">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                    <button onclick="rerollMasking()" style="margin-top: 1rem;">Re-roll Masking Strategy</button>
+                </div>
+
+                <h4 style="margin-top: 2rem;">Objective 2: Next Sentence Prediction (NSP)</h4>
+                <p>Binary classification on the [CLS] token. BERT learns if Sentence B follows Sentence A.</p>
+
+                <div class="katex-display">
+                    $$\mathcal{L}_{\text{NSP}} = -[y \log P(\text{IsNext}) + (1-y) \log P(\text{NotNext})]$$
+                </div>
+
+                <h4>Combined Loss</h4>
+                <div class="katex-display">
+                    $$\mathcal{L} = \mathcal{L}_{\text{MLM}} + \mathcal{L}_{\text{NSP}}$$
+                </div>
+
+                <p><strong>Note:</strong> Later research (RoBERTa) showed NSP doesn't help much. Many models dropped it entirely.</p>
+            </div>
+
+            <!-- Fine-tuning Architectures -->
+            <div class="card">
+                <h3>§3.1.3 Fine-tuning Architectures</h3>
+                <p>Depending on your task, BERT's output is used differently:</p>
+
+                <h4>Architecture 1: Token-Level Tasks (NER, POS)</h4>
+                <p>Use the output of every token. Add a classification layer on top of each token representation.</p>
+                <p style="margin-top: 1rem; padding: 1rem; background: rgba(245, 158, 11, 0.1); border-left: 3px solid var(--accent); border-radius: 4px;">
+                    Example: "John lives in New York" → Each word gets its own NER label (PERSON, location, location).
+                </p>
+
+                <h4>Architecture 2: Single Sentence Classification</h4>
+                <p>Use only the [CLS] token output. This representation summarizes the entire sentence.</p>
+                <p style="margin-top: 1rem; padding: 1rem; background: rgba(245, 158, 11, 0.1); border-left: 3px solid var(--accent); border-radius: 4px;">
+                    Example: Sentiment classification: "I loved this movie!" → [CLS] → Positive
+                </p>
+
+                <h4>Architecture 3: Sentence Pair Classification (NLI)</h4>
+                <p>Two sentences separated by [SEP]. Use [CLS] for binary/multi-class classification.</p>
+                <p style="margin-top: 1rem; padding: 1rem; background: rgba(245, 158, 11, 0.1); border-left: 3px solid var(--accent); border-radius: 4px;">
+                    Example: "A dog is sitting" + "The dog is resting" → Entailment
+                </p>
+
+                <h4>Architecture 4: Question Answering</h4>
+                <p>Use span prediction. Two special tokens mark the start and end of the answer span.</p>
+                <p style="margin-top: 1rem; padding: 1rem; background: rgba(245, 158, 11, 0.1); border-left: 3px solid var(--accent); border-radius: 4px;">
+                    Example: Question: "Where is John?" Context: "John lives in New York" → Span: [lives in] "New York"
+                </p>
+            </div>
+
+            <!-- RoBERTa Variants -->
+            <div class="card">
+                <h3>§3.2 BERT Variants: RoBERTa</h3>
+                <p><strong>RoBERTa</strong> (Robustly Optimized BERT) improved upon BERT with 6 key training changes:</p>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Improvement</th>
+                            <th>BERT</th>
+                            <th>RoBERTa</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Masking</td>
+                            <td>Static (same for 40 epochs)</td>
+                            <td>Dynamic (new masks each epoch)</td>
+                        </tr>
+                        <tr>
+                            <td>NSP Loss</td>
+                            <td>Included</td>
+                            <td>Removed (found to hurt performance)</td>
+                        </tr>
+                        <tr>
+                            <td>Batch Size</td>
+                            <td>256</td>
+                            <td>8,192 (32× larger!)</td>
+                        </tr>
+                        <tr>
+                            <td>Training Data</td>
+                            <td>16 GB</td>
+                            <td>160 GB (10× more)</td>
+                        </tr>
+                        <tr>
+                            <td>Training Time</td>
+                            <td>40 epochs</td>
+                            <td>500K steps (~100 epochs)</td>
+                        </tr>
+                        <tr>
+                            <td>Sequence Length</td>
+                            <td>Mixed (512 and shorter)</td>
+                            <td>Full 512 tokens</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p style="margin-top: 1rem;"><strong>Result:</strong> RoBERTa typically outperforms BERT on downstream tasks by 1-2% because of these training improvements.</p>
+            </div>
+
+            <!-- ALBERT -->
+            <div class="card">
+                <h3>§3.2 BERT Variants: ALBERT</h3>
+                <p><strong>ALBERT</strong> (A Lite BERT) achieves similar performance with ~12× fewer parameters using two tricks:</p>
+
+                <h4>Trick 1: Factorized Embeddings</h4>
+                <p>Instead of embedding dimension H, use a smaller dimension E. Then project to H.</p>
+                <div class="katex-display">
+                    $$V \times H \rightarrow V \times E + E \times H \quad \text{(where } E \ll H \text{)}$$
+                </div>
+                <p>For BERT-Base: Instead of vocab(30K) × 768, use 30K × 128 + 128 × 768. This saves millions of parameters.</p>
+
+                <h4>Trick 2: Cross-Layer Parameter Sharing</h4>
+                <p>All 12 layers share the same weights. This reduces parameters by ~12×.</p>
+                <p><strong>Downside:</strong> Slightly slower convergence during fine-tuning. But once trained, it's much faster and uses less memory.</p>
+
+                <h4>Bonus: Sentence Order Prediction (SOP)</h4>
+                <p>ALBERT replaces NSP with SOP: Can BERT tell if two sentences are in the correct order? This is harder and more useful than NSP.</p>
+            </div>
+
+            <!-- Applications -->
+            <div class="card">
+                <h3>§3.3 Domain-Specific BERT Applications</h3>
+
+                <h4>TaBERT: BERT for Tabular Data</h4>
+                <p>Pre-trains on both tables and text. Uses:</p>
+                <ul style="margin: 1rem 0 1rem 2rem; color: var(--text-secondary);">
+                    <li><strong>Horizontal self-attention:</strong> Across columns within a row</li>
+                    <li><strong>Vertical self-attention:</strong> Across rows within a column</li>
+                    <li><strong>Hybrid attention:</strong> Combinations for semantic understanding</li>
+                </ul>
+                <p>Result: Excellent at table question-answering and semantic search over structured data.</p>
+
+                <h4>BERTopic: Topic Modeling with BERT</h4>
+                <p>Pipeline: Document embeddings (BERT) → Dimensionality reduction (UMAP) → Clustering (HDBSCAN) → Topic extraction (c-TF-IDF)</p>
+                <div class="katex-display">
+                    $$c\text{-}TF\text{-}IDF_i = \frac{t_i}{w_i} \times \log \frac{m}{\sum_j t_j}$$
+                </div>
+                <p>This creates semantic topics from unlabeled documents with minimal hyperparameter tuning.</p>
+            </div>
+
+            <!-- BERTology -->
+            <div class="card">
+                <h3>§3.4 BERTology: What Does BERT Learn?</h3>
+                <p>Researchers have dissected BERT to understand what each layer learns. Use the slider below to explore:</p>
+
+                <div style="margin: 2rem 0;">
+                    <label for="layer-slider" style="color: var(--accent); font-weight: 600;">BERT Layer: <span id="layer-num">6</span>/12</label>
+                    <input type="range" id="layer-slider" min="0" max="11" value="6" style="width: 100%; height: 6px; margin: 1rem 0; cursor: pointer; accent-color: var(--accent);">
+                </div>
+
+                <div id="layer-knowledge" style="margin: 1.5rem 0;">
+                    <div class="prediction-box">
+                        <p id="layer-text"></p>
+                    </div>
+                </div>
+
+                <h4 style="margin-top: 2rem;">Three Types of Knowledge</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 1rem;">
+                    <div class="card">
+                        <h4 style="margin-bottom: 0.5rem;">Syntactic Knowledge</h4>
+                        <p style="font-size: 0.9rem;">Lower layers learn grammar rules, word order, parts of speech. Detected through attention probes on POS tags.</p>
+                    </div>
+                    <div class="card">
+                        <h4 style="margin-bottom: 0.5rem;">Semantic Knowledge</h4>
+                        <p style="font-size: 0.9rem;">Middle layers learn relationships: "king - man + woman ≈ queen". Word embeddings are semantically meaningful.</p>
+                    </div>
+                    <div class="card">
+                        <h4 style="margin-bottom: 0.5rem;">Task-Specific</h4>
+                        <p style="font-size: 0.9rem;">Top layers adapt to the task. Sentiment heads form. NLI entailment patterns emerge during fine-tuning.</p>
+                    </div>
+                </div>
+
+                <h4 style="margin-top: 2rem;">BERT Limitations (From BERTology Research)</h4>
+                <ul style="margin: 1rem 0 1rem 2rem; color: var(--text-secondary);">
+                    <li><strong>Negation Blindness:</strong> "not bad" often classified as negative. Negation scope is hard for attention.</li>
+                    <li><strong>Number Struggles:</strong> Can't reliably predict "2 + 2 = ?" or count objects in text.</li>
+                    <li><strong>Relational Inference:</strong> Weak at multi-hop reasoning ("John's mother is Mary. Mary's brother is Bob. Who is Bob to John?").</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- LEVEL 3: Engineer's Sandbox -->
+        <section id="level-3">
+            <h1 class="section-header">Engineer's Sandbox</h1>
+            <p class="section-subtitle">PyTorch and HuggingFace code implementations</p>
+
+            <!-- Code Block 1 -->
+            <div class="card">
+                <h3>Code Block 1: BERT Input Embeddings from Scratch</h3>
+                <p>Building the embedding layer that combines token, segment, and position information:</p>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span>bert_embeddings.py</span>
+                        <button onclick="copyCode('code-1')" style="background: rgba(245, 158, 11, 0.2); color: var(--accent); border: 1px solid var(--accent); padding: 0.5rem 1rem; font-size: 0.85rem;">Copy</button>
+                    </div>
+                    <div class="code-content" id="code-1">
+                        <div class="code-line"><span class="code-line-num">1</span><span class="code-line-content"><span class="keyword">import</span> torch</span></div>
+                        <div class="code-line"><span class="code-line-num">2</span><span class="code-line-content"><span class="keyword">import</span> torch.nn <span class="keyword">as</span> nn</span></div>
+                        <div class="code-line"><span class="code-line-num">3</span><span class="code-line-content"></span></div>
+                        <div class="code-line"><span class="code-line-num">4</span><span class="code-line-content"><span class="keyword">class</span> <span class="function">BERTEmbedding</span>(nn.Module):</span></div>
+                        <div class="code-line"><span class="code-line-num">5</span><span class="code-line-content">    <span class="string">"""BERT Input = Token + Segment + Position"""</span></span></div>
+                        <div class="code-line"><span class="code-line-num">6</span><span class="code-line-content">    <span class="keyword">def</span> <span class="function">__init__</span>(<span class="keyword">self</span>, vocab_size, hidden_size,</span></div>
+                        <div class="code-line"><span class="code-line-num">7</span><span class="code-line-content">                 max_seq_len, num_segments=<span class="number">2</span>, dropout=<span class="number">0.1</span>):</span></div>
+                        <div class="code-line"><span class="code-line-num">8</span><span class="code-line-content">        <span class="keyword">super</span>().__init__()</span></div>
+                        <div class="code-line"><span class="code-line-num">9</span><span class="code-line-content">        <span class="keyword">self</span>.token_embed = nn.Embedding(vocab_size, hidden_size)</span></div>
+                        <div class="code-line"><span class="code-line-num">10</span><span class="code-line-content">        <span class="keyword">self</span>.segment_embed = nn.Embedding(num_segments, hidden_size)</span></div>
+                        <div class="code-line"><span class="code-line-num">11</span><span class="code-line-content">        <span class="keyword">self</span>.position_embed = nn.Embedding(max_seq_len, hidden_size)</span></div>
+                        <div class="code-line"><span class="code-line-num">12</span><span class="code-line-content">        <span class="opt"># OPT: BERT uses learned positional embeddings, not sinusoidal</span></div>
+                        <div class="code-line"><span class="code-line-num">13</span><span class="code-line-content">        <span class="keyword">self</span>.norm = nn.LayerNorm(hidden_size)</span></div>
+                        <div class="code-line"><span class="code-line-num">14</span><span class="code-line-content">        <span class="keyword">self</span>.dropout = nn.Dropout(dropout)</span></div>
+                        <div class="code-line"><span class="code-line-num">15</span><span class="code-line-content"></span></div>
+                        <div class="code-line"><span class="code-line-num">16</span><span class="code-line-content">    <span class="keyword">def</span> <span class="function">forward</span>(<span class="keyword">self</span>, input_ids, segment_ids):</span></div>
+                        <div class="code-line"><span class="code-line-num">17</span><span class="code-line-content">        seq_len = input_ids.size(<span class="number">1</span>)</span></div>
+                        <div class="code-line"><span class="code-line-num">18</span><span class="code-line-content">        positions = torch.arange(seq_len, device=input_ids.device)</span></div>
+                        <div class="code-line"><span class="code-line-num">19</span><span class="code-line-content">        positions = positions.unsqueeze(<span class="number">0</span>)</span></div>
+                        <div class="code-line"><span class="code-line-num">20</span><span class="code-line-content">        <span class="opt"># OPT: Positions created on-the-fly, no storage needed</span></div>
+                        <div class="code-line"><span class="code-line-num">21</span><span class="code-line-content">        x = (<span class="keyword">self</span>.token_embed(input_ids) +</span></div>
+                        <div class="code-line"><span class="code-line-num">22</span><span class="code-line-content">             <span class="keyword">self</span>.segment_embed(segment_ids) +</span></div>
+                        <div class="code-line"><span class="code-line-num">23</span><span class="code-line-content">             <span class="keyword">self</span>.position_embed(positions))</span></div>
+                        <div class="code-line"><span class="code-line-num">24</span><span class="code-line-content">        <span class="keyword">return</span> <span class="keyword">self</span>.dropout(<span class="keyword">self</span>.norm(x))</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Code Block 2 -->
+            <div class="card">
+                <h3>Code Block 2: MLM Head Implementation</h3>
+                <p>The prediction head that turns hidden representations into vocabulary predictions:</p>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span>mlm_head.py</span>
+                        <button onclick="copyCode('code-2')" style="background: rgba(245, 158, 11, 0.2); color: var(--accent); border: 1px solid var(--accent); padding: 0.5rem 1rem; font-size: 0.85rem;">Copy</button>
+                    </div>
+                    <div class="code-content" id="code-2">
+                        <div class="code-line"><span class="code-line-num">1</span><span class="code-line-content"><span class="keyword">class</span> <span class="function">MLMHead</span>(nn.Module):</span></div>
+                        <div class="code-line"><span class="code-line-num">2</span><span class="code-line-content">    <span class="string">"""Masked Language Model prediction head"""</span></span></div>
+                        <div class="code-line"><span class="code-line-num">3</span><span class="code-line-content">    <span class="keyword">def</span> <span class="function">__init__</span>(<span class="keyword">self</span>, hidden_size, vocab_size):</span></div>
+                        <div class="code-line"><span class="code-line-num">4</span><span class="code-line-content">        <span class="keyword">super</span>().__init__()</span></div>
+                        <div class="code-line"><span class="code-line-num">5</span><span class="code-line-content">        <span class="keyword">self</span>.dense = nn.Linear(hidden_size, hidden_size)</span></div>
+                        <div class="code-line"><span class="code-line-num">6</span><span class="code-line-content">        <span class="keyword">self</span>.activation = nn.GELU()</span></div>
+                        <div class="code-line"><span class="code-line-num">7</span><span class="code-line-content">        <span class="opt"># OPT: BERT uses GELU activation, not ReLU</span></div>
+                        <div class="code-line"><span class="code-line-num">8</span><span class="code-line-content">        <span class="keyword">self</span>.norm = nn.LayerNorm(hidden_size)</span></div>
+                        <div class="code-line"><span class="code-line-num">9</span><span class="code-line-content">        <span class="keyword">self</span>.decoder = nn.Linear(hidden_size, vocab_size)</span></div>
+                        <div class="code-line"><span class="code-line-num">10</span><span class="code-line-content">        <span class="opt"># OPT: Decoder shares weights with token embeddings</span></div>
+                        <div class="code-line"><span class="code-line-num">11</span><span class="code-line-content"></span></div>
+                        <div class="code-line"><span class="code-line-num">12</span><span class="code-line-content">    <span class="keyword">def</span> <span class="function">forward</span>(<span class="keyword">self</span>, hidden_states, masked_positions):</span></div>
+                        <div class="code-line"><span class="code-line-num">13</span><span class="code-line-content">        <span class="comment"># Only compute for masked positions (saves memory)</span></span></div>
+                        <div class="code-line"><span class="code-line-num">14</span><span class="code-line-content">        masked_hidden = hidden_states[masked_positions]</span></div>
+                        <div class="code-line"><span class="code-line-num">15</span><span class="code-line-content">        <span class="opt"># OPT: Sparse computation improves efficiency</span></div>
+                        <div class="code-line"><span class="code-line-num">16</span><span class="code-line-content">        x = <span class="keyword">self</span>.activation(<span class="keyword">self</span>.dense(masked_hidden))</span></div>
+                        <div class="code-line"><span class="code-line-num">17</span><span class="code-line-content">        x = <span class="keyword">self</span>.norm(x)</span></div>
+                        <div class="code-line"><span class="code-line-num">18</span><span class="code-line-content">        logits = <span class="keyword">self</span>.decoder(x)</span></div>
+                        <div class="code-line"><span class="code-line-num">19</span><span class="code-line-content">        <span class="keyword">return</span> logits</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Code Block 3 -->
+            <div class="card">
+                <h3>Code Block 3: Fine-tuning with HuggingFace</h3>
+                <p>Loading pre-trained BERT and fine-tuning for sentiment classification:</p>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span>sentiment_classifier.py</span>
+                        <button onclick="copyCode('code-3')" style="background: rgba(245, 158, 11, 0.2); color: var(--accent); border: 1px solid var(--accent); padding: 0.5rem 1rem; font-size: 0.85rem;">Copy</button>
+                    </div>
+                    <div class="code-content" id="code-3">
+                        <div class="code-line"><span class="code-line-num">1</span><span class="code-line-content"><span class="keyword">from</span> transformers <span class="keyword">import</span> (</span></div>
+                        <div class="code-line"><span class="code-line-num">2</span><span class="code-line-content">    BertTokenizer, BertForSequenceClassification,</span></div>
+                        <div class="code-line"><span class="code-line-num">3</span><span class="code-line-content">    Trainer, TrainingArguments</span></div>
+                        <div class="code-line"><span class="code-line-num">4</span><span class="code-line-content">)</span></div>
+                        <div class="code-line"><span class="code-line-num">5</span><span class="code-line-content"></span></div>
+                        <div class="code-line"><span class="code-line-num">6</span><span class="code-line-content"><span class="opt"># OPT: Load pre-trained BERT-base-cased for case-sensitive tasks</span></div>
+                        <div class="code-line"><span class="code-line-num">7</span><span class="code-line-content">tokenizer = BertTokenizer.from_pretrained(<span class="string">'bert-base-cased'</span>)</span></div>
+                        <div class="code-line"><span class="code-line-num">8</span><span class="code-line-content">model = BertForSequenceClassification.from_pretrained(</span></div>
+                        <div class="code-line"><span class="code-line-num">9</span><span class="code-line-content">    <span class="string">'bert-base-cased'</span>, num_labels=<span class="number">3</span>  <span class="comment"># neg, neutral, pos</span></span></div>
+                        <div class="code-line"><span class="code-line-num">10</span><span class="code-line-content">)</span></div>
+                        <div class="code-line"><span class="code-line-num">11</span><span class="code-line-content"></span></div>
+                        <div class="code-line"><span class="code-line-num">12</span><span class="code-line-content">sample = <span class="string">"I loved this movie so much!"</span></span></div>
+                        <div class="code-line"><span class="code-line-num">13</span><span class="code-line-content">encoding = tokenizer.encode_plus(</span></div>
+                        <div class="code-line"><span class="code-line-num">14</span><span class="code-line-content">    sample, max_length=<span class="number">160</span>, truncation=<span class="keyword">True</span>,</span></div>
+                        <div class="code-line"><span class="code-line-num">15</span><span class="code-line-content">    add_special_tokens=<span class="keyword">True</span>,  <span class="comment"># [CLS] and [SEP]</span></span></div>
+                        <div class="code-line"><span class="code-line-num">16</span><span class="code-line-content">    return_token_type_ids=<span class="keyword">False</span>,</span></div>
+                        <div class="code-line"><span class="code-line-num">17</span><span class="code-line-content">    pad_to_max_length=<span class="keyword">True</span>,</span></div>
+                        <div class="code-line"><span class="code-line-num">18</span><span class="code-line-content">    return_attention_mask=<span class="keyword">True</span>,</span></div>
+                        <div class="code-line"><span class="code-line-num">19</span><span class="code-line-content">    return_tensors=<span class="string">'pt'</span></span></div>
+                        <div class="code-line"><span class="code-line-num">20</span><span class="code-line-content">)</span></div>
+                        <div class="code-line"><span class="code-line-num">21</span><span class="code-line-content"><span class="opt"># OPT: Always set truncation=True to prevent OOM on long sequences</span></div>
+                        <div class="code-line"><span class="code-line-num">22</span><span class="code-line-content">tokens = tokenizer.convert_ids_to_tokens(</span></div>
+                        <div class="code-line"><span class="code-line-num">23</span><span class="code-line-content">    encoding[<span class="string">'input_ids'</span>][<span class="number">0</span>]</span></div>
+                        <div class="code-line"><span class="code-line-num">24</span><span class="code-line-content">)</span></div>
+                        <div class="code-line"><span class="code-line-num">25</span><span class="code-line-content"><span class="opt"># Result: ['[CLS]', 'I', 'loved', 'this', 'movie', '[SEP]', '[PAD]', ...]</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Code Block 4 -->
+            <div class="card">
+                <h3>Code Block 4: RoBERTa vs BERT Comparison</h3>
+                <p>Comparing predictions on the same task between BERT and RoBERTa:</p>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span>bert_vs_roberta.py</span>
+                        <button onclick="copyCode('code-4')" style="background: rgba(245, 158, 11, 0.2); color: var(--accent); border: 1px solid var(--accent); padding: 0.5rem 1rem; font-size: 0.85rem;">Copy</button>
+                    </div>
+                    <div class="code-content" id="code-4">
+                        <div class="code-line"><span class="code-line-num">1</span><span class="code-line-content"><span class="keyword">from</span> transformers <span class="keyword">import</span> pipeline</span></div>
+                        <div class="code-line"><span class="code-line-num">2</span><span class="code-line-content"></span></div>
+                        <div class="code-line"><span class="code-line-num">3</span><span class="code-line-content"><span class="comment"># Load fill-mask pipelines</span></span></div>
+                        <div class="code-line"><span class="code-line-num">4</span><span class="code-line-content">bert_fill = pipeline(<span class="string">'fill-mask'</span>,</span></div>
+                        <div class="code-line"><span class="code-line-num">5</span><span class="code-line-content">                        model=<span class="string">'bert-base-uncased'</span>)</span></div>
+                        <div class="code-line"><span class="code-line-num">6</span><span class="code-line-content">roberta_fill = pipeline(<span class="string">'fill-mask'</span>,</span></div>
+                        <div class="code-line"><span class="code-line-num">7</span><span class="code-line-content">                         model=<span class="string">'roberta-base'</span>)</span></div>
+                        <div class="code-line"><span class="code-line-num">8</span><span class="code-line-content"></span></div>
+                        <div class="code-line"><span class="code-line-num">9</span><span class="code-line-content">text_bert = <span class="string">"The capital of France is [MASK]."</span></span></div>
+                        <div class="code-line"><span class="code-line-num">10</span><span class="code-line-content">text_roberta = <span class="string">"The capital of France is &lt;mask&gt;."</span></span></div>
+                        <div class="code-line"><span class="code-line-num">11</span><span class="code-line-content"><span class="opt"># OPT: BERT uses [MASK], RoBERTa uses &lt;mask&gt;</span></div>
+                        <div class="code-line"><span class="code-line-num">12</span><span class="code-line-content"></span></div>
+                        <div class="code-line"><span class="code-line-num">13</span><span class="code-line-content">print(<span class="string">"BERT top-5:"</span>)</span></div>
+                        <div class="code-line"><span class="code-line-num">14</span><span class="code-line-content"><span class="keyword">for</span> pred <span class="keyword">in</span> bert_fill(text_bert):</span></div>
+                        <div class="code-line"><span class="code-line-num">15</span><span class="code-line-content">    print(<span class="string">f"  {pred['token_str']}: {pred['score']:.2%}"</span>)</span></div>
+                        <div class="code-line"><span class="code-line-num">16</span><span class="code-line-content"></span></div>
+                        <div class="code-line"><span class="code-line-num">17</span><span class="code-line-content">print(<span class="string">"RoBERTa top-5:"</span>)</span></div>
+                        <div class="code-line"><span class="code-line-num">18</span><span class="code-line-content"><span class="keyword">for</span> pred <span class="keyword">in</span> roberta_fill(text_roberta):</span></div>
+                        <div class="code-line"><span class="code-line-num">19</span><span class="code-line-content">    print(<span class="string">f"  {pred['token_str']}: {pred['score']:.2%}"</span>)</span></div>
+                        <div class="code-line"><span class="code-line-num">20</span><span class="code-line-content"><span class="opt"># OPT: RoBERTa usually shows higher confidence due to training</span></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- LEVEL 4: Socratic Sandbox -->
+        <section id="level-4">
+            <h1 class="section-header">Socratic Sandbox</h1>
+            <p class="section-subtitle">Model failure scenarios and debugging</p>
+
+            <!-- Question 1 -->
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span class="collapsible-title">Question 1: Negation Blindness</span>
+                    <span class="collapsible-arrow">▼</span>
+                </div>
+                <div class="collapsible-content">
+                    <p><strong>Problem:</strong> Your BERT sentiment classifier labels "The movie was not bad" as negative sentiment. Why?</p>
+                    <p style="margin: 1.5rem 0;"><strong>Answer:</strong></p>
+                    <p><strong>Negation blindness</strong> is a documented BERT limitation (from BERTology research §3.4.2). Attention mechanisms don't fully capture negation scope. Here's what happens:</p>
+                    <ul style="margin: 1rem 0 1rem 2rem; color: var(--text-secondary);">
+                        <li>The token "bad" gets high attention weights due to strong semantic signal (negative word)</li>
+                        <li>The "not" token fails to modulate these weights across the full phrase</li>
+                        <li>BERT sees "[not] + [bad]" as ~80% negative, despite negation</li>
+                    </ul>
+                    <p style="margin-top: 1.5rem;"><strong>Solutions:</strong></p>
+                    <ul style="margin: 1rem 0 1rem 2rem; color: var(--text-secondary);">
+                        <li><strong>Fine-tune on negation-aware data:</strong> Use datasets explicitly labeled with negations</li>
+                        <li><strong>Augment with synthetic data:</strong> Generate negation pairs automatically</li>
+                        <li><strong>Use specialized models:</strong> Models like BERT-for-negation or RoBERTa fine-tuned on adversarial examples</li>
+                        <li><strong>Post-processing:</strong> Add a negation rule layer: flip predictions for sentences containing negation markers</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Question 2 -->
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span class="collapsible-title">Question 2: Few-Shot Catastrophe</span>
+                    <span class="collapsible-arrow">▼</span>
+                </div>
+                <div class="collapsible-content">
+                    <p><strong>Problem:</strong> You fine-tune BERT on only 50 labeled examples and get 52% accuracy (random is 50%). What went wrong?</p>
+                    <p style="margin: 1.5rem 0;"><strong>Answer:</strong></p>
+                    <p><strong>Few-shot catastrophe:</strong> BERT requires sufficient fine-tuning data (~1000+ examples). With 50 examples:</p>
+                    <ul style="margin: 1rem 0 1rem 2rem; color: var(--text-secondary);">
+                        <li>BERT overfits to noise in your tiny dataset</li>
+                        <li>The model memorizes your 50 examples instead of learning generalizable patterns</li>
+                        <li>Validation loss improves but test accuracy stays random</li>
+                    </ul>
+                    <p style="margin-top: 1.5rem;"><strong>Solutions:</strong></p>
+                    <ul style="margin: 1rem 0 1rem 2rem; color: var(--text-secondary);">
+                        <li><strong>Data augmentation:</strong> Use EDA, backtranslation, or paraphrasing to expand 50 → 500 examples</li>
+                        <li><strong>Few-shot methods:</strong> Try SetFit (semantic textual similarity + logistic regression) or in-context learning with larger models</li>
+                        <li><strong>Larger pre-trained models:</strong> BERT-Large or domain-specific models (SciBERT, FinBERT) may transfer better</li>
+                        <li><strong>Prompt-based learning:</strong> Use prompt templates: "This review is [positive/negative]" instead of full fine-tuning</li>
+                        <li><strong>Collect more data:</strong> The gold standard solution</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Question 3 -->
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span class="collapsible-title">Question 3: RoBERTa Outperformance</span>
+                    <span class="collapsible-arrow">▼</span>
+                </div>
+                <div class="collapsible-content">
+                    <p><strong>Problem:</strong> RoBERTa consistently outperforms BERT on your task despite having identical architecture. Explain all 6 reasons.</p>
+                    <p style="margin: 1.5rem 0;"><strong>Answer:</strong></p>
+                    <p>RoBERTa made 6 training improvements. Each contributes independently:</p>
+                    <ol style="margin: 1rem 0 1rem 2rem; color: var(--text-secondary); list-style-type: decimal;">
+                        <li><strong>Dynamic masking:</strong> BERT masks statically (same 40 epochs). RoBERTa generates new masks each epoch → 40× more masking patterns.</li>
+                        <li><strong>Removed NSP:</strong> The NSP task was noise. Removing it simplified the loss landscape.</li>
+                        <li><strong>Larger batches (8K):</strong> Better gradient estimates and more stable training (BERT used 256).</li>
+                        <li><strong>10× more data (160GB):</strong> More diverse language patterns learned. Classic "more data" benefit.</li>
+                        <li><strong>Longer training:</strong> BERT: 40 epochs. RoBERTa: ~100 epochs. More optimization time → better convergence.</li>
+                        <li><strong>Full 512-token sequences:</strong> BERT trained on mixed lengths. RoBERTa always used full 512 tokens → better long-range understanding.</li>
+                    </ol>
+                    <p style="margin-top: 1.5rem;"><strong>Key insight:</strong> These aren't architectural changes — they're training recipe improvements. The architecture is identical, but the training process was better.</p>
+                </div>
+            </div>
+
+            <!-- Question 4 -->
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span class="collapsible-title">Question 4: Language Transfer Failure</span>
+                    <span class="collapsible-arrow">▼</span>
+                </div>
+                <div class="collapsible-content">
+                    <p><strong>Problem:</strong> Your BERT model handles English perfectly (95% F1) but fails on German text (52% F1). What's happening?</p>
+                    <p style="margin: 1.5rem 0;"><strong>Answer:</strong></p>
+                    <p><strong>Vocabulary mismatch and over-fragmentation:</strong> BERT's WordPiece vocabulary is 30K tokens, optimized for English.</p>
+                    <ul style="margin: 1rem 0 1rem 2rem; color: var(--text-secondary);">
+                        <li>English word "unhappy" → 1-2 tokens</li>
+                        <li>German word "Unglücklichkeit" → 5-7 subword tokens (broken up)</li>
+                        <li>Over-fragmented tokens lose semantic meaning. BERT sees noise instead of words.</li>
+                    </ul>
+                    <p style="margin-top: 1.5rem;"><strong>Solutions:</strong></p>
+                    <ul style="margin: 1rem 0 1rem 2rem; color: var(--text-secondary);">
+                        <li><strong>Use mBERT (multilingual BERT):</strong> 104 languages, shared vocabulary. Works across languages.</li>
+                        <li><strong>Use language-specific BERT:</strong> German BERT, French BERT, etc. Pre-trained on in-language data.</li>
+                        <li><strong>Fine-tune on German:</strong> Take BERT and continue pre-training on German corpus before fine-tuning.</li>
+                        <li><strong>Use XLM-RoBERTa:</strong> Better multilingual model than mBERT, supports 100+ languages.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Question 5 -->
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span class="collapsible-title">Question 5: ALBERT Parameter Reduction Miracle</span>
+                    <span class="collapsible-arrow">▼</span>
+                </div>
+                <div class="collapsible-content">
+                    <p><strong>Problem:</strong> ALBERT has 12M parameters vs BERT's 110M (9× smaller) but achieves similar performance. How?</p>
+                    <p style="margin: 1.5rem 0;"><strong>Answer:</strong></p>
+                    <p><strong>ALBERT uses two parameter reduction tricks:</strong></p>
+
+                    <h4 style="color: var(--accent); margin-top: 1.5rem;">Trick 1: Factorized Embeddings</h4>
+                    <p>Instead of projecting vocabulary directly to hidden dimension H, use intermediate dimension E:</p>
+                    <div class="katex-display">
+                        $$V \times H \quad \rightarrow \quad V \times E + E \times H \quad \text{(where } E \ll H \text{)}$$
+                    </div>
+                    <p><strong>Numbers:</strong> BERT-Base uses 30K vocab × 768 hidden = 23M parameters just for embeddings. ALBERT-Base uses 30K × 128 + 128 × 768 = 4.8M. That's 5× reduction in one layer.</p>
+
+                    <h4 style="color: var(--accent); margin-top: 1.5rem;">Trick 2: Cross-Layer Parameter Sharing</h4>
+                    <p>All 12 transformer layers share the exact same weights. Normally:</p>
+                    <ul style="margin: 1rem 0 1rem 2rem; color: var(--text-secondary);">
+                        <li>BERT: 12 layers × different weights = 12× parameters</li>
+                        <li>ALBERT: 12 layers × same weights = 1× parameters</li>
+                    </ul>
+                    <p>This reduces transformer layers by ~12×.</p>
+
+                    <h4 style="color: var(--accent); margin-top: 1.5rem;">Bonus: Sentence Order Prediction (SOP)</h4>
+                    <p>ALBERT replaces NSP with SOP: "Can you tell if these two sentences are in the correct order?" This is harder and more useful for downstream tasks.</p>
+
+                    <p style="margin-top: 1.5rem;"><strong>Trade-off:</strong> ALBERT converges slower during fine-tuning because all layers must learn together. But inference is much faster and uses less memory.</p>
+                </div>
+            </div>
+
+            <div style="margin-top: 3rem; padding: 2rem; background: rgba(245, 158, 11, 0.1); border-left: 4px solid var(--accent); border-radius: 8px;">
+                <h3 style="color: var(--accent); margin-bottom: 1rem;">Key Takeaway</h3>
+                <p>BERT's weaknesses are systematic: negation, numerics, relational reasoning. Knowing these limitations helps you choose the right model and preprocessing strategy for your task. When in doubt, try RoBERTa (better training) or domain-specific variants.</p>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // ============ Navigation ============
+        const sections = document.querySelectorAll('section');
+        const navDots = document.querySelectorAll('.nav-dot');
+
+        window.addEventListener('scroll', () => {
+            let current = 0;
+            sections.forEach((section, index) => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (pageYOffset >= sectionTop - sectionHeight / 3) {
+                    current = index;
+                }
+            });
+            navDots.forEach(dot => dot.classList.remove('active'));
+            navDots[current].classList.add('active');
+        });
+
+        function scrollToSection(index) {
+            sections[index].scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // ============ MLM Interactive Demo ============
+        const sampleSentence = ["[CLS]", "The", "cat", "sat", "on", "the", "mat", "[SEP]"];
+        const predictions = {
+            "cat": ["cat: 78%", "dog: 12%", "mouse: 5%", "bird: 3%", "rabbit: 2%"],
+            "sat": ["sat: 72%", "slept: 15%", "jumped: 8%", "ran: 3%", "lay: 2%"],
+            "mat": ["mat: 81%", "floor: 10%", "bed: 5%", "chair: 2%", "table: 2%"],
+            "The": ["The: 85%", "A: 10%", "This: 3%", "That: 2%"],
+            "on": ["on: 88%", "in: 8%", "under: 2%", "by: 2%"]
+        };
+
+        function initTokenContainer() {
+            const container = document.getElementById('token-container');
+            container.innerHTML = '';
+            sampleSentence.forEach((token, idx) => {
+                const tokenEl = document.createElement('div');
+                tokenEl.className = 'token';
+                tokenEl.textContent = token;
+                tokenEl.onclick = () => maskToken(idx, token);
+                container.appendChild(tokenEl);
+            });
+        }
+
+        function maskToken(index, token) {
+            const tokens = document.querySelectorAll('#token-container .token');
+            tokens.forEach(t => t.classList.remove('masked'));
+            tokens[index].classList.add('masked');
+            tokens[index].textContent = '[MASK]';
+
+            if (predictions[token]) {
+                showPredictions(predictions[token]);
+            }
+        }
+
+        function showPredictions(preds) {
+            const resultsDiv = document.getElementById('prediction-results');
+            resultsDiv.innerHTML = '<p style="margin-top: 1.5rem; color: var(--text-secondary);"><strong>BERT Predictions (animated):</strong></p>';
+
+            const predBox = document.createElement('div');
+            predBox.className = 'prediction-box';
+
+            preds.forEach((pred, idx) => {
+                const [word, percentage] = pred.split(': ');
+                const percent = parseInt(percentage);
+
+                const item = document.createElement('div');
+                item.className = 'prediction-item';
+                item.innerHTML = `
+                    <div class="prediction-label">${word}</div>
+                    <div class="prediction-bar">
+                        <div class="prediction-fill" style="width: 0%; animation-delay: ${idx * 0.1}s;">
+                            ${percentage}
+                        </div>
+                    </div>
+                `;
+                predBox.appendChild(item);
+
+                setTimeout(() => {
+                    const fill = item.querySelector('.prediction-fill');
+                    fill.style.width = percent + '%';
+                }, 50);
+            });
+
+            resultsDiv.appendChild(predBox);
+        }
+
+        function resetMasking() {
+            initTokenContainer();
+            document.getElementById('prediction-results').innerHTML = '';
+        }
+
+        // ============ NSP Interactive Demo ============
+        const nspPairs = [
+            { a: "I went to the grocery store yesterday afternoon.", b: "I bought milk and eggs.", follows: true },
+            { a: "The weather is sunny today.", b: "Penguins live in Antarctica.", follows: false },
+            { a: "Sarah is a software engineer.", b: "She writes code every day.", follows: true },
+            { a: "Cars have four wheels.", b: "The sky is blue.", follows: false },
+            { a: "I failed my driving test.", b: "I need to practice more.", follows: true }
+        ];
+
+        let currentNSPPair = 0;
+
+        function changeNSPSentence() {
+            currentNSPPair = Math.floor(Math.random() * nspPairs.length);
+            document.getElementById('nsp-b-text').textContent = nspPairs[currentNSPPair].b;
+            document.getElementById('nsp-result').style.display = 'none';
+        }
+
+        function checkNSP(userGuess) {
+            const pair = nspPairs[currentNSPPair];
+            const correct = userGuess === pair.follows;
+
+            let emoji = correct ? '✓' : '✗';
+            let color = correct ? 'var(--success)' : 'var(--error)';
+
+            const feedbackDiv = document.getElementById('nsp-feedback');
+            feedbackDiv.innerHTML = `
+                <p style="color: ${color}; font-weight: bold; font-size: 1.1rem; margin-bottom: 0.5rem;">${emoji} ${correct ? 'Correct!' : 'BERT disagrees'}</p>
+                <p>Sentence B <strong>${pair.follows ? 'follows' : 'does not follow'}</strong> Sentence A.</p>
+                <p style="margin-top: 1rem; color: var(--text-secondary); font-size: 0.9rem;">
+                    ${pair.follows ?
+                        "These sentences are contextually related and form a coherent narrative." :
+                        "These sentences are unrelated — there's no logical connection between them."
+                    }
+                </p>
+            `;
+            document.getElementById('nsp-result').style.display = 'block';
+        }
+
+        // ============ Masking Strategy Visualizer ============
+        function initMaskingGrid() {
+            const grid = document.getElementById('masking-grid');
+            grid.innerHTML = '';
+
+            const tokens = sampleSentence.slice(1, -1); // Remove [CLS] and [SEP]
+            const masking = generateMaskingStrategy(tokens.length);
+
+            tokens.forEach((token, idx) => {
+                const cell = document.createElement('div');
+                cell.className = `masking-cell ${masking[idx]}`;
+                const label = masking[idx] === 'mask' ? '80% MASK' : masking[idx] === 'random' ? '10% Random' : '10% Keep';
+                cell.innerHTML = `
+                    <div style="font-family: JetBrains Mono; font-size: 0.9rem; margin-bottom: 0.5rem;">${token}</div>
+                    <div class="masking-label">${label}</div>
+                `;
+                grid.appendChild(cell);
+            });
+        }
+
+        function generateMaskingStrategy(len) {
+            const strategy = [];
+            for (let i = 0; i < len; i++) {
+                const rand = Math.random();
+                if (rand < 0.8) strategy.push('mask');
+                else if (rand < 0.9) strategy.push('random');
+                else strategy.push('keep');
+            }
+            return strategy;
+        }
+
+        function rerollMasking() {
+            initMaskingGrid();
+        }
+
+        // ============ Layer Knowledge Slider ============
+        const layerSlider = document.getElementById('layer-slider');
+
+        const layerKnowledge = [
+            "Layer 0-2: Word order and linear syntax. Learns which word is next, relative positions, surface patterns.",
+            "Layer 3-4: Syntactic structures begin. Can detect POS tags. Learns noun phrases, verb phrases.",
+            "Layer 5-6: Full syntactic trees. Deep parsing. Dependency structures are clear.",
+            "Layer 7-8: Transition to semantics. Coreference resolution. 'The cat' and 'it' are linked.",
+            "Layer 9-10: Task-specific features. For sentiment, learns opinion words and negation (weakly).",
+            "Layer 11: Output layer. Task-specific decision boundaries. For classification, concentrates on [CLS]."
+        ];
+
+        layerSlider.addEventListener('input', (e) => {
+            const layer = Math.floor(e.target.value / 2);
+            document.getElementById('layer-num').textContent = e.target.value;
+            document.getElementById('layer-text').textContent = layerKnowledge[layer];
+        });
+
+        // Initialize with layer 6
+        document.getElementById('layer-text').textContent = layerKnowledge[3];
+
+        // ============ Code Copy Function ============
+        function copyCode(blockId) {
+            const codeContent = document.getElementById(blockId);
+            const text = Array.from(codeContent.querySelectorAll('.code-line-content'))
+                .map(line => line.textContent)
+                .join('\n');
+
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = event.target;
+                const original = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => { btn.textContent = original; }, 2000);
+            });
+        }
+
+        // ============ Collapsible Functionality ============
+        document.querySelectorAll('.collapsible-header').forEach(header => {
+            header.addEventListener('click', function() {
+                this.parentElement.classList.toggle('open');
+            });
+        });
+
+        // ============ KaTeX Rendering ============
+        document.addEventListener('DOMContentLoaded', function() {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false}
+                ]
+            });
+        });
+
+        // ============ Initialize ============
+        initTokenContainer();
+        initMaskingGrid();
+    </script>
+</body>
+</html>

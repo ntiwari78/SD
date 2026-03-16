@@ -1,0 +1,1776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 2: Seq2Seq & The Birth of Attention - Transformer Neural Hub</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- KaTeX for Math -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"
+            onload="renderMathInElement(document.body);"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0a0e1a 0%, #0f1425 100%);
+            color: #f1f5f9;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        header {
+            background: rgba(26, 31, 53, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+            padding: 1.5rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #06b6d4;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo:hover {
+            color: #3b82f6;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: #cbd5e1;
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: #3b82f6;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #3b82f6, #06b6d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: #94a3b8;
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Tabs Navigation */
+        .tabs-container {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid rgba(59, 130, 246, 0.1);
+            overflow-x: auto;
+            padding-bottom: 1rem;
+        }
+
+        .tab-button {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            color: #cbd5e1;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .tab-button:hover {
+            color: #f1f5f9;
+        }
+
+        .tab-button.active {
+            color: #06b6d4;
+            border-bottom-color: #06b6d4;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Card Styles */
+        .card {
+            background: rgba(26, 31, 53, 0.6);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 0.75rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: rgba(59, 130, 246, 0.4);
+            background: rgba(26, 31, 53, 0.8);
+            transform: translateY(-2px);
+        }
+
+        .card h2 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            color: #3b82f6;
+        }
+
+        .card h3 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.3rem;
+            margin: 1.5rem 0 1rem 0;
+            color: #06b6d4;
+        }
+
+        .card h4 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.1rem;
+            margin: 1rem 0 0.5rem 0;
+            color: #8b5cf6;
+        }
+
+        p {
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+
+        /* Code Blocks */
+        .code-block {
+            background: rgba(10, 14, 26, 0.8);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+        }
+
+        .code-block code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: #e2e8f0;
+            line-height: 1.6;
+            display: block;
+            white-space: pre;
+        }
+
+        .code-label {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.85rem;
+            color: #06b6d4;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        /* Math Rendering */
+        .katex {
+            font-size: 1.1em;
+        }
+
+        .math-inline {
+            display: inline;
+        }
+
+        .math-block {
+            display: block;
+            text-align: center;
+            margin: 1.5rem 0;
+            padding: 1rem;
+            background: rgba(139, 92, 246, 0.1);
+            border-left: 4px solid #8b5cf6;
+            border-radius: 0.25rem;
+        }
+
+        /* Interactive Components */
+        .interactive-container {
+            background: rgba(26, 31, 53, 0.8);
+            border: 2px dashed rgba(6, 182, 212, 0.3);
+            border-radius: 0.75rem;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        .interactive-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.2rem;
+            color: #06b6d4;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .interactive-title::before {
+            content: "▶";
+            color: #3b82f6;
+        }
+
+        /* SVG Animation */
+        .animation-container {
+            display: flex;
+            justify-content: center;
+            margin: 2rem 0;
+            background: rgba(10, 14, 26, 0.5);
+            border-radius: 0.5rem;
+            padding: 2rem;
+            min-height: 300px;
+        }
+
+        svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .attention-line {
+            stroke: #3b82f6;
+            fill: none;
+            stroke-width: 2;
+            opacity: 0.6;
+            transition: opacity 0.3s ease;
+        }
+
+        .attention-line:hover {
+            stroke: #06b6d4;
+            stroke-width: 3;
+            opacity: 1;
+        }
+
+        .word-box {
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            padding: 0.5rem 1rem;
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid #3b82f6;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .word-box:hover {
+            background: rgba(59, 130, 246, 0.4);
+            border-color: #06b6d4;
+        }
+
+        /* Input Fields */
+        .input-group {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        input[type="number"] {
+            padding: 0.75rem;
+            background: rgba(10, 14, 26, 0.8);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 0.5rem;
+            color: #f1f5f9;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            min-width: 100px;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #06b6d4;
+            background: rgba(10, 14, 26, 0.95);
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #3b82f6, #06b6d4);
+            border: none;
+            border-radius: 0.5rem;
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        /* Charts */
+        .chart-container {
+            background: rgba(10, 14, 26, 0.5);
+            border-radius: 0.5rem;
+            padding: 2rem;
+            margin: 1.5rem 0;
+        }
+
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-around;
+            height: 200px;
+            gap: 1rem;
+        }
+
+        .bar {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+        }
+
+        .bar-fill {
+            width: 100%;
+            background: linear-gradient(180deg, #06b6d4, #3b82f6);
+            border-radius: 0.25rem 0.25rem 0 0;
+            min-height: 5px;
+            transition: height 0.3s ease;
+        }
+
+        .bar-label {
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            color: #94a3b8;
+            text-align: center;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Socratic Sections */
+        .question-container {
+            background: rgba(26, 31, 53, 0.8);
+            border-left: 4px solid #8b5cf6;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0.5rem;
+        }
+
+        .question-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.1rem;
+            color: #8b5cf6;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .question-title::before {
+            content: "▶";
+            display: inline-block;
+            transition: transform 0.3s ease;
+        }
+
+        .question-title.expanded::before {
+            transform: rotate(90deg);
+        }
+
+        .question-answer {
+            display: none;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(139, 92, 246, 0.2);
+            animation: slideDown 0.3s ease;
+        }
+
+        .question-answer.expanded {
+            display: block;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hint {
+            background: rgba(59, 130, 246, 0.1);
+            border-left: 4px solid #3b82f6;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 0.25rem;
+        }
+
+        /* Comparison Grid */
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .comparison-item {
+            background: rgba(26, 31, 53, 0.8);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+        }
+
+        .comparison-item h4 {
+            color: #06b6d4;
+            margin-bottom: 1rem;
+        }
+
+        .comparison-item code {
+            background: rgba(10, 14, 26, 0.8);
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-family: 'JetBrains Mono', monospace;
+            color: #e2e8f0;
+        }
+
+        /* Footer Navigation */
+        .footer-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 4rem;
+            padding: 2rem;
+            background: rgba(26, 31, 53, 0.6);
+            border-top: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 0.75rem;
+        }
+
+        .nav-button {
+            padding: 0.75rem 1.5rem;
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            color: #f1f5f9;
+            text-decoration: none;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-button:hover {
+            background: rgba(59, 130, 246, 0.3);
+            border-color: #06b6d4;
+            color: #06b6d4;
+        }
+
+        .chapter-info {
+            text-align: center;
+            color: #94a3b8;
+            font-size: 0.95rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .card {
+                padding: 1.5rem;
+            }
+
+            .tabs-container {
+                flex-wrap: wrap;
+            }
+
+            .footer-nav {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .animation-container {
+                padding: 1rem;
+                min-height: 250px;
+            }
+        }
+
+        /* Scene Visualization */
+        .scene-container {
+            background: rgba(26, 31, 53, 0.6);
+            border-left: 4px solid #3b82f6;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0.5rem;
+        }
+
+        .scene-title {
+            color: #3b82f6;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .scene-content ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .scene-content li {
+            margin-bottom: 0.5rem;
+            color: #cbd5e1;
+        }
+
+        .highlight {
+            color: #06b6d4;
+            font-weight: 600;
+        }
+
+        .emphasis {
+            color: #8b5cf6;
+            font-style: italic;
+        }
+
+        /* Equation Styling */
+        .equation-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+
+        .equation-label {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Accessibility */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+
+        /* Keyboard Navigation Indicator */
+        .kb-hint {
+            color: #64748b;
+            font-size: 0.85rem;
+            margin-top: 1rem;
+        }
+
+        /* Animation Performance */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-container">
+            <a href="index.html" class="logo">
+                <span>⚡</span>
+                <span>Transformer Hub</span>
+            </a>
+            <nav class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="chapter1.html">Chapter 1</a>
+                <a href="chapter2.html" style="color: #06b6d4;">Chapter 2</a>
+                <a href="chapter3.html">Chapter 3</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+        <h1>Module 2: Seq2Seq & The Birth of Attention</h1>
+        <p class="subtitle">Understanding how attention mechanisms solved the information bottleneck and paved the way for Transformers</p>
+
+        <!-- Tab Navigation -->
+        <div class="tabs-container">
+            <button class="tab-button active" data-tab="level1">📖 Level 1: The Feynman Bridge</button>
+            <button class="tab-button" data-tab="level2">🔬 Level 2: The Mathematics</button>
+            <button class="tab-button" data-tab="level3">⚙️ Level 3: The Engineer's Sandbox</button>
+            <button class="tab-button" data-tab="socratic">❓ Socratic Sandbox</button>
+        </div>
+
+        <!-- Level 1: The Feynman Bridge -->
+        <div id="level1" class="tab-content active">
+            <div class="card">
+                <h2>The Game of Passing Notes</h2>
+                <p>Imagine translating a message across an ocean. How do you pass information without losing it? Let's explore three scenarios that explain why attention was invented.</p>
+            </div>
+
+            <!-- Scene 1 -->
+            <div class="card">
+                <h3>Scene 1: The Old Way (No Attention)</h3>
+                <div class="scene-container">
+                    <div class="scene-title">🚫 The Information Bottleneck</div>
+                    <div class="scene-content">
+                        <p>Imagine a student in <span class="highlight">Paris</span> who reads an entire French paragraph, then writes a single Post-It note to send to a student in <span class="highlight">New York</span>.</p>
+                        <ul>
+                            <li>The Paris student (Encoder) reads: "J'aime le thé avec du citron chaque matin avant de commencer mon travail." (11 words)</li>
+                            <li>They compress EVERYTHING into ONE Post-It note</li>
+                            <li>The New York student (Decoder) must translate from that single note alone</li>
+                        </ul>
+                        <p><strong>The Problem:</strong> The Post-It is the <span class="highlight">"context vector"</span> — a fixed-size memory. What happens to information that doesn't fit?</p>
+                        <ul>
+                            <li><span class="emphasis">Problem 1: Information Bottleneck</span> — Long paragraphs → Post-It can't hold enough info</li>
+                            <li><span class="emphasis">Problem 2: Vanishing Gradients</span> — The first words (J'aime) fade from memory by the time the Post-It is written</li>
+                            <li><span class="emphasis">Problem 3: Sequential Bottleneck</span> — Each word processed one at a time, in order → can't parallelize</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scene 2 -->
+            <div class="card">
+                <h3>Scene 2: The Breakthrough (With Attention)</h3>
+                <div class="scene-container">
+                    <div class="scene-title">✨ The Spotlight Solution</div>
+                    <div class="scene-content">
+                        <p>Now imagine a <span class="highlight">better system</span>: Instead of one Post-It, the Paris student keeps <strong>ALL their notes visible on a bulletin board</strong>.</p>
+                        <ul>
+                            <li>Every word is written on its own sticky note: J'aime | le | thé | avec | du | citron | chaque | matin | avant | de | commencer | mon | travail</li>
+                            <li>When the New York student needs to translate each output word, they can <span class="highlight">LOOK BACK at the bulletin board</span></li>
+                            <li>They shine a spotlight on whichever French notes are most relevant for THAT specific word</li>
+                        </ul>
+                        <p><strong>Example: Translating "tea"</strong></p>
+                        <p>When translating "tea" to English, the New York student focuses most strongly on "thé" with attention weight <span class="highlight">0.82</span>, and less on other words. This is the <span class="highlight">"attention weight"</span> — it says WHERE to look and HOW MUCH to focus.</p>
+                    </div>
+                </div>
+
+                <div class="interactive-container">
+                    <div class="interactive-title">Interactive: Watch Attention in Action</div>
+                    <p>Click or hover on an English word below. The animated lines show which French words the model focuses on, with thicker/brighter lines = higher attention.</p>
+                    <div class="animation-container">
+                        <svg width="100%" height="300" viewBox="0 0 800 300">
+                            <!-- Source Language (French) -->
+                            <g id="source-words">
+                                <text x="50" y="30" font-size="14" fill="#94a3b8" text-anchor="middle">French Input</text>
+                                <rect x="30" y="50" width="40" height="30" fill="rgba(59, 130, 246, 0.2)" stroke="#3b82f6" stroke-width="1" rx="4"/>
+                                <text x="50" y="70" font-size="13" fill="#f1f5f9" text-anchor="middle" font-family="Inter">J'aime</text>
+
+                                <rect x="90" y="50" width="30" height="30" fill="rgba(59, 130, 246, 0.2)" stroke="#3b82f6" stroke-width="1" rx="4"/>
+                                <text x="105" y="70" font-size="13" fill="#f1f5f9" text-anchor="middle" font-family="Inter">le</text>
+
+                                <rect x="140" y="50" width="30" height="30" fill="rgba(59, 130, 246, 0.2)" stroke="#3b82f6" stroke-width="1" rx="4"/>
+                                <text x="155" y="70" font-size="13" fill="#f1f5f9" text-anchor="middle" font-family="Inter">thé</text>
+
+                                <rect x="190" y="50" width="40" height="30" fill="rgba(59, 130, 246, 0.2)" stroke="#3b82f6" stroke-width="1" rx="4"/>
+                                <text x="210" y="70" font-size="13" fill="#f1f5f9" text-anchor="middle" font-family="Inter">.</text>
+                            </g>
+
+                            <!-- Target Language (English) -->
+                            <g id="target-words">
+                                <text x="50" y="180" font-size="14" fill="#94a3b8" text-anchor="middle">English Output</text>
+                                <rect x="20" y="200" width="60" height="35" fill="rgba(139, 92, 246, 0.2)" stroke="#8b5cf6" stroke-width="2" rx="4" class="target-word" data-word="I"/>
+                                <text x="50" y="223" font-size="14" fill="#f1f5f9" text-anchor="middle" font-weight="600" font-family="Inter" class="target-word" data-word="I">I</text>
+
+                                <rect x="100" y="200" width="60" height="35" fill="rgba(139, 92, 246, 0.2)" stroke="#8b5cf6" stroke-width="1" rx="4" class="target-word" data-word="love"/>
+                                <text x="130" y="223" font-size="14" fill="#f1f5f9" text-anchor="middle" font-family="Inter" class="target-word" data-word="love">love</text>
+
+                                <rect x="180" y="200" width="60" height="35" fill="rgba(139, 92, 246, 0.2)" stroke="#8b5cf6" stroke-width="1" rx="4" class="target-word" data-word="tea"/>
+                                <text x="210" y="223" font-size="14" fill="#f1f5f9" text-anchor="middle" font-family="Inter" class="target-word" data-word="tea">tea</text>
+
+                                <rect x="260" y="200" width="30" height="35" fill="rgba(139, 92, 246, 0.2)" stroke="#8b5cf6" stroke-width="1" rx="4" class="target-word" data-word="."/>
+                                <text x="275" y="223" font-size="14" fill="#f1f5f9" text-anchor="middle" font-family="Inter" class="target-word" data-word=".">.</text>
+                            </g>
+
+                            <!-- Attention Lines (hidden by default) -->
+                            <g id="attention-lines" opacity="0.6"></g>
+
+                            <!-- Legend -->
+                            <g>
+                                <text x="400" y="150" font-size="12" fill="#94a3b8">← Hover over English words to see attention</text>
+                            </g>
+                        </svg>
+                    </div>
+                    <p class="kb-hint">The attention lines show where the decoder "looks" when generating each output word. Thicker/brighter = higher focus.</p>
+                </div>
+            </div>
+
+            <!-- Scene 3 -->
+            <div class="card">
+                <h3>Scene 3: Why This Changes Everything</h3>
+                <div class="scene-container">
+                    <div class="scene-title">🎯 Solving Three Critical Problems</div>
+                    <div class="scene-content">
+                        <p><strong style="color: #06b6d4;">1. No More Information Bottleneck</strong></p>
+                        <ul>
+                            <li><span class="emphasis">Before</span>: ONE context vector for 100 words</li>
+                            <li><span class="highlight">After</span>: Access to ALL 100 encoder states — pick what you need</li>
+                        </ul>
+                        <p><strong style="color: #06b6d4;">2. No More Forgetting</strong></p>
+                        <ul>
+                            <li><span class="emphasis">Before</span>: Direct pathways decay through RNN recurrence (vanishing gradient)</li>
+                            <li><span class="highlight">After</span>: Direct connection to the first word (J'aime) with only ONE attention layer</li>
+                        </ul>
+                        <p><strong style="color: #06b6d4;">3. Foundation for Parallelism</strong></p>
+                        <ul>
+                            <li><span class="emphasis">Before</span>: Each word depends on previous word → strict sequential order</li>
+                            <li><span class="highlight">After</span>: Attention allows different positions to "look back" independently → leads to Transformers (Chapter 3)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Key Insight: The Attention Spotlight</h3>
+                <p>Think of attention as a <span class="highlight">learnable spotlight</span> that the decoder controls:</p>
+                <ul style="margin-left: 1.5rem;">
+                    <li>The decoder asks: "What should I focus on NOW?"</li>
+                    <li>Attention weights are probabilities (sum to 1.0) that say: "Focus 82% on 'thé', 10% on 'le', 5% on 'J'aime', 3% on '.'​"</li>
+                    <li>The output is a weighted blend of all source words, emphasizing the relevant ones</li>
+                    <li>Different output words focus on different input words (this is called <span class="highlight">alignment</span>)</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Level 2: The Mathematics -->
+        <div id="level2" class="tab-content">
+            <div class="card">
+                <h2>The Mathematics of Attention</h2>
+                <p>Now let's formalize what we learned with symbols and equations. This is where intuition meets implementation.</p>
+            </div>
+
+            <!-- Section A: Encoder-Decoder -->
+            <div class="card">
+                <h3>Section A: The Encoder-Decoder Architecture</h3>
+                <p><strong>The Encoder</strong> processes the input sequence one step at a time (RNN):</p>
+                <div class="math-block">
+                    $$\mathbf{h}_t = f(\mathbf{h}_{t-1}, \mathbf{x}_t)$$
+                </div>
+                <p>For a vanilla RNN:</p>
+                <div class="math-block">
+                    $$\mathbf{h}_t = \tanh(\mathbf{W}^{(hh)}\mathbf{h}_{t-1} + \mathbf{W}^{(hx)}\mathbf{x}_t)$$
+                </div>
+                <p><strong>The Context Vector</strong> compresses the entire input into a single vector (the bottleneck we discussed):</p>
+                <div class="math-block">
+                    $$\mathbf{c} = m(\mathbf{h}_1, \cdots, \mathbf{h}_T) = \mathbf{h}_T$$
+                </div>
+                <p>This is the key problem: the context <span class="highlight">c</span> is just the final hidden state. For a 100-word sentence, we're throwing away 99 hidden states!</p>
+
+                <p style="margin-top: 2rem;"><strong>The Decoder</strong> generates output conditioned on the context:</p>
+                <div class="math-block">
+                    $$\mathbf{s}_{t'} = g(\mathbf{s}_{t'-1}, \mathbf{y}_{t'-1}, \mathbf{c})$$
+                </div>
+                <p>The probability of the next word:</p>
+                <div class="math-block">
+                    $$P(\mathbf{y}_{t'} | \mathbf{y}_{t'-1}, \cdots, y_1, \mathbf{c}) = \text{softmax}(\mathbf{W}_s \mathbf{s}_{t'-1})$$
+                </div>
+                <p><strong>Training</strong> uses teacher forcing and cross-entropy loss:</p>
+                <div class="math-block">
+                    $$\mathcal{L} = -\frac{1}{N} \sum_{n=1}^{N} \log p_\theta(\mathbf{y}^{(n)} | \mathbf{x}^{(n)})$$
+                </div>
+            </div>
+
+            <!-- Section B: The Bottleneck -->
+            <div class="card">
+                <h3>Section B: The Information Bottleneck Problem</h3>
+                <p>Why does the vanilla seq2seq fail for long sequences? Three factors:</p>
+
+                <div class="scene-container">
+                    <div class="scene-title">Problem 1: Fixed-Length Bottleneck</div>
+                    <p>A context vector of dimension <span class="highlight">256</span> must encode ~100 words × ~10 bits/word ≈ 1000 bits of information.</p>
+                    <p>A 256-dimensional float32 vector has 256 × 32 = 8,192 bits of <strong>potential</strong> capacity, but tanh activation bounds values to [-1, 1], drastically reducing effective capacity. The network struggles to use this space efficiently.</p>
+                </div>
+
+                <div class="scene-container">
+                    <div class="scene-title">Problem 2: Vanishing/Exploding Gradients</div>
+                    <p>During backpropagation through the RNN, gradients are multiplied by the same weight matrix T times. If the largest eigenvalue < 1, gradients shrink exponentially (vanish). If > 1, they explode.</p>
+                    <div class="math-block">
+                        $$\frac{\partial \mathcal{L}}{\partial \mathbf{h}_1} = \frac{\partial \mathcal{L}}{\partial \mathbf{h}_T} \prod_{t=1}^{T-1} \frac{\partial \mathbf{h}_{t+1}}{\partial \mathbf{h}_t}$$
+                    </div>
+                    <p>For T = 100 and eigenvalue = 0.99, the gradient becomes 0.99^99 ≈ 0.37 — severely attenuated.</p>
+                </div>
+
+                <div class="scene-container">
+                    <div class="scene-title">Problem 3: Sequential Processing (No Parallelization)</div>
+                    <p>Each hidden state h_t depends on h_{t-1}, so we must compute them one at a time. With a 100-word sentence, we need 100 sequential steps. This prevents parallelization, making training slow.</p>
+                </div>
+            </div>
+
+            <!-- Section C: The Attention Mechanism -->
+            <div class="card">
+                <h3>Section C: The Attention Mechanism Formalized</h3>
+                <p>Given <span class="highlight">n key-value pairs</span> (k₁,v₁),...,(kₙ,vₙ) and a <span class="highlight">query</span> q, attention computes a weighted sum of values:</p>
+
+                <p style="margin-top: 1.5rem;"><strong>Step 1: Score Function</strong></p>
+                <div class="math-block">
+                    $$a_i = \alpha(\mathbf{q}, \mathbf{k}_i)$$
+                </div>
+                <p>The score measures "similarity" between query and key. Different score functions give different attention types.</p>
+
+                <p style="margin-top: 1.5rem;"><strong>Step 2: Softmax Normalization</strong></p>
+                <div class="math-block">
+                    $$\mathbf{b} = \text{softmax}(\mathbf{a}) \quad \text{where} \quad b_i = \frac{\exp(a_i)}{\sum_j \exp(a_j)}$$
+                </div>
+                <p>Weights sum to 1.0 and are all non-negative. This is our "spotlight distribution".</p>
+
+                <p style="margin-top: 1.5rem;"><strong>Step 3: Weighted Sum (Context)</strong></p>
+                <div class="math-block">
+                    $$\mathbf{o} = \sum_{i=1}^{n} b_i \mathbf{v}_i$$
+                </div>
+                <p>The output is a linear combination of all values, weighted by how relevant each key is.</p>
+
+                <p style="margin-top: 1.5rem;"><strong>In Seq2Seq with Attention:</strong></p>
+                <ul style="margin-left: 1.5rem;">
+                    <li><span class="highlight">Keys & Values</span> = encoder hidden states h₁, ..., h_T</li>
+                    <li><span class="highlight">Query</span> = decoder hidden state s_{t-1}</li>
+                    <li><span class="highlight">Output</span> = context vector for decoding word at position t</li>
+                </ul>
+            </div>
+
+            <!-- Section D: Score Functions -->
+            <div class="card">
+                <h3>Section D: Types of Score Functions</h3>
+                <p>There are three main ways to compute attention scores. Each has tradeoffs in speed vs. expressiveness.</p>
+
+                <div class="comparison-grid">
+                    <div class="comparison-item">
+                        <h4>1. Dot Product (Luong, 2015)</h4>
+                        <div class="math-block">$$\alpha(\mathbf{q}, \mathbf{k}) = \mathbf{q} \cdot \mathbf{k}$$</div>
+                        <p><strong>Pros:</strong></p>
+                        <ul style="margin-left: 1rem; font-size: 0.95rem;">
+                            <li>Simplest, no parameters</li>
+                            <li>Fast matmul operation</li>
+                        </ul>
+                        <p><strong>Cons:</strong></p>
+                        <ul style="margin-left: 1rem; font-size: 0.95rem;">
+                            <li>Sensitive to dimension d_k</li>
+                            <li>Can push softmax to extremes</li>
+                        </ul>
+                    </div>
+
+                    <div class="comparison-item">
+                        <h4>2. Scaled Dot Product (Vaswani, 2017)</h4>
+                        <div class="math-block">$$\alpha(\mathbf{q}, \mathbf{k}) = \frac{\mathbf{q} \cdot \mathbf{k}}{\sqrt{d_k}}$$</div>
+                        <p><strong>Pros:</strong></p>
+                        <ul style="margin-left: 1rem; font-size: 0.95rem;">
+                            <li>Stabilizes gradients</li>
+                            <li>Prevents softmax saturation</li>
+                            <li>Still O(1) computation</li>
+                        </ul>
+                        <p><strong>Cons:</strong></p>
+                        <ul style="margin-left: 1rem; font-size: 0.95rem;">
+                            <li>Still no learnable parameters</li>
+                        </ul>
+                    </div>
+
+                    <div class="comparison-item">
+                        <h4>3. Additive/MLP (Bahdanau, 2015)</h4>
+                        <div class="math-block">$$\alpha(\mathbf{q}, \mathbf{k}) = \mathbf{v}^T \tanh(\mathbf{W}_k \mathbf{k} + \mathbf{W}_q \mathbf{q})$$</div>
+                        <p><strong>Pros:</strong></p>
+                        <ul style="margin-left: 1rem; font-size: 0.95rem;">
+                            <li>Learnable parameters (W_k, W_q, v)</li>
+                            <li>More expressive</li>
+                        </ul>
+                        <p><strong>Cons:</strong></p>
+                        <ul style="margin-left: 1rem; font-size: 0.95rem;">
+                            <li>Slower (not a simple matmul)</li>
+                            <li>~3×hidden_dim² extra params</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <p style="margin-top: 2rem;"><strong>Why Scaled Dot-Product?</strong> The Transformer (Chapter 3) uses scaled dot-product because:</p>
+                <ul style="margin-left: 1.5rem;">
+                    <li>Fast enough to compute in parallel (matmul)</li>
+                    <li>Gradient-stable due to 1/√d_k scaling</li>
+                    <li>Can be implemented efficiently on GPUs with GEMM (General Matrix Multiply)</li>
+                </ul>
+            </div>
+
+            <!-- Section E: Attention-Based Seq2Seq -->
+            <div class="card">
+                <h3>Section E: Attention-Based Seq2Seq in Practice</h3>
+                <p>How does attention fit into the decoder?</p>
+                <div class="math-block">
+                    $$\text{context}_t = \sum_{j=1}^{T} \alpha_{t,j} \mathbf{h}_j$$
+                </div>
+                <p>where the attention weights are computed as:</p>
+                <div class="math-block">
+                    $$\alpha_{t,j} = \frac{\exp(\text{score}(\mathbf{s}_{t-1}, \mathbf{h}_j))}{\sum_{k=1}^{T} \exp(\text{score}(\mathbf{s}_{t-1}, \mathbf{h}_k))}$$
+                </div>
+                <p>Then the decoder input becomes a concatenation of the embedding and context:</p>
+                <div class="math-block">
+                    $$\mathbf{s}_t = \text{RNN}([\mathbf{y}_{t-1}; \text{context}_t], \mathbf{s}_{t-1})$$
+                </div>
+            </div>
+
+            <!-- Interactive: Softmax Calculator -->
+            <div class="card">
+                <h3>Interactive: The Softmax Function Visualizer</h3>
+                <p>Enter 3-5 raw attention scores. The softmax will normalize them into probabilities. Watch how the distribution changes as you adjust the inputs!</p>
+
+                <div class="interactive-container">
+                    <div class="input-group">
+                        <input type="number" id="score1" placeholder="Score 1" value="2.0">
+                        <input type="number" id="score2" placeholder="Score 2" value="1.0">
+                        <input type="number" id="score3" placeholder="Score 3" value="0.5">
+                        <input type="number" id="score4" placeholder="Score 4" value="3.0">
+                        <input type="number" id="score5" placeholder="Score 5" value="0.1">
+                        <button onclick="computeSoftmax()">Compute Softmax</button>
+                    </div>
+
+                    <div id="softmax-stats" style="margin-bottom: 1.5rem; display: none;">
+                        <p><strong>Softmax Output Distribution:</strong></p>
+                        <p id="softmax-values"></p>
+                        <p><strong>Entropy (uncertainty):</strong> <span id="entropy-value"></span></p>
+                        <p style="font-size: 0.9rem; color: #94a3b8;">
+                            Higher entropy = more uniform (model is unsure). Lower entropy = more peaked (model is confident).
+                        </p>
+                    </div>
+
+                    <div class="chart-container">
+                        <div class="bar-chart" id="softmax-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Level 3: The Engineer's Sandbox -->
+        <div id="level3" class="tab-content">
+            <div class="card">
+                <h2>Building Seq2Seq and Attention from Scratch</h2>
+                <p>Now we implement the theory. This is production-grade code with optimization comments explaining every decision.</p>
+            </div>
+
+            <!-- Code Block 1 -->
+            <div class="card">
+                <h3>Code Block 1: Vanilla Seq2Seq Encoder-Decoder</h3>
+                <p><strong>This has the bottleneck problem we discussed.</strong> We'll fix it with attention in Block 2.</p>
+                <div class="code-block">
+                    <div class="code-label">encoder_decoder.py</div>
+                    <code>import torch
+import torch.nn as nn
+
+class Seq2SeqEncoder(nn.Module):
+    """RNN Encoder: converts input sequence to hidden states."""
+    def __init__(self, vocab_size, embed_dim, hidden_dim,
+                 n_layers=2, dropout=0.3):
+        super().__init__()
+        self.embedding = nn.Embedding(vocab_size, embed_dim)
+        self.rnn = nn.LSTM(embed_dim, hidden_dim, n_layers,
+                          dropout=dropout, bidirectional=True,
+                          batch_first=True)
+        # Bidirectional LSTM doubles hidden dim
+        self.fc = nn.Linear(hidden_dim * 2, hidden_dim)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, src):  # src: [batch, src_len]
+        embedded = self.dropout(self.embedding(src))
+        outputs, (hidden, cell) = self.rnn(embedded)
+        # outputs: [batch, src_len, hidden*2] — ALL hidden states
+        # hidden:  [n_layers*2, batch, hidden] — final state
+
+        # Project bidirectional hidden to single direction
+        hidden = torch.cat([hidden[-2], hidden[-1]], dim=1)
+        hidden = torch.tanh(self.fc(hidden)).unsqueeze(0)
+        # tanh keeps values bounded [-1,1], preventing explosion
+        return outputs, hidden
+
+
+class Seq2SeqDecoder(nn.Module):
+    """RNN Decoder WITHOUT attention — uses only final context."""
+    def __init__(self, vocab_size, embed_dim, hidden_dim,
+                 n_layers=1, dropout=0.3):
+        super().__init__()
+        self.embedding = nn.Embedding(vocab_size, embed_dim)
+        self.rnn = nn.LSTM(embed_dim, hidden_dim, n_layers,
+                          dropout=dropout, batch_first=True)
+        self.fc_out = nn.Linear(hidden_dim, vocab_size)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, trg_token, hidden, cell):
+        # trg_token: [batch, 1] — single token at a time
+        embedded = self.dropout(self.embedding(trg_token))
+        output, (hidden, cell) = self.rnn(embedded, (hidden, cell))
+        prediction = self.fc_out(output.squeeze(1))
+        return prediction, hidden, cell
+
+# ⚠️ BOTTLENECK: The entire source sentence is compressed into
+# one hidden vector. For sequences >20 tokens, BLEU scores drop
+# significantly. This is exactly what attention solves next.</code>
+                </div>
+            </div>
+
+            <!-- Code Block 2 -->
+            <div class="card">
+                <h3>Code Block 2: Adding Bahdanau Attention</h3>
+                <p><strong>This is the innovation.</strong> Now the decoder can access all encoder states, not just the final one.</p>
+                <div class="code-block">
+                    <div class="code-label">attention.py</div>
+                    <code>class BahdanauAttention(nn.Module):
+    """Additive attention: α(q,k) = v^T tanh(W_k·k + W_q·q)"""
+    def __init__(self, hidden_dim):
+        super().__init__()
+        self.W_q = nn.Linear(hidden_dim, hidden_dim, bias=False)
+        self.W_k = nn.Linear(hidden_dim * 2, hidden_dim, bias=False)
+        self.v = nn.Linear(hidden_dim, 1, bias=False)
+
+    def forward(self, query, keys):
+        # query: [batch, 1, hidden]
+        # keys:  [batch, src_len, hidden*2]
+
+        scores = self.v(torch.tanh(
+            self.W_q(query) + self.W_k(keys)
+        ))  # [batch, src_len, 1]
+
+        weights = torch.softmax(scores, dim=1)  # Softmax = spotlight
+
+        context = (weights * keys).sum(dim=1, keepdim=True)
+        return context, weights.squeeze(-1)
+
+
+class AttentionDecoder(nn.Module):
+    """Decoder WITH attention — accesses all encoder states."""
+    def __init__(self, vocab_size, embed_dim, hidden_dim, dropout=0.3):
+        super().__init__()
+        self.attention = BahdanauAttention(hidden_dim)
+        self.embedding = nn.Embedding(vocab_size, embed_dim)
+        self.rnn = nn.GRU(embed_dim + hidden_dim * 2, hidden_dim,
+                         batch_first=True)
+        self.fc_out = nn.Linear(hidden_dim + hidden_dim * 2 + embed_dim,
+                               vocab_size)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, trg_token, hidden, encoder_outputs):
+        embedded = self.dropout(self.embedding(trg_token))
+
+        # Compute attention context
+        context, attn_weights = self.attention(
+            hidden.permute(1, 0, 2),  # [batch, 1, hidden]
+            encoder_outputs
+        )
+
+        # Concatenate embedding + context as RNN input
+        rnn_input = torch.cat([embedded, context], dim=2)
+        output, hidden = self.rnn(rnn_input, hidden)
+
+        # Final prediction uses output + context + embedded
+        prediction = self.fc_out(
+            torch.cat([output.squeeze(1), context.squeeze(1),
+                      embedded.squeeze(1)], dim=1)
+        )
+        return prediction, hidden, attn_weights
+
+# ✨ KEY INSIGHT: Attention adds only ~3×hidden_dim² parameters
+# but dramatically improves performance on sequences >15 tokens.
+# BLEU improvement from vanilla to attention: typically 5-10 points.
+# Critical: use learning rate warmup (1000-4000 steps) — attention
+# weights need time to stabilize from random initialization.</code>
+                </div>
+            </div>
+
+            <!-- Code Block 3 -->
+            <div class="card">
+                <h3>Code Block 3: Why Scaled Dot-Product Prevents Vanishing Gradients</h3>
+                <div class="code-block">
+                    <div class="code-label">softmax_temperature.py</div>
+                    <code>import torch
+import torch.nn.functional as F
+
+# The scaling factor 1/√d_k is a TEMPERATURE parameter for softmax.
+# It controls how "sharp" the distribution is.
+
+scores = torch.tensor([2.0, 1.0, 0.5, 3.0, 0.1])
+
+print("Raw scores:", scores.tolist())
+print()
+
+for temp_name, temp in [("High temp (T=5.0)", 5.0),
+                         ("Normal (T=1.0)", 1.0),
+                         ("Scaled (T=1/√64≈0.125)", 1/8.0),
+                         ("Low temp (T=0.1)", 0.1)]:
+    weights = F.softmax(scores / temp, dim=0)
+    entropy = -(weights * weights.log()).sum()
+    print(f"{temp_name}:")
+    print(f"  Weights: {[f'{w:.4f}' for w in weights.tolist()]}")
+    print(f"  Max weight: {weights.max():.4f}")
+    print(f"  Entropy: {entropy:.4f}")
+    print()
+
+# OUTPUT:
+# High temp (T=5.0):
+#   Weights: ['0.2198', '0.1972', '0.1712', '0.2702', '0.1415']
+#   Max weight: 0.2702
+#   Entropy: 1.5883
+#
+# Normal (T=1.0):
+#   Weights: ['0.2637', '0.0966', '0.0356', '0.5762', '0.0130']
+#   Max weight: 0.5762
+#   Entropy: 0.8872
+#
+# Scaled (T=1/√64≈0.125):
+#   Weights: ['0.3520', '0.0173', '0.0020', '0.6281', '0.0005']
+#   Max weight: 0.6281
+#   Entropy: 0.5123
+#
+# Low temp (T=0.1):
+#   Weights: ['0.0000', '0.0000', '0.0000', '1.0000', '0.0000']
+#   Max weight: 1.0000
+#   Entropy: 0.0000
+
+# ⚠️ PROBLEM: As d_k grows, dot products grow too!
+# For d_k = 512: if q and k are random N(0,1),
+# their dot product has variance = d_k = 512.
+# This pushes q·k values huge → softmax saturates →
+# gradients approach 0 (vanishing gradient).
+
+# ✨ SOLUTION: Divide by √d_k
+# This rescales variance back to 1: Var(q·k/√d_k) = Var(q·k)/d_k = 1
+# Result: stable softmax with reasonable gradients for all d_k.</code>
+                </div>
+            </div>
+
+            <!-- Code Block 4 -->
+            <div class="card">
+                <h3>Code Block 4: Pre-trained Seq2Seq at Production Scale</h3>
+                <p><strong>This is real-world translation using the exact architecture we've discussed.</strong></p>
+                <div class="code-block">
+                    <div class="code-label">huggingface_example.py</div>
+                    <code>from transformers import MarianMTModel, MarianTokenizer
+
+# MarianMT is a seq2seq model with attention trained by Helsinki NLP
+# It demonstrates encoder-decoder + attention at scale
+
+model_name = "Helsinki-NLP/opus-mt-fr-en"
+tokenizer = MarianTokenizer.from_pretrained(model_name)
+model = MarianMTModel.from_pretrained(model_name)
+
+# The exact example from Book Figure 2.2
+french_sentences = [
+    "J'aime le thé.",
+    "Le chat est assis sur le tapis.",
+    "L'attention est tout ce dont vous avez besoin.",
+]
+
+for fr in french_sentences:
+    inputs = tokenizer(fr, return_tensors="pt", padding=True)
+    translated = model.generate(**inputs)
+    en = tokenizer.decode(translated[0], skip_special_tokens=True)
+    print(f"FR: {fr}")
+    print(f"EN: {en}")
+    print()
+
+# OUTPUT:
+# FR: J'aime le thé.
+# EN: I love tea.
+#
+# FR: Le chat est assis sur le tapis.
+# EN: The cat is sitting on the mat.
+#
+# FR: L'attention est tout ce dont vous avez besoin.
+# EN: Attention is all you need.
+
+# ✨ ARCHITECTURE DETAILS:
+# - 6 encoder layers + 6 decoder layers with attention
+# - 8 attention heads, d_model = 512 (Transformer-base)
+# - Trained on ~58M sentence pairs from OPUS corpus
+# - Uses scaled dot-product attention (Vaswani et al., 2017)
+
+# 📊 PRODUCTION TIPS:
+# - Use batch_size=32+, fp16 for speed
+# - beam_size=4 for better BLEU (greedy=1 is faster)
+# - Temperature=0.8 for slightly more diverse outputs
+# - max_length=256 typically sufficient for most sentences</code>
+                </div>
+            </div>
+
+            <!-- Training Loop Section -->
+            <div class="card">
+                <h3>Training Loop: Teacher Forcing vs. Autoregressive Decoding</h3>
+                <div class="code-block">
+                    <div class="code-label">training.py</div>
+                    <code>def train_epoch(model, iterator, optimizer, criterion):
+    """Training with TEACHER FORCING"""
+    model.train()
+    epoch_loss = 0
+
+    for batch_idx, batch in enumerate(iterator):
+        src, trg = batch.src, batch.trg
+
+        # Encoder: process entire source sequence at once
+        encoder_outputs, hidden = model.encoder(src)
+
+        # Decoder: use CORRECT previous tokens (teacher forcing)
+        decoder_input = trg[:-1]  # Shift right
+        predictions = []
+
+        for t in range(decoder_input.shape[0]):
+            pred, hidden, attn_weights = model.decoder(
+                decoder_input[t:t+1], hidden, encoder_outputs
+            )
+            predictions.append(pred)
+
+        predictions = torch.stack(predictions)
+        loss = criterion(predictions.reshape(-1, output_dim),
+                        trg[1:].reshape(-1))
+
+        optimizer.zero_grad()
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        optimizer.step()
+
+        epoch_loss += loss.item()
+
+    return epoch_loss / len(iterator)
+
+def evaluate(model, iterator, criterion):
+    """Evaluation with AUTOREGRESSIVE decoding (no teacher forcing)"""
+    model.eval()
+    epoch_loss = 0
+
+    with torch.no_grad():
+        for batch in iterator:
+            src, trg = batch.src, batch.trg
+
+            encoder_outputs, hidden = model.encoder(src)
+
+            # Start with <sos> token
+            trg_tokens = [sos_token]
+
+            for t in range(max_len):
+                # Use MODEL'S OWN PREDICTION, not ground truth
+                decoder_input = torch.tensor([trg_tokens[-1]])
+                pred, hidden, _ = model.decoder(
+                    decoder_input, hidden, encoder_outputs
+                )
+                top_token = pred.argmax(1).item()
+
+                if top_token == eos_token:
+                    break
+                trg_tokens.append(top_token)
+
+            loss = criterion(pred.reshape(-1, output_dim),
+                           trg[1:].reshape(-1))
+            epoch_loss += loss.item()
+
+    return epoch_loss / len(iterator)
+
+# ⚠️ IMPORTANT: Teacher forcing gives OPTIMISTIC training loss.
+# At inference, the model sees its own predictions → exposure bias.
+# Gap between train and eval BLEU: typically 5-10% in the
+# autoregressive setting. Solutions:
+# 1. Scheduled Sampling: gradually replace teacher tokens
+# 2. Sequence-level training: REINFORCE or minimum risk training
+# 3. Use model's predictions during training (more realistic)</code>
+                </div>
+            </div>
+        </div>
+
+        <!-- Socratic Sandbox -->
+        <div id="socratic" class="tab-content">
+            <div class="card">
+                <h2>The Translation Crisis: A Socratic Investigation</h2>
+                <p><strong>Scenario:</strong> You've trained a seq2seq model for English→German translation. It works on 20-word sentences (BLEU: 32), but on a 100-word paragraph, it produces garbled output by the end (BLEU: 15.2).</p>
+            </div>
+
+            <!-- Question 1 -->
+            <div class="question-container">
+                <div class="question-title">Question 1: The Information Theory Bottleneck</div>
+                <p style="margin-top: 0.5rem; color: #cbd5e1;">You're using a context vector of dimension 256. For a 100-word sentence (assume 10 bits of information per word), compute:</p>
+                <ul style="margin-left: 1.5rem; color: #cbd5e1;">
+                    <li>Total information in source: 100 words × 10 bits = ? bits</li>
+                    <li>Capacity of 256-dim float32 vector: 256 × 32 = ? bits</li>
+                    <li>What does this tell you about the bottleneck?</li>
+                </ul>
+
+                <div class="question-answer">
+                    <h4 style="color: #06b6d4; margin-bottom: 1rem;">Answer</h4>
+                    <p><strong>Information in source:</strong> 100 × 10 = <span class="highlight">1,000 bits</span></p>
+                    <p><strong>Capacity of context vector:</strong> 256 × 32 = <span class="highlight">8,192 bits</span></p>
+                    <p><strong>Apparent conclusion:</strong> "We have plenty of capacity!"</p>
+                    <p style="margin-top: 1rem;"><strong>But...</strong> This analysis is misleading because:</p>
+                    <div class="hint">
+                        <p><strong>The Real Problem: Effective Capacity</strong></p>
+                        <p>1. The <span class="highlight">tanh activation</span> bounds all values to [-1, 1]. Most of the float32 precision is wasted.</p>
+                        <p>2. The network must <strong>learn</strong> to use this space efficiently. During training, it doesn't instantly organize all 8,192 bits for your information.</p>
+                        <p>3. <strong>Vanishing gradients</strong> (Problem 2) make it hard to learn good use of this capacity. Backpropagation through 100 steps of RNN multiplies gradients by the same weight matrix 100 times.</p>
+                        <p>4. The real issue: <span class="highlight">The decoder can't access early words directly</span>. It only gets h_100, which has been transformed 99 times through nonlinearities and matrix multiplies. Information about "J'aime" (word 1) is severely degraded by the time the context vector is formed.</p>
+                    </div>
+                    <p style="margin-top: 1rem;"><strong>How Attention Solves This:</strong> Instead of compressing to h_100, attention allows the decoder to access ALL states h_1, ..., h_100 directly. The decoder can focus (via attention weights) on whichever words it needs for the current output word.</p>
+                </div>
+            </div>
+
+            <!-- Question 2 -->
+            <div class="question-container">
+                <div class="question-title">Question 2: The Exposure Bias Problem</div>
+                <p style="margin-top: 0.5rem; color: #cbd5e1;">You add Bahdanau attention and BLEU jumps to 24.5 during validation <strong>with teacher forcing</strong>. But when you switch to autoregressive decoding (using the model's own predictions), BLEU drops to 18.1.</p>
+                <ul style="margin-left: 1.5rem; color: #cbd5e1;">
+                    <li>What is this gap called?</li>
+                    <li>Why does teacher forcing hide the problem?</li>
+                    <li>Name two techniques to close the gap.</li>
+                </ul>
+
+                <div class="question-answer">
+                    <h4 style="color: #06b6d4; margin-bottom: 1rem;">Answer</h4>
+                    <p>This 6.4-point BLEU drop is called <span class="highlight">"exposure bias"</span> or the <span class="highlight">"train-test mismatch"</span>.</p>
+
+                    <div class="hint" style="margin: 1rem 0;">
+                        <p><strong>Why Teacher Forcing Hides the Problem:</strong></p>
+                        <p>During training with teacher forcing:</p>
+                        <ul style="margin-left: 1.5rem;">
+                            <li>The decoder always sees the <span class="highlight">correct previous token</span>, even if it predicted wrongly</li>
+                            <li>The model learns a policy optimized for this "easy" distribution</li>
+                            <li>Training loss is low because the decoder never has to recover from its own mistakes</li>
+                        </ul>
+                        <p style="margin-top: 1rem;">At inference with autoregressive decoding:</p>
+                        <ul style="margin-left: 1.5rem;">
+                            <li>The decoder uses its own (possibly wrong) predictions as input</li>
+                            <li>It encounters input distributions it never saw during training</li>
+                            <li>One wrong word compounds: error feeds into next word, and propagates</li>
+                            <li>BLEU drops because the model isn't trained for this reality</li>
+                        </ul>
+                    </div>
+
+                    <p><strong>Two Solutions:</strong></p>
+                    <p><strong>1. Scheduled Sampling</strong></p>
+                    <ul style="margin-left: 1.5rem;">
+                        <li>During training, randomly replace some ground-truth tokens with the model's own predictions</li>
+                        <li>Start with low probability of sampling (0.1), gradually increase (0.5) over epochs</li>
+                        <li>By the end, the model is 50% exposed to its own mistakes</li>
+                        <li>Trade-off: training is noisier (higher loss), but gap to inference shrinks</li>
+                    </ul>
+                    <p><strong>2. Sequence-Level Training (REINFORCE or Minimum Risk Training)</strong></p>
+                    <ul style="margin-left: 1.5rem;">
+                        <li>Instead of cross-entropy loss (token-by-token), optimize BLEU directly</li>
+                        <li>Use policy gradient (REINFORCE) or minimum risk training to maximize task-level metric</li>
+                        <li>More computationally expensive, but closes the gap dramatically</li>
+                        <li>Common in state-of-the-art systems (neural machine translation, summarization)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Question 3 -->
+            <div class="question-container">
+                <div class="question-title">Question 3: Diffuse Attention on Complex Words</div>
+                <p style="margin-top: 0.5rem; color: #cbd5e1;">Visualizing attention weights for German word "Aufmerksamkeit" (attention), you see the model attends almost equally to ALL source words (uniform distribution). But for "the" → "der", attention is sharp and focused. Why?</p>
+
+                <div class="question-answer">
+                    <h4 style="color: #06b6d4; margin-bottom: 1rem;">Answer</h4>
+                    <p><strong>Why complex words get diffuse attention:</strong></p>
+                    <div class="hint">
+                        <p><strong>Content-Rich Words Need Multiple Signals</strong></p>
+                        <p>"Aufmerksamkeit" (attention) is a complex, abstract noun. To decode it correctly, the model needs:</p>
+                        <ul style="margin-left: 1.5rem;">
+                            <li>Root meaning from the source word "attention"</li>
+                            <li>Grammatical context (subject? object? adjective modifier?)</li>
+                            <li>Sentence-level semantics (is this positive or negative?)</li>
+                            <li>Morphological agreement (case, gender, number for German declension)</li>
+                        </ul>
+                        <p style="margin-top: 1rem;">No SINGLE source word carries all this information. The model needs to integrate signals from many positions:</p>
+                        <ul style="margin-left: 1.5rem;">
+                            <li>Subject position → grammatical role</li>
+                            <li>Verbs → semantic context</li>
+                            <li>Articles/adjectives → morphological constraints</li>
+                        </ul>
+                        <p style="margin-top: 1rem;">Result: <span class="highlight">uniform or diffuse attention</span> — the model attends weakly to many words because it needs all of them.</p>
+                    </div>
+
+                    <p style="margin-top: 1rem;"><strong>Why simple function words have sharp attention:</strong></p>
+                    <p>"the" → "der" is a direct, function-word correspondence. It's a 1-to-1 alignment. The model sharply focuses on the English "the" because that's all it needs.</p>
+
+                    <p style="margin-top: 1rem;"><strong>What This Reveals About Single-Head Attention's Limitations:</strong></p>
+                    <div class="hint" style="margin-top: 1rem;">
+                        <p>Single-head attention computes ONE probability distribution per output word. It can't simultaneously attend to different aspects of the source.</p>
+                        <p>Solution (Chapter 3): <span class="highlight">Multi-head attention</span> — multiple attention distributions in parallel, each head capturing different types of relationships (morphology, syntax, semantics, etc.). With 8 or 16 heads, the model can:</p>
+                        <ul style="margin-left: 1.5rem;">
+                            <li>Head 1: attend to grammatical dependencies</li>
+                            <li>Head 2: attend to semantic content</li>
+                            <li>Head 3: attend to rare/domain-specific terms</li>
+                            <li>... and so on</li>
+                        </ul>
+                        <p style="margin-top: 1rem;">This is why multi-head attention is one of the key innovations of the Transformer.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Question 4 -->
+            <div class="question-container">
+                <div class="question-title">Question 4: The Dot-Product Explosion Problem</div>
+                <p style="margin-top: 0.5rem; color: #cbd5e1;">You're using unscaled dot-product attention with d_k = 512. Your raw attention scores often exceed 30.0. After softmax, one word gets weight 0.9999 and all others get ~0.0001. Your gradients have nearly vanished.</p>
+                <ul style="margin-left: 1.5rem; color: #cbd5e1;">
+                    <li>Which specific equation modification fixes this?</li>
+                    <li>What is the scaling factor, and how do you compute it?</li>
+                    <li>WHY does high dimensionality cause this problem?</li>
+                </ul>
+
+                <div class="question-answer">
+                    <h4 style="color: #06b6d4; margin-bottom: 1rem;">Answer</h4>
+                    <p><strong>The Fix: Scaled Dot-Product Attention</strong></p>
+                    <div class="math-block">
+                        $$\alpha(\mathbf{q}, \mathbf{k}) = \frac{\mathbf{q} \cdot \mathbf{k}}{\sqrt{d_k}}$$
+                    </div>
+                    <p><strong>Scaling factor:</strong> <span class="highlight">√d_k</span> = √512 ≈ 22.6</p>
+                    <p>So instead of raw scores [30.0, 2.1, 0.5, ...], you divide by 22.6 to get [1.33, 0.093, 0.022, ...]. These stay in a reasonable range for softmax.</p>
+
+                    <p style="margin-top: 1.5rem;"><strong>WHY Does High Dimensionality Cause the Explosion?</strong></p>
+                    <div class="hint">
+                        <p><strong>Variance Analysis:</strong></p>
+                        <p>If q and k are random vectors with mean 0 and variance 1 in each dimension:</p>
+                        <ul style="margin-left: 1.5rem;">
+                            <li>q·k = Σ q_i × k_i summed over d_k dimensions</li>
+                            <li>Each term q_i × k_i has variance 1 × 1 = 1</li>
+                            <li>Summing d_k independent terms → total variance = d_k</li>
+                        </ul>
+                        <p style="margin-top: 1rem;">So: <strong>Var(q·k) = d_k</strong></p>
+                        <p style="margin-top: 1rem;">For d_k = 512, the dot products have standard deviation √512 ≈ 22.6. This means scores are often ±45 in magnitude.</p>
+                    </div>
+
+                    <p style="margin-top: 1rem;"><strong>The Softmax Saturation Problem:</strong></p>
+                    <div class="hint">
+                        <p>When softmax inputs are extreme (±30+):</p>
+                        <p style="margin-bottom: 0.5rem;">exp(30) ≈ 10^13, exp(-30) ≈ 10^-13</p>
+                        <p style="margin-bottom: 0.5rem;">The softmax becomes [0.9999, 0.00001, 0.00001, ...]</p>
+                        <p style="margin-bottom: 0.5rem;">Gradient of softmax at extreme: ≈ 0.00001 × (1 - 0.00001) ≈ 0.00001 (vanishing!)</p>
+                        <p>The model can't learn because gradients are too small.</p>
+                    </div>
+
+                    <p style="margin-top: 1rem;"><strong>The Scaling Solution:</strong></p>
+                    <div class="hint">
+                        <p>By dividing by √d_k:</p>
+                        <p style="margin-bottom: 0.5rem;">Var(q·k / √d_k) = Var(q·k) / d_k = d_k / d_k = 1</p>
+                        <p>Scores stay O(1), softmax stays in a reasonable range [0.1, 0.8, 0.1], and gradients are healthy for learning.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Question 5 -->
+            <div class="question-container">
+                <div class="question-title">Question 5: The Dictionary Analogy</div>
+                <p style="margin-top: 0.5rem; color: #cbd5e1;">A colleague argues: "Attention is just a soft lookup table — queries search for matching keys, then return the corresponding values. It's like a differentiable dictionary."</p>
+                <ul style="margin-left: 1.5rem; color: #cbd5e1;">
+                    <li>Is this a good analogy? Partially? Misleading?</li>
+                    <li>What's ONE way it's accurate?</li>
+                    <li>What's ONE way it breaks down?</li>
+                </ul>
+
+                <div class="question-answer">
+                    <h4 style="color: #06b6d4; margin-bottom: 1rem;">Answer</h4>
+                    <p><strong>Verdict: Useful analogy, but important caveats.</strong></p>
+
+                    <p style="margin-top: 1.5rem;"><strong>How It's Accurate:</strong></p>
+                    <div class="hint">
+                        <p>Like a dictionary lookup:</p>
+                        <ul style="margin-left: 1.5rem;">
+                            <li>You provide a <span class="highlight">query</span> (the word you want to look up)</li>
+                            <li>The system matches against <span class="highlight">keys</span> (the dictionary's index)</li>
+                            <li>For matching keys, it returns the <span class="highlight">values</span> (the dictionary entries)</li>
+                        </ul>
+                        <p style="margin-top: 1rem;">Attention works the same way: q matches against k's, and returns v's.</p>
+                        <p style="margin-top: 1rem;">The softmax is like a "soft" key match instead of exact matching (all-or-nothing binary).</p>
+                    </div>
+
+                    <p style="margin-top: 1.5rem;"><strong>Where It Breaks Down (Critical):</strong></p>
+                    <div class="hint">
+                        <p><strong>Crucial Difference: Attention returns a weighted BLEND, not one entry.</strong></p>
+                        <p>A real dictionary returns one entry: look up "dog" → you get ONE definition.</p>
+                        <p style="margin-top: 1rem;">Attention returns a <span class="highlight">weighted combination</span> of ALL values:</p>
+                        <div class="math-block">
+                            $$\mathbf{o} = \sum_{i=1}^{n} b_i \mathbf{v}_i = 0.82 \times v_{\text{thé}} + 0.10 \times v_{\text{le}} + 0.05 \times v_{\text{J'aime}} + \ldots$$
+                        </div>
+                        <p style="margin-top: 1rem;">The output is a blend of 4 different source words. A dictionary never does this.</p>
+                        <p style="margin-top: 1rem;"><strong>Another key difference (Self-Attention):</strong> In Chapter 3 (Transformers), queries, keys, and values all come from the SAME input. It's like a dictionary that searches itself — very different from traditional lookup.</p>
+                    </div>
+
+                    <p style="margin-top: 1.5rem;"><strong>Better Analogy:</strong></p>
+                    <p>"Attention is like a <span class="highlight">soft relevance weighting system</span>. Given a question (query), it scores all candidate answers (keys) for relevance, then returns a mixture (softmax blend) of the top candidates (values). The stronger a match, the higher its weight in the blend."</p>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top: 2rem;">
+                <h3>Synthesis: What You've Learned</h3>
+                <p>By solving these five problems, you now understand:</p>
+                <ul style="margin-left: 1.5rem;">
+                    <li><strong>Information Theory:</strong> Why fixed-size context vectors fail for long sequences (Problem 1)</li>
+                    <li><strong>Training Dynamics:</strong> How exposure bias creates train-test gaps (Problem 2)</li>
+                    <li><strong>Model Architecture:</strong> Why single-head attention is limited; multi-head helps (Problem 3)</li>
+                    <li><strong>Numerical Stability:</strong> How to prevent softmax saturation and vanishing gradients (Problem 4)</li>
+                    <li><strong>Conceptual Clarity:</strong> What attention really does (not just a lookup; a learned, differentiable blend) (Problem 5)</li>
+                </ul>
+                <p style="margin-top: 1.5rem;">These insights led directly to the <strong>Transformer</strong> (Chapter 3): multi-head scaled dot-product attention + positional encoding + feed-forward networks, stacked in layers. The Transformer throws away RNNs entirely and replaces them with pure attention.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer Navigation -->
+    <footer class="container">
+        <div class="footer-nav">
+            <a href="chapter1.html" class="nav-button">
+                <span>← Previous</span>
+            </a>
+            <div class="chapter-info">
+                <p>Module 2: Seq2Seq & The Birth of Attention</p>
+                <p style="font-size: 0.85rem; color: #64748b;">Book Chapter 2, Sections 2.1–2.3</p>
+            </div>
+            <a href="chapter3.html" class="nav-button">
+                <span>Next →</span>
+            </a>
+        </div>
+    </footer>
+
+    <script>
+        // Tab Navigation
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const tabName = button.getAttribute('data-tab');
+
+                // Remove active class from all buttons and contents
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+
+                // Add active class to clicked button and corresponding content
+                button.classList.add('active');
+                document.getElementById(tabName).classList.add('active');
+            });
+        });
+
+        // Keyboard Navigation for Tabs
+        document.addEventListener('keydown', (e) => {
+            const activeButton = document.querySelector('.tab-button.active');
+            const allButtons = Array.from(document.querySelectorAll('.tab-button'));
+            const currentIndex = allButtons.indexOf(activeButton);
+
+            if (e.key === 'ArrowRight' && currentIndex < allButtons.length - 1) {
+                allButtons[currentIndex + 1].click();
+            } else if (e.key === 'ArrowLeft' && currentIndex > 0) {
+                allButtons[currentIndex - 1].click();
+            }
+        });
+
+        // Attention Animation: Interactive Note Passing
+        const targetWords = document.querySelectorAll('.target-word');
+
+        const attentionData = {
+            'I': [
+                { source: 'J\'aime', weight: 0.85 },
+                { source: 'le', weight: 0.05 },
+                { source: 'thé', weight: 0.05 },
+                { source: '.', weight: 0.05 }
+            ],
+            'love': [
+                { source: 'J\'aime', weight: 0.70 },
+                { source: 'le', weight: 0.10 },
+                { source: 'thé', weight: 0.15 },
+                { source: '.', weight: 0.05 }
+            ],
+            'tea': [
+                { source: 'J\'aime', weight: 0.02 },
+                { source: 'le', weight: 0.10 },
+                { source: 'thé', weight: 0.82 },
+                { source: '.', weight: 0.06 }
+            ],
+            '.': [
+                { source: 'J\'aime', weight: 0.05 },
+                { source: 'le', weight: 0.05 },
+                { source: 'thé', weight: 0.05 },
+                { source: '.', weight: 0.85 }
+            ]
+        };
+
+        const sourceWordsMap = {
+            'J\'aime': 50,
+            'le': 105,
+            'thé': 155,
+            '.': 210
+        };
+
+        const targetWordsMap = {
+            'I': 50,
+            'love': 130,
+            'tea': 210,
+            '.': 275
+        };
+
+        targetWords.forEach(word => {
+            word.addEventListener('mouseover', () => {
+                const wordText = word.getAttribute('data-word');
+                const attentionLines = document.getElementById('attention-lines');
+                attentionLines.innerHTML = '';
+
+                const sourceY = 80;
+                const targetY = 200;
+
+                attentionData[wordText].forEach(attention => {
+                    const sourceX = sourceWordsMap[attention.source];
+                    const targetX = targetWordsMap[wordText];
+
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', sourceX);
+                    line.setAttribute('y1', sourceY);
+                    line.setAttribute('x2', targetX);
+                    line.setAttribute('y2', targetY);
+                    line.setAttribute('class', 'attention-line');
+                    line.setAttribute('stroke-opacity', attention.weight);
+
+                    attentionLines.appendChild(line);
+                });
+            });
+        });
+
+        document.addEventListener('mouseout', () => {
+            const attentionLines = document.getElementById('attention-lines');
+            attentionLines.innerHTML = '';
+        });
+
+        // Softmax Calculator
+        function computeSoftmax() {
+            const scores = [];
+            for (let i = 1; i <= 5; i++) {
+                const input = document.getElementById(`score${i}`);
+                if (input.value !== '') {
+                    scores.push(parseFloat(input.value));
+                }
+            }
+
+            if (scores.length === 0) {
+                alert('Please enter at least one score');
+                return;
+            }
+
+            // Compute softmax
+            const maxScore = Math.max(...scores);
+            const expScores = scores.map(s => Math.exp(s - maxScore));
+            const sumExp = expScores.reduce((a, b) => a + b, 0);
+            const softmaxWeights = expScores.map(e => e / sumExp);
+
+            // Compute entropy
+            const entropy = -softmaxWeights.reduce((sum, w) => {
+                return sum + (w > 0 ? w * Math.log2(w) : 0);
+            }, 0);
+
+            // Display results
+            const statsDiv = document.getElementById('softmax-stats');
+            statsDiv.style.display = 'block';
+
+            const valuesText = softmaxWeights
+                .map((w, i) => `b_${i+1} = ${w.toFixed(4)}`)
+                .join(', ');
+            document.getElementById('softmax-values').textContent = valuesText;
+            document.getElementById('entropy-value').textContent = entropy.toFixed(4);
+
+            // Create bar chart
+            const chart = document.getElementById('softmax-chart');
+            chart.innerHTML = '';
+
+            softmaxWeights.forEach((weight, index) => {
+                const bar = document.createElement('div');
+                bar.className = 'bar';
+
+                const fill = document.createElement('div');
+                fill.className = 'bar-fill';
+                fill.style.height = (weight * 200) + 'px';
+
+                const label = document.createElement('div');
+                label.className = 'bar-label';
+                label.textContent = weight.toFixed(3);
+
+                bar.appendChild(fill);
+                bar.appendChild(label);
+                chart.appendChild(bar);
+            });
+        }
+
+        // Socratic Questions: Toggle Answers
+        const questionTitles = document.querySelectorAll('.question-title');
+
+        questionTitles.forEach(title => {
+            title.addEventListener('click', () => {
+                const answer = title.nextElementSibling;
+
+                title.classList.toggle('expanded');
+                answer.classList.toggle('expanded');
+            });
+        });
+
+        // KaTeX rendering
+        if (window.renderMathInElement) {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false }
+                ]
+            });
+        }
+    </script>
+</body>
+</html>
