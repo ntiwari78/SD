@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 5: Hands-on Ancient Translator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true,
+                macros: {
+                    lt: ["<"],
+                    gt: [">"]
+                }
+            },
+            options: {
+                enableMenu: false
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        body { background: #050505; color: #d4d4d8; font-family: 'Inter', sans-serif; line-height: 1.6; }
+        .highlight { color: #f8fafc; font-weight: 600; }
+        .math-block { background: rgba(248, 250, 252, 0.03); border-left: 4px solid #f8fafc; padding: 1.5rem; margin: 1.5rem 0; border-radius: 0 0.5rem 0.5rem 0; overflow-x: auto; }
+        .code-block { background: #111; border: 1px solid #222; padding: 1.25rem; border-radius: 0.75rem; font-family: 'Fira Code', monospace; font-size: 0.9rem; overflow-x: auto; }
+        .intuition-box { border: 1px solid #e2e8f0; background: rgba(226, 232, 240, 0.05); padding: 1.5rem; border-radius: 1rem; }
+    </style>
+</head>
+<body class="p-6 md:p-12 max-w-4xl mx-auto">
+
+    <nav class="mb-12">
+        <a href="index.html" class="text-white hover:text-gray-300 transition-colors flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            Back to Hub
+        </a>
+    </nav>
+
+    <header class="mb-12 text-center">
+        <span class="text-white font-mono text-sm uppercase tracking-widest">Chapter 05</span>
+        <h1 class="text-4xl md:text-5xl font-bold mt-2 mb-4 text-white">Hands-on: The Ancient Translator</h1>
+        <p class="text-xl text-gray-400 italic">From theory to a working production pipeline.</p>
+    </header>
+
+    <section class="space-y-12">
+        <!-- 1. The Core Intuition -->
+        <div class="intuition-box">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2 text-white">
+                <span>🛠️</span> The Project Intuition
+            </h2>
+            <p>
+                We have explored the Engine, the Reader, the Writer, and the Specialist. Now, we assemble the factory. To build a translator for an ancient language, we don't need to manually code rules for grammar. We build a **Sequence-to-Sequence (Seq2Seq)** pipeline.
+            </p>
+            <p class="mt-4">
+                In this project, we will use a **MarianMT** model—a specialized Transformer architecture designed for translation—to map Ancient Greek to English.
+            </p>
+        </div>
+
+        <!-- 2. Evaluation Metric: BLEU Score -->
+        <div>
+            <h2 class="text-2xl font-bold mb-4 text-white border-b border-gray-800 pb-2">Measuring Success: The BLEU Score</h2>
+            <p class="mb-4">How do we know if our translator is good? We use the **Bilingual Evaluation Understudy (BLEU)**. It compares the model's output to a set of human-written reference translations by measuring n-gram overlap.</p>
+            
+            <div class="math-block">
+                $$ \text{BP} = \begin{cases} 1 & \text{if } c \gt r \\ e^{(1-r/c)} & \text{if } c \le r \end{cases} $$
+                $$ \text{BLEU} = \text{BP} \cdot \exp\left(\sum_{n=1}^{N} w_n \log p_n\right) $$
+            </div>
+            <p class="text-xs text-gray-500 italic">Where $p_n$ is the precision of n-grams, $c$ is candidate length, and $r$ is reference length. The BP (Brevity Penalty) ensures the model doesn't "cheat" by outputting very short, high-precision sentences.</p>
+        </div>
+
+        <!-- 3. The Implementation -->
+        <div>
+            <h2 class="text-2xl font-bold mb-4 text-white">Hugging Face Pipeline (< 50 Lines)</h2>
+            <p class="mb-4 text-gray-400">This script initializes a pre-trained translator and processes an ancient text segment.</p>
+            <div class="code-block">
+<pre class="text-blue-400">from transformers import pipeline, AutoModelForSeq2SeqLM, AutoTokenizer
+
+# 1. Define the model (Ancient Greek to English)
+model_name = "Helsinki-NLP/opus-mt-grc-en"
+
+# 2. Load Tokenizer and Model
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+
+# 3. Initialize the translation pipeline
+translator = pipeline("translation", model=model, tokenizer=tokenizer)
+
+# 4. Input: Opening of Homer's Iliad
+ancient_greek = "μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος"
+
+# 5. Generate and Print Result
+result = translator(ancient_greek, max_length=40)
+print(f"Ancient: {ancient_greek}")
+print(f"English: {result[0]['translation_text']}")
+
+# Output: "Sing, goddess, the wrath of Achilles Peleus' son."</pre>
+            </div>
+        </div>
+
+        <!-- 4. Ancient Language Connection: Fine-Tuning the Project -->
+        <div class="bg-gray-900/40 p-6 rounded-xl border border-gray-800">
+            <h2 class="text-2xl font-bold mb-4 text-white">Scaling to Your Language</h2>
+            <p class="text-gray-400">If a model doesn't exist for your specific ancient tongue, follow this workflow:</p>
+            <ol class="list-decimal ml-6 mt-4 space-y-3 text-sm text-gray-300">
+                <li><strong>Collect Parallel Text:</strong> Scrape digital archives like the <em>Perseus Digital Library</em>.</li>
+                <li><strong>Train a Tokenizer:</strong> Use Byte-Pair Encoding (BPE) on your corpus.</li>
+                <li><strong>Apply QLoRA (Chapter 4):</strong> Fine-tune a base model (like Llama 3) on your pairs.</li>
+                <li><strong>Deploy:</strong> Use Hugging Face's <code>pipeline</code> for inference.</li>
+            </ol>
+        </div>
+
+        <!-- 5. Knowledge Check -->
+        <div class="space-y-6 border-t border-gray-800 pt-8">
+            <h2 class="text-2xl font-bold text-white">Knowledge Check</h2>
+            <div class="space-y-4">
+                <details class="group bg-gray-900/50 p-6 rounded-lg border border-gray-800">
+                    <summary class="cursor-pointer font-bold text-gray-200 group-hover:text-blue-400 transition-colors">
+                        1. Why use Seq2Seq (Encoder-Decoder) for translation instead of just GPT (Decoder-only)?
+                    </summary>
+                    <div class="mt-4 text-gray-400 pl-4 border-l-2 border-blue-500">
+                        While GPT can translate, **Encoder-Decoder** models (like MarianMT or T5) are mathematically designed for mapping tasks. The Encoder creates a bidirectional "map" of the input, and the Decoder uses cross-attention to "read" that map while generating the output. This is often more efficient for translation.
+                    </div>
+                </details>
+                <details class="group bg-gray-900/50 p-6 rounded-lg border border-gray-800">
+                    <summary class="cursor-pointer font-bold text-gray-200 group-hover:text-blue-400 transition-colors">
+                        2. What is the biggest weakness of the BLEU score?
+                    </summary>
+                    <div class="mt-4 text-gray-400 pl-4 border-l-2 border-blue-500">
+                        BLEU doesn't understand **meaning**, only **strings**. If your model outputs "The king is dead" and the reference is "The monarch has died," BLEU will give a low score even though the translation is perfect. Modern researchers also use **BERTScore** or **METEOR** to fix this.
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <!-- 6. Master Link Library -->
+        <div class="bg-gray-900/40 p-8 rounded-2xl border border-gray-800">
+            <h2 class="text-2xl font-bold mb-6 text-white flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                Master Link Library
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <a href="https://huggingface.co/docs/transformers/main_classes/pipelines" target="_blank" class="block p-4 bg-black/40 rounded-xl hover:bg-gray-800 transition-all border border-gray-700">
+                    <h4 class="font-bold text-white mb-1">HF Pipeline Documentation</h4>
+                    <p class="text-xs text-gray-500">The easiest way to use Transformers for production tasks.</p>
+                </a>
+                <a href="https://huggingface.co/Helsinki-NLP" target="_blank" class="block p-4 bg-black/40 rounded-xl hover:bg-gray-800 transition-all border border-gray-700">
+                    <h4 class="font-bold text-white mb-1">Helsinki-NLP Models</h4>
+                    <p class="text-xs text-gray-500">A library of over 1,000 translation models for niche languages.</p>
+                </a>
+                <a href="https://arxiv.org/abs/2005.14165" target="_blank" class="block p-4 bg-black/40 rounded-xl hover:bg-gray-800 transition-all border border-gray-700">
+                    <h4 class="font-bold text-white mb-1">Few-Shot Learners (GPT-3)</h4>
+                    <p class="text-xs text-gray-500">Understanding how models translate with almost no data.</p>
+                </a>
+                <a href="https://cloud.google.com/translate/docs/advanced/bleu" target="_blank" class="block p-4 bg-black/40 rounded-xl hover:bg-gray-800 transition-all border border-gray-700">
+                    <h4 class="font-bold text-white mb-1">Google Cloud: BLEU Score</h4>
+                    <p class="text-xs text-gray-500">A practical guide to calculating and interpreting BLEU.</p>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <footer class="mt-20 border-t border-gray-800 pt-8 text-center">
+        <p class="text-gray-600 mb-4">Congratulations! You have completed the Modern NLP Explainer Course.</p>
+        <a href="index.html" class="bg-white text-black px-8 py-3 rounded-full font-bold hover:bg-gray-200 transition-all">
+            Return to Learning Hub
+        </a>
+    </footer>
+
+</body>
+</html>
