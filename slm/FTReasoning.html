@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Fine-Tuning LLMs for Reasoning &amp; Chain-of-Thought</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --paper: #ffffff;
+    --ink: #1a1a1a;
+    --muted: #555;
+    --accent: #6d28d9;
+    --accent-soft: #f3eaff;
+    --line: #e5e5e5;
+    --code-bg: #1a1033;
+    --code-ink: #e9e3ff;
+    --warn: #b45309;
+    --warn-soft: #fff7ed;
+    --success: #166534;
+    --success-soft: #ecfdf5;
+    --thinking: #d946ef;
+    --thinking-soft: #fdf4ff;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.65;
+    font-size: 16px;
+  }
+  .layout { display: grid; grid-template-columns: 280px 1fr; gap: 0; max-width: 1400px; margin: 0 auto; }
+  nav.toc {
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+    padding: 24px 16px; border-right: 1px solid var(--line);
+    background: var(--paper); font-size: 14px;
+  }
+  nav.toc h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 12px; }
+  nav.toc ol { list-style: none; padding: 0; margin: 0; counter-reset: section; }
+  nav.toc li { counter-increment: section; margin: 4px 0; }
+  nav.toc li::before { content: counter(section) ". "; color: var(--muted); }
+  nav.toc a { color: var(--ink); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc ul { list-style: none; padding-left: 16px; font-size: 13px; }
+  nav.toc ul li::before { content: "›  "; color: var(--muted); }
+  main { padding: 48px 56px; background: var(--paper); min-height: 100vh; }
+  h1 { font-size: 36px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -0.02em; }
+  h2 { font-size: 26px; margin: 48px 0 12px; padding-top: 12px; border-top: 2px solid var(--line); letter-spacing: -0.01em; }
+  h3 { font-size: 20px; margin: 28px 0 8px; color: #111; }
+  h4 { font-size: 16px; margin: 20px 0 6px; color: #222; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+  p { margin: 8px 0 14px; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid rgba(109,40,217,0.25); }
+  a:hover { border-bottom-color: var(--accent); }
+  code { font-family: "SF Mono", "Monaco", "Menlo", Consolas, monospace; font-size: 0.92em; background: #f1f0f7; padding: 2px 6px; border-radius: 4px; }
+  pre { background: var(--code-bg); color: var(--code-ink); padding: 16px 20px; border-radius: 8px; overflow-x: auto; font-size: 13.5px; line-height: 1.55; }
+  pre code { background: transparent; color: inherit; padding: 0; }
+  blockquote { border-left: 3px solid var(--accent); margin: 16px 0; padding: 4px 16px; color: var(--muted); background: var(--accent-soft); border-radius: 0 6px 6px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14.5px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: #f8f5ff; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+  tbody tr:hover { background: #fafbfc; }
+  .lede { font-size: 18px; color: var(--muted); margin: 12px 0 32px; }
+  .callout { padding: 14px 18px; border-radius: 8px; margin: 20px 0; }
+  .callout.info { background: var(--accent-soft); border-left: 4px solid var(--accent); }
+  .callout.warn { background: var(--warn-soft); border-left: 4px solid var(--warn); color: #6b3a06; }
+  .callout.success { background: var(--success-soft); border-left: 4px solid var(--success); color: #065f46; }
+  .callout.thinking { background: var(--thinking-soft); border-left: 4px solid var(--thinking); }
+  .pillbar { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 16px; }
+  .pill { padding: 3px 10px; border-radius: 999px; background: #f1f0f7; color: var(--muted); font-size: 12px; }
+  .pill.thinking { background: var(--thinking-soft); color: var(--thinking); }
+  .formula { background: #fdfdfd; border: 1px dashed var(--line); padding: 12px 16px; border-radius: 8px; font-family: "Cambria Math", Georgia, serif; font-size: 16px; text-align: center; margin: 12px 0; }
+  hr { border: none; border-top: 1px solid var(--line); margin: 36px 0; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .card { padding: 16px 18px; background: #fcfcfd; border: 1px solid var(--line); border-radius: 8px; }
+  .card h4 { margin-top: 0; }
+  .card.model { background: linear-gradient(180deg, #fcfaff 0%, #fff 100%); border-color: #e9deff; }
+  .anchor { color: var(--muted); font-weight: normal; font-size: 0.7em; margin-left: 8px; opacity: 0; }
+  h2:hover .anchor, h3:hover .anchor { opacity: 1; }
+  details { margin: 12px 0; padding: 12px 16px; background: #fafbfc; border: 1px solid var(--line); border-radius: 6px; }
+  summary { font-weight: 600; cursor: pointer; }
+  .sources-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; font-size: 14px; }
+  .meta { font-size: 13px; color: var(--muted); }
+  .hat { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; margin-right: 6px; vertical-align: middle; }
+  .hat.blue { background: #dbeafe; color: #1e40af; }
+  .hat.green { background: #dcfce7; color: #166534; }
+  .hat.red { background: #fee2e2; color: #991b1b; }
+  .hat.black { background: #1f2937; color: #fff; }
+  .hat.yellow { background: #fef3c7; color: #92400e; }
+  .hat.white { background: #f9fafb; color: #374151; border: 1px solid #d1d5db; }
+  @media (max-width: 1024px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--line); }
+    main { padding: 32px 24px; }
+    .grid-2, .sources-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#intro">Why Reasoning Matters</a></li>
+    <li><a href="#foundations">Foundations: SFT for Reasoning</a>
+      <ul>
+        <li><a href="#paradigms">SFT Paradigms</a></li>
+        <li><a href="#cot-data">Acquiring CoT Data</a></li>
+        <li><a href="#datasets">Reasoning Datasets</a></li>
+      </ul>
+    </li>
+    <li><a href="#rft">Reinforced Fine-Tuning</a>
+      <ul>
+        <li><a href="#ppo-like">PPO-like (RLHF)</a></li>
+        <li><a href="#grpo-like">GRPO-like</a></li>
+        <li><a href="#dpo-like">DPO-like</a></li>
+        <li><a href="#star">STaR-like</a></li>
+        <li><a href="#reward">Reward Modeling</a></li>
+      </ul>
+    </li>
+    <li><a href="#advanced">Advanced Techniques</a>
+      <ul>
+        <li><a href="#dcot">DCoT</a></li>
+        <li><a href="#select2reason">Select2Reason</a></li>
+        <li><a href="#impact">Impact on Reasoning</a></li>
+      </ul>
+    </li>
+    <li><a href="#models">Emerging Reasoning Models</a></li>
+    <li><a href="#practical">Practical Step-by-Step Guide</a></li>
+    <li><a href="#tips">Tips &amp; Considerations</a></li>
+    <li><a href="#challenges">Challenges &amp; Future</a></li>
+    <li><a href="#sources">Resources &amp; Further Reading</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<header>
+  <h1>Fine-Tuning LLMs for Reasoning &amp; Chain-of-Thought</h1>
+  <p class="lede">A focused companion to the general fine-tuning guide — covering the supervised, reinforced, and self-corrective paradigms that turn next-token predictors into deliberate, multi-step thinkers.</p>
+  <div class="pillbar">
+    <span class="pill thinking">CoT-SFT · DCoT · Select2Reason</span>
+    <span class="pill thinking">RLHF · GRPO · DPO · STaR</span>
+    <span class="pill thinking">DeepSeek-R1 · Qwen3-Next · MoE reasoning</span>
+    <span class="pill">Updated 6 May 2026</span>
+  </div>
+</header>
+
+<section id="intro">
+<h2>1. Introduction: Why Reasoning Matters <span class="anchor">#</span></h2>
+
+<p>LLMs trained purely on next-token prediction excel at fluent text but often struggle with logical and multi-step problem solving. Research has shown that asking models to <em>generate intermediate chains of thought (CoTs)</em> improves accuracy on complex tasks. The idea was popularized by Google researchers in 2022 who demonstrated that prompting LLMs with "Let's think step by step" encourages them to reason out loud. Subsequent work introduced <strong>chain-of-thought fine-tuning</strong>: models are further trained on datasets containing problem statements, intermediate reasoning traces, and final answers — so the model emulates human-like reasoning rather than merely pattern-matching answers.</p>
+
+<p>Unlike generic fine-tuning, reasoning fine-tuning has to deal with four distinct properties:</p>
+<ol>
+  <li><strong>Learning to think before answering.</strong> The model must generate a plausible sequence of reasoning steps before its final answer.</li>
+  <li><strong>Faithfulness and error accumulation.</strong> The reasoning trace should actually lead to the answer; errors early in the chain propagate.</li>
+  <li><strong>Data scarcity.</strong> Annotating high-quality reasoning traces is expensive, so automatic methods or distillation from larger models are common.</li>
+  <li><strong>Long-context management.</strong> Reasoning often spans long token chains, motivating sparse-attention and Mixture-of-Experts architectures.</li>
+</ol>
+
+<div class="callout thinking">
+  <p><strong>The Six Thinking Hats lens.</strong> The recent survey <a href="https://arxiv.org/abs/2510.13170" target="_blank" rel="noopener">"Putting on the Thinking Hats" (Chen et al., 2026)</a> categorises CoT fine-tuning along six dimensions, mapping each to one of Edward de Bono's metaphorical "thinking hats":</p>
+  <p>
+    <span class="hat blue">Blue</span>detailed planning &nbsp;·&nbsp;
+    <span class="hat green">Green</span>divergent thinking &nbsp;·&nbsp;
+    <span class="hat red">Red</span>intuitive judgment &nbsp;·&nbsp;
+    <span class="hat black">Black</span>timely reflection &nbsp;·&nbsp;
+    <span class="hat yellow">Yellow</span>internal reasoning &nbsp;·&nbsp;
+    <span class="hat white">White</span>fact perception
+  </p>
+  <p>Reasoning fine-tuning, the survey argues, "leverages both supervised and reinforced approaches to cultivate skills like detailed planning, divergent thinking, and fact perception." This document follows the same structural arc.</p>
+</div>
+</section>
+
+<section id="foundations">
+<h2>2. Foundations: Supervised Fine-Tuning (SFT) for Reasoning <span class="anchor">#</span></h2>
+
+<h3>Pre-training vs. fine-tuning vs. reasoning fine-tuning</h3>
+<p>Pre-training is unsupervised next-token modeling on massive corpora. Fine-tuning adapts a pre-trained model to a narrower distribution using labelled data and/or feedback. <em>Reasoning</em> fine-tuning typically occurs <strong>after</strong> instruction tuning: the model already knows to follow instructions and now must learn to <em>think</em> while doing so.</p>
+
+<p>Chen et al. describe transforming a <strong>Reflex Model</strong> (instinctive answerer) into a <strong>Thinking Model</strong> (deliberate reasoner) using two stages: supervised fine-tuning (<a href="#sft">SFT</a>) followed by reinforced fine-tuning (<a href="#rft">RFT</a>).</p>
+
+<h3 id="paradigms">2.1 The Three SFT Paradigms</h3>
+<table>
+<thead><tr><th>Paradigm</th><th>What the model outputs</th><th>Strengths</th><th>Limitations</th></tr></thead>
+<tbody>
+<tr>
+  <td><strong>Pre-thinking</strong></td>
+  <td>CoT first → answer last. Cross-entropy is applied over the concatenation of question + reasoning + answer.</td>
+  <td>Enables problem decomposition; widely adopted.</td>
+  <td>Suffers from <em>unfaithfulness</em> (reasoning trace doesn't lead to the final answer) and <em>error accumulation</em> (early mistakes propagate).</td>
+</tr>
+<tr>
+  <td><strong>Post-thinking</strong></td>
+  <td>Answer first → explanation after.</td>
+  <td>Faster response; mitigates error accumulation because the answer precedes the reasoning.</td>
+  <td>Lacks problem-decomposition ability; suitable mainly for smaller models on simple tasks.</td>
+</tr>
+<tr>
+  <td><strong>Multi-task learning</strong></td>
+  <td>Prefix tokens indicate whether to generate full reasoning or answer-only.</td>
+  <td>Improves training stability and inference speed.</td>
+  <td>Separates reasoning from answer generation, which can increase unfaithfulness.</td>
+</tr>
+</tbody></table>
+
+<h3 id="cot-data">2.2 Acquiring Chain-of-Thought Data</h3>
+<p>SFT relies on high-quality reasoning traces. The <a href="https://arxiv.org/abs/2510.13170" target="_blank" rel="noopener">"Thinking Hats" survey</a> identifies two acquisition routes:</p>
+<ul>
+  <li><strong>Manual annotation.</strong> Either <em>implicit</em> — annotators highlight supporting spans (e-SNLI, MultiRC, FEVER) — or <em>explicit</em> — annotators write out reasoning steps (used in GSM8K and MATH). Manual CoTs are high-fidelity but expensive and domain-specific.</li>
+  <li><strong>Automatic annotation.</strong> A strong reasoning model (e.g., DeepSeek-R1 or GPT-4) generates reasoning traces for smaller models. Rule-based methods derive CoTs from structured data — e.g., converting medical knowledge graphs into reasoning paths. Both require post-processing and verification, often using answer verifiers or external checkers to filter incorrect traces.</li>
+</ul>
+
+<h4>The reasoning data record format</h4>
+<p>According to <a href="https://docs.together.ai/docs/fine-tuning-data-preparation" target="_blank" rel="noopener">Together AI's reasoning fine-tuning documentation</a>, training data should split the chain-of-thought into a dedicated <code>reasoning</code> field and the final response into a <code>content</code> field. Crucially, <em>fine-tuning a reasoning model without reasoning data can actually degrade reasoning ability</em>:</p>
+
+<pre><code>{
+  "prompt":    "Question or instruction",
+  "reasoning": "Step-by-step chain of thought",
+  "content":   "Final answer"
+}</code></pre>
+
+<h3 id="datasets">2.3 Example Reasoning Datasets</h3>
+<p>Many benchmark datasets have been extended with CoTs. The <a href="https://github.com/AI-Chen/Awesome-CoT-Finetuning" target="_blank" rel="noopener">Awesome-CoT-Finetuning</a> repository maintains an up-to-date list. A complementary list of long-CoT specific work lives at <a href="https://github.com/LightChen233/Awesome-Long-Chain-of-Thought-Reasoning" target="_blank" rel="noopener">Awesome-Long-Chain-of-Thought-Reasoning</a>.</p>
+
+<table>
+<thead><tr><th>Dataset</th><th>Domain</th><th>Size (train / valid / test)</th><th>CoT provided?</th></tr></thead>
+<tbody>
+<tr><td>GSM8K</td><td>Grade-school math</td><td>7 500 / 0 / 1 000</td><td>Yes</td></tr>
+<tr><td>AQuA</td><td>Algebraic word problems</td><td>100 949 / 250 / 250</td><td>Yes</td></tr>
+<tr><td>MATH</td><td>Competition-level math</td><td>7 500 / 0 / 5 000</td><td>Yes</td></tr>
+<tr><td>MGSM</td><td>Multilingual GSM8K</td><td>88 / 0 / 2 750</td><td>Yes</td></tr>
+<tr><td>BBH</td><td>General reasoning tasks</td><td>0 / 0 / 6 511</td><td>No</td></tr>
+<tr><td>MMLUPro</td><td>Graduate-level Q&amp;A</td><td>0 / 70 / 12 032</td><td>Partial CoT</td></tr>
+</tbody></table>
+
+<p class="meta">Many works synthesize additional CoT data by prompting a large reasoning model (e.g., DeepSeek-R1, GPT-4) and filtering outputs. Datasets may also include tool-use traces or browser interactions (WebGPT).</p>
+</section>
+
+<section id="rft">
+<h2>3. Reinforced Fine-Tuning (RFT) <span class="anchor">#</span></h2>
+
+<p>After SFT, <strong>reinforced fine-tuning</strong> further improves reasoning by optimizing a reward signal. Chen et al. group RFT methods into four categories with explicit mathematical formulations.</p>
+
+<h3 id="ppo-like">3.1 PPO-like (RLHF)</h3>
+<p>Combines a reward model and a value model. A reward model is trained from human preference pairs; PPO then updates the actor model while penalizing divergence (KL) from the pre-tuned reference model. RLHF improves reasoning but requires <strong>four models in memory</strong> (actor, reference, reward, value) and suffers from instability and heavy resource use. See <a href="https://huggingface.co/blog/rlhf" target="_blank" rel="noopener">HF's "Illustrating RLHF"</a> for the canonical primer.</p>
+
+<h3 id="grpo-like">3.2 GRPO-like</h3>
+<p>Originating in DeepSeek-Math and central to <a href="https://github.com/deepseek-ai/DeepSeek-R1" target="_blank" rel="noopener">DeepSeek-R1</a>, <strong>Group Relative Policy Optimization</strong> estimates advantage by comparing multiple outputs for the same input — eliminating the value model entirely.</p>
+<div class="formula">A<sub>i</sub> = ( r<sub>i</sub> − mean(r<sub>1…G</sub>) ) / std(r<sub>1…G</sub>)</div>
+<p>Variants address known weaknesses: <strong>DAPO</strong> and <strong>GSPO</strong> tackle entropy collapse and stability; <strong>DRA-GRPO</strong> introduces diversity rewards. For deeper math see <a href="https://medium.com/yugen-ai-technology-blog/understanding-the-math-behind-grpo-deepseek-r1-zero-9fb15e103a0a" target="_blank" rel="noopener">"Understanding the Math Behind GRPO"</a> and <a href="https://ghost.oxen.ai/why-grpo-is-important-and-how-it-works/" target="_blank" rel="noopener">"Why GRPO is Important and How it Works"</a>.</p>
+
+<h3 id="dpo-like">3.3 DPO-like</h3>
+<p><strong>Direct Preference Optimization</strong> treats the preference model as part of the objective: it directly optimizes the policy to prefer the better answer over the worse one and removes the explicit reward model. Follow-ups refine the granularity (<em>Token-level DPO</em>) or eliminate even the reference model (<em>CPO</em>). See <a href="https://arxiv.org/abs/2305.18290" target="_blank" rel="noopener">arXiv:2305.18290 — DPO</a>.</p>
+
+<h3 id="star">3.4 STaR-like (Self-Taught with Reasoning)</h3>
+<p>Self-training variants such as <strong>STaR</strong> collect multiple reasoning trajectories <em>from the model itself</em> and fine-tune only on the trajectories that match the correct answer. The model is encouraged to explore; incorrect traces are discarded. This produces a tight loop: generate → verify → train on what worked.</p>
+
+<h3 id="reward">3.5 Reward Modeling</h3>
+<p>RFT relies on preference data and reward modeling. Two axes of design:</p>
+<ul>
+  <li><strong>Outcome-based rewards</strong> evaluate only the final answer — easy to compute but blind to bad reasoning paths that happen to land on the right answer.</li>
+  <li><strong>Process-based rewards</strong> evaluate intermediate reasoning steps, assigning credit to each step. More aligned but expensive to annotate.</li>
+</ul>
+<p>Specialized discriminative or generative reward models (<strong>GenRM-CoT</strong>) can be trained to score reasoning, but they need annotated preference data. <em>Rule-based</em> methods assign reward 1 if the answer matches the reference and 0 otherwise — simple and effective for math and coding. <em>LLM-based</em> evaluations ask a strong LLM to critique or verify the reasoning itself.</p>
+</section>
+
+<section id="advanced">
+<h2>4. Advanced Techniques <span class="anchor">#</span></h2>
+
+<h3 id="dcot">4.1 Divergent Chain-of-Thought (DCoT)</h3>
+<p><a href="https://openreview.net/forum?id=u4whlT6xKO" target="_blank" rel="noopener">DCoT (ICLR 2025)</a> requires the model to generate <strong>multiple reasoning chains</strong> before selecting an answer. Instruction tuning on DCoT datasets "consistently improves performance over the CoT baseline across model families and scales (1.3 B – 70 B)." The improvement comes from <em>self-correction</em>: the model compares divergent reasoning paths and chooses the best answer. DCoT helps even smaller models approach the reasoning performance of much larger ones. Full paper: <a href="https://arxiv.org/abs/2407.03181" target="_blank" rel="noopener">arXiv:2407.03181</a>.</p>
+
+<h3 id="select2reason">4.2 Select2Reason: Efficient Long-CoT Data Selection</h3>
+<p>Fine-tuning on large synthetic instruction sets (200 k+ examples) is expensive. <a href="https://arxiv.org/abs/2505.17266" target="_blank" rel="noopener">Select2Reason (arXiv:2505.17266)</a> proposes a data-selection strategy that prioritizes instructions which elicit long chains of thought. It uses a quantifier to estimate question difficulty and a reasoning-trace-length heuristic, combining them through a weighted scheme to rank examples.</p>
+
+<p>On <strong>OpenR1-Math-220k</strong>, fine-tuning on only <strong>10 % of the selected data</strong> achieves performance competitive with — and on some benchmarks superior to — full-data tuning across three competition-level and six comprehensive math benchmarks. See also the <a href="https://openreview.net/forum?id=MDE6S92PJR" target="_blank" rel="noopener">OpenReview submission (ICLR 2026)</a>.</p>
+
+<div class="callout success">
+  <p><strong>Why this matters.</strong> Long-CoT distillation is dominated by data quantity. Select2Reason shows that "what looks long and hard" is a surprisingly good selection criterion — and that naive scaling of synthetic CoT data is wasteful.</p>
+</div>
+
+<h3 id="impact">4.3 Impact of Fine-Tuning on Reasoning</h3>
+<p>Not all fine-tuning <em>improves</em> reasoning. The NAACL 2025 study <a href="https://arxiv.org/abs/2411.15382" target="_blank" rel="noopener">"On the Impact of Fine-Tuning on Chain-of-Thought Reasoning" (arXiv:2411.15382)</a> shows that while fine-tuning with RLHF, supervised fine-tuning, or QLoRA improves task accuracy, it may <strong>reduce the faithfulness of CoT reasoning</strong>. On average, faithfulness decreased across four datasets — meaning naive task-specific fine-tuning can harm reasoning quality.</p>
+
+<div class="callout warn">
+  <p><strong>Practical takeaway.</strong> If you fine-tune a reasoning model with task-specific data and don't preserve reasoning behaviour explicitly (via reasoning-aware data formats and evaluation), you may degrade exactly the capability you bought the reasoning model for. This is why Together AI's docs are emphatic: <em>always include the <code>reasoning</code> field in your training data when fine-tuning a reasoning model</em>.</p>
+</div>
+</section>
+
+<section id="models">
+<h2>5. Emerging Reasoning Models (2025–2026) <span class="anchor">#</span></h2>
+
+<p>Open-source reasoning models have flourished. The <a href="https://www.clarifai.com/blog/top-10-open-source-reasoning-models-in-2026" target="_blank" rel="noopener">Clarifai "Top 10 Open-source Reasoning Models in 2026"</a> blog notes that AI is shifting "from raw text generators to agents that act and reason," and that reasoning-first models — those which explicitly use internal deliberation or chain-of-thought — will power autonomous agents and strategic planners. Three highlights:</p>
+
+<div class="grid-2">
+
+<div class="card model">
+  <h4>DeepSeek-R1-Distill-Qwen3-8B</h4>
+  <p>Released May 2025 as part of the <strong>DeepSeek-R1-0528</strong> update. Distils reasoning patterns from the 671 B DeepSeek-R1 into Alibaba's Qwen3-8B base using ~800 000 high-quality reasoning samples focused on math, logic, and structured reasoning. Despite its small size, it is SOTA among open-source models on AIME 2024 (+10 % over Qwen3-8B), and after the R1-0528 update its AIME 2025 accuracy jumped from 70 % → 87.5 %.</p>
+  <p>Architecture identical to Qwen3-8B but with the DeepSeek-R1-0528 tokenizer config. Runs on a single 40–80 GB-VRAM GPU. <strong>MIT-licensed</strong> — supports commercial use and further distillation.</p>
+  <p><a href="https://huggingface.co/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B" target="_blank" rel="noopener">deepseek-ai/DeepSeek-R1-0528-Qwen3-8B</a> · <a href="https://github.com/deepseek-ai/DeepSeek-R1" target="_blank" rel="noopener">deepseek-ai/DeepSeek-R1</a></p>
+</div>
+
+<div class="card model">
+  <h4>DeepSeek-V3.2 "Terminus"</h4>
+  <p>A Mixture-of-Experts transformer using <strong>sparse attention</strong> for long contexts (up to ~1 M tokens) with ~37 B active parameters per token. Reinforcement training (GRPO) integrates math, coding, and tool use. Provides built-in thinking modes, function calling, and agent workflows. Tops open-source reasoning benchmarks but requires substantial compute.</p>
+</div>
+
+<div class="card model">
+  <h4>Qwen3-Next-80B-A3B "Thinking"</h4>
+  <p>Alibaba's next-generation open model with <strong>hybrid attention</strong> (Gated DeltaNet + Gated Attention) and a <strong>high-sparsity MoE</strong> with ~3 B active parameters out of 80 B total. The MoE uses 512 routing experts + 1 shared expert; each token activates 10 experts. Native context up to 262 144 tokens.</p>
+  <p>Benchmarks: ~87.8 % on AIME25 math, ~73.9 % on HMMT25 — outperforming earlier Qwen models and several proprietary systems. Stability tricks include zero-centered weight-decayed layernorm and Multi-Token Prediction.</p>
+  <p><a href="https://huggingface.co/Qwen/Qwen3-Next-80B-A3B-Thinking" target="_blank" rel="noopener">Qwen/Qwen3-Next-80B-A3B-Thinking</a></p>
+</div>
+
+<div class="card model">
+  <h4>Common pattern across the frontier</h4>
+  <p>Combine large-scale reasoning data, efficient architectures (MoE, sparse attention), and specialised RFT (GRPO + verifiable rewards). The result: lightweight models that punch far above their parameter weight.</p>
+</div>
+
+</div>
+</section>
+
+<section id="practical">
+<h2>6. Practical Fine-Tuning: Step-by-Step <span class="anchor">#</span></h2>
+
+<p>Below is a practical workflow using <a href="https://github.com/huggingface/transformers" target="_blank" rel="noopener">Hugging Face Transformers</a> and the <a href="https://github.com/huggingface/peft" target="_blank" rel="noopener">PEFT</a> package for LoRA. It trains a 7 B-class model on a chain-of-thought dataset (e.g., GSM8K). Adjust to suit your model and dataset.</p>
+
+<pre><code>from datasets import load_dataset
+from transformers import (AutoTokenizer, AutoModelForCausalLM,
+                          TrainingArguments, Trainer)
+from peft import LoraConfig, get_peft_model
+
+# 1. Load a base model pretrained for instruction following (Qwen, Mistral, ...)
+model_name = "your_base_model"
+tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True)
+model     = AutoModelForCausalLM.from_pretrained(model_name)
+
+# 2. Load a CoT dataset. Each example needs `prompt`, `reasoning`, `content`.
+dataset = load_dataset("gsm8k", "main")  # replace with your dataset
+
+def preprocess(example):
+    text = (f"Question: {example['question']}\n"
+            f"Reasoning: {example['reasoning']}\n"
+            f"Answer: {example['content']}")
+    enc = tokenizer(text, truncation=True)
+    example["input_ids"] = enc.input_ids
+    example["labels"]    = enc.input_ids
+    return example
+
+dataset = dataset.map(preprocess, remove_columns=dataset.column_names["train"])
+
+# 3. Configure LoRA
+lora_config = LoraConfig(
+    r=8,
+    lora_alpha=16,
+    target_modules=["q_proj", "v_proj"],   # adjust per architecture
+    lora_dropout=0.05,
+    bias="none",
+)
+model = get_peft_model(model, lora_config)
+model.print_trainable_parameters()
+
+# 4. Training
+training_args = TrainingArguments(
+    output_dir="./cot_finetuned_model",
+    per_device_train_batch_size=2,
+    gradient_accumulation_steps=8,
+    num_train_epochs=3,
+    learning_rate=5e-5,
+    fp16=True,
+    logging_steps=100,
+    save_strategy="epoch",
+)
+
+trainer = Trainer(model=model, args=training_args, train_dataset=dataset["train"])
+trainer.train()
+
+# 5. Save adapter
+model.save_pretrained("./cot_lora_adapter")</code></pre>
+</section>
+
+<section id="tips">
+<h2>7. Tips and Considerations <span class="anchor">#</span></h2>
+<ul>
+  <li><strong>Dataset preparation.</strong> Ensure reasoning traces are high-quality and align with the answers. Remove noisy or contradictory CoTs using verifier models.</li>
+  <li><strong>Instruction format.</strong> Use explicit delimiters (<code>Reasoning:</code> / <code>Answer:</code>) so the model learns to switch modes. Do not interleave the answer inside the reasoning.</li>
+  <li><strong>Parameter-efficient fine-tuning.</strong> LoRA or QLoRA reduces memory and avoids overwriting the base model. DeepSeek and Qwen open models already support LoRA adapters.</li>
+  <li><strong>Reinforcement fine-tuning.</strong> For further gains, consider DPO or GRPO after SFT. Reward models can be trained from preference data, but rule-based rewards suffice for math.</li>
+  <li><strong>Evaluation.</strong> Use benchmarks like GSM8K, BBH, MMLUPro. Evaluate <em>both</em> final accuracy and reasoning faithfulness — for faithfulness, compare the generated CoT to known reasoning or prompt an LLM judge to verify.</li>
+</ul>
+</section>
+
+<section id="challenges">
+<h2>8. Challenges and Future Directions <span class="anchor">#</span></h2>
+<ol>
+  <li><strong>Unfaithfulness and error accumulation.</strong> Pre-thinking SFT often produces reasoning sequences that don't correctly lead to the answer. Research into mutual-information objectives and counterfactual training (e.g., FRODO) seeks to align answer with reasoning.</li>
+  <li><strong>Data efficiency.</strong> High-quality CoT data is expensive. <a href="https://arxiv.org/abs/2505.17266" target="_blank" rel="noopener">Select2Reason</a> shows that intelligent selection can match full-data performance with only 10 % of the data; more work is needed on active learning and curriculum design for reasoning.</li>
+  <li><strong>Resource-heavy reinforcement learning.</strong> RLHF and variants demand multiple models and large GPU budgets. Lighter methods (DPO, GRPO) are promising but still maturing.</li>
+  <li><strong>Long-context reasoning.</strong> Real tasks may need thousands of reasoning tokens. Sparse attention and MoE architectures (DeepSeek-V3.2, Qwen3-Next) help but remain costly.</li>
+  <li><strong>Evaluation of reasoning quality.</strong> Existing metrics focus on final answers; measuring the correctness and faithfulness of the reasoning trace itself is an open research problem. Process-level reward models and automatic critique LLMs are active areas.</li>
+  <li><strong>Safety and privacy.</strong> Reasoning traces may inadvertently reveal sensitive data or encourage harmful behaviours. Safe instruction tuning and content filtering are necessary.</li>
+</ol>
+
+<div class="callout success">
+  <p><strong>The reasoning-first era.</strong> Fine-tuning for reasoning transforms surface-level text generators into thinking models capable of multi-step problem solving. New models like DeepSeek-R1-Distill-Qwen3-8B prove that careful distillation and efficient fine-tuning can deliver high-quality reasoning at a fraction of the size of giant base models — while studies on faithfulness warn that <em>how</em> you fine-tune matters as much as <em>what</em> you fine-tune on.</p>
+</div>
+</section>
+
+<section id="sources">
+<h2>9. Resources and Further Reading <span class="anchor">#</span></h2>
+
+<h3>Surveys and primary papers</h3>
+<div class="sources-grid">
+  <div><a href="https://arxiv.org/abs/2510.13170" target="_blank" rel="noopener">arXiv:2510.13170 — "Putting on the Thinking Hats"</a> · the comprehensive survey on CoT fine-tuning analysed throughout this guide.</div>
+  <div><a href="https://arxiv.org/html/2510.13170" target="_blank" rel="noopener">HTML version</a> · same survey rendered for reading.</div>
+  <div><a href="https://arxiv.org/pdf/2510.13170" target="_blank" rel="noopener">PDF version</a> of the survey.</div>
+  <div><a href="https://openreview.net/forum?id=u4whlT6xKO" target="_blank" rel="noopener">DCoT — Divergent Chain-of-Thought (OpenReview, ICLR 2025)</a></div>
+  <div><a href="https://arxiv.org/abs/2407.03181" target="_blank" rel="noopener">arXiv:2407.03181 — DCoT paper</a></div>
+  <div><a href="https://arxiv.org/abs/2505.17266" target="_blank" rel="noopener">arXiv:2505.17266 — Select2Reason</a> · efficient long-CoT data selection.</div>
+  <div><a href="https://openreview.net/forum?id=MDE6S92PJR" target="_blank" rel="noopener">Select2Reason — OpenReview (ICLR 2026)</a></div>
+  <div><a href="https://arxiv.org/abs/2411.15382" target="_blank" rel="noopener">arXiv:2411.15382 — "On the Impact of Fine-Tuning on CoT Reasoning"</a> (NAACL 2025)</div>
+  <div><a href="https://arxiv.org/abs/2305.18290" target="_blank" rel="noopener">arXiv:2305.18290 — DPO</a> · the closed-form preference optimization.</div>
+</div>
+
+<h3>Curated lists &amp; awesome repos</h3>
+<div class="sources-grid">
+  <div><a href="https://github.com/AI-Chen/Awesome-CoT-Finetuning" target="_blank" rel="noopener">AI-Chen/Awesome-CoT-Finetuning</a> · companion repo for the "Thinking Hats" survey, listing CoT datasets, papers, and code.</div>
+  <div><a href="https://github.com/LightChen233/Awesome-Long-Chain-of-Thought-Reasoning" target="_blank" rel="noopener">Awesome-Long-Chain-of-Thought-Reasoning</a> · latest advances in long-CoT reasoning.</div>
+</div>
+
+<h3>Models and model docs</h3>
+<div class="sources-grid">
+  <div><a href="https://huggingface.co/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B" target="_blank" rel="noopener">deepseek-ai/DeepSeek-R1-0528-Qwen3-8B</a> · HF model card.</div>
+  <div><a href="https://github.com/deepseek-ai/DeepSeek-R1" target="_blank" rel="noopener">deepseek-ai/DeepSeek-R1</a> · main repo with weights and recipes.</div>
+  <div><a href="https://huggingface.co/Qwen/Qwen3-Next-80B-A3B-Thinking" target="_blank" rel="noopener">Qwen/Qwen3-Next-80B-A3B-Thinking</a> · HF model card.</div>
+  <div><a href="https://huggingface.co/Qwen/Qwen3-Next-80B-A3B-Instruct" target="_blank" rel="noopener">Qwen/Qwen3-Next-80B-A3B-Instruct</a> · instruct sibling.</div>
+  <div><a href="https://www.clarifai.com/blog/top-10-open-source-reasoning-models-in-2026" target="_blank" rel="noopener">Clarifai — Top 10 Open-source Reasoning Models in 2026</a></div>
+</div>
+
+<h3>Practitioner guides</h3>
+<div class="sources-grid">
+  <div><a href="https://docs.together.ai/docs/fine-tuning-data-preparation" target="_blank" rel="noopener">Together AI — Fine-tuning Data Preparation</a> · the canonical reasoning-data format with <code>reasoning</code> and <code>content</code> fields.</div>
+  <div><a href="https://www.together.ai/fine-tuning" target="_blank" rel="noopener">Together AI — Fine-Tuning landing page</a></div>
+  <div><a href="https://www.ibm.com/think/topics/chain-of-thoughts" target="_blank" rel="noopener">IBM — What is Chain-of-Thought prompting?</a></div>
+  <div><a href="https://www.amazon.science/blog/multiagent-ai-for-generating-chain-of-thought-training-data" target="_blank" rel="noopener">Amazon Science — Multiagent AI for Generating CoT Training Data</a></div>
+  <div><a href="https://medium.com/@anicomanesh/fine-tuning-deepseek-r1-reasoning-on-the-medical-chain-of-thought-dataset-922407121cc2" target="_blank" rel="noopener">Fine-Tuning DeepSeek R1 on Medical CoT (walkthrough)</a></div>
+  <div><a href="https://invisibletech.ai/blog/how-to-teach-chain-of-thought-reasoning-to-your-llm" target="_blank" rel="noopener">Invisible Tech — How to teach CoT reasoning to your LLM</a></div>
+</div>
+
+<h3>Companion algorithms (links from the broader fine-tuning guide)</h3>
+<div class="sources-grid">
+  <div><a href="https://huggingface.co/blog/rlhf" target="_blank" rel="noopener">HF — Illustrating RLHF</a> · the canonical RLHF primer.</div>
+  <div><a href="https://medium.com/yugen-ai-technology-blog/understanding-the-math-behind-grpo-deepseek-r1-zero-9fb15e103a0a" target="_blank" rel="noopener">Yugen.ai — Math behind GRPO</a></div>
+  <div><a href="https://ghost.oxen.ai/why-grpo-is-important-and-how-it-works/" target="_blank" rel="noopener">Oxen.ai — Why GRPO is Important</a></div>
+  <div><a href="https://arxiv.org/abs/2501.12948" target="_blank" rel="noopener">arXiv:2501.12948 — DeepSeek-R1</a> · the original reasoning-RL pipeline.</div>
+</div>
+</section>
+
+<hr>
+<p class="meta">Compiled from "Fine-Tuning Large Language Models for Reasoning and Chain-of-Thought" (6 May 2026) and supplemented with material from the linked surveys, model cards, and provider documentation. All sources accessed May 2026.</p>
+
+</main>
+</div>
+</body>
+</html>
