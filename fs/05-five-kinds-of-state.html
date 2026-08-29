@@ -1,0 +1,1150 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Five Kinds of State</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+:root{
+  --paper:#F1F4F3; --surface:#FFFFFF; --surface-2:#E8EDEC; --surface-3:#DDE5E3;
+  --ink:#0E1518; --ink-2:#3A484C; --ink-3:#65777B;
+  --rule:#D3DCDA; --rule-2:#C0CCC9;
+  /* UI ink (text-safe) */
+  --client:#005886; --wire:#A34800; --server:#007052; --data:#0B4739; --alert:#B3261E;
+  /* chart marks (validated: light PASS on all six checks) */
+  --c-client:#0072B2; --c-wire:#D55E00; --c-server:#009E73; --c-data:#00614A;
+  --client-wash:#0072B214; --wire-wash:#D55E0014; --server-wash:#009E7314; --data-wash:#00614A14; --alert-wash:#B3261E14;
+  --good:#007052; --warn:#A34800; --bad:#B3261E;
+  --shadow:0 1px 2px rgba(14,21,24,.05), 0 8px 24px -12px rgba(14,21,24,.16);
+  --display:'Archivo','Helvetica Neue',Arial,sans-serif;
+  --body:'Source Serif 4',Georgia,'Times New Roman',serif;
+  --mono:'JetBrains Mono','SF Mono',Menlo,Consolas,monospace;
+  --maxw:1120px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --paper:#0E1416; --surface:#151D1F; --surface-2:#1D2729; --surface-3:#263234;
+  --ink:#E6EDEC; --ink-2:#AFC0BE; --ink-3:#7E9291;
+  --rule:#2A383A; --rule-2:#3A4B4D;
+  --client:#7CBBE6; --wire:#F09A55; --server:#4FBE8A; --data:#A5DEC5; --alert:#F08A80;
+  --c-client:#4A9AD0; --c-wire:#DE7018; --c-server:#2FA76A; --c-data:#7ED3AF;
+  --client-wash:#4A9AD01A; --wire-wash:#DE70181A; --server-wash:#2FA76A1A; --data-wash:#7ED3AF1A; --alert-wash:#F08A801A;
+  --good:#4FBE8A; --warn:#F09A55; --bad:#F08A80;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+}}
+:root[data-theme="dark"]{
+  --paper:#0E1416; --surface:#151D1F; --surface-2:#1D2729; --surface-3:#263234;
+  --ink:#E6EDEC; --ink-2:#AFC0BE; --ink-3:#7E9291;
+  --rule:#2A383A; --rule-2:#3A4B4D;
+  --client:#7CBBE6; --wire:#F09A55; --server:#4FBE8A; --data:#A5DEC5; --alert:#F08A80;
+  --c-client:#4A9AD0; --c-wire:#DE7018; --c-server:#2FA76A; --c-data:#7ED3AF;
+  --client-wash:#4A9AD01A; --wire-wash:#DE70181A; --server-wash:#2FA76A1A; --data-wash:#7ED3AF1A; --alert-wash:#F08A801A;
+  --good:#4FBE8A; --warn:#F09A55; --bad:#F08A80;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+}
+
+*{box-sizing:border-box}
+body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--body); font-size:17px; line-height:1.64; -webkit-font-smoothing:antialiased}
+h1,h2,h3,h4,h5{font-family:var(--display); font-weight:700; letter-spacing:-.018em; text-wrap:balance; margin:0}
+p{margin:0 0 14px} p:last-child{margin-bottom:0}
+a{color:var(--client)}
+.wrap{max-width:var(--maxw); margin:0 auto; padding:0 24px}
+button{font-family:var(--mono); cursor:pointer}
+button:focus-visible,summary:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--c-client); outline-offset:2px}
+code{font-family:var(--mono); font-size:.855em; background:var(--surface-2); padding:1px 4px; border-radius:2px}
+pre{font-family:var(--mono); font-size:13px; line-height:1.62; background:var(--surface-2); border:1px solid var(--rule);
+    border-radius:3px; padding:14px 16px; overflow-x:auto; margin:0 0 14px}
+pre b{color:var(--client); font-weight:700}
+pre i{color:var(--ink-3); font-style:normal}
+
+/* masthead */
+.masthead{background:var(--surface); border-bottom:1px solid var(--rule)}
+.mast{max-width:var(--maxw); margin:0 auto; padding:38px 24px 30px; display:flex; flex-direction:column; gap:22px}
+.mast-top{display:flex; justify-content:space-between; gap:20px; align-items:flex-start; flex-wrap:wrap}
+.eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3)}
+h1{font-size:clamp(32px,5.2vw,56px); line-height:1.02; margin-top:6px}
+.lede{font-size:19px; color:var(--ink-2); max-width:62ch; margin:0}
+.themebtn{font-size:11px; letter-spacing:.1em; text-transform:uppercase; background:transparent; color:var(--ink-3);
+  border:1px solid var(--rule-2); border-radius:2px; padding:7px 11px; white-space:nowrap}
+.themebtn:hover{color:var(--ink); border-color:var(--ink-3)}
+
+/* section nav */
+.navbar{position:sticky; top:0; z-index:40; background:var(--paper); border-bottom:1px solid var(--rule)}
+.navinner{max-width:var(--maxw); margin:0 auto; padding:0 24px; display:flex; gap:2px; overflow-x:auto; scrollbar-width:thin}
+.navinner a{font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase; text-decoration:none;
+  color:var(--ink-3); padding:12px 11px; white-space:nowrap; border-bottom:2px solid transparent}
+.navinner a:hover{color:var(--ink)}
+.navinner a.on{color:var(--ink); border-bottom-color:var(--c-wire)}
+
+/* module */
+.module{padding:60px 0 10px; border-top:1px solid var(--rule)}
+.module:first-of-type{border-top:0}
+.mod-head{display:flex; gap:14px; align-items:baseline; margin-bottom:18px; flex-wrap:wrap}
+.mod-n{font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.14em; color:var(--tint,var(--ink-3))}
+.mod-head h2{font-size:clamp(25px,3.4vw,36px)}
+.mod-q{font-family:var(--body); font-size:19px; color:var(--ink-2); max-width:64ch; margin:0 0 26px; font-style:italic}
+.prose{max-width:68ch}
+.prose h3{font-size:21px; margin:30px 0 10px}
+.prose h4{font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3); margin:28px 0 9px}
+.prose ul,.prose ol{padding-left:20px; margin:0 0 14px}
+.prose li{margin-bottom:6px}
+.tag{font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; padding:3px 7px; border-radius:2px; white-space:nowrap}
+.t-client{background:var(--client-wash); color:var(--client)} .t-wire{background:var(--wire-wash); color:var(--wire)}
+.t-server{background:var(--server-wash); color:var(--server)} .t-data{background:var(--data-wash); color:var(--data)}
+
+/* lab panel */
+.lab{background:var(--surface); border:1px solid var(--rule); border-radius:5px; box-shadow:var(--shadow); margin:26px 0 8px; overflow:hidden}
+.lab-head{display:flex; justify-content:space-between; align-items:center; gap:14px; padding:13px 18px; border-bottom:1px solid var(--rule); background:var(--surface-2); flex-wrap:wrap}
+.lab-head h3{font-size:16px}
+.lab-head .kind{font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3)}
+.lab-body{padding:18px}
+.ctrls{display:flex; flex-wrap:wrap; gap:14px 22px; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--surface)}
+.ctrl{display:flex; flex-direction:column; gap:5px}
+.ctrl label{font-family:var(--mono); font-size:9.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3)}
+.seg{display:flex; border:1px solid var(--rule-2); border-radius:3px; overflow:hidden}
+.seg button{font-size:11px; padding:6px 10px; border:0; background:var(--surface); color:var(--ink-2); border-right:1px solid var(--rule-2)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--ink); color:var(--paper)}
+.tog{display:flex; align-items:center; gap:7px; font-family:var(--mono); font-size:11.5px; color:var(--ink-2); cursor:pointer; padding-top:14px}
+.tog input{width:15px; height:15px; accent-color:var(--c-wire); cursor:pointer}
+.runbtn{font-size:11px; letter-spacing:.12em; text-transform:uppercase; background:var(--ink); color:var(--paper); border:1px solid var(--ink); border-radius:2px; padding:8px 14px}
+.ghostbtn{font-size:11px; letter-spacing:.12em; text-transform:uppercase; background:transparent; color:var(--ink-2); border:1px solid var(--rule-2); border-radius:2px; padding:8px 12px}
+.ghostbtn[aria-pressed="true"]{background:var(--ink); color:var(--paper); border-color:var(--ink)}
+select{font-family:var(--mono); font-size:11.5px; padding:6px 8px; border:1px solid var(--rule-2); border-radius:3px; background:var(--surface); color:var(--ink)}
+input[type=text]{font-family:var(--mono); font-size:11.5px; padding:6px 8px; border:1px solid var(--rule-2); border-radius:3px; background:var(--surface); color:var(--ink); min-width:210px}
+
+/* waterfall */
+.wf-scroll{overflow-x:auto}
+.wf{width:100%; min-width:640px; display:block}
+.wf .lbl{font-family:var(--mono); font-size:10.5px; fill:var(--ink-2)}
+.wf .lbl.dim{fill:var(--ink-3)}
+.wf .ms{font-family:var(--mono); font-size:10px; fill:var(--ink-3)}
+.wf .grid{stroke:var(--rule); stroke-width:1}
+.wf .axis{font-family:var(--mono); font-size:9.5px; fill:var(--ink-3)}
+.wf rect.bar{rx:2; ry:2}
+.wf rect.bar:hover{opacity:.82}
+.wf .sep{stroke:var(--surface); stroke-width:2}
+.legend{display:flex; gap:16px; flex-wrap:wrap; font-family:var(--mono); font-size:10.5px; color:var(--ink-3); padding:0 0 12px}
+.legend i{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:-1px}
+.total{display:flex; gap:26px; flex-wrap:wrap; align-items:baseline; padding:14px 18px; border-top:1px solid var(--rule); background:var(--surface-2)}
+.total .big{font-family:var(--display); font-weight:700; font-size:32px; font-variant-numeric:tabular-nums; line-height:1}
+.total .sm{font-family:var(--mono); font-size:10px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3)}
+.tip{position:fixed; z-index:99; pointer-events:none; background:var(--ink); color:var(--paper); font-family:var(--mono);
+  font-size:11px; line-height:1.5; padding:8px 10px; border-radius:3px; max-width:290px; opacity:0; transition:opacity .12s}
+.tip.on{opacity:1}
+.tip b{color:#fff}
+
+.tablewrap{overflow-x:auto; border:1px solid var(--rule); border-radius:3px; margin-top:14px}
+table{border-collapse:collapse; width:100%; min-width:520px; background:var(--surface)}
+th,td{text-align:left; padding:8px 12px; border-bottom:1px solid var(--rule); font-size:14px}
+th{font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); background:var(--surface-2)}
+td.num{font-family:var(--mono); font-variant-numeric:tabular-nums; text-align:right}
+tbody tr:last-child td{border-bottom:0}
+
+/* verdict blocks */
+.verdict{border-left:3px solid var(--vc); background:var(--vw); padding:14px 16px; border-radius:0 3px 3px 0; margin-bottom:14px}
+.verdict.ok{--vc:var(--good); --vw:var(--server-wash)}
+.verdict.no{--vc:var(--bad); --vw:var(--alert-wash)}
+.verdict.warn{--vc:var(--warn); --vw:var(--wire-wash)}
+.verdict h5{font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--vc); margin-bottom:7px}
+.verdict p{font-size:15.5px; margin-bottom:8px}
+
+.cols{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:20px}
+.cols3{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px}
+
+.card{border:1px solid var(--rule); border-radius:4px; background:var(--surface); padding:14px 16px}
+.card h5{font-family:var(--display); font-size:15.5px; margin-bottom:6px}
+.card p{font-size:14.5px; color:var(--ink-2); margin-bottom:0; line-height:1.5}
+.card.acc{border-left:3px solid var(--ac)}
+
+/* instances */
+.rack{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:14px 0}
+.inst{border:1px solid var(--rule); border-radius:4px; padding:11px 12px; background:var(--surface); text-align:center}
+.inst.down{opacity:.45; border-style:dashed}
+.inst .nm{font-family:var(--mono); font-size:11px; color:var(--ink-3); letter-spacing:.08em}
+.inst .st{font-family:var(--display); font-weight:700; font-size:13px; margin-top:5px}
+.inst .ss{font-family:var(--mono); font-size:10px; color:var(--ink-3); margin-top:4px; min-height:14px}
+.reqs{display:flex; gap:5px; flex-wrap:wrap; margin-top:12px}
+.req{font-family:var(--mono); font-size:10.5px; padding:5px 8px; border-radius:2px; border:1px solid var(--rule-2); background:var(--surface)}
+.req.ok{border-color:var(--good); color:var(--good); background:var(--server-wash)}
+.req.fail{border-color:var(--bad); color:var(--bad); background:var(--alert-wash)}
+
+/* misc blocks */
+.callout{border:1px solid var(--rule); border-left:3px solid var(--c-wire); background:var(--wire-wash); border-radius:0 4px 4px 0; padding:15px 17px; margin:22px 0}
+.callout h4{font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--wire); margin-bottom:8px}
+.callout p,.callout li{font-size:15.5px}
+.mistakes{display:grid; gap:10px; margin:14px 0}
+.mistake{border:1px solid var(--rule); border-radius:4px; overflow:hidden; background:var(--surface)}
+.mistake summary{list-style:none; cursor:pointer; padding:12px 15px; font-family:var(--display); font-weight:600; font-size:15.5px; display:flex; gap:11px; align-items:flex-start}
+.mistake summary::-webkit-details-marker{display:none}
+.mistake summary:hover{background:var(--surface-2)}
+.mistake .x{font-family:var(--mono); color:var(--bad); font-weight:700; flex:none}
+.mistake .in{padding:0 15px 14px 41px; font-size:15px; color:var(--ink-2)}
+.mistake .in p{margin-bottom:9px}
+
+.taskbox{border:1px solid var(--rule-2); border-radius:4px; background:var(--surface); padding:15px 17px; margin:20px 0}
+.taskbox h4{font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3); margin-bottom:9px}
+.taskbox.exp{border-left:3px solid var(--c-client)}
+.taskbox.chal{border-left:3px solid var(--c-server)}
+.taskbox.arch{border-left:3px solid var(--c-data)}
+.reads{display:flex; flex-wrap:wrap; gap:6px; margin:16px 0 0}
+.reads a{font-family:var(--mono); font-size:11px; text-decoration:none; color:var(--ink-2); border:1px solid var(--rule-2); border-radius:2px; padding:4px 9px; background:var(--surface)}
+.reads a:hover{border-color:var(--c-client); color:var(--client)}
+.reads .src{font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3); margin-right:5px}
+
+.matrix2{overflow-x:auto}
+.matrix2 table{min-width:560px}
+.yes{color:var(--good); font-weight:700} .no2{color:var(--bad); font-weight:700}
+
+footer{border-top:1px solid var(--rule); background:var(--surface); padding:34px 0 50px; margin-top:60px}
+footer p{color:var(--ink-3); font-size:14.5px; max-width:72ch}
+@media (prefers-reduced-motion: reduce){*{transition:none!important; animation:none!important}}
+@media(max-width:640px){ .rack{grid-template-columns:1fr} body{font-size:16px} }
+</style></head><body><style>
+/* ---------- kind legend ---------- */
+.skinds{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:9px; margin:20px 0}
+.skind{border:1px solid var(--rule); border-left:3px solid var(--kc); border-radius:3px; padding:12px 14px; background:var(--surface)}
+.skind .kn{font-family:var(--display); font-weight:700; font-size:15.5px; color:var(--kc)}
+.skind .kd{font-size:14px; color:var(--ink-2); line-height:1.45; margin-top:5px}
+.skind .kw{font-family:var(--mono); font-size:10.5px; color:var(--ink-3); margin-top:8px; padding-top:8px; border-top:1px dashed var(--rule-2)}
+.k-local{--kc:var(--c-client)} .k-server{--kc:var(--c-server)} .k-global{--kc:var(--c-wire)}
+.k-url{--kc:var(--c-data)} .k-form{--kc:var(--bad)}
+
+/* ---------- classifier ---------- */
+.qcard{border:1px solid var(--rule); border-radius:4px; background:var(--surface); padding:18px 20px; margin-bottom:14px}
+.qcard .qn{font-family:var(--mono); font-size:10px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3)}
+.qcard .qt{font-family:var(--display); font-weight:600; font-size:19px; line-height:1.3; margin-top:7px}
+.choices{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:7px; margin-top:16px}
+.choice{font-family:var(--mono); font-size:11.5px; padding:10px 8px; border:1px solid var(--rule-2); border-radius:3px;
+  background:var(--surface); color:var(--ink-2); text-align:center}
+.choice:hover:not(:disabled){border-color:var(--ck,var(--c-client)); color:var(--ink)}
+.choice.right{background:var(--server-wash); border-color:var(--good); color:var(--good); font-weight:700}
+.choice.wrong{background:var(--alert-wash); border-color:var(--bad); color:var(--bad)}
+.choice:disabled{cursor:default}
+.scorebar{display:flex; gap:16px; align-items:center; flex-wrap:wrap; font-family:var(--mono); font-size:11px; color:var(--ink-3)}
+.scorebar b{font-family:var(--display); font-size:19px; color:var(--ink)}
+
+/* ---------- cache machine ---------- */
+.cachebox{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+@media(max-width:820px){.cachebox{grid-template-columns:1fr}}
+.entry{border:1px solid var(--rule); border-radius:4px; background:var(--surface); overflow:hidden}
+.entry .ehead{background:var(--surface-2); border-bottom:1px solid var(--rule); padding:9px 12px;
+  font-family:var(--mono); font-size:11px; color:var(--ink-2); display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap}
+.entry .ebody{padding:13px}
+.badge{font-family:var(--mono); font-size:9.5px; letter-spacing:.11em; text-transform:uppercase; padding:3px 8px; border-radius:2px;
+  border:1px solid var(--bc); color:var(--bc); background:var(--bw)}
+.b-fresh{--bc:var(--good); --bw:var(--server-wash)}
+.b-stale{--bc:var(--warn); --bw:var(--wire-wash)}
+.b-fetching{--bc:var(--c-client); --bw:var(--client-wash)}
+.b-none{--bc:var(--ink-3); --bw:var(--surface-2)}
+.b-removed{--bc:var(--bad); --bw:var(--alert-wash)}
+.kv{display:flex; justify-content:space-between; gap:12px; font-family:var(--mono); font-size:12px; padding:5px 0;
+  border-bottom:1px dashed var(--rule); color:var(--ink-2)}
+.kv:last-child{border-bottom:0}
+.kv b{color:var(--ink); font-variant-numeric:tabular-nums}
+.logbox{border:1px solid var(--rule); border-radius:4px; background:var(--surface); max-height:290px; overflow-y:auto}
+.logrow{display:grid; grid-template-columns:56px 1fr; gap:10px; padding:7px 12px; border-bottom:1px solid var(--rule);
+  font-family:var(--mono); font-size:11.5px; line-height:1.45}
+.logrow:last-child{border-bottom:0}
+.logrow .t{color:var(--ink-3); font-variant-numeric:tabular-nums}
+.logrow .m{color:var(--ink-2)}
+.logrow.net{background:var(--client-wash)}
+.logrow.net .m{color:var(--client); font-weight:700}
+.logrow.gc{background:var(--alert-wash)}
+.logrow.gc .m{color:var(--bad)}
+
+/* ---------- consumers grid ---------- */
+.cgrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; margin:14px 0}
+.cnode{border:1px solid var(--rule); border-radius:3px; padding:11px 12px; background:var(--surface); text-align:center}
+.cnode .cnn{font-family:var(--display); font-weight:600; font-size:14.5px}
+.cnode .cns{font-family:var(--mono); font-size:10px; color:var(--ink-3); margin-top:4px}
+.cnode .cnb{font-family:var(--mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; margin-top:8px;
+  padding:3px 6px; border-radius:2px; display:inline-block}
+.cnode.re{border-color:var(--c-wire); background:var(--wire-wash)}
+.cnode.re .cnb{background:var(--c-wire); color:#fff}
+.cnode.skip{opacity:.55}
+.cnode.skip .cnb{border:1px solid var(--rule-2); color:var(--ink-3)}
+
+/* ---------- tabs ---------- */
+.tabs{display:flex; gap:2px; border-bottom:1px solid var(--rule); margin-bottom:0; overflow-x:auto}
+.tabs button{font-family:var(--mono); font-size:11.5px; padding:10px 14px; border:0; background:transparent;
+  color:var(--ink-3); border-bottom:2px solid transparent; white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink); border-bottom-color:var(--c-wire)}
+.tabs button:hover{color:var(--ink)}
+.metrics{display:grid; grid-template-columns:repeat(auto-fit,minmax(132px,1fr)); gap:8px; margin:16px 0}
+.metric{border:1px solid var(--rule); border-radius:3px; padding:10px 12px; background:var(--surface)}
+.metric .mv{font-family:var(--display); font-weight:700; font-size:20px; line-height:1}
+.metric .ml{font-family:var(--mono); font-size:9.5px; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-3); margin-top:6px}
+
+/* ---------- mutation timeline ---------- */
+.mline{border-left:2px solid var(--rule); margin-left:9px; padding-left:20px}
+.mstep{position:relative; padding-bottom:16px}
+.mstep::before{content:""; position:absolute; left:-27px; top:4px; width:12px; height:12px; border-radius:50%;
+  background:var(--surface); border:2px solid var(--sc,var(--rule-2))}
+.mstep.on::before{background:var(--sc); box-shadow:0 0 0 3px var(--sw)}
+.mstep .mt{font-family:var(--mono); font-size:10px; letter-spacing:.11em; text-transform:uppercase; color:var(--sc,var(--ink-3))}
+.mstep .mh{font-family:var(--display); font-weight:600; font-size:15.5px; margin-top:4px}
+.mstep .mb{font-size:14.5px; color:var(--ink-2); line-height:1.5; margin-top:5px}
+.mstep.s-ui{--sc:var(--c-client); --sw:var(--client-wash)}
+.mstep.s-net{--sc:var(--c-wire); --sw:var(--wire-wash)}
+.mstep.s-srv{--sc:var(--c-server); --sw:var(--server-wash)}
+.mstep.s-bad{--sc:var(--bad); --sw:var(--alert-wash)}
+.screens{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; margin:14px 0}
+.screen{border:1px solid var(--rule); border-radius:3px; padding:11px 12px; background:var(--surface)}
+.screen .sn{font-family:var(--mono); font-size:9.5px; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-3)}
+.screen .sv{font-family:var(--mono); font-size:13px; margin-top:6px; color:var(--ink); font-weight:700}
+.screen.hot{border-color:var(--c-wire); background:var(--wire-wash)}
+
+/* ---------- state map ---------- */
+.maprow{display:grid; grid-template-columns:1fr 132px 1fr; gap:12px; align-items:center; padding:10px 12px;
+  border:1px solid var(--rule); border-left:3px solid var(--mc); border-radius:3px; margin-bottom:6px; background:var(--surface)}
+@media(max-width:700px){.maprow{grid-template-columns:1fr; gap:6px}}
+.maprow .mn{font-family:var(--display); font-weight:600; font-size:14.5px}
+.maprow .mk{font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--mc);
+  border:1px solid var(--mc); border-radius:2px; padding:3px 7px; text-align:center; white-space:nowrap}
+.maprow .mw{font-family:var(--mono); font-size:11.5px; color:var(--ink-2)}
+.m-local{--mc:var(--c-client)} .m-server{--mc:var(--c-server)} .m-global{--mc:var(--c-wire)}
+.m-url{--mc:var(--c-data)} .m-form{--mc:var(--bad)}
+</style>
+<header class="masthead">
+  <div class="mast">
+    <div class="mast-top">
+      <div>
+        <div class="eyebrow">Full-Stack Atlas · Stage 05 · Level 2 Frontend</div>
+        <h1>Five Kinds of State</h1>
+      </div>
+      <button class="themebtn" id="themebtn" type="button">Theme</button>
+    </div>
+    <p class="lede">“Which state library should I use?” is the wrong first question, and answering it first is how applications end up with a Redux store full of API responses. The right first question is what kind of state you are holding — because four of the five kinds have an obvious home once you have named them.</p>
+  </div>
+</header>
+
+<nav class="navbar"><div class="navinner" id="nav"></div></nav>
+
+<main class="wrap">
+
+<!-- ============ 1 ============ -->
+<section class="module" id="m1" style="--tint:var(--client)">
+  <div class="mod-head"><span class="mod-n">01 / CLASSIFY</span><h2>Name it before you store it</h2></div>
+  <p class="mod-q">Most “global state” problems dissolve the moment you notice the state is not global and not yours.</p>
+
+  <div class="prose">
+    <p>The reason state management feels hard in React is that the word covers five genuinely different things, with different owners, different lifetimes, and different failure modes. Treating them as one problem is what produces a 4,000-line store that nobody can reason about.</p>
+  </div>
+
+  <div class="skinds">
+    <div class="skind k-local"><div class="kn">Local UI state</div>
+      <div class="kd">Ephemeral, belongs to one component, dies with it. Is the menu open, which tab is active, is this row hovered.</div>
+      <div class="kw">useState · useReducer</div></div>
+    <div class="skind k-server"><div class="kn">Server state</div>
+      <div class="kd">Owned by the backend. You hold a <i>copy</i> that is stale the instant it arrives, shared by many components, and can change without you.</div>
+      <div class="kw">TanStack Query · RTK Query</div></div>
+    <div class="skind k-global"><div class="kn">Global client state</div>
+      <div class="kd">Genuinely yours, genuinely app-wide, and not derivable from the server. Theme, the access token in memory, a command palette.</div>
+      <div class="kw">Zustand · Redux Toolkit · Context</div></div>
+    <div class="skind k-url"><div class="kn">URL state</div>
+      <div class="kd">Anything a user should be able to bookmark, share or reach with the back button. Filters, sort, page, the open record.</div>
+      <div class="kw">useSearchParams · route params</div></div>
+    <div class="skind k-form"><div class="kn">Form state</div>
+      <div class="kd">In-progress edits, plus touched, dirty and validity. Short-lived, high-frequency, and its own problem.</div>
+      <div class="kw">React Hook Form</div></div>
+  </div>
+
+  <div class="prose">
+    <p>The claim this stage rests on: <b>in a typical CRUD application, seventy per cent of what people put in a global store is server state.</b> It got there because there was no other name for “data several components need”, and once there, it has to be manually kept in sync with a source of truth that does not know your store exists. That manual synchronisation is where the bugs live.</p>
+    <p>Classify these fourteen pieces of the capstone before reading further. The two that catch nearly everyone are worth the exercise on their own.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Classifier</h3><span class="kind">Interactive · 14 items</span></div>
+    <div class="ctrls">
+      <div class="ctrl" style="flex:1"><label>Progress</label>
+        <div class="scorebar"><span><b id="cl-score">0</b> / <span id="cl-total">14</span> correct</span>
+          <span class="track" style="flex:1; min-width:120px"><i id="cl-track" style="width:0%; background:var(--c-server)"></i></span></div></div>
+      <div class="ctrl"><label>&nbsp;</label><div style="display:flex; gap:8px">
+        <button class="ghostbtn" id="cl-prev" type="button">‹ Back</button>
+        <button class="runbtn" id="cl-next" type="button">Next ›</button>
+        <button class="ghostbtn" id="cl-reset" type="button">Restart</button>
+      </div></div>
+    </div>
+    <div class="lab-body"><div id="cl-out"></div></div>
+  </div>
+
+  <div class="reads">
+    <a href="https://react.dev/learn/choosing-the-state-structure" target="_blank" rel="noopener"><span class="src">Official</span>Choosing the state structure</a>
+    <a href="https://tkdodo.eu/blog/react-query-as-a-state-manager" target="_blank" rel="noopener"><span class="src">Expert opinion</span>Query as a state manager</a>
+  </div>
+</section>
+
+<!-- ============ 2 ============ -->
+<section class="module" id="m2" style="--tint:var(--server)">
+  <div class="mod-head"><span class="mod-n">02 / SERVER</span><h2>Server state is a cache, and caches have rules</h2></div>
+  <p class="mod-q">Your deck never names this category. It is the largest single gap in it, and the one that costs the most.</p>
+
+  <div class="prose">
+    <p>Here is the distinction that reorganises everything. <b>Client state you own: you set it, you know it is correct.</b> Server state you do not own — PostgreSQL does. What lives in your browser is a <i>copy that was correct at the moment it arrived</i> and has been decaying ever since, possibly changed by another user, another tab, or a background job while you read this sentence.</p>
+    <p>That means server state comes with problems client state simply does not have, and each of them is a decision you make whether or not you notice:</p>
+    <ul>
+      <li><b>Staleness</b> — how long is a copy good enough to reuse without asking again?</li>
+      <li><b>Deduplication</b> — three components mount and all want the scholarship list. One request, or three?</li>
+      <li><b>Revalidation</b> — the user switched tabs for ten minutes and came back. Is the number on screen still true?</li>
+      <li><b>Races</b> — Stage 2's problem, at the data layer: the response to the older request arrives last.</li>
+      <li><b>Garbage collection</b> — the component unmounted. Keep the data for the back button, or free it?</li>
+      <li><b>Retries and backoff</b> — a 500 might be transient; a 403 never is.</li>
+    </ul>
+    <p>Put server data in a Redux slice and you have signed up to solve all six by hand, in application code, forever. Use a query cache and they become configuration. Drive the machine below and watch what each setting actually does.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Query cache lifecycle</h3><span class="kind">Interactive · state machine</span></div>
+    <div class="ctrls">
+      <div class="ctrl"><label>staleTime</label>
+        <div class="seg" data-group="stale">
+          <button data-v="0" aria-pressed="true">0 (default)</button>
+          <button data-v="30" aria-pressed="false">30 s</button>
+          <button data-v="300" aria-pressed="false">5 min</button>
+        </div></div>
+      <div class="ctrl"><label>gcTime</label>
+        <div class="seg" data-group="gc">
+          <button data-v="30" aria-pressed="false">30 s</button>
+          <button data-v="300" aria-pressed="true">5 min (default)</button>
+        </div></div>
+      <div class="ctrl" style="flex:1"><label>Fire an event</label>
+        <div style="display:flex; gap:7px; flex-wrap:wrap">
+          <button class="ghostbtn" data-ev="mount" type="button">Mount &lt;List&gt;</button>
+          <button class="ghostbtn" data-ev="mount2" type="button">Mount &lt;Sidebar&gt; (same key)</button>
+          <button class="ghostbtn" data-ev="focus" type="button">Window refocus</button>
+          <button class="ghostbtn" data-ev="wait" type="button">Wait 60 s</button>
+          <button class="ghostbtn" data-ev="invalidate" type="button">Mutate + invalidate</button>
+          <button class="ghostbtn" data-ev="unmount" type="button">Unmount all</button>
+          <button class="ghostbtn" id="cm-reset" type="button">Reset</button>
+        </div></div>
+    </div>
+    <div class="lab-body">
+      <div class="cachebox">
+        <div>
+          <div class="entry">
+            <div class="ehead"><span>queryKey: ["scholarships", { status: "OPEN" }]</span><span id="cm-badge"></span></div>
+            <div class="ebody" id="cm-state"></div>
+          </div>
+          <div id="cm-note" style="margin-top:14px"></div>
+        </div>
+        <div>
+          <h4 style="font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3); margin-bottom:9px">What happened</h4>
+          <div class="logbox" id="cm-log"></div>
+          <div class="cols3" style="margin-top:14px">
+            <div class="card acc" style="--ac:var(--c-server)"><h5 id="cm-reqs">0</h5><p>Requests with a query cache</p></div>
+            <div class="card acc" style="--ac:var(--bad)"><h5 id="cm-naive">0</h5><p>Requests with <code>useEffect(fetch, [])</code> in each component — one per mount, no dedup, never revalidated</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="prose">
+    <h4>The two settings that matter, and the one people confuse</h4>
+    <p><b><code>staleTime</code></b> is how long the data is considered good enough to serve without a background refetch. It defaults to <b>zero</b>, which means “refetch on the next trigger, always” — the safest default and the reason a query library looks chatty until you tune it. Reference data that changes weekly deserves minutes; a live queue deserves zero.</p>
+    <p><b><code>gcTime</code></b> is how long an <i>unused</i> entry survives in memory after its last observer unmounts. It is not about freshness at all. Setting <code>staleTime</code> when you meant <code>gcTime</code> is the single most common misconfiguration; the giveaway is “why is my data gone when I navigate back” (that is <code>gcTime</code>) versus “why is it refetching so often” (that is <code>staleTime</code>).</p>
+    <p>Notice what the counters are and are not saying. A query cache does not simply make fewer requests — driven for long enough it may well make more, because it revalidates on refocus and after every mutation. What it makes is <b>the right requests</b>: none when several components ask for the same thing at once, none when the copy it holds is still within <code>staleTime</code>, and one whenever something has happened that could have made the copy wrong. The naive version fires exactly once per mount, forever, and its data is stale from that moment until the component happens to remount.</p>
+
+    <h4>The query key <i>is</i> the identity</h4>
+    <p>Everything above hangs on one design decision: the key. It must contain every input that changes the result — which, if you followed Stage 4, is exactly the URL's search parameters.</p>
+    <pre><b>const</b> { filters } = useScholarshipFilters();          <i>// from the URL — Stage 3</i>
+
+<b>const</b> { data, isPending, isFetching, error } = useQuery({
+  queryKey: ["scholarships", filters],                <i>// identity = the inputs</i>
+  queryFn:  ({ signal }) =&gt; apiGet(`/scholarships?${qs(filters)}`, pageSchema, { signal }),
+  staleTime: 30_000,
+  placeholderData: keepPreviousData,   <i>// page 2 keeps page 1 on screen while loading</i>
+});
+
+<i>// isPending  → no data at all yet          → skeleton   (Stage 4, module 02)
+// isFetching → refreshing behind data       → stale mark
+// error      → the ApiError from Stage 2    → error panel</i></pre>
+    <p>Because the key is derived from the URL, the cache, the browser history and the shareable link are the same thing. Change a filter and you get a different key, a different cache entry, and — with <code>keepPreviousData</code> — the old table stays on screen while the new one loads instead of flashing a skeleton. All three of Stage 4's loading treatments fall out of this one hook.</p>
+  </div>
+
+  <div class="mistakes">
+    <details class="mistake"><summary><span class="x">✕</span><span>Copying query data into <code>useState</code> so you can edit it</span></summary>
+      <div class="in"><p>Now there are two copies and one of them is silently wrong. If you need an editable draft, that is <i>form state</i> — initialise the form from the query and let the mutation write back. The cache is not your working copy.</p></div></details>
+    <details class="mistake"><summary><span class="x">✕</span><span>A query key that omits an input</span></summary>
+      <div class="in"><p><code>["scholarships"]</code> for a filtered request means every filter shares one cache entry, so switching filters shows the previous filter's rows and the cache never notices. If it changes the response, it belongs in the key. This is a cache-invalidation bug disguised as a typo.</p></div></details>
+    <details class="mistake"><summary><span class="x">✕</span><span>Disabling refetch-on-focus globally because it “looks noisy”</span></summary>
+      <div class="in"><p>You have turned off the feature that keeps a long-lived tab honest. If it is genuinely too chatty, raise <code>staleTime</code> — that is the knob for “this data does not change that fast”. Turning off revalidation is the knob for “I would rather show stale numbers”, which is rarely what anyone means.</p></div></details>
+  </div>
+
+  <div class="reads">
+    <a href="https://tanstack.com/query/latest/docs/framework/react/guides/important-defaults" target="_blank" rel="noopener"><span class="src">Official</span>TanStack Query · defaults</a>
+    <a href="https://tanstack.com/query/latest/docs/framework/react/guides/query-keys" target="_blank" rel="noopener"><span class="src">Official</span>Query keys</a>
+    <a href="https://redux-toolkit.js.org/rtk-query/overview" target="_blank" rel="noopener"><span class="src">Official</span>RTK Query</a>
+  </div>
+</section>
+
+<!-- ============ 3 ============ -->
+<section class="module" id="m3" style="--tint:var(--wire)">
+  <div class="mod-head"><span class="mod-n">03 / CONTEXT</span><h2>Context is dependency injection, not a state manager</h2></div>
+  <p class="mod-q">Your deck teaches Context well. It does not mention the thing that makes people abandon it at scale.</p>
+
+  <div class="prose">
+    <p>Context solves exactly one problem: <b>getting a value to a deep descendant without threading it through every component in between</b>. It is a transport mechanism. It holds nothing, updates nothing, and optimises nothing — the state still lives in a <code>useState</code> or <code>useReducer</code> somewhere above.</p>
+    <p>The consequence people meet in month three: <b>every consumer of a context re-renders whenever the context value changes</b>, with no way to subscribe to part of it. Put <code>user</code>, <code>theme</code> and <code>notifications</code> in one context and a notification arriving re-renders every component that only wanted the theme.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Context re-render simulator</h3><span class="kind">Interactive · change one slice</span></div>
+    <div class="ctrls">
+      <div class="ctrl"><label>Architecture</label>
+        <div class="seg" data-group="arch">
+          <button data-v="one" aria-pressed="true">One AppContext</button>
+          <button data-v="split" aria-pressed="false">Split contexts</button>
+          <button data-v="store" aria-pressed="false">Store + selectors</button>
+        </div></div>
+      <div class="ctrl"><label>Change which slice</label>
+        <div class="seg" data-group="slice">
+          <button data-v="user" aria-pressed="false">user</button>
+          <button data-v="theme" aria-pressed="true">theme</button>
+          <button data-v="notifications" aria-pressed="false">notifications</button>
+        </div></div>
+      <label class="tog"><input type="checkbox" id="ar-memo" checked> Provider <code>value</code> is memoised</label>
+      <label class="tog"><input type="checkbox" id="ar-count" checked> The change alters the derived unread count</label>
+    </div>
+    <div class="lab-body">
+      <div class="cgrid" id="ar-grid"></div>
+      <div id="ar-note"></div>
+    </div>
+  </div>
+
+  <div class="prose">
+    <h4>Three fixes, in the order to try them</h4>
+    <ol>
+      <li><b>Memoise the provider value.</b> <code>&lt;Ctx.Provider value={{ user, theme }}&gt;</code> creates a new object on every render of the provider, so every consumer re-renders even when nothing changed. Wrap it in <code>useMemo</code>. This is a bug, not an optimisation — turn the toggle off above to see how bad it is.</li>
+      <li><b>Split by change frequency, not by topic.</b> A value that changes on every keystroke and a value that changes twice a session do not belong in the same context. Two providers is not duplication; it is the correct granularity.</li>
+      <li><b>Separate the value from the setters.</b> A <code>StateContext</code> and a <code>DispatchContext</code> — the pattern your deck's <code>useReducer</code> slides are one step away from — means components that only dispatch never re-render when the state changes. That is often the single biggest win, because there are usually more dispatchers than readers.</li>
+    </ol>
+    <p>Past that, you have outgrown Context, and the honest move is a store with selector subscriptions rather than a fourth clever workaround. Note what Context still does better than any store: it is <b>scoped</b>. Two <code>&lt;WizardProvider&gt;</code>s on one page hold two independent wizards, which a module-level store cannot do without keys and manual cleanup.</p>
+  </div>
+
+  <div class="taskbox exp"><h4>Experiment</h4>
+    <p>Two runs worth doing. First: <i>Split contexts</i> with the memo toggle <b>off</b> — splitting bought you nothing, because each provider still hands out a fresh object every render. Second: set the slice to <code>notifications</code> and uncheck <i>alters the derived unread count</i>. Both Context architectures wake <code>UnreadBadge</code>; the store does not, because the number it selects did not change. That gap — subscribing to what you <i>read</i> rather than to the container — is the whole of what a store buys you here.</p></div>
+
+  <div class="reads">
+    <a href="https://react.dev/learn/scaling-up-with-reducer-and-context" target="_blank" rel="noopener"><span class="src">Official</span>Reducer + Context</a>
+    <a href="https://react.dev/reference/react/useContext#optimizing-re-renders-when-passing-objects-and-functions" target="_blank" rel="noopener"><span class="src">Official</span>Optimising context re-renders</a>
+  </div>
+</section>
+
+<!-- ============ 4 ============ -->
+<section class="module" id="m4" style="--tint:var(--wire)">
+  <div class="mod-head"><span class="mod-n">04 / STORES</span><h2>The same feature, three ways</h2></div>
+  <p class="mod-q">Context, Redux Toolkit, Zustand. Not which is best — which is proportionate.</p>
+
+  <div class="prose">
+    <p>One feature, implemented three times: a notification tray with add, dismiss, mark-all-read, and a derived unread count. It is deliberately modest, because that is where most of these decisions are actually made — long before the application is big enough for the answer to be obvious.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Three implementations</h3><span class="kind">Interactive · compare</span></div>
+    <div class="lab-body" style="padding-top:0">
+      <div class="tabs" id="im-tabs"></div>
+      <div style="padding-top:16px"><div id="im-out"></div></div>
+    </div>
+  </div>
+
+  <div class="prose">
+    <h4>How to choose, stated as a rule</h4>
+    <ul>
+      <li><b>Start with Context + <code>useReducer</code>.</b> Zero dependencies, scoped to a subtree, and if the value is small and changes rarely — theme, the auth object, a wizard — it may be the last answer you need.</li>
+      <li><b>Move to Zustand</b> when consumers are re-rendering for slices they do not use, when you want the store outside React (an interceptor reading the token), or when the ceremony of Context providers is the thing you are actually tired of. It is roughly a hook with a subscription, which is why it is the smallest step up.</li>
+      <li><b>Choose Redux Toolkit</b> for a large team on a long-lived application where the value is the <i>discipline</i>: one mutation vocabulary, time-travel debugging, a serialisable action log you can attach to a bug report, and middleware as a real extension point. Your deck teaches RTK properly, and RTK Query would fold module 02's job into the same store — a legitimate alternative to TanStack Query if you are already on Redux.</li>
+    </ul>
+    <p>What should <i>not</i> decide it: how many lines each version takes on a slide. RTK looks verbose at one slice and looks like structure at forty, and the boilerplate argument that killed classic Redux was largely addressed by <code>createSlice</code>. Judge these at the size you will actually be, not at the size of the example.</p>
+    <p>And the recommendation for the capstone, stated as one: <b>TanStack Query for server state, Context for auth and theme, Zustand only if a third genuinely-global concern appears.</b> No Redux — not because it is worse, but because with server state properly homed, what remains is too small to earn a store's overhead. That is an architectural judgement about this application, and a team already fluent in RTK should weigh it differently.</p>
+  </div>
+</section>
+
+<!-- ============ 5 ============ -->
+<section class="module" id="m5" style="--tint:var(--data)">
+  <div class="mod-head"><span class="mod-n">05 / MUTATION</span><h2>Writing, and the four ways it goes wrong</h2></div>
+  <p class="mod-q">The reviewer clicks Award. When should the UI change — and what happens when the server says no?</p>
+
+  <div class="prose">
+    <p>Reads are the easy half. The moment you write, you have two copies of the truth diverging in real time, and every design in this space is a different answer to “how long am I willing to lie to the user?”</p>
+    <p>Step through each scenario.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Mutation timeline</h3><span class="kind">Interactive · step through</span></div>
+    <div class="ctrls">
+      <div class="ctrl"><label>Scenario</label>
+        <div class="seg" data-group="mut">
+          <button data-v="pess" aria-pressed="true">Pessimistic</button>
+          <button data-v="opt" aria-pressed="false">Optimistic · succeeds</button>
+          <button data-v="fail" aria-pressed="false">Optimistic · fails</button>
+          <button data-v="race" aria-pressed="false">Two clicks racing</button>
+        </div></div>
+      <div class="ctrl"><label>&nbsp;</label><div style="display:flex; gap:8px">
+        <button class="ghostbtn" id="mu-prev" type="button">‹ Back</button>
+        <button class="runbtn" id="mu-next" type="button">Step ›</button>
+        <button class="ghostbtn" id="mu-reset" type="button">Reset</button>
+      </div></div>
+    </div>
+    <div class="lab-body">
+      <div class="screens" id="mu-screens"></div>
+      <div class="cols">
+        <div class="mline" id="mu-line"></div>
+        <div><div id="mu-note"></div></div>
+      </div>
+      <div class="stepbar"><span class="pos" id="mu-pos">0 / 0</span><span class="track"><i id="mu-track" style="width:0%"></i></span></div>
+    </div>
+  </div>
+
+  <div class="prose">
+    <h4>Invalidate or write into the cache?</h4>
+    <p>After a successful write you have two options and they are not equivalent.</p>
+    <ul>
+      <li><b><code>invalidateQueries</code></b> marks the affected entries stale and refetches the visible ones. It costs a round trip and it is <i>always correct</i>, because the server recomputes everything your write touched — the derived counts, the audit entry, the recomputed remaining budget. Make this your default.</li>
+      <li><b><code>setQueryData</code></b> writes the server's response straight into the cache with no round trip. It is right when the response already contains the complete new state of that entry, and wrong the moment a write has side effects elsewhere — which, in a domain with budgets, audit logs and notification counters, is most writes.</li>
+    </ul>
+    <pre><b>const</b> award = useMutation({
+  mutationFn: (id: number) =&gt; apiPost(`/applications/${id}/award`, {}, applicationSchema),
+
+  <i>// 1 · before the request: apply the lie, and keep the truth to undo it</i>
+  onMutate: <b>async</b> (id) =&gt; {
+    <b>await</b> qc.cancelQueries({ queryKey: ["applications"] });   <i>// stop an in-flight refetch
+                                                              // from overwriting us</i>
+    <b>const</b> prev = qc.getQueryData(["applications"]);
+    qc.setQueryData(["applications"], (old) =&gt; markAwarded(old, id));
+    <b>return</b> { prev };                    <i>// the rollback token</i>
+  },
+
+  <i>// 2 · it failed: put the world back exactly as it was</i>
+  onError: (_err, _id, ctx) =&gt; qc.setQueryData(["applications"], ctx.prev),
+
+  <i>// 3 · either way, let the server have the last word</i>
+  onSettled: () =&gt; qc.invalidateQueries({ queryKey: ["applications"] }),
+});</pre>
+    <p>Three details in that snippet are the difference between an optimistic update that works and one that produces ghosts. <code>cancelQueries</code> stops a refetch that started before your write from landing after it and undoing it. The context object is the <i>only</i> record of the pre-write state, so it must be captured before the mutation, not reconstructed after. And <code>onSettled</code> runs on both paths, because after a failure the cache should be re-synchronised from the server rather than trusted.</p>
+
+    <h4>When to be optimistic at all</h4>
+    <p>Optimism is a bet that the write will succeed, paid for in credibility if it does not. Take it when the action is <b>frequent, low-stakes and reversible</b> — a checkbox, a like, a reorder — where the latency is more annoying than the rare rollback. Do not take it when the action is <b>rare, consequential or irreversible</b>: awarding a scholarship, deleting a document, submitting an application. There, a disabled button and a spinner for 300 ms is honest, and a UI that shows “Awarded” and then takes it back is worse than one that made the user wait.</p>
+  </div>
+
+  <div class="taskbox arch"><h4>Architecture connection</h4>
+    <p>Every failure mode here has a server-side counterpart. The racing clicks are why Stage 7 gives you idempotency keys — with one, the second request is recognised as a duplicate rather than creating a second award. The stale-refetch overwrite is why Stage 8 uses optimistic locking with a version column, so a write based on a stale read is rejected with a <code>409</code> instead of silently winning. Client-side state management is one half of a conversation; the other half is the API contract.</p></div>
+
+  <div class="reads">
+    <a href="https://tanstack.com/query/latest/docs/framework/react/guides/optimistic-updates" target="_blank" rel="noopener"><span class="src">Official</span>Optimistic updates</a>
+    <a href="https://tanstack.com/query/latest/docs/framework/react/guides/query-invalidation" target="_blank" rel="noopener"><span class="src">Official</span>Query invalidation</a>
+  </div>
+</section>
+
+<!-- ============ 6 ============ -->
+<section class="module" id="m6" style="--tint:var(--data)">
+  <div class="mod-head"><span class="mod-n">06 / THE MAP</span><h2>Where every piece of the capstone lives</h2></div>
+  <p class="mod-q">The deliverable of this stage is not a library choice. It is this table, written down and agreed.</p>
+
+  <div class="prose">
+    <p>A state map is a cheap artefact with an outsized payoff: it turns “where should this go?” from a debate into a lookup, and it makes the wrong answer visible in code review. Here is the capstone's, with the reasoning attached to the entries that are not obvious.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Capstone state map</h3><span class="kind">Interactive · filter by kind</span></div>
+    <div class="ctrls">
+      <div class="ctrl" style="flex:1"><label>Show</label>
+        <div class="seg" data-group="mapf">
+          <button data-v="all" aria-pressed="true">All</button>
+          <button data-v="local" aria-pressed="false">Local UI</button>
+          <button data-v="server" aria-pressed="false">Server</button>
+          <button data-v="global" aria-pressed="false">Global</button>
+          <button data-v="url" aria-pressed="false">URL</button>
+          <button data-v="form" aria-pressed="false">Form</button>
+        </div></div>
+    </div>
+    <div class="lab-body"><div id="map-out"></div></div>
+  </div>
+
+  <div class="prose">
+    <h4>The two entries worth arguing about</h4>
+    <p><b>The signed-in user is server state.</b> This surprises people, because “current user” feels like the definition of global. But it comes from <code>GET /me</code>, the server owns it, and it can change without you — an admin revokes a role and the next revalidation should reflect that. Cache it with a long <code>staleTime</code> and refetch on focus. What genuinely belongs in a global store is only the <i>access token</i>, and only because an HTTP interceptor outside React needs to read it.</p>
+    <p><b>The unread notification count is server state too</b>, not a number you increment locally. Increment it yourself and it drifts from the badge the user sees on their phone within a day. Derive it from the cached notifications query, and let a mutation invalidate that query.</p>
+    <p>The pattern behind both: <b>if the server could tell you the answer, the server owns it.</b> Anything you compute and store locally instead is a second source of truth you have volunteered to maintain.</p>
+  </div>
+
+  <div class="taskbox chal"><h4>Challenge</h4>
+    <p>Add three rows to the map for features the capstone will need and this stage has not classified: a document upload with progress, a multi-step onboarding wizard whose progress survives a refresh, and a reviewer's “recently viewed applications” list. Each has a defensible answer in two different categories — write down which one you picked and the argument against it. The second half is the part that makes the exercise worth doing.</p></div>
+</section>
+
+<!-- ============ 7 ============ -->
+<section class="module" id="m7" style="--tint:var(--server)">
+  <div class="mod-head"><span class="mod-n">07 / CLOSING</span><h2>What you should now be able to do</h2></div>
+  <div class="prose">
+    <h4>Self-check</h4>
+    <ol>
+      <li>Name the five kinds of state and the default tool for each.</li>
+      <li>Why is server state different in kind — not just in origin — from client state? Name three problems it has that client state does not.</li>
+      <li><code>staleTime</code> versus <code>gcTime</code>: which one explains “it refetches constantly” and which explains “my data vanished when I navigated back”?</li>
+      <li>What belongs in a query key, and what goes wrong when something is missing from it?</li>
+      <li>Why does every consumer of a Context re-render, and what are the three fixes in order?</li>
+      <li>When does <code>React.memo</code> fail to stop a context-driven re-render? (Stage 3's answer applies — say why.)</li>
+      <li>Give an action you would update optimistically and one you would not, with the reasoning.</li>
+      <li>After a successful write: <code>invalidateQueries</code> or <code>setQueryData</code>? When is each wrong?</li>
+      <li>Why is the signed-in user server state and the access token global state?</li>
+    </ol>
+
+    <h4>The capstone increment</h4>
+    <ul>
+      <li><b>TanStack Query</b> for every read, with query keys derived from the URL filters built in Stage 3, <code>staleTime</code> set deliberately per resource, and the <code>apiGet</code> wrapper from Stage 2 as the only <code>queryFn</code> — so every response is still schema-validated at the boundary.</li>
+      <li><b>Mutations</b> for apply, award, reject and document upload — pessimistic on the consequential ones, optimistic with rollback on the reversible ones, each invalidating the right keys.</li>
+      <li><b>An <code>AuthContext</code></b> holding the access token in memory plus a <code>useCurrentUser()</code> query for the profile and roles, with the refresh-token flow from Stage 1's recommendation.</li>
+      <li><b>A theme context</b> persisted to <code>localStorage</code>, and nothing else global unless a third concern earns it.</li>
+      <li><b>The state map</b> committed to the repository as a markdown table, and a review rule: a pull request that adds state to a category the map does not justify has to update the map.</li>
+    </ul>
+
+    <h4>Where your deck helps, and where it stops</h4>
+    <p>Slides 253–269 on prop drilling, composition, lifting state up, Context and <code>useReducer</code> are solid, and slides 377–390 on Redux Toolkit — <code>createSlice</code>, <code>configureStore</code>, <code>useSelector</code>, Immer — are among its strongest material. Read them for the mechanics. What the deck cannot give you is the classification this stage is built on: it never names server state as a category, never mentions a query cache, and its Redux-versus-Context comparison is therefore answering a narrower question than the one you actually face. Zustand appears once, as a name. TanStack Query does not appear at all.</p>
+  </div>
+
+  <div class="callout" style="border-left-color:var(--c-server); background:var(--server-wash)">
+    <h4 style="color:var(--server)">Next</h4>
+    <p style="margin-bottom:0">Stage 6 — <i>Java and Spring Boot Fundamentals</i>. The front end now has a shape; the back end gets one. Modern Java as it actually reads in 2026, then the Spring container as a lifecycle you can trace rather than annotations you sprinkle: bean creation, dependency resolution, scopes, proxies, and reading an auto-configuration report to say why a bean did or did not exist.</p>
+  </div>
+</section>
+
+</main>
+
+<footer><div class="wrap">
+  <p><b style="font-family:var(--display); color:var(--ink)">Sources.</b> React and TanStack Query behaviour is stated per their official documentation, linked inline. The cache lifecycle machine implements the documented default behaviours — stale-while-revalidate, deduplication, refetch-on-focus, garbage collection after the last observer unmounts — as a model you can drive; it is not an instrumented run of the library.</p>
+  <p style="margin-top:12px">The classification, the state map, and the recommendation of Query + Context over a Redux store for this application are architectural judgements with reasoning attached, not specification requirements. A team already fluent in Redux Toolkit has a good case for RTK Query instead, and that case is stated in module 04. Stage 5 of the Full-Stack Atlas.</p>
+</div></footer>
+
+<div class="tip" id="tip"></div>
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const state = {stale:"0", gc:"300", arch:"one", slice:"theme", mut:"pess", mapf:"all"};
+function segGroup(g, cb){
+  $$(`.seg[data-group="${g}"] button`).forEach(b=>b.addEventListener("click",()=>{
+    $$(`.seg[data-group="${g}"] button`).forEach(x=>x.setAttribute("aria-pressed", x===b?"true":"false"));
+    state[g]=b.dataset.v; cb(b.dataset.v);
+  }));
+}
+const KINDS = {
+  local:["Local UI state","k-local"], server:["Server state","k-server"], global:["Global client state","k-global"],
+  url:["URL state","k-url"], form:["Form state","k-form"]
+};
+
+/* ================= 1. classifier ================= */
+const ITEMS = [
+ {q:"Whether the status filter dropdown is currently open", a:"local", w:"<code>useState</code> inside the dropdown",
+  n:"Nobody else needs it, it should not survive a refresh, and it dies with the component. Lifting this anywhere is a net loss."},
+ {q:"The list of scholarships returned by <code>GET /api/v1/scholarships</code>", a:"server", w:"A query cache, keyed by the filters",
+  n:"PostgreSQL owns it. Your copy was true when it arrived and is decaying. Putting it in a store means hand-maintaining staleness, deduplication and revalidation forever."},
+ {q:"Which cohort the reviewer has filtered to", a:"url", w:"<code>useSearchParams</code>",
+  n:"A filtered view that cannot be shared or reached with the back button is a worse product. And once it is in the URL it is free as a query key."},
+ {q:"The signed-in user's name, email and roles", a:"server", w:"<code>useQuery([\"me\"])</code> with a long <code>staleTime</code>",
+  n:"The one nearly everyone gets wrong. It <i>feels</i> global, but it comes from <code>GET /me</code>, the server owns it, and an admin can change your roles while you are logged in. Cache it and revalidate on focus."},
+ {q:"The JWT access token used by the HTTP client", a:"global", w:"An auth store or context, in memory",
+  n:"Genuinely global, genuinely yours, and needed by an interceptor that lives outside React. Note Stage 1's recommendation: in memory, with the refresh token in an <code>HttpOnly</code> cookie — not <code>localStorage</code>."},
+ {q:"The half-typed application the student has not submitted yet", a:"form", w:"React Hook Form",
+  n:"High-frequency, short-lived, and it needs touched/dirty/validity alongside the values. That is a different problem from every other row here, which is why it gets its own library."},
+ {q:"Light or dark theme preference", a:"global", w:"A tiny context, persisted to <code>localStorage</code>",
+  n:"Small, app-wide, changes twice a session, and not derivable from the server. Almost the textbook case for Context — and the one place its re-render cost genuinely does not matter."},
+ {q:"Which page of the results table the reviewer is on", a:"url", w:"<code>useSearchParams</code>",
+  n:"Same argument as the filters. It also means the query key changes with the page, so each page is cached separately and the back button is instant."},
+ {q:"Whether the “unsaved changes” confirmation dialog is showing", a:"local", w:"<code>useState</code> in the form container",
+  n:"Local, ephemeral, and deliberately <i>not</i> in the URL — a dialog you can deep-link into is a dialog with no context behind it."},
+ {q:"The number of unread notifications on the bell icon", a:"server", w:"Derived from the notifications query",
+  n:"The second one that catches people. Increment it locally and it drifts from what the user sees on their phone within a day. Derive it from cached server data; let a mutation invalidate that query."},
+ {q:"Which rows the reviewer has ticked for bulk approval", a:"local", w:"<code>useState</code> in the table component",
+  n:"Local to this table, this visit. If you find yourself wanting it to survive navigation, that is a signal the selection is really a draft — which would make it form state, not global."},
+ {q:"The sort column and direction on the applications table", a:"url", w:"<code>useSearchParams</code>",
+  n:"Part of the shareable view. Also the reason Stage 4 insisted on a unique tiebreaker: sort order is now something a colleague can reproduce exactly."},
+ {q:"Upload progress percentage for a document being attached", a:"local", w:"<code>useState</code> next to the uploader, or the mutation's own state",
+  n:"Transient, tied to one in-flight operation, and meaningless after it completes. The <i>result</i> of the upload is server state; the progress bar is not."},
+ {q:"The list of NGOs shown in the “funded by” dropdown", a:"server", w:"A query with a long <code>staleTime</code>",
+  n:"Reference data is still server state — it just changes slowly. That is what <code>staleTime</code> is for: five minutes or an hour, not a different storage mechanism."}
+];
+let clIdx = 0, clAnswers = new Array(ITEMS.length).fill(null);
+function drawCl(){
+  const it = ITEMS[clIdx], picked = clAnswers[clIdx];
+  const [kn, kc] = picked ? KINDS[it.a] : ["",""];
+  $("#cl-out").innerHTML = `
+    <div class="qcard">
+      <div class="qn">Item ${clIdx+1} of ${ITEMS.length} — which kind of state?</div>
+      <div class="qt">${it.q}</div>
+      <div class="choices">${Object.entries(KINDS).map(([k,v])=>{
+        let cls = "";
+        if(picked){ if(k===it.a) cls=" right"; else if(k===picked) cls=" wrong"; }
+        return `<button class="choice${cls}" data-k="${k}" type="button" ${picked?"disabled":""}>${v[0]}</button>`;
+      }).join("")}</div>
+    </div>
+    ${picked ? `<div class="verdict ${picked===it.a?'ok':'no'}" style="margin-bottom:0">
+      <h5>${picked===it.a ? "Correct" : `Not quite — this is ${kn.toLowerCase()}`}</h5>
+      <p><b>Where it lives:</b> ${it.w}</p>
+      <p style="margin-bottom:0">${it.n}</p></div>` : ""}`;
+  $$("#cl-out .choice").forEach(b=>b.addEventListener("click",()=>{
+    clAnswers[clIdx] = b.dataset.k; drawCl();
+  }));
+  const score = clAnswers.filter((a,i)=>a===ITEMS[i].a).length;
+  const done = clAnswers.filter(Boolean).length;
+  $("#cl-score").textContent = score;
+  $("#cl-track").style.width = (done/ITEMS.length*100)+"%";
+}
+$("#cl-next").addEventListener("click",()=>{ clIdx=Math.min(ITEMS.length-1,clIdx+1); drawCl(); });
+$("#cl-prev").addEventListener("click",()=>{ clIdx=Math.max(0,clIdx-1); drawCl(); });
+$("#cl-reset").addEventListener("click",()=>{ clIdx=0; clAnswers=new Array(ITEMS.length).fill(null); drawCl(); });
+$("#cl-total").textContent = ITEMS.length;
+
+/* ================= 2. cache machine ================= */
+let cm = null;
+function cmReset(){
+  cm = {clock:0, data:null, updatedAt:null, observers:0, inactiveSince:null, removed:false, reqs:0, naive:0, saved:0, reval:0, inFlightAt:null, log:[]};
+  cmLog("Cache is empty. No component has mounted.", "");
+  drawCM();
+}
+function cmLog(m, cls){ cm.log.unshift({t:cm.clock, m, cls}); }
+function cmAge(){ return cm.updatedAt===null ? Infinity : cm.clock - cm.updatedAt; }
+function cmFetch(why){
+  /* Simultaneous observers share one in-flight request — TanStack's deduplication. */
+  if(cm.inFlightAt === cm.clock){
+    cm.saved++;
+    cmLog("⇢ joined the request already in flight for this key — deduplicated, no second call", "");
+    return;
+  }
+  cm.reqs++; cm.inFlightAt = cm.clock;
+  cm.data = "24 rows"; cm.updatedAt = cm.clock; cm.removed = false;
+  cmLog(`→ network request (${why}) · resolved, cache updated`, "net");
+}
+function cmEvent(ev){
+  const staleTime = +state.stale, gcTime = +state.gc;
+  if(ev==="mount" || ev==="mount2"){
+    const who = ev==="mount" ? "<List>" : "<Sidebar>";
+    cm.observers++; cm.naive++; cm.inactiveSince = null;
+    if(cm.removed || cm.data===null){ cmLog(`${who} mounted · no cached entry`, ""); cmFetch("no data"); }
+    else if(cmAge() >= staleTime){ cmLog(`${who} mounted · cached data served instantly, but it is stale`, ""); cmFetch("stale on mount"); }
+    else { cm.saved++; cmLog(`${who} mounted · served from cache, data is fresh — no request`, ""); }
+  }
+  else if(ev==="focus"){
+    if(cm.observers===0){ cmLog("Window refocused · no active observers, nothing to revalidate", ""); }
+    else if(cm.data===null||cm.removed){ cmLog("Window refocused · no data", ""); cmFetch("refocus, empty"); }
+    else if(cmAge() >= staleTime){ cm.reval++; cmLog("Window refocused · data is stale", ""); cmFetch("refetchOnWindowFocus"); }
+    else { cmLog(`Window refocused · data is still fresh (${cmAge()}s old, staleTime ${staleTime}s) — no request`, ""); }
+  }
+  else if(ev==="wait"){
+    cm.clock += 60;
+    cmLog("60 seconds pass", "");
+    if(cm.observers===0 && cm.inactiveSince!==null && !cm.removed && (cm.clock - cm.inactiveSince) >= gcTime){
+      cm.removed = true; cm.data = null; cm.updatedAt = null;
+      cmLog(`✕ garbage collected — inactive for ${gcTime}s with no observers`, "gc");
+    }
+  }
+  else if(ev==="invalidate"){
+    cmLog("Mutation succeeded · invalidateQueries marks the entry stale", "");
+    cm.updatedAt = cm.updatedAt===null ? null : -1e9;
+    if(cm.observers>0){ cm.reval++; cmFetch("invalidated with active observers"); }
+    else cmLog("No active observers — refetch deferred until something mounts", "");
+  }
+  else if(ev==="unmount"){
+    cm.observers = 0; cm.inactiveSince = cm.clock;
+    cmLog("All observers unmounted · entry is now inactive (data kept for gcTime)", "");
+  }
+  drawCM();
+}
+function drawCM(){
+  const staleTime = +state.stale;
+  let badge, bcls;
+  if(cm.removed || cm.data===null){ badge="no data"; bcls="b-none"; }
+  else if(cmAge() >= staleTime){ badge="stale"; bcls="b-stale"; }
+  else { badge="fresh"; bcls="b-fresh"; }
+  if(cm.observers===0 && cm.data!==null) badge += " · inactive";
+  $("#cm-badge").innerHTML = `<span class="badge ${bcls}">${badge}</span>`;
+  const age = cm.updatedAt===null ? "—" : (cmAge() < 0 ? "invalidated" : cmAge()+" s ago");
+  $("#cm-state").innerHTML = `
+    <div class="kv"><span>clock</span><b>${cm.clock} s</b></div>
+    <div class="kv"><span>observers (mounted components)</span><b>${cm.observers}</b></div>
+    <div class="kv"><span>data</span><b>${cm.data ?? "—"}</b></div>
+    <div class="kv"><span>last updated</span><b>${age}</b></div>
+    <div class="kv"><span>staleTime</span><b>${staleTime} s</b></div>
+    <div class="kv"><span>gcTime</span><b>${state.gc} s</b></div>`;
+  $("#cm-log").innerHTML = cm.log.slice(0,14).map(l=>
+    `<div class="logrow ${l.cls}"><span class="t">${l.t}s</span><span class="m">${l.m}</span></div>`).join("");
+  $("#cm-reqs").textContent = cm.reqs;
+  $("#cm-naive").textContent = cm.naive;
+  $("#cm-note").innerHTML = `<div class="verdict ${(cm.saved||cm.reval)?'ok':'warn'}" style="margin-bottom:0">
+    <h5>${cm.saved} served without a request · ${cm.reval} revalidation${cm.reval===1?"":"s"}</h5>
+    <p style="margin-bottom:0">${(cm.saved||cm.reval)
+      ? `The comparison is not “fewer requests” — it is <b>the right requests</b>. The cache skipped ${cm.saved} call${cm.saved===1?"":"s"} by deduplicating simultaneous observers and serving copies it already knew were fresh, and it made ${cm.reval} call${cm.reval===1?"":"s"} the naive version would never make at all — on refocus and after a mutation. That second number is the one that keeps a long-lived tab honest, and it is exactly what you give up by putting server data in a store.`
+      : `Mount the same query from two components at once, then wait and refocus, then invalidate. Watch both numbers move for different reasons.`}</p></div>`;
+}
+segGroup("stale", drawCM); segGroup("gc", drawCM);
+$$("[data-ev]").forEach(b=>b.addEventListener("click",()=>cmEvent(b.dataset.ev)));
+$("#cm-reset").addEventListener("click", cmReset);
+
+/* ================= 3. context re-renders ================= */
+const CONSUMERS = [
+ {n:"Header", uses:["user","theme"]},
+ {n:"UserMenu", uses:["user"]},
+ {n:"ThemeToggle", uses:["theme"]},
+ {n:"NotificationBell", uses:["notifications"]},
+ {n:"UnreadBadge", uses:["notifications"], narrow:"unread count"},
+ {n:"ScholarshipList", uses:["user"]},
+ {n:"Sidebar", uses:["theme"]},
+ {n:"Footer", uses:[]}
+];
+function drawAR(){
+  const arch = state.arch, slice = state.slice, memo = $("#ar-memo").checked;
+  const countChanges = $("#ar-count").checked;
+  const re = c => {
+    if(c.uses.length===0) return false;
+    if(arch==="one") return true;
+    if(arch==="split") return memo ? c.uses.includes(slice) : true;
+    if(!c.uses.includes(slice)) return false;
+    if(c.narrow && slice==="notifications" && !countChanges) return false;   /* selector output unchanged */
+    return true;
+  };
+  $("#ar-grid").innerHTML = CONSUMERS.map(c=>{
+    const r = re(c);
+    return `<div class="cnode ${r?'re':'skip'}"><div class="cnn">${c.n}</div>
+      <div class="cns">${c.uses.length?(c.narrow?"selects "+c.narrow:"uses "+c.uses.join(", ")):"consumes nothing"}</div>
+      <div class="cnb">${r?"re-rendered":"skipped"}</div></div>`;
+  }).join("");
+  const n = CONSUMERS.filter(re).length, need = CONSUMERS.filter(c=>c.uses.includes(slice)).length;
+  const waste = n - need;
+  const NOTE = {
+    one: [`All ${n} consumers re-render, though only ${need} read <code>${slice}</code>. One context means one subscription — React cannot know which property you read, so it wakes everyone. <code>React.memo</code> on these components does not help: <code>useContext</code> subscribes the component directly, and a context update bypasses the memo comparison entirely.`, waste?"no":"ok"],
+    split: memo
+      ? [`Only the ${n} consumer${n===1?"":"s"} of the <code>${slice}</code> context re-render. Splitting by change frequency is the cheapest real fix, and it needs no library.`, "ok"]
+      : [`All ${n} consumers re-render even though only ${need} read <code>${slice}</code> — because each provider creates a <b>new value object</b> on every render of the component that holds them. Splitting the contexts bought you nothing while the values are unmemoised. This is a bug, not a tuning issue.`, "no"],
+    store: [`Only the ${n} component${n===1?"":"s"} whose selector output actually changed. A store compares what each component <i>reads</i>, not what the container holds. ${
+      slice==="notifications" && !countChanges
+        ? `<b>This is the case Context cannot express:</b> the notifications array changed, but <code>UnreadBadge</code> selects a derived count that did not — so it is skipped. Under either Context architecture it re-renders, because a context update is all-or-nothing.`
+        : `The memo toggle is irrelevant here: there is no provider value to memoise.`}`, "ok"]
+  }[arch];
+  $("#ar-note").innerHTML = `<div class="verdict ${NOTE[1]}" style="margin-bottom:0">
+    <h5>${n} of ${CONSUMERS.length} re-rendered · ${need} actually needed to</h5>
+    <p style="margin-bottom:0">${NOTE[0]}</p></div>`;
+}
+segGroup("arch", drawAR); segGroup("slice", drawAR);
+$("#ar-memo").addEventListener("change", drawAR);
+$("#ar-count").addEventListener("change", drawAR);
+
+/* ================= 4. three implementations ================= */
+const IMPL = [
+{k:"Context + useReducer", deps:"0", lines:"~55", gran:"All consumers", dev:"None", out:"No", scoped:"Yes",
+ code:`<i>// notifications-context.tsx — state and dispatch split, so components that
+// only dispatch never re-render when the list changes.</i>
+<b>type</b> Action =
+  | { type: "added"; item: Notification }
+  | { type: "dismissed"; id: string }
+  | { type: "allRead" };
+
+<b>function</b> reducer(state: Notification[], a: Action): Notification[] {
+  <b>switch</b> (a.type) {
+    <b>case</b> "added":     <b>return</b> [a.item, ...state];
+    <b>case</b> "dismissed": <b>return</b> state.filter(n =&gt; n.id !== a.id);
+    <b>case</b> "allRead":   <b>return</b> state.map(n =&gt; ({ ...n, read: <b>true</b> }));
+    <b>default</b>: {
+      <b>const</b> _x: never = a; <b>return</b> _x;      <i>// Stage 2's exhaustiveness check</i>
+    }
+  }
+}
+
+<b>const</b> StateCtx = createContext&lt;Notification[]&gt;([]);
+<b>const</b> DispatchCtx = createContext&lt;Dispatch&lt;Action&gt;&gt;(() =&gt; {});
+
+<b>export function</b> NotificationProvider({ children }: PropsWithChildren) {
+  <b>const</b> [items, dispatch] = useReducer(reducer, []);
+  <b>return</b> (
+    &lt;DispatchCtx.Provider value={dispatch}&gt;      <i>// dispatch is stable — no memo needed</i>
+      &lt;StateCtx.Provider value={items}&gt;{children}&lt;/StateCtx.Provider&gt;
+    &lt;/DispatchCtx.Provider&gt;
+  );
+}
+
+<b>export const</b> useNotifications = () =&gt; useContext(StateCtx);
+<b>export const</b> useNotify        = () =&gt; useContext(DispatchCtx);
+<b>export function</b> useUnreadCount() {
+  <b>const</b> items = useContext(StateCtx);
+  <b>return</b> items.filter(n =&gt; !n.read).length;   <i>// derived, never stored</i>
+}`,
+ when:"The default starting point. Zero dependencies, scoped to whatever subtree you wrap, and if the value is small and changes rarely it may be the last answer you need. The state/dispatch split is what keeps it viable longer than people expect."},
+{k:"Redux Toolkit", deps:"2", lines:"~45", gran:"Per selector", dev:"Excellent", out:"Yes", scoped:"No",
+ code:`<i>// notificationsSlice.ts — Immer means the "mutation" is a safe copy.</i>
+<b>const</b> slice = createSlice({
+  name: "notifications",
+  initialState: [] <b>as</b> Notification[],
+  reducers: {
+    added(state, a: PayloadAction&lt;Notification&gt;) { state.unshift(a.payload); },
+    dismissed(state, a: PayloadAction&lt;string&gt;) {
+      <b>return</b> state.filter(n =&gt; n.id !== a.payload);
+    },
+    allRead(state) { state.forEach(n =&gt; { n.read = <b>true</b>; }); },
+  },
+});
+<b>export const</b> { added, dismissed, allRead } = slice.actions;
+
+<i>// A memoised selector: recomputes only when the slice changes.</i>
+<b>export const</b> selectUnread = createSelector(
+  [(s: RootState) =&gt; s.notifications],
+  items =&gt; items.filter(n =&gt; !n.read).length,
+);
+
+<i>// store.ts</i>
+<b>export const</b> store = configureStore({ reducer: { notifications: slice.reducer } });
+
+<i>// In a component — subscribes to this selector only.</i>
+<b>const</b> unread = useSelector(selectUnread);
+<b>const</b> dispatch = useDispatch();`,
+ when:"A large team on a long-lived application, where the value is the discipline rather than the API: one vocabulary for every mutation, a serialisable action log you can attach to a bug report, time-travel debugging, and middleware as a real extension point. Your deck teaches this well — and RTK Query would fold module 02's job into the same store."},
+{k:"Zustand", deps:"1", lines:"~28", gran:"Per selector", dev:"Good", out:"Yes", scoped:"Only with effort",
+ code:`<i>// notification-store.ts — no provider, no context, no boilerplate.</i>
+<b>type</b> Store = {
+  items: Notification[];
+  add(item: Notification): <b>void</b>;
+  dismiss(id: string): <b>void</b>;
+  markAllRead(): <b>void</b>;
+};
+
+<b>export const</b> useNotifications = create&lt;Store&gt;((set) =&gt; ({
+  items: [],
+  add:  (item) =&gt; set(s =&gt; ({ items: [item, ...s.items] })),
+  dismiss: (id) =&gt; set(s =&gt; ({ items: s.items.filter(n =&gt; n.id !== id) })),
+  markAllRead: () =&gt; set(s =&gt; ({ items: s.items.map(n =&gt; ({ ...n, read: <b>true</b> })) })),
+}));
+
+<i>// Each component subscribes to exactly what it selects.</i>
+<b>const</b> unread = useNotifications(s =&gt; s.items.filter(n =&gt; !n.read).length);
+<b>const</b> dismiss = useNotifications(s =&gt; s.dismiss);   <i>// stable — no re-render on items change</i>
+
+<i>// And it works outside React, which is the point for an auth token:</i>
+useNotifications.getState().add({ id, text, read: <b>false</b> });`,
+ when:"The smallest real step up from Context. Reach for it when consumers are re-rendering for slices they do not use, when something outside React needs to read the store (an HTTP interceptor reading the token), or when provider ceremony is the thing you are actually tired of. The cost is that a module-level store is a singleton — two independent instances on one page take work that Context gives you free."}
+];
+let imSel = 0;
+function drawIM(){
+  $("#im-tabs").innerHTML = IMPL.map((im,i)=>
+    `<button data-i="${i}" aria-selected="${i===imSel}" type="button">${im.k}</button>`).join("");
+  $$("#im-tabs button").forEach(b=>b.addEventListener("click",()=>{ imSel=+b.dataset.i; drawIM(); }));
+  const im = IMPL[imSel];
+  $("#im-out").innerHTML = `
+    <div class="metrics">
+      <div class="metric"><div class="mv">${im.deps}</div><div class="ml">Dependencies</div></div>
+      <div class="metric"><div class="mv">${im.lines}</div><div class="ml">Lines for this feature</div></div>
+      <div class="metric"><div class="mv" style="font-size:15px">${im.gran}</div><div class="ml">Re-render granularity</div></div>
+      <div class="metric"><div class="mv" style="font-size:15px">${im.dev}</div><div class="ml">Devtools</div></div>
+      <div class="metric"><div class="mv" style="font-size:15px">${im.out}</div><div class="ml">Readable outside React</div></div>
+      <div class="metric"><div class="mv" style="font-size:15px">${im.scoped}</div><div class="ml">Scoped instances</div></div>
+    </div>
+    <pre style="margin-bottom:16px">${im.code}</pre>
+    <div class="verdict warn" style="margin-bottom:0"><h5>Pick this when</h5><p style="margin-bottom:0">${im.when}</p></div>`;
+}
+
+/* ================= 5. mutation timeline ================= */
+const MUT = {
+ pess:{steps:[
+  {k:"ui", t:"t = 0 ms", h:"Reviewer clicks Award", b:"The button enters a busy state and disables itself. Nothing else changes — the row still reads SUBMITTED, because that is still the truth.", s:["Award… (busy)","SUBMITTED","SUBMITTED"], hot:0},
+  {k:"net", t:"t = 2 ms", h:"POST /applications/8891/award", b:"The request goes out. The UI is now honest but slow: the user is waiting on a round trip they can see.", s:["Award… (busy)","SUBMITTED","SUBMITTED"], hot:-1},
+  {k:"srv", t:"t = 240 ms", h:"Server commits and returns 200", b:"PostgreSQL has the award, the budget is debited, the audit row is written. None of that is visible to the client yet.", s:["Award… (busy)","SUBMITTED","AWARDED"], hot:2},
+  {k:"net", t:"t = 245 ms", h:"onSettled → invalidateQueries", b:"The applications query is marked stale and, because it has active observers, refetched immediately.", s:["Award… (busy)","refetching","AWARDED"], hot:1},
+  {k:"ui", t:"t = 480 ms", h:"Cache updated, UI reflects the truth", b:"Roughly half a second of waiting, and at no point did the interface claim something that was not true. For a consequential, hard-to-reverse action, that is the right trade.", s:["AWARDED","AWARDED","AWARDED"], hot:0}
+ ], note:["ok","Pessimistic is the correct default for anything a user would be upset to see reversed. It costs a visible round trip and buys total honesty — and the busy button gives them the feedback they need in the meantime."]},
+
+ opt:{steps:[
+  {k:"ui", t:"t = 0 ms", h:"onMutate runs before the request", b:"Three things, in order: cancel in-flight refetches for this key, snapshot the current cache as a rollback token, then write the optimistic value. The row reads AWARDED instantly.", s:["AWARDED (optimistic)","AWARDED (optimistic)","SUBMITTED"], hot:1},
+  {k:"net", t:"t = 2 ms", h:"POST /applications/8891/award", b:"The request goes out <i>after</i> the UI has already changed. The interface is now ahead of the server — a deliberate, temporary lie.", s:["AWARDED (optimistic)","AWARDED (optimistic)","SUBMITTED"], hot:2},
+  {k:"srv", t:"t = 240 ms", h:"Server returns 200", b:"The bet paid off. The server now agrees with what the user has been looking at for a quarter of a second.", s:["AWARDED (optimistic)","AWARDED (optimistic)","AWARDED"], hot:2},
+  {k:"net", t:"t = 245 ms", h:"onSettled → invalidateQueries", b:"Even on success, re-fetch. The server may have changed things your optimistic write did not know about — the remaining budget, the queue count, the audit trail.", s:["AWARDED","refetching","AWARDED"], hot:1},
+  {k:"ui", t:"t = 470 ms", h:"Confirmed", b:"The user perceived this as instant. The round trip happened behind a UI that was already correct.", s:["AWARDED","AWARDED","AWARDED"], hot:0}
+ ], note:["ok","Optimism is right for frequent, low-stakes, reversible actions where latency is more annoying than the rare rollback. Note that <code>cancelQueries</code> is not optional: without it, a refetch that started before your write can land after it and quietly undo it."]},
+
+ fail:{steps:[
+  {k:"ui", t:"t = 0 ms", h:"onMutate applies the optimistic write", b:"Same as before: cancel, snapshot, write. The row reads AWARDED and the reviewer moves on to the next application.", s:["AWARDED (optimistic)","AWARDED (optimistic)","SUBMITTED"], hot:1},
+  {k:"net", t:"t = 2 ms", h:"POST /applications/8891/award", b:"Request sent.", s:["AWARDED (optimistic)","AWARDED (optimistic)","SUBMITTED"], hot:-1},
+  {k:"bad", t:"t = 260 ms", h:"422 — cohort budget exhausted", b:"A rule only the database could enforce. Nothing was written; the server's state never changed. Stage 4's point about client validation being a courtesy, arriving in practice.", s:["AWARDED (optimistic)","AWARDED (optimistic)","SUBMITTED"], hot:2},
+  {k:"bad", t:"t = 262 ms", h:"onError → rollback from the snapshot", b:"The cache is restored from the token captured in <code>onMutate</code>. The row reverts to SUBMITTED and a toast explains why. This is the moment the earlier lie is paid for.", s:["SUBMITTED + toast","SUBMITTED","SUBMITTED"], hot:0},
+  {k:"ui", t:"t = 500 ms", h:"onSettled → invalidate anyway", b:"After a failure, do not trust the rolled-back cache either — re-synchronise from the server. <code>onSettled</code> runs on both paths for exactly this reason.", s:["SUBMITTED","SUBMITTED","SUBMITTED"], hot:1}
+ ], note:["no","This is the cost of optimism, and it is a credibility cost rather than a technical one. A UI that says “Awarded” and then takes it back is worse than one that made the reviewer wait 300 ms. Which is why the rule is: optimistic for reversible and frequent, pessimistic for consequential and rare."]},
+
+ race:{steps:[
+  {k:"ui", t:"t = 0 ms", h:"First click — optimistic write applied", b:"Snapshot taken (SUBMITTED), cache set to AWARDED, request A sent.", s:["AWARDED (optimistic)","AWARDED (optimistic)","SUBMITTED"], hot:1},
+  {k:"bad", t:"t = 180 ms", h:"Second click — the button was never disabled", b:"<code>onMutate</code> runs again and snapshots the <b>already-optimistic</b> cache. The rollback token for this mutation now says AWARDED, not SUBMITTED. The undo is already broken.", s:["AWARDED (optimistic)","AWARDED ×2","SUBMITTED"], hot:1},
+  {k:"srv", t:"t = 240 ms", h:"Request A commits", b:"The award is written and the cohort budget is debited once.", s:["AWARDED","AWARDED ×2","AWARDED · budget −1"], hot:2},
+  {k:"bad", t:"t = 420 ms", h:"Request B commits too", b:"With no idempotency key, the server has no way to know this is the same intent. A second award row is written and the budget is debited <b>twice</b>. No client-side code can detect this after the fact.", s:["AWARDED","AWARDED ×2","AWARDED ×2 · budget −2"], hot:2},
+  {k:"ui", t:"t = 600 ms", h:"Invalidate — and the damage is now the truth", b:"The refetch faithfully reports what the database contains, which is two awards. The cache is consistent; the data is wrong.", s:["AWARDED ×2","AWARDED ×2","AWARDED ×2"], hot:0}
+ ], note:["no","Two fixes, and you need both. Client side: disable the control while <code>mutation.isPending</code> — that removes the common case and costs one line. Server side: an idempotency key on the request, so a repeat of the same intent is recognised and returns the first result instead of acting twice. The client fix is a courtesy; only the server fix is correctness, and Stage 7 builds it."]}
+};
+let muIdx = 0;
+function drawMu(){
+  const sc = MUT[state.mut], steps = sc.steps;
+  muIdx = Math.min(muIdx, steps.length-1);
+  const st = steps[muIdx];
+  const LBL = ["What the reviewer sees","Query cache","PostgreSQL"];
+  $("#mu-screens").innerHTML = st.s.map((v,i)=>
+    `<div class="screen ${st.hot===i?'hot':''}"><div class="sn">${LBL[i]}</div><div class="sv">${v}</div></div>`).join("");
+  $("#mu-line").innerHTML = steps.map((s,i)=>
+    `<div class="mstep s-${s.k}${i<=muIdx?' on':''}" style="${i>muIdx?'opacity:.4':''}">
+      <div class="mt">${s.t}</div><div class="mh">${s.h}</div>
+      ${i===muIdx?`<div class="mb">${s.b}</div>`:""}</div>`).join("");
+  $("#mu-note").innerHTML = muIdx===steps.length-1
+    ? `<div class="verdict ${sc.note[0]}" style="margin-bottom:0"><h5>The trade</h5><p style="margin-bottom:0">${sc.note[1]}</p></div>`
+    : `<div class="verdict warn" style="margin-bottom:0"><h5>Step ${muIdx+1} of ${steps.length}</h5><p style="margin-bottom:0">${st.b}</p></div>`;
+  $("#mu-pos").textContent = `${muIdx+1} / ${steps.length}`;
+  $("#mu-track").style.width = ((muIdx+1)/steps.length*100)+"%";
+}
+$("#mu-next").addEventListener("click",()=>{ muIdx=Math.min(MUT[state.mut].steps.length-1,muIdx+1); drawMu(); });
+$("#mu-prev").addEventListener("click",()=>{ muIdx=Math.max(0,muIdx-1); drawMu(); });
+$("#mu-reset").addEventListener("click",()=>{ muIdx=0; drawMu(); });
+segGroup("mut", ()=>{ muIdx=0; drawMu(); });
+
+/* ================= 6. state map ================= */
+const MAP = [
+ ["Scholarship list, filtered","server",'useQuery(["scholarships", filters])'],
+ ["Application detail","server",'useQuery(["application", id])'],
+ ["Signed-in user profile and roles","server",'useQuery(["me"]) · staleTime 5 min'],
+ ["Unread notification count","server","derived from the notifications query"],
+ ["NGO reference list","server",'useQuery(["ngos"]) · staleTime 1 h'],
+ ["Document list for an application","server",'useQuery(["documents", applicationId])'],
+ ["Access token","global","auth context, in memory"],
+ ["Theme","global","theme context + localStorage"],
+ ["Command palette open","global","a small UI store"],
+ ["Search query, status, cohort","url","useSearchParams"],
+ ["Page number and size","url","useSearchParams"],
+ ["Sort column and direction","url","useSearchParams"],
+ ["Selected application id (detail pane)","url","route param /applications/:id"],
+ ["Application form values","form","React Hook Form + Zod"],
+ ["Onboarding wizard step values","form","React Hook Form, one form across steps"],
+ ["Dropdown / dialog open","local","useState in the component"],
+ ["Bulk-selection checkboxes","local","useState in the table"],
+ ["Upload progress","local","useState beside the uploader"],
+ ["Table row hover / focus","local","the DOM — no React state at all"]
+];
+function drawMap(){
+  const f = state.mapf;
+  const rows = MAP.filter(m=>f==="all"||m[1]===f);
+  $("#map-out").innerHTML = rows.map(m=>
+    `<div class="maprow m-${m[1]}"><span class="mn">${m[0]}</span>
+      <span class="mk">${KINDS[m[1]][0]}</span><span class="mw">${esc(m[2])}</span></div>`).join("")
+    + `<p style="font-family:var(--mono); font-size:11px; color:var(--ink-3); margin-top:12px">
+        ${rows.length} of ${MAP.length} entries · ${MAP.filter(m=>m[1]==="server").length} of them server state</p>`;
+}
+segGroup("mapf", drawMap);
+
+/* ================= nav + theme ================= */
+const SECTIONS = [["m1","Classify"],["m2","Server"],["m3","Context"],["m4","Stores"],["m5","Mutations"],
+                  ["m6","The map"],["m7","Close"]];
+$("#nav").innerHTML = SECTIONS.map((s,i)=>`<a href="#${s[0]}"${i===0?' class="on"':''}>${String(i+1).padStart(2,"0")} ${s[1]}</a>`).join("");
+const links = $$("#nav a");
+const obs = new IntersectionObserver(es=>{ es.forEach(e=>{ if(e.isIntersecting){
+  links.forEach(l=>l.classList.toggle("on", l.getAttribute("href")==="#"+e.target.id)); }}); },
+  {rootMargin:"-25% 0px -65% 0px"});
+SECTIONS.forEach(s=>obs.observe(document.getElementById(s[0])));
+
+try{ const t = localStorage.getItem("fsatlas.theme"); if(t) document.documentElement.setAttribute("data-theme",t); }catch(e){}
+$("#themebtn").addEventListener("click",()=>{
+  const cur = document.documentElement.getAttribute("data-theme");
+  const isDark = cur ? cur==="dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.setAttribute("data-theme", isDark?"light":"dark");
+  try{ localStorage.setItem("fsatlas.theme", isDark?"light":"dark"); }catch(e){}
+});
+
+drawCl(); cmReset(); drawAR(); drawIM(); drawMu(); drawMap();
+</script>
+</body></html>

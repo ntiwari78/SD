@@ -1,0 +1,1341 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Types and the Event Loop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+:root{
+  --paper:#F1F4F3; --surface:#FFFFFF; --surface-2:#E8EDEC; --surface-3:#DDE5E3;
+  --ink:#0E1518; --ink-2:#3A484C; --ink-3:#65777B;
+  --rule:#D3DCDA; --rule-2:#C0CCC9;
+  /* UI ink (text-safe) */
+  --client:#005886; --wire:#A34800; --server:#007052; --data:#0B4739; --alert:#B3261E;
+  /* chart marks (validated: light PASS on all six checks) */
+  --c-client:#0072B2; --c-wire:#D55E00; --c-server:#009E73; --c-data:#00614A;
+  --client-wash:#0072B214; --wire-wash:#D55E0014; --server-wash:#009E7314; --data-wash:#00614A14; --alert-wash:#B3261E14;
+  --good:#007052; --warn:#A34800; --bad:#B3261E;
+  --shadow:0 1px 2px rgba(14,21,24,.05), 0 8px 24px -12px rgba(14,21,24,.16);
+  --display:'Archivo','Helvetica Neue',Arial,sans-serif;
+  --body:'Source Serif 4',Georgia,'Times New Roman',serif;
+  --mono:'JetBrains Mono','SF Mono',Menlo,Consolas,monospace;
+  --maxw:1120px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --paper:#0E1416; --surface:#151D1F; --surface-2:#1D2729; --surface-3:#263234;
+  --ink:#E6EDEC; --ink-2:#AFC0BE; --ink-3:#7E9291;
+  --rule:#2A383A; --rule-2:#3A4B4D;
+  --client:#7CBBE6; --wire:#F09A55; --server:#4FBE8A; --data:#A5DEC5; --alert:#F08A80;
+  --c-client:#4A9AD0; --c-wire:#DE7018; --c-server:#2FA76A; --c-data:#7ED3AF;
+  --client-wash:#4A9AD01A; --wire-wash:#DE70181A; --server-wash:#2FA76A1A; --data-wash:#7ED3AF1A; --alert-wash:#F08A801A;
+  --good:#4FBE8A; --warn:#F09A55; --bad:#F08A80;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+}}
+:root[data-theme="dark"]{
+  --paper:#0E1416; --surface:#151D1F; --surface-2:#1D2729; --surface-3:#263234;
+  --ink:#E6EDEC; --ink-2:#AFC0BE; --ink-3:#7E9291;
+  --rule:#2A383A; --rule-2:#3A4B4D;
+  --client:#7CBBE6; --wire:#F09A55; --server:#4FBE8A; --data:#A5DEC5; --alert:#F08A80;
+  --c-client:#4A9AD0; --c-wire:#DE7018; --c-server:#2FA76A; --c-data:#7ED3AF;
+  --client-wash:#4A9AD01A; --wire-wash:#DE70181A; --server-wash:#2FA76A1A; --data-wash:#7ED3AF1A; --alert-wash:#F08A801A;
+  --good:#4FBE8A; --warn:#F09A55; --bad:#F08A80;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+}
+
+*{box-sizing:border-box}
+body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--body); font-size:17px; line-height:1.64; -webkit-font-smoothing:antialiased}
+h1,h2,h3,h4,h5{font-family:var(--display); font-weight:700; letter-spacing:-.018em; text-wrap:balance; margin:0}
+p{margin:0 0 14px} p:last-child{margin-bottom:0}
+a{color:var(--client)}
+.wrap{max-width:var(--maxw); margin:0 auto; padding:0 24px}
+button{font-family:var(--mono); cursor:pointer}
+button:focus-visible,summary:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--c-client); outline-offset:2px}
+code{font-family:var(--mono); font-size:.855em; background:var(--surface-2); padding:1px 4px; border-radius:2px}
+pre{font-family:var(--mono); font-size:13px; line-height:1.62; background:var(--surface-2); border:1px solid var(--rule);
+    border-radius:3px; padding:14px 16px; overflow-x:auto; margin:0 0 14px}
+pre b{color:var(--client); font-weight:700}
+pre i{color:var(--ink-3); font-style:normal}
+
+/* masthead */
+.masthead{background:var(--surface); border-bottom:1px solid var(--rule)}
+.mast{max-width:var(--maxw); margin:0 auto; padding:38px 24px 30px; display:flex; flex-direction:column; gap:22px}
+.mast-top{display:flex; justify-content:space-between; gap:20px; align-items:flex-start; flex-wrap:wrap}
+.eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3)}
+h1{font-size:clamp(32px,5.2vw,56px); line-height:1.02; margin-top:6px}
+.lede{font-size:19px; color:var(--ink-2); max-width:62ch; margin:0}
+.themebtn{font-size:11px; letter-spacing:.1em; text-transform:uppercase; background:transparent; color:var(--ink-3);
+  border:1px solid var(--rule-2); border-radius:2px; padding:7px 11px; white-space:nowrap}
+.themebtn:hover{color:var(--ink); border-color:var(--ink-3)}
+
+/* section nav */
+.navbar{position:sticky; top:0; z-index:40; background:var(--paper); border-bottom:1px solid var(--rule)}
+.navinner{max-width:var(--maxw); margin:0 auto; padding:0 24px; display:flex; gap:2px; overflow-x:auto; scrollbar-width:thin}
+.navinner a{font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase; text-decoration:none;
+  color:var(--ink-3); padding:12px 11px; white-space:nowrap; border-bottom:2px solid transparent}
+.navinner a:hover{color:var(--ink)}
+.navinner a.on{color:var(--ink); border-bottom-color:var(--c-wire)}
+
+/* module */
+.module{padding:60px 0 10px; border-top:1px solid var(--rule)}
+.module:first-of-type{border-top:0}
+.mod-head{display:flex; gap:14px; align-items:baseline; margin-bottom:18px; flex-wrap:wrap}
+.mod-n{font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.14em; color:var(--tint,var(--ink-3))}
+.mod-head h2{font-size:clamp(25px,3.4vw,36px)}
+.mod-q{font-family:var(--body); font-size:19px; color:var(--ink-2); max-width:64ch; margin:0 0 26px; font-style:italic}
+.prose{max-width:68ch}
+.prose h3{font-size:21px; margin:30px 0 10px}
+.prose h4{font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3); margin:28px 0 9px}
+.prose ul,.prose ol{padding-left:20px; margin:0 0 14px}
+.prose li{margin-bottom:6px}
+.tag{font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; padding:3px 7px; border-radius:2px; white-space:nowrap}
+.t-client{background:var(--client-wash); color:var(--client)} .t-wire{background:var(--wire-wash); color:var(--wire)}
+.t-server{background:var(--server-wash); color:var(--server)} .t-data{background:var(--data-wash); color:var(--data)}
+
+/* lab panel */
+.lab{background:var(--surface); border:1px solid var(--rule); border-radius:5px; box-shadow:var(--shadow); margin:26px 0 8px; overflow:hidden}
+.lab-head{display:flex; justify-content:space-between; align-items:center; gap:14px; padding:13px 18px; border-bottom:1px solid var(--rule); background:var(--surface-2); flex-wrap:wrap}
+.lab-head h3{font-size:16px}
+.lab-head .kind{font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3)}
+.lab-body{padding:18px}
+.ctrls{display:flex; flex-wrap:wrap; gap:14px 22px; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--surface)}
+.ctrl{display:flex; flex-direction:column; gap:5px}
+.ctrl label{font-family:var(--mono); font-size:9.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3)}
+.seg{display:flex; border:1px solid var(--rule-2); border-radius:3px; overflow:hidden}
+.seg button{font-size:11px; padding:6px 10px; border:0; background:var(--surface); color:var(--ink-2); border-right:1px solid var(--rule-2)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--ink); color:var(--paper)}
+.tog{display:flex; align-items:center; gap:7px; font-family:var(--mono); font-size:11.5px; color:var(--ink-2); cursor:pointer; padding-top:14px}
+.tog input{width:15px; height:15px; accent-color:var(--c-wire); cursor:pointer}
+.runbtn{font-size:11px; letter-spacing:.12em; text-transform:uppercase; background:var(--ink); color:var(--paper); border:1px solid var(--ink); border-radius:2px; padding:8px 14px}
+.ghostbtn{font-size:11px; letter-spacing:.12em; text-transform:uppercase; background:transparent; color:var(--ink-2); border:1px solid var(--rule-2); border-radius:2px; padding:8px 12px}
+.ghostbtn[aria-pressed="true"]{background:var(--ink); color:var(--paper); border-color:var(--ink)}
+select{font-family:var(--mono); font-size:11.5px; padding:6px 8px; border:1px solid var(--rule-2); border-radius:3px; background:var(--surface); color:var(--ink)}
+input[type=text]{font-family:var(--mono); font-size:11.5px; padding:6px 8px; border:1px solid var(--rule-2); border-radius:3px; background:var(--surface); color:var(--ink); min-width:210px}
+
+/* waterfall */
+.wf-scroll{overflow-x:auto}
+.wf{width:100%; min-width:640px; display:block}
+.wf .lbl{font-family:var(--mono); font-size:10.5px; fill:var(--ink-2)}
+.wf .lbl.dim{fill:var(--ink-3)}
+.wf .ms{font-family:var(--mono); font-size:10px; fill:var(--ink-3)}
+.wf .grid{stroke:var(--rule); stroke-width:1}
+.wf .axis{font-family:var(--mono); font-size:9.5px; fill:var(--ink-3)}
+.wf rect.bar{rx:2; ry:2}
+.wf rect.bar:hover{opacity:.82}
+.wf .sep{stroke:var(--surface); stroke-width:2}
+.legend{display:flex; gap:16px; flex-wrap:wrap; font-family:var(--mono); font-size:10.5px; color:var(--ink-3); padding:0 0 12px}
+.legend i{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:-1px}
+.total{display:flex; gap:26px; flex-wrap:wrap; align-items:baseline; padding:14px 18px; border-top:1px solid var(--rule); background:var(--surface-2)}
+.total .big{font-family:var(--display); font-weight:700; font-size:32px; font-variant-numeric:tabular-nums; line-height:1}
+.total .sm{font-family:var(--mono); font-size:10px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3)}
+.tip{position:fixed; z-index:99; pointer-events:none; background:var(--ink); color:var(--paper); font-family:var(--mono);
+  font-size:11px; line-height:1.5; padding:8px 10px; border-radius:3px; max-width:290px; opacity:0; transition:opacity .12s}
+.tip.on{opacity:1}
+.tip b{color:#fff}
+
+.tablewrap{overflow-x:auto; border:1px solid var(--rule); border-radius:3px; margin-top:14px}
+table{border-collapse:collapse; width:100%; min-width:520px; background:var(--surface)}
+th,td{text-align:left; padding:8px 12px; border-bottom:1px solid var(--rule); font-size:14px}
+th{font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); background:var(--surface-2)}
+td.num{font-family:var(--mono); font-variant-numeric:tabular-nums; text-align:right}
+tbody tr:last-child td{border-bottom:0}
+
+/* verdict blocks */
+.verdict{border-left:3px solid var(--vc); background:var(--vw); padding:14px 16px; border-radius:0 3px 3px 0; margin-bottom:14px}
+.verdict.ok{--vc:var(--good); --vw:var(--server-wash)}
+.verdict.no{--vc:var(--bad); --vw:var(--alert-wash)}
+.verdict.warn{--vc:var(--warn); --vw:var(--wire-wash)}
+.verdict h5{font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--vc); margin-bottom:7px}
+.verdict p{font-size:15.5px; margin-bottom:8px}
+
+.cols{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:20px}
+.cols3{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px}
+
+.card{border:1px solid var(--rule); border-radius:4px; background:var(--surface); padding:14px 16px}
+.card h5{font-family:var(--display); font-size:15.5px; margin-bottom:6px}
+.card p{font-size:14.5px; color:var(--ink-2); margin-bottom:0; line-height:1.5}
+.card.acc{border-left:3px solid var(--ac)}
+
+/* instances */
+.rack{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:14px 0}
+.inst{border:1px solid var(--rule); border-radius:4px; padding:11px 12px; background:var(--surface); text-align:center}
+.inst.down{opacity:.45; border-style:dashed}
+.inst .nm{font-family:var(--mono); font-size:11px; color:var(--ink-3); letter-spacing:.08em}
+.inst .st{font-family:var(--display); font-weight:700; font-size:13px; margin-top:5px}
+.inst .ss{font-family:var(--mono); font-size:10px; color:var(--ink-3); margin-top:4px; min-height:14px}
+.reqs{display:flex; gap:5px; flex-wrap:wrap; margin-top:12px}
+.req{font-family:var(--mono); font-size:10.5px; padding:5px 8px; border-radius:2px; border:1px solid var(--rule-2); background:var(--surface)}
+.req.ok{border-color:var(--good); color:var(--good); background:var(--server-wash)}
+.req.fail{border-color:var(--bad); color:var(--bad); background:var(--alert-wash)}
+
+/* misc blocks */
+.callout{border:1px solid var(--rule); border-left:3px solid var(--c-wire); background:var(--wire-wash); border-radius:0 4px 4px 0; padding:15px 17px; margin:22px 0}
+.callout h4{font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--wire); margin-bottom:8px}
+.callout p,.callout li{font-size:15.5px}
+.mistakes{display:grid; gap:10px; margin:14px 0}
+.mistake{border:1px solid var(--rule); border-radius:4px; overflow:hidden; background:var(--surface)}
+.mistake summary{list-style:none; cursor:pointer; padding:12px 15px; font-family:var(--display); font-weight:600; font-size:15.5px; display:flex; gap:11px; align-items:flex-start}
+.mistake summary::-webkit-details-marker{display:none}
+.mistake summary:hover{background:var(--surface-2)}
+.mistake .x{font-family:var(--mono); color:var(--bad); font-weight:700; flex:none}
+.mistake .in{padding:0 15px 14px 41px; font-size:15px; color:var(--ink-2)}
+.mistake .in p{margin-bottom:9px}
+
+.taskbox{border:1px solid var(--rule-2); border-radius:4px; background:var(--surface); padding:15px 17px; margin:20px 0}
+.taskbox h4{font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3); margin-bottom:9px}
+.taskbox.exp{border-left:3px solid var(--c-client)}
+.taskbox.chal{border-left:3px solid var(--c-server)}
+.taskbox.arch{border-left:3px solid var(--c-data)}
+.reads{display:flex; flex-wrap:wrap; gap:6px; margin:16px 0 0}
+.reads a{font-family:var(--mono); font-size:11px; text-decoration:none; color:var(--ink-2); border:1px solid var(--rule-2); border-radius:2px; padding:4px 9px; background:var(--surface)}
+.reads a:hover{border-color:var(--c-client); color:var(--client)}
+.reads .src{font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3); margin-right:5px}
+
+.matrix2{overflow-x:auto}
+.matrix2 table{min-width:560px}
+.yes{color:var(--good); font-weight:700} .no2{color:var(--bad); font-weight:700}
+
+footer{border-top:1px solid var(--rule); background:var(--surface); padding:34px 0 50px; margin-top:60px}
+footer p{color:var(--ink-3); font-size:14.5px; max-width:72ch}
+@media (prefers-reduced-motion: reduce){*{transition:none!important; animation:none!important}}
+@media(max-width:640px){ .rack{grid-template-columns:1fr} body{font-size:16px} }
+</style></head><body><style>
+/* ---------- event loop machine ---------- */
+.machine{display:grid; grid-template-columns:1.25fr 1fr; gap:16px}
+@media(max-width:860px){.machine{grid-template-columns:1fr}}
+.codepane{background:var(--surface-2); border:1px solid var(--rule); border-radius:3px; overflow:hidden}
+.codepane .ln{display:grid; grid-template-columns:30px 1fr; font-family:var(--mono); font-size:12.5px; line-height:1.75}
+.codepane .ln > span:first-child{color:var(--ink-3); text-align:right; padding-right:10px; user-select:none; border-right:1px solid var(--rule)}
+.codepane .ln > span:last-child{padding-left:12px; white-space:pre; overflow-x:auto}
+.codepane .ln.hot > span:last-child{background:var(--wire-wash); box-shadow:inset 3px 0 0 var(--c-wire)}
+.queues{display:flex; flex-direction:column; gap:10px}
+.queue{border:1px solid var(--rule); border-radius:3px; background:var(--surface); overflow:hidden}
+.queue h6{font-family:var(--mono); font-size:9.5px; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--qc,var(--ink-3)); margin:0; padding:7px 11px; background:var(--surface-2); border-bottom:1px solid var(--rule);
+  display:flex; justify-content:space-between; gap:8px}
+.queue h6 em{font-style:normal; color:var(--ink-3); font-weight:400; letter-spacing:.04em; text-transform:none; font-size:10px}
+.queue .items{padding:8px 11px; min-height:44px; display:flex; flex-direction:column-reverse; gap:5px}
+.queue .items.row{flex-direction:row; flex-wrap:wrap}
+.qi{font-family:var(--mono); font-size:11px; padding:4px 8px; border-radius:2px; border:1px solid var(--qc,var(--rule-2));
+  color:var(--qc,var(--ink-2)); background:var(--qw,transparent)}
+.qi.empty{border-style:dashed; color:var(--ink-3); border-color:var(--rule-2)}
+.q-stack{--qc:var(--c-wire); --qw:var(--wire-wash)}
+.q-micro{--qc:var(--c-server); --qw:var(--server-wash)}
+.q-macro{--qc:var(--c-client); --qw:var(--client-wash)}
+.q-out{--qc:var(--c-data); --qw:var(--data-wash)}
+.stepnote{border-left:3px solid var(--c-wire); background:var(--wire-wash); padding:11px 14px; border-radius:0 3px 3px 0;
+  font-size:15px; line-height:1.5; margin-top:14px}
+.stepbar{display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-top:14px}
+.stepbar .pos{font-family:var(--mono); font-size:11px; color:var(--ink-3); font-variant-numeric:tabular-nums}
+.track{flex:1; min-width:120px; height:4px; background:var(--surface-3); border-radius:2px; overflow:hidden}
+.track i{display:block; height:100%; background:var(--c-wire); transition:width .2s}
+
+/* ---------- reveal cards ---------- */
+.trap{border:1px solid var(--rule); border-radius:4px; background:var(--surface); overflow:hidden; margin-bottom:10px}
+.trap summary{list-style:none; cursor:pointer; padding:13px 15px}
+.trap summary::-webkit-details-marker{display:none}
+.trap summary:hover{background:var(--surface-2)}
+.trap .expr{font-family:var(--mono); font-size:12.5px; white-space:pre; overflow-x:auto; display:block; color:var(--ink)}
+.trap .ask{font-family:var(--mono); font-size:10px; letter-spacing:.13em; text-transform:uppercase; color:var(--c-wire); margin-top:9px; display:block}
+.trap[open] .ask{display:none}
+.trap .in{padding:0 15px 15px; border-top:1px solid var(--rule); margin-top:2px}
+.trap .ans{font-family:var(--mono); font-size:12.5px; background:var(--data-wash); border-left:3px solid var(--c-data);
+  padding:9px 12px; border-radius:0 3px 3px 0; margin:14px 0 12px; white-space:pre-wrap; overflow-x:auto}
+.trap .why{font-size:15px; color:var(--ink-2); line-height:1.55}
+.trap .why b{color:var(--ink)}
+.trap .bite{font-size:14.5px; color:var(--ink-2); margin-top:9px; padding-top:9px; border-top:1px dashed var(--rule-2)}
+.trap .bite b{font-family:var(--mono); font-size:9.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3); display:block; margin-bottom:4px}
+
+/* ---------- timeline ---------- */
+.tl{width:100%; min-width:560px; display:block}
+.tl .lbl{font-family:var(--mono); font-size:10.5px; fill:var(--ink-2)}
+.tl .axis{font-family:var(--mono); font-size:9.5px; fill:var(--ink-3)}
+.tl .grid{stroke:var(--rule); stroke-width:1}
+.tl rect{rx:2; ry:2}
+
+/* ---------- narrowing walker ---------- */
+.walk{display:grid; grid-template-columns:1.15fr 1fr; gap:16px}
+@media(max-width:860px){.walk{grid-template-columns:1fr}}
+.tsline{font-family:var(--mono); font-size:12.5px; line-height:1.8; padding:2px 10px; border-radius:2px; cursor:pointer; white-space:pre; overflow-x:auto}
+.tsline:hover{background:var(--surface-2)}
+.tsline.on{background:var(--ink); color:var(--paper)}
+.tsline.on .cm{color:var(--rule-2)}
+.cm{color:var(--ink-3)}
+.typebox{border:1px solid var(--rule); border-radius:3px; background:var(--surface); padding:13px 15px}
+.typebox h6{font-family:var(--mono); font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3); margin:0 0 8px}
+.typebox pre{margin:0 0 12px; font-size:12.5px; background:var(--surface-2)}
+.typebox p{font-size:15px; color:var(--ink-2); line-height:1.55; margin:0}
+
+/* ---------- validator ---------- */
+.fieldgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:8px; margin-bottom:14px}
+.field{border:1px solid var(--rule); border-left:3px solid var(--fc,var(--rule-2)); border-radius:3px; background:var(--surface); padding:9px 11px}
+.field .k{font-family:var(--mono); font-size:11.5px; font-weight:700; color:var(--ink)}
+.field .v{font-family:var(--mono); font-size:11px; color:var(--ink-3); margin-top:3px; word-break:break-all}
+.field .e{font-size:13px; color:var(--fc); margin-top:5px; line-height:1.4}
+.field.ok{--fc:var(--good)} .field.bad{--fc:var(--bad)} .field.miss{--fc:var(--warn)}
+.pill{font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; padding:2px 6px; border-radius:2px; float:right}
+.pill.ok{background:var(--server-wash); color:var(--good)}
+.pill.bad{background:var(--alert-wash); color:var(--bad)}
+.pill.miss{background:var(--wire-wash); color:var(--warn)}
+
+.kbd{font-family:var(--mono); font-size:11px; border:1px solid var(--rule-2); border-bottom-width:2px; border-radius:3px; padding:1px 5px; background:var(--surface-2)}
+</style>
+<header class="masthead">
+  <div class="mast">
+    <div class="mast-top">
+      <div>
+        <div class="eyebrow">Full-Stack Atlas · Stage 02 · Level 1 Foundations</div>
+        <h1>Types and the Event Loop</h1>
+      </div>
+      <button class="themebtn" id="themebtn" type="button">Theme</button>
+    </div>
+    <p class="lede">You already know how to program. What you need from JavaScript is its two genuinely unusual ideas — a single thread with a queue, and objects whose shape is their type — and what a type system built on top of that can and cannot promise you. This is the stage your course deck declares a prerequisite and never teaches.</p>
+  </div>
+</header>
+
+<nav class="navbar"><div class="navinner" id="nav"></div></nav>
+
+<main class="wrap">
+
+<!-- ===================== 1 ===================== -->
+<section class="module" id="m1" style="--tint:var(--wire)">
+  <div class="mod-head"><span class="mod-n">01 / EXECUTION</span><h2>One thread, two queues</h2></div>
+  <p class="mod-q">Why does a <code>setTimeout(fn, 0)</code> run <i>after</i> a promise that resolved later than it was scheduled?</p>
+
+  <div class="prose">
+    <p>Almost every JavaScript surprise you will meet in React comes from one fact: there is exactly one thread, and it does not interleave. Your function runs to completion. Nothing — not a timer, not a network response, not a click — can interrupt it mid-statement. Everything that “happens later” is a callback sitting in a queue, waiting for your code to get out of the way.</p>
+    <p>What makes this non-obvious is that there are <b>two</b> queues with different priorities, and the difference between them decides the order of your logs, the timing of your renders, and whether your UI freezes.</p>
+  </div>
+
+  <div class="cols3">
+    <div class="card acc" style="--ac:var(--c-wire)"><h5>Call stack</h5><p>What is executing right now. Synchronous, one frame at a time. While anything is on it, nothing else in the page runs — no timer, no paint, no click handler.</p></div>
+    <div class="card acc" style="--ac:var(--c-server)"><h5>Microtask queue</h5><p>Promise callbacks, <code>await</code> continuations, <code>queueMicrotask</code>. Drained <b>completely</b> the moment the stack empties — and if a microtask queues another microtask, that one runs too, before anything else gets a turn.</p></div>
+    <div class="card acc" style="--ac:var(--c-client)"><h5>Macrotask queue</h5><p><code>setTimeout</code>, <code>setInterval</code>, I/O, DOM events. <b>One</b> per loop turn, and only after the microtask queue is empty. Rendering happens around these, never during your code.</p></div>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Event loop stepper</h3><span class="kind">Interactive · step through</span></div>
+    <div class="ctrls">
+      <div class="ctrl"><label>Program</label>
+        <div class="seg" data-group="elprog">
+          <button data-v="0" aria-pressed="true">Ordering</button>
+          <button data-v="1" aria-pressed="false">async / await</button>
+          <button data-v="2" aria-pressed="false">Microtask starvation</button>
+        </div></div>
+      <div class="ctrl"><label>&nbsp;</label><div style="display:flex; gap:8px">
+        <button class="ghostbtn" id="el-prev" type="button">‹ Back</button>
+        <button class="runbtn" id="el-play" type="button">Play</button>
+        <button class="ghostbtn" id="el-next" type="button">Step ›</button>
+        <button class="ghostbtn" id="el-reset" type="button">Reset</button>
+      </div></div>
+    </div>
+    <div class="lab-body">
+      <div class="machine">
+        <div>
+          <div class="codepane" id="el-code"></div>
+          <div class="stepbar">
+            <span class="pos" id="el-pos">0 / 0</span>
+            <span class="track"><i id="el-track" style="width:0%"></i></span>
+          </div>
+          <div class="stepnote" id="el-note"></div>
+        </div>
+        <div class="queues" id="el-queues"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="prose">
+    <h4>Under the hood</h4>
+    <p>One turn of the loop is, roughly: run the current task to completion → drain the entire microtask queue → let the browser render if it wants to → take the next macrotask. Two consequences follow, and both matter more in React than anywhere else.</p>
+    <p><b>Microtasks can starve everything.</b> A promise chain that keeps queueing another promise never yields. Timers never fire, clicks never dispatch, the page never paints. It looks exactly like an infinite loop, because functionally it is one.</p>
+    <p><b>Your synchronous code blocks the paint.</b> Set some state, then run 300 ms of synchronous work in the same handler, and the user sees nothing until both are done — React's update is queued, and the browser cannot paint while your function is on the stack. This is precisely what Interaction to Next Paint measures, and why the fix is to break the work up or move it to a worker, never to “optimise the render”.</p>
+  </div>
+
+  <div class="taskbox arch"><h4>Architecture connection</h4>
+    <p>Stage 1 showed you where the milliseconds go across the network. This is the other half: where they go inside the browser. <i>Parse + boot React</i> and <i>React render + paint</i> in that waterfall were both a single thread doing synchronous work, and every one of them blocked the user's next frame. Stage 11 gives you the instruments; this is the mechanism.</p></div>
+
+  <div class="taskbox exp"><h4>Experiment</h4>
+    <p>Run the <i>Microtask starvation</i> program and watch the timer callback sit in the macrotask queue while microtasks keep jumping the line. Then change the mental model: replace <code>Promise.resolve().then(loop)</code> with <code>setTimeout(loop, 0)</code>. The work still happens — but now the browser gets a turn between each iteration, and the page stays alive. That one substitution is the whole technique behind chunking expensive work.</p></div>
+
+  <div class="reads">
+    <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Event_loop" target="_blank" rel="noopener"><span class="src">MDN</span>Event loop</a>
+    <a href="https://html.spec.whatwg.org/multipage/webappapis.html#event-loops" target="_blank" rel="noopener"><span class="src">Spec</span>HTML · Event loops</a>
+    <a href="https://web.dev/articles/inp" target="_blank" rel="noopener"><span class="src">web.dev</span>Interaction to Next Paint</a>
+  </div>
+</section>
+
+<!-- ===================== 2 ===================== -->
+<section class="module" id="m2" style="--tint:var(--client)">
+  <div class="mod-head"><span class="mod-n">02 / SCOPE</span><h2>Closures, and what a function actually captured</h2></div>
+  <p class="mod-q">Your <code>useEffect</code> logs a count of 0 forever, even though the counter is clearly at 7. Where is the 0 coming from?</p>
+
+  <div class="prose">
+    <p>A closure is not a JavaScript curiosity. It is the single mechanism behind every custom hook you will write, every event handler that “remembers” something, and the most-reported bug in React — the stale closure. A function does not capture <i>variables</i> by name at call time; it captures the <b>environment record it was created in</b>, and holds it alive for as long as the function is reachable.</p>
+    <p>The classic demonstration is a loop, and it is worth watching rather than reading, because the difference between <code>var</code> and <code>let</code> here is not stylistic — they create a different number of environments.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Closure inspector</h3><span class="kind">Interactive · environments</span></div>
+    <div class="ctrls">
+      <div class="ctrl"><label>Declaration</label>
+        <div class="seg" data-group="clo">
+          <button data-v="var" aria-pressed="true">var i</button>
+          <button data-v="let" aria-pressed="false">let i</button>
+        </div></div>
+    </div>
+    <div class="lab-body"><div id="clo-out"></div></div>
+  </div>
+
+  <div class="prose">
+    <h4>The React version of the same bug</h4>
+    <p>This is not a loop problem. It is a “the function was created in a render that has since been replaced” problem, and it shows up like this:</p>
+    <pre><i>// Broken: the interval callback closed over count from the first render,
+// where count was 0. It will log 0 forever.</i>
+useEffect(() => {
+  <b>const</b> id = setInterval(() =&gt; console.log(count), 1000);
+  <b>return</b> () =&gt; clearInterval(id);
+}, []);                       <i>// [] says "never recreate me" — including my closure</i>
+
+<i>// Fix 1: depend on what you close over. Honest, and usually right.</i>
+useEffect(() =&gt; {
+  <b>const</b> id = setInterval(() =&gt; console.log(count), 1000);
+  <b>return</b> () =&gt; clearInterval(id);
+}, [count]);
+
+<i>// Fix 2: don't close over it at all — read the latest value from the updater.</i>
+setCount(c =&gt; c + 1);         <i>// c is always current; no capture involved</i></pre>
+    <p>The dependency array is not bureaucracy. It is a declaration of which environment this function is allowed to remember, and the lint rule that complains about it is almost always right.</p>
+
+    <h4>What you should be fluent in, and why</h4>
+    <ul>
+      <li><b><code>const</code> by default, <code>let</code> when you reassign, <code>var</code> never.</b> <code>var</code> is function-scoped and hoisted; <code>let</code>/<code>const</code> are block-scoped with a temporal dead zone that turns “used before defined” into an error instead of <code>undefined</code>.</li>
+      <li><b>Arrow functions have no <code>this</code> of their own.</b> They inherit it lexically, which is exactly what you want in a callback and exactly wrong in an object method that needs the receiver.</li>
+      <li><b>Closures keep memory alive.</b> A handler that captures a large object and is never removed is a leak. In React, that is a missing cleanup function; in a plain page, a missing <code>removeEventListener</code>.</li>
+    </ul>
+  </div>
+
+  <div class="mistakes">
+    <details class="mistake"><summary><span class="x">✕</span><span>Silencing the exhaustive-deps lint rule to “fix” an infinite loop</span></summary>
+      <div class="in"><p>The loop is telling you a dependency is a new object on every render — an inline object, array or function. The fix is to stabilise it (<code>useCallback</code>, <code>useMemo</code>, or hoisting it out of the component), or to restructure so the effect does not need it. Removing it from the array does not remove the dependency; it just hides it and gives you a stale closure instead of a loop.</p></div></details>
+    <details class="mistake"><summary><span class="x">✕</span><span>Assuming a captured variable updates because the variable updated</span></summary>
+      <div class="in"><p>Each render creates new bindings. A function created in render #1 sees render #1's bindings forever. This is not a flaw — it is what makes React's model coherent, because a render is meant to be a pure snapshot. Once you accept that, stale-closure bugs stop being mysterious.</p></div></details>
+  </div>
+
+  <div class="reads">
+    <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures" target="_blank" rel="noopener"><span class="src">MDN</span>Closures</a>
+    <a href="https://react.dev/reference/react/useEffect#my-effect-runs-after-every-re-render" target="_blank" rel="noopener"><span class="src">Official</span>useEffect &amp; dependencies</a>
+  </div>
+</section>
+
+<!-- ===================== 3 ===================== -->
+<section class="module" id="m3" style="--tint:var(--client)">
+  <div class="mod-head"><span class="mod-n">03 / SHAPES</span><h2>Ten expressions worth being certain about</h2></div>
+  <p class="mod-q">You know what these <i>probably</i> do. In production, “probably” is where the bug lives.</p>
+
+  <div class="prose">
+    <p>Modern JavaScript's ergonomics — destructuring, spread, optional chaining, nullish coalescing — are what make React code readable. Each also has an edge that produces a bug you will not spot in review because the code looks correct.</p>
+    <p>Predict the result before you open each one. The ones you get wrong are the ones worth remembering.</p>
+  </div>
+
+  <div id="traps"></div>
+
+  <div class="callout">
+    <h4>On modules, briefly</h4>
+    <p>Prefer <b>named exports</b>. A default export can be imported under any name, so a rename never propagates and your codebase quietly accumulates three names for one component. Named exports also give bundlers a reliable graph for tree-shaking. ES module bindings are <i>live</i> — importing a <code>let</code> and watching it change is legal, and a source of confusion; export functions and constants, not mutable state.</p>
+  </div>
+
+  <div class="taskbox chal"><h4>Challenge</h4>
+    <p>Find the bug: a settings form sends <code>{ notifications: false, pageSize: 0, nickname: "" }</code> to the API, and the server stores <code>true</code>, <code>20</code> and <code>"Student"</code>. The merge on the way in is <code>{ ...defaults, ...incoming }</code> — which is correct. The bug is one line later, where each value is read with <code>||</code>. Write the three-character fix and explain why it matters more for a settings API than almost anywhere else.</p></div>
+
+  <div class="reads">
+    <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment" target="_blank" rel="noopener"><span class="src">MDN</span>Destructuring</a>
+    <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Nullish_coalescing" target="_blank" rel="noopener"><span class="src">MDN</span>Nullish coalescing</a>
+    <a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/structuredClone" target="_blank" rel="noopener"><span class="src">MDN</span>structuredClone</a>
+  </div>
+</section>
+
+<!-- ===================== 4 ===================== -->
+<section class="module" id="m4" style="--tint:var(--wire)">
+  <div class="mod-head"><span class="mod-n">04 / CONCURRENCY</span><h2>The <code>await</code> in your loop is costing you seconds</h2></div>
+  <p class="mod-q">Twelve independent API calls, 90 ms each. How long should that take — and how long does your code actually take?</p>
+
+  <div class="prose">
+    <p>A promise is a value that will exist later; <code>await</code> is “suspend this function until it does, and let everything else run meanwhile”. That second half is the part people forget. Awaiting inside a loop does not make your program slow because awaiting is slow — it makes it slow because you have serialised work that had no reason to be sequential.</p>
+    <p>This is the code-level version of the round-trip lesson from Stage 1. Same arithmetic, different layer.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Concurrency timeline</h3><span class="kind">Interactive · timeline</span></div>
+    <div class="ctrls">
+      <div class="ctrl"><label>Strategy</label>
+        <div class="seg" data-group="cstrat">
+          <button data-v="seq" aria-pressed="true">await in a loop</button>
+          <button data-v="all" aria-pressed="false">Promise.all</button>
+          <button data-v="pool" aria-pressed="false">Bounded pool (3)</button>
+          <button data-v="settled" aria-pressed="false">allSettled, one fails</button>
+        </div></div>
+      <div class="ctrl"><label>Requests</label>
+        <div class="seg" data-group="cn">
+          <button data-v="4" aria-pressed="false">4</button>
+          <button data-v="8" aria-pressed="true">8</button>
+          <button data-v="16" aria-pressed="false">16</button>
+        </div></div>
+      <div class="ctrl"><label>Latency each</label>
+        <div class="seg" data-group="clat">
+          <button data-v="40" aria-pressed="false">40 ms</button>
+          <button data-v="90" aria-pressed="true">90 ms</button>
+          <button data-v="220" aria-pressed="false">220 ms</button>
+        </div></div>
+    </div>
+    <div class="lab-body">
+      <div class="wf-scroll"><svg class="tl" id="tl" role="img" aria-label="Timeline of concurrent requests"></svg></div>
+      <div id="tl-note" style="margin-top:14px"></div>
+    </div>
+  </div>
+
+  <div class="prose">
+    <h4>The four shapes, and when each is correct</h4>
+    <pre><i>// Sequential — correct only when call N+1 genuinely needs call N's result.</i>
+<b>for</b> (<b>const</b> id <b>of</b> ids) results.push(<b>await</b> fetchStudent(id));
+
+<i>// Parallel — the default for independent work. Rejects on the first failure,
+// and the others keep running; you just stop hearing about them.</i>
+<b>const</b> results = <b>await</b> Promise.all(ids.map(fetchStudent));
+
+<i>// Every outcome, never rejects. Use when partial success is meaningful —
+// a dashboard where one dead widget must not blank the page.</i>
+<b>const</b> settled = <b>await</b> Promise.allSettled(ids.map(fetchStudent));
+<b>const</b> ok = settled.filter(r =&gt; r.status === "fulfilled").map(r =&gt; r.value);
+
+<i>// Bounded concurrency — because 500 parallel requests will exhaust the
+// browser's connection pool, your gateway's rate limit, or Hikari's pool.</i>
+<b>async function</b> pool(items, limit, fn) {
+  <b>const</b> out = [], running = <b>new</b> Set();
+  <b>for</b> (<b>const</b> it <b>of</b> items) {
+    <b>const</b> p = fn(it).finally(() =&gt; running.delete(p));
+    out.push(p); running.add(p);
+    <b>if</b> (running.size &gt;= limit) <b>await</b> Promise.race(running);
+  }
+  <b>return</b> Promise.all(out);
+}</pre>
+    <h4>Two things about promises that are not obvious</h4>
+    <ul>
+      <li><b>A promise starts running when it is created, not when it is awaited.</b> <code>ids.map(fetchStudent)</code> has already fired every request by the time <code>Promise.all</code> sees the array. That is why the parallel version works at all — and why storing promises in a variable “for later” means the work already happened.</li>
+      <li><b>An unhandled rejection is not a caught error.</b> With <code>Promise.all</code>, the losing promises still reject; if nothing attaches a handler, you get an unhandled rejection warning and, in Node, a process exit. <code>allSettled</code> exists partly to avoid this.</li>
+    </ul>
+  </div>
+
+  <div class="taskbox exp"><h4>Experiment</h4>
+    <p>Set 16 requests at 220 ms and compare <i>await in a loop</i> with <i>Promise.all</i>. Then ask the harder question: would you actually ship <code>Promise.all</code> here? Sixteen simultaneous requests against one Spring Boot instance with a ten-connection Hikari pool is a self-inflicted outage. The bounded pool is usually the right production answer, and the timeline shows you what it costs.</p></div>
+
+  <div class="reads">
+    <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise" target="_blank" rel="noopener"><span class="src">MDN</span>Promise</a>
+    <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/allSettled" target="_blank" rel="noopener"><span class="src">MDN</span>Promise.allSettled</a>
+  </div>
+</section>
+
+<!-- ===================== 5 ===================== -->
+<section class="module" id="m5" style="--tint:var(--wire)">
+  <div class="mod-head"><span class="mod-n">05 / FAILURE</span><h2>Where an error goes when nobody catches it</h2></div>
+  <p class="mod-q"><code>try/catch</code> around the call, and the error still crashed the page. How?</p>
+
+  <div class="prose">
+    <p>JavaScript has three distinct failure channels and they do not connect to each other automatically. Knowing which one you are in tells you where the <code>catch</code> has to be.</p>
+    <ol>
+      <li><b>Synchronous throw</b> — unwinds the stack to the nearest enclosing <code>try</code>. Ordinary and well-behaved.</li>
+      <li><b>Rejected promise</b> — does <i>not</i> unwind anything. It sits in the promise, waiting for a <code>.catch</code> or an <code>await</code> inside a <code>try</code>. A <code>try/catch</code> around a call you forgot to <code>await</code> catches nothing, because the function returned successfully — it returned a promise that later rejected.</li>
+      <li><b>Callback error</b> — a throw inside a <code>setTimeout</code> or an event listener happens on a completely fresh stack, long after your <code>try</code> block finished. Nothing you wrote is in scope to catch it.</li>
+    </ol>
+    <pre><i>// Catches nothing. save() returns a promise; the throw happens later.</i>
+<b>try</b> { save(application); } <b>catch</b> (e) { toast(e); }
+
+<i>// Catches. await connects the rejection back to this stack.</i>
+<b>try</b> { <b>await</b> save(application); } <b>catch</b> (e) { toast(e); }
+
+<i>// Also catches, without making the caller async.</i>
+save(application).catch(toast);
+
+<i>// Catches nothing, in any language you write it in.</i>
+<b>try</b> { setTimeout(() =&gt; { <b>throw new</b> Error("boom"); }, 0); } <b>catch</b> (e) { }</pre>
+
+    <h4>What to actually throw</h4>
+    <p>You can throw any value, which is why <code>catch (e)</code> gives you <code>unknown</code> in TypeScript rather than <code>Error</code>. Always throw an <code>Error</code> subclass — you get a stack trace, and <code>instanceof</code> becomes a usable dispatch mechanism. For an API client, model the server's problem-detail response as a class, so that every layer above can ask precise questions:</p>
+    <pre><b>export class</b> ApiError <b>extends</b> Error {
+  <b>constructor</b>(
+    <b>readonly</b> status: number,
+    <b>readonly</b> problem: ProblemDetail,   <i>// RFC 9457 body from Spring Boot</i>
+  ) {
+    <b>super</b>(problem.title ?? `HTTP ${status}`);
+    <b>this</b>.name = "ApiError";
+  }
+  <b>get</b> isAuth() { <b>return this</b>.status === 401; }
+  <b>get</b> isForbidden() { <b>return this</b>.status === 403; }
+}
+
+<i>// Now the React layer can branch on meaning, not on string matching:</i>
+<b>if</b> (err <b>instanceof</b> ApiError &amp;&amp; err.isAuth) refreshTokenAndRetry();</pre>
+    <p>That <code>401</code> versus <code>403</code> distinction is the one from Stage 1, and this is where it becomes code. A 401 means refresh and retry; a 403 means stop. A client that retries on 403 loops forever.</p>
+  </div>
+
+  <div class="taskbox arch"><h4>Architecture connection</h4>
+    <p>Every error your React app can show a user originates in one of four places: the network never reached the server, Spring Security rejected the request, your service threw, or the browser threw. Stage 7 gives all four a single wire format (Problem Details), Stage 9 makes the auth cases precise, and Stage 12 makes them traceable back to the exact request. The class above is the seam where those meet the UI.</p></div>
+</section>
+
+<!-- ===================== 6 ===================== -->
+<section class="module" id="m6" style="--tint:var(--server)">
+  <div class="mod-head"><span class="mod-n">06 / TYPES</span><h2>What a type system is actually for</h2></div>
+  <p class="mod-q">You have shipped large systems without TypeScript. What does it buy that discipline and tests do not?</p>
+
+  <div class="prose">
+    <p>The wrong answer is “it catches typos”. The useful answer is that a type is a <b>machine-checked claim about the whole program</b>, enforced at every call site including the ones you have not written yet. A test proves one path works; a type proves an entire class of paths cannot be written. Rename a field on a DTO and the compiler hands you the complete list of everything that must change — which is the difference between refactoring and rewriting.</p>
+
+    <h4>Structural, not nominal — and that is not the Java model</h4>
+    <p>Coming from Java, this is the adjustment worth making explicitly. In Java, a class implements an interface because you declared that it does. In TypeScript, a value satisfies a type <b>because its shape matches</b>. There is no declaration and no inheritance involved:</p>
+    <pre><b>interface</b> Awardable { id: number; amount: number }
+
+<b>function</b> disburse(a: Awardable) { <i>/* … */</i> }
+
+<b>const</b> grant = { id: 7, amount: 50_000, currency: "INR" };
+disburse(grant);   <i>// ✓ legal. grant was never declared Awardable —
+                   //   it simply has the required members.</i></pre>
+    <p>Two things follow. First, you almost never need adapter classes to make one library's type fit another's. Second, the compiler will not stop you passing an object with extra fields — with one deliberate exception, <b>excess property checking</b>, which fires only on object literals assigned directly:</p>
+    <pre>disburse({ id: 7, amount: 50_000, currency: "INR" });
+<i>// ✗ Object literal may only specify known properties.
+//   TypeScript assumes a literal with an unexpected key is a typo,
+//   not a design. Assign it to a variable first and it compiles.</i></pre>
+
+    <h4>Infer aggressively, annotate at the boundaries</h4>
+    <p>The idiom that separates pleasant TypeScript from noisy TypeScript: annotate function parameters, return types on exported functions, and anything crossing a module boundary. Let inference do everything else. Annotating every local variable adds no safety and doubles the diff on every change.</p>
+    <pre><i>// Noise — the type is already known and now must be maintained twice.</i>
+<b>const</b> names: string[] = students.map((s: Student): string =&gt; s.name);
+
+<i>// Same guarantees, nothing to keep in sync.</i>
+<b>const</b> names = students.map(s =&gt; s.name);</pre>
+
+    <h4><code>interface</code> or <code>type</code>?</h4>
+    <p>Practically: <b><code>interface</code></b> for object shapes you expect others to extend or that model a domain entity; <b><code>type</code></b> for unions, intersections, mapped and conditional types, and function signatures — things <code>interface</code> cannot express. Interfaces also merge across declarations, which is what makes library augmentation possible and what makes accidental merging a real if rare hazard. Team consistency matters more than the choice.</p>
+  </div>
+
+  <div class="callout">
+    <h4>The one rule that decides whether TypeScript is worth it</h4>
+    <p>Turn on <code>strict</code> on day one, and treat <code>any</code> as a bug. <code>any</code> is not “a type I have not decided yet” — it is a hole through which type checking stops for everything downstream of it. One <code>any</code> at your API boundary silently un-types your entire data layer, and you get the compile times of TypeScript with the guarantees of JavaScript. When you genuinely do not know a shape, the honest annotation is <code>unknown</code>, which forces you to narrow before use. That is the whole difference: <code>any</code> disables the checker, <code>unknown</code> defers to it.</p>
+  </div>
+
+  <div class="reads">
+    <a href="https://www.typescriptlang.org/docs/handbook/2/everyday-types.html" target="_blank" rel="noopener"><span class="src">Official</span>Everyday types</a>
+    <a href="https://www.typescriptlang.org/docs/handbook/type-compatibility.html" target="_blank" rel="noopener"><span class="src">Official</span>Structural typing</a>
+    <a href="https://www.typescriptlang.org/tsconfig/#strict" target="_blank" rel="noopener"><span class="src">Official</span>strict</a>
+  </div>
+</section>
+
+<!-- ===================== 7 ===================== -->
+<section class="module" id="m7" style="--tint:var(--server)">
+  <div class="mod-head"><span class="mod-n">07 / NARROWING</span><h2>Unions, and making illegal states unrepresentable</h2></div>
+  <p class="mod-q">Four booleans give you sixteen states. How many of them are real?</p>
+
+  <div class="prose">
+    <p>Here is the highest-value idea in this entire stage, and it costs nothing to adopt. Most React components model async data like this:</p>
+    <pre><b>interface</b> State {
+  loading: boolean;
+  error: string | <b>null</b>;
+  data: Scholarship[] | <b>null</b>;
+}</pre>
+    <p>That is eight combinations, of which three are meaningful. The other five — loading <i>and</i> error, data <i>and</i> error, nothing at all — are states your rendering code must nonetheless handle, and the bug you eventually ship is the one where a stale error renders next to fresh data. A <b>discriminated union</b> removes them from the language:</p>
+    <pre><b>type</b> Result =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "error"; error: ApiError }
+  | { status: "ready"; data: Scholarship[] };</pre>
+    <p>Now there are exactly four states, <code>error</code> exists only when there is an error, and <code>data</code> exists only when there is data. Click through the walker to see what the compiler knows at each line.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Narrowing walker</h3><span class="kind">Interactive · click a line</span></div>
+    <div class="lab-body">
+      <div class="walk">
+        <div id="nw-code"></div>
+        <div class="typebox" id="nw-box"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="prose">
+    <h4>How the compiler narrows</h4>
+    <ul>
+      <li><b><code>typeof</code></b> for primitives, <b><code>Array.isArray</code></b>, <b><code>instanceof</code></b> for classes — including your <code>ApiError</code>.</li>
+      <li><b>Literal comparison on a discriminant</b> — <code>if (r.status === "ready")</code>. This is why the discriminant must be a literal type, and why widening it to <code>string</code> silently destroys every narrowing in the file.</li>
+      <li><b><code>in</code></b> — <code>if ("error" in r)</code>, for unions without a shared tag.</li>
+      <li><b>User-defined type guards</b> — <code>function isReady(r: Result): r is Extract&lt;Result, {status:"ready"}&gt;</code>. Note that these are <i>assertions</i>: the compiler believes you. A wrong guard is a silent lie, which is exactly the argument for module 09.</li>
+      <li><b>Exhaustiveness via <code>never</code></b> — the trick below turns “someone added a case and forgot a branch” from a runtime bug into a compile error, which is the entire point of doing this.</li>
+    </ul>
+    <pre><b>function</b> render(r: Result) {
+  <b>switch</b> (r.status) {
+    <b>case</b> "idle":    <b>return</b> &lt;Empty /&gt;;
+    <b>case</b> "loading": <b>return</b> &lt;Skeleton /&gt;;
+    <b>case</b> "error":   <b>return</b> &lt;ErrorPanel problem={r.error.problem} /&gt;;
+    <b>case</b> "ready":   <b>return</b> &lt;Table rows={r.data} /&gt;;
+    <b>default</b>: {
+      <b>const</b> _exhaustive: never = r;   <i>// add a 5th status → this line fails to compile</i>
+      <b>return</b> _exhaustive;
+    }
+  }
+}</pre>
+    <h4>Intersections, and where they belong</h4>
+    <p>Unions are “one of”; intersections (<code>A &amp; B</code>) are “both at once”. Intersections earn their place in composition — <code>type Props = ButtonHTMLAttributes&lt;HTMLButtonElement&gt; &amp; { variant: "primary" | "ghost" }</code> — and become a smell when used to bolt optional fields onto an entity, which is usually a union wearing a disguise.</p>
+  </div>
+
+  <div class="taskbox chal"><h4>Challenge</h4>
+    <p>Model the capstone's scholarship application lifecycle — <code>DRAFT</code>, <code>SUBMITTED</code>, <code>UNDER_REVIEW</code>, <code>AWARDED</code>, <code>REJECTED</code> — as a discriminated union where each state carries only the fields that can exist in it. <code>rejectionReason</code> must be impossible to read on an awarded application; <code>awardedAmount</code> must be impossible to read on a draft. Then write the transition function and let <code>never</code> prove you covered every case.</p></div>
+
+  <div class="reads">
+    <a href="https://www.typescriptlang.org/docs/handbook/2/narrowing.html" target="_blank" rel="noopener"><span class="src">Official</span>Narrowing</a>
+    <a href="https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#union-types" target="_blank" rel="noopener"><span class="src">Official</span>Union types</a>
+  </div>
+</section>
+
+<!-- ===================== 8 ===================== -->
+<section class="module" id="m8" style="--tint:var(--server)">
+  <div class="mod-head"><span class="mod-n">08 / ABSTRACTION</span><h2>Generics and utility types</h2></div>
+  <p class="mod-q">Generics in Java are erased at runtime. What are TypeScript's, and what can you do with them that you cannot do in Java?</p>
+
+  <div class="prose">
+    <p>TypeScript's generics are erased too — they exist only at compile time. But because the type system is structural and has mapped and conditional types, generics are used less for containers and more for <b>describing relationships between types</b>. Hover any call below to see what the compiler infers.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Inference explorer</h3><span class="kind">Interactive · pick a call</span></div>
+    <div class="ctrls">
+      <div class="ctrl" style="flex:1"><label>Call site</label><select id="gen-sel"></select></div>
+    </div>
+    <div class="lab-body"><div id="gen-out"></div></div>
+  </div>
+
+  <div class="prose">
+    <h4>The utility types you will use weekly</h4>
+    <div class="matrix2" style="margin:14px 0 20px">
+      <table>
+        <thead><tr><th>Type</th><th>What it produces</th><th>Where it earns its keep</th></tr></thead>
+        <tbody>
+          <tr><td><code>Partial&lt;T&gt;</code></td><td>All properties optional</td><td>PATCH request bodies, form drafts</td></tr>
+          <tr><td><code>Required&lt;T&gt;</code></td><td>All properties required</td><td>After validation, to prove the optional fields are now present</td></tr>
+          <tr><td><code>Pick&lt;T,K&gt;</code> / <code>Omit&lt;T,K&gt;</code></td><td>A subset of properties</td><td>Deriving a list-row DTO from the full entity, so they cannot drift</td></tr>
+          <tr><td><code>Record&lt;K,V&gt;</code></td><td>An object with keys K</td><td>A lookup keyed by a union — and the compiler forces every key to exist</td></tr>
+          <tr><td><code>Readonly&lt;T&gt;</code></td><td>All properties immutable</td><td>Props, and anything you pass into a memoised component</td></tr>
+          <tr><td><code>NonNullable&lt;T&gt;</code></td><td>T without null/undefined</td><td>After a filter or a guard</td></tr>
+          <tr><td><code>Awaited&lt;T&gt;</code></td><td>The value a promise resolves to</td><td>Deriving a hook's data type from its fetcher, once</td></tr>
+          <tr><td><code>ReturnType&lt;F&gt;</code> / <code>Parameters&lt;F&gt;</code></td><td>A function's output / inputs</td><td>Typing wrappers, decorators and test doubles without restating signatures</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4>Two techniques worth stealing immediately</h4>
+    <p><b><code>satisfies</code></b> checks a value against a type <i>without widening it</i>. You get the validation of an annotation and the precision of inference — the difference between a config object whose keys are <code>string</code> and one whose keys the compiler knows exactly:</p>
+    <pre><b>const</b> routes = {
+  students:    "/students",
+  scholarships:"/scholarships",
+} <b>satisfies</b> Record&lt;string, `/${string}`&gt;;
+
+routes.students;   <i>// type: "/students"  ← literal preserved</i>
+<i>// With  : Record&lt;string, string&gt;  instead, it would be  string
+//   and  routes.typo  would compile.</i></pre>
+    <p><b>Deriving types from a source of truth</b> rather than declaring them twice. A hand-written interface next to a Zod schema will drift within a sprint; a derived one cannot:</p>
+    <pre><b>type</b> Application = z.infer&lt;<b>typeof</b> applicationSchema&gt;;
+<b>type</b> Status     = Application["status"];          <i>// indexed access</i>
+<b>type</b> ListRow    = Pick&lt;Application, "id" | "studentName" | "status"&gt;;</pre>
+    <p>The same discipline applies across the network boundary: generate your API types from the OpenAPI document Spring Boot already publishes (Stage 7), rather than typing them by hand on the client. A backend field rename then becomes a red build instead of a production <code>undefined</code>.</p>
+  </div>
+
+  <div class="reads">
+    <a href="https://www.typescriptlang.org/docs/handbook/2/generics.html" target="_blank" rel="noopener"><span class="src">Official</span>Generics</a>
+    <a href="https://www.typescriptlang.org/docs/handbook/utility-types.html" target="_blank" rel="noopener"><span class="src">Official</span>Utility types</a>
+    <a href="https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-9.html#the-satisfies-operator" target="_blank" rel="noopener"><span class="src">Official</span>satisfies</a>
+  </div>
+</section>
+
+<!-- ===================== 9 ===================== -->
+<section class="module" id="m9" style="--tint:var(--data)">
+  <div class="mod-head"><span class="mod-n">09 / BOUNDARY</span><h2>Your types stop at the network</h2></div>
+  <p class="mod-q"><code>const data = await res.json() as Scholarship[]</code> — what exactly did you just verify?</p>
+
+  <div class="prose">
+    <p>Nothing. Not one thing. <code>as</code> is an instruction to the compiler to stop asking, and <code>res.json()</code> returns <code>any</code>, which means the object graph flowing through your entire application has been typed by an act of faith. Every type in your React app is a compile-time fiction about data that arrives at runtime from another process, over a network, from a Spring Boot version that may have been deployed twenty minutes ago.</p>
+    <p>So there is exactly one rule, and it is the deliverable of this whole stage: <b>parse at the boundary, then trust the types inside it.</b> Validate once, where the data enters — and from that point on, the compiler's guarantees are real, because something checked them.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Boundary validator</h3><span class="kind">Interactive · live validation</span></div>
+    <div class="ctrls">
+      <div class="ctrl"><label>What the server actually sent</label>
+        <div class="seg" data-group="payload">
+          <button data-v="0" aria-pressed="true">Valid</button>
+          <button data-v="1" aria-pressed="false">Field renamed in a deploy</button>
+          <button data-v="2" aria-pressed="false">Number sent as string</button>
+          <button data-v="3" aria-pressed="false">null instead of missing</button>
+          <button data-v="4" aria-pressed="false">New enum value</button>
+        </div></div>
+    </div>
+    <div class="lab-body"><div id="val-out"></div></div>
+  </div>
+
+  <div class="prose">
+    <h4>What this looks like in the capstone</h4>
+    <pre><i>// One schema. The TypeScript type is derived from it, so they cannot drift.</i>
+<b>export const</b> applicationSchema = z.object({
+  id:            z.number().int().positive(),
+  studentName:   z.string().min(2),
+  cohort:        z.number().int().min(2000).max(2100),
+  email:         z.string().email(),
+  guardianEmail: z.string().email().optional(),
+  status:        z.enum(["DRAFT","SUBMITTED","UNDER_REVIEW","AWARDED","REJECTED"]),
+  documents:     z.array(z.object({ type: z.string(), url: z.string().url() })),
+  submittedAt:   z.string().datetime().nullable(),
+});
+
+<b>export type</b> Application = z.infer&lt;<b>typeof</b> applicationSchema&gt;;
+
+<i>// One place where unknown becomes known.</i>
+<b>export async function</b> apiGet&lt;T&gt;(url: string, schema: z.ZodType&lt;T&gt;): Promise&lt;T&gt; {
+  <b>const</b> res = <b>await</b> fetch(url, { headers: authHeaders() });
+  <b>if</b> (!res.ok) <b>throw new</b> ApiError(res.status, <b>await</b> res.json());
+  <b>const</b> raw: unknown = <b>await</b> res.json();          <i>// unknown, not any</i>
+  <b>const</b> parsed = schema.safeParse(raw);
+  <b>if</b> (!parsed.success) {
+    reportSchemaDrift(url, parsed.error);            <i>// this is a monitoring event</i>
+    <b>throw new</b> Error(`Contract violation from ${url}`);
+  }
+  <b>return</b> parsed.data;                              <i>// genuinely typed from here on</i>
+}</pre>
+    <p>Note <code>reportSchemaDrift</code>. A validation failure at the boundary is not a user error and it is not really a client bug — it is the two sides of a contract having disagreed, and it should page someone. This is the cheapest contract test you will ever deploy, and it runs in production against real traffic.</p>
+
+    <h4>Where else the boundary is</h4>
+    <p>The API is the obvious one. The others catch people out: <code>localStorage</code> (written by a version of your app that no longer exists), URL query parameters (typed by whoever pasted the link), environment variables (all strings, all optional, all capable of taking production down at boot), form input, third-party webhooks, and anything crossing <code>postMessage</code>. Each deserves a schema. Environment variables in particular are worth validating at startup so a missing key fails the deploy rather than the checkout page.</p>
+  </div>
+
+  <div class="mistakes">
+    <details class="mistake"><summary><span class="x">✕</span><span>Writing the interface by hand next to the schema</span></summary>
+      <div class="in"><p>Two sources of truth, and only one is enforced. They agree today. Derive the type with <code>z.infer</code> and the question cannot arise.</p></div></details>
+    <details class="mistake"><summary><span class="x">✕</span><span>Validating in every component instead of at the boundary</span></summary>
+      <div class="in"><p>Defensive checks scattered through the render tree are the symptom of not trusting your own types — and they never cover everything. Parse once at the edge; inside, use the types with confidence. If you cannot, the edge is in the wrong place.</p></div></details>
+    <details class="mistake"><summary><span class="x">✕</span><span>Using <code>as</code> to make a type error go away</span></summary>
+      <div class="in"><p><code>as</code> does not convert anything at runtime. It suppresses the compiler's objection, which was the only thing standing between you and the bug. The legitimate uses are narrow: <code>as const</code>, and asserting a type the compiler cannot possibly know but you have just proven — after a validation, not before.</p></div></details>
+  </div>
+
+  <div class="taskbox arch"><h4>Architecture connection</h4>
+    <p>This module is the client half of a contract; Stage 7 builds the server half. Spring Boot publishes an OpenAPI document, Jakarta Bean Validation enforces the same constraints on the way in, and RFC 9457 problem details describe failures in one shape. When both halves are generated from one contract, a breaking change surfaces in CI (Stage 14) instead of in a user's browser. Everything after this stage assumes the boundary is guarded.</p></div>
+
+  <div class="reads">
+    <a href="https://zod.dev/" target="_blank" rel="noopener"><span class="src">Official</span>Zod</a>
+    <a href="https://www.typescriptlang.org/docs/handbook/2/functions.html#unknown" target="_blank" rel="noopener"><span class="src">Official</span>unknown</a>
+    <a href="https://openapi-ts.dev/" target="_blank" rel="noopener"><span class="src">Reference</span>Generating types from OpenAPI</a>
+  </div>
+</section>
+
+<!-- ===================== 10 ===================== -->
+<section class="module" id="m10" style="--tint:var(--data)">
+  <div class="mod-head"><span class="mod-n">10 / CLOSING</span><h2>What you should now be able to do</h2></div>
+  <div class="prose">
+    <h4>Self-check</h4>
+    <ol>
+      <li>Order the output of a program mixing sync logs, <code>setTimeout(…, 0)</code>, a resolved promise and an <code>await</code> — and justify each position.</li>
+      <li>Explain a stale closure in a <code>useEffect</code> to someone who has not met one, and give two fixes with different trade-offs.</li>
+      <li><code>value ?? fallback</code> versus <code>value || fallback</code>: name two values where they differ and a feature where that difference is a bug.</li>
+      <li>Twelve independent calls at 90 ms. Give the wall-clock time for sequential, parallel and pooled-at-3 — and say which you would ship.</li>
+      <li>Why does <code>try { save(x) } catch {}</code> catch nothing, and what are the two ways to fix it?</li>
+      <li>Rewrite <code>{loading, error, data}</code> as a discriminated union and show what becomes impossible.</li>
+      <li>What does <code>as Scholarship[]</code> verify at runtime? What does <code>schema.parse</code> verify?</li>
+      <li>Where are the six boundaries in a React + Spring Boot app where untyped data enters?</li>
+    </ol>
+
+    <h4>The capstone increment</h4>
+    <p>Build the typed foundation the rest of the curriculum imports:</p>
+    <ul>
+      <li>A Vite + React + TypeScript project with <code>strict</code> on and <code>any</code> banned by lint rule.</li>
+      <li><code>schemas/</code> — Zod schemas for <code>Student</code>, <code>Guardian</code>, <code>School</code>, <code>Scholarship</code>, <code>Application</code>, <code>Document</code>, with every domain type derived via <code>z.infer</code>.</li>
+      <li><code>api/client.ts</code> — the <code>apiGet</code>/<code>apiPost</code> wrapper above: <code>unknown</code> in, validated type out, <code>ApiError</code> carrying the problem detail, and a schema-drift report on failure.</li>
+      <li><code>Result&lt;T&gt;</code> as a discriminated union, used by every data-loading surface from Stage 4 onward.</li>
+      <li>An <code>env.ts</code> that parses <code>import.meta.env</code> through a schema at startup, so a missing variable fails the build rather than a page.</li>
+    </ul>
+    <p>Nothing here is throwaway. Stages 3 through 15 all import this module, and the single decision that pays off most across the remaining thirteen stages is banning <code>any</code> today, while the codebase is small enough that the ban is free.</p>
+  </div>
+
+  <div class="callout" style="border-left-color:var(--c-server); background:var(--server-wash)">
+    <h4 style="color:var(--server)">Next</h4>
+    <p style="margin-bottom:0">Stage 3 — <i>React from First Principles</i>. Why re-rendering everything is the cheap option, what reconciliation actually compares, and why almost every <code>useEffect</code> you are tempted to write should not exist. Your course deck is genuinely strong here — roughly 110 slides — so Stage 3 spends its effort on the mental model underneath the APIs, and on the seven hooks the deck lists and never teaches.</p>
+  </div>
+</section>
+
+</main>
+
+<footer><div class="wrap">
+  <p><b style="font-family:var(--display); color:var(--ink)">Sources.</b> Language behaviour is stated per the ECMAScript and HTML specifications and MDN; TypeScript behaviour per the official handbook, all linked inline. Where this page recommends a practice — banning <code>any</code>, deriving types from schemas, parsing at the boundary — that is an architectural recommendation with reasoning attached, not a specification requirement.</p>
+  <p style="margin-top:12px">Stage 2 of the Full-Stack Atlas. The event-loop stepper, closure inspector and narrowing walker are hand-authored traces of real semantics; the concurrency timeline is a model, and the boundary validator runs a real schema check in your browser.</p>
+</div></footer>
+
+<div class="tip" id="tip"></div>
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const state = {elprog:"0", clo:"var", cstrat:"seq", cn:"8", clat:"90", payload:"0"};
+function segGroup(group, cb){
+  $$(`.seg[data-group="${group}"] button`).forEach(b=>b.addEventListener("click",()=>{
+    $$(`.seg[data-group="${group}"] button`).forEach(x=>x.setAttribute("aria-pressed", x===b?"true":"false"));
+    state[group] = b.dataset.v; cb(b.dataset.v);
+  }));
+}
+const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+/* ==================== 1. event loop ==================== */
+const PROGRAMS = [
+{ name:"Ordering",
+  code:[
+  'console.log("A: sync");',
+  'setTimeout(() => console.log("B: timeout"), 0);',
+  'Promise.resolve().then(() => console.log("C: micro"));',
+  'queueMicrotask(() => console.log("D: micro"));',
+  'console.log("E: sync");'],
+  steps:[
+  {l:1, stack:["<script>"], micro:[], macro:[], out:["A: sync"],
+   n:"Line 1 runs on the stack and logs immediately. Nothing else in the page can run while this frame is open."},
+  {l:2, stack:["<script>"], micro:[], macro:["B: timeout"], out:["A: sync"],
+   n:"<code>setTimeout</code> hands the callback to the timer subsystem and returns instantly. Even at 0&nbsp;ms it cannot run now — it is queued as a macrotask."},
+  {l:3, stack:["<script>"], micro:["C: micro"], macro:["B: timeout"], out:["A: sync"],
+   n:"The promise is <i>already</i> resolved, so its callback goes straight to the microtask queue. It still does not run: the stack is not empty."},
+  {l:4, stack:["<script>"], micro:["C: micro","D: micro"], macro:["B: timeout"], out:["A: sync"],
+   n:"<code>queueMicrotask</code> appends to the same queue. Within a queue, order is strictly first-in first-out."},
+  {l:5, stack:["<script>"], micro:["C: micro","D: micro"], macro:["B: timeout"], out:["A: sync","E: sync"],
+   n:"Still synchronous. Both queued callbacks are waiting, and neither can jump ahead of running code."},
+  {l:0, stack:[], micro:["C: micro","D: micro"], macro:["B: timeout"], out:["A: sync","E: sync"],
+   n:"The script finishes and the stack empties. <b>Now</b> the loop turns — and its first job is the microtask queue."},
+  {l:0, stack:["C: micro"], micro:["D: micro"], macro:["B: timeout"], out:["A: sync","E: sync","C: micro"],
+   n:"First microtask runs."},
+  {l:0, stack:["D: micro"], micro:[], macro:["B: timeout"], out:["A: sync","E: sync","C: micro","D: micro"],
+   n:"The microtask queue is drained <b>completely</b> — not one per turn. This is the key asymmetry."},
+  {l:0, stack:[], micro:[], macro:["B: timeout"], out:["A: sync","E: sync","C: micro","D: micro"],
+   n:"Microtasks empty. The browser is now free to render, if it wants to. Then the loop takes exactly one macrotask."},
+  {l:2, stack:["B: timeout"], micro:[], macro:[], out:["A: sync","E: sync","C: micro","D: micro","B: timeout"],
+   n:"The 0&nbsp;ms timer finally runs — <b>last</b>, despite having been scheduled first. A promise queued after it still wins, every time."}]},
+
+{ name:"async / await",
+  code:[
+  'async function load() {',
+  '  console.log("B: load body");',
+  '  await null;',
+  '  console.log("E: after await");',
+  '}',
+  '',
+  'console.log("A: before");',
+  'load();',
+  'Promise.resolve().then(() => console.log("D: then"));',
+  'console.log("C: after");'],
+  steps:[
+  {l:7, stack:["<script>"], micro:[], macro:[], out:["A: before"],
+   n:"Synchronous, as expected."},
+  {l:8, stack:["<script>","load()"], micro:[], macro:[], out:["A: before"],
+   n:"Calling an <code>async</code> function defers <b>nothing</b>. Its body starts running immediately, on this very stack."},
+  {l:2, stack:["<script>","load()"], micro:[], macro:[], out:["A: before","B: load body"],
+   n:"Proof: B logs before anything that follows the call. The <code>async</code> keyword only changes what the function <i>returns</i>."},
+  {l:3, stack:["<script>"], micro:["load ▸ resume"], macro:[], out:["A: before","B: load body"],
+   n:"<code>await</code> splits the function in two. Everything after it becomes a microtask, and <code>load()</code> returns a pending promise to its caller right here."},
+  {l:9, stack:["<script>"], micro:["load ▸ resume","D: then"], macro:[], out:["A: before","B: load body"],
+   n:"The <code>.then</code> callback queues <i>behind</i> the resumption, which was scheduled one line earlier."},
+  {l:10, stack:["<script>"], micro:["load ▸ resume","D: then"], macro:[], out:["A: before","B: load body","C: after"],
+   n:"Still synchronous — C beats both queued continuations."},
+  {l:0, stack:[], micro:["load ▸ resume","D: then"], macro:[], out:["A: before","B: load body","C: after"],
+   n:"Script done. Drain the microtask queue, first in first out."},
+  {l:4, stack:["load ▸ resume"], micro:["D: then"], macro:[], out:["A: before","B: load body","C: after","E: after await"],
+   n:"The rest of <code>load()</code> resumes on a fresh stack."},
+  {l:9, stack:["D: then"], micro:[], macro:[], out:["A: before","B: load body","C: after","E: after await","D: then"],
+   n:"Then the <code>.then</code> callback. Final order: <b>A B C E D</b>. <code>await null</code> awaits nothing at all and still costs one microtask tick — and that tick is the entire reason E lands after C."}]},
+
+{ name:"Microtask starvation",
+  code:[
+  'setTimeout(() => console.log("timer"), 0);',
+  '',
+  'let n = 0;',
+  'function loop() {',
+  '  if (n++ < 3) {',
+  '    console.log("micro " + n);',
+  '    Promise.resolve().then(loop);',
+  '  }',
+  '}',
+  'loop();'],
+  steps:[
+  {l:1, stack:["<script>"], micro:[], macro:["timer"], out:[],
+   n:"The timer expires essentially at once and its callback is sitting in the macrotask queue, ready to go."},
+  {l:6, stack:["<script>","loop()"], micro:[], macro:["timer"], out:["micro 1"],
+   n:"<code>loop()</code> logs synchronously."},
+  {l:7, stack:["<script>"], micro:["loop"], macro:["timer"], out:["micro 1"],
+   n:"…and queues itself as a microtask before returning."},
+  {l:0, stack:[], micro:["loop"], macro:["timer"], out:["micro 1"],
+   n:"Stack empty. The loop drains microtasks first — the timer keeps waiting."},
+  {l:6, stack:["loop"], micro:["loop"], macro:["timer"], out:["micro 1","micro 2"],
+   n:"The microtask ran and queued <b>another</b> microtask. The queue is not empty, so the loop does not move on."},
+  {l:6, stack:["loop"], micro:["loop"], macro:["timer"], out:["micro 1","micro 2","micro 3"],
+   n:"Again. Still no rendering, still no timer, still no click handling."},
+  {l:5, stack:["loop"], micro:[], macro:["timer"], out:["micro 1","micro 2","micro 3"],
+   n:"<code>n</code> has reached 3, the guard fails, and no further microtask is queued. The queue finally empties."},
+  {l:1, stack:["timer"], micro:[], macro:[], out:["micro 1","micro 2","micro 3","timer"],
+   n:"Only now does the 0&nbsp;ms timer run. Remove the guard and it <b>never</b> runs: no paint, no input, no timers. An unbounded microtask chain is indistinguishable from <code>while (true)</code> from the user's side."}]}
+];
+let elIdx = 0, elTimer = null;
+function drawEL(){
+  const p = PROGRAMS[+state.elprog], st = p.steps[elIdx];
+  $("#el-code").innerHTML = p.code.map((c,i)=>
+    `<div class="ln${st.l===i+1?' hot':''}"><span>${i+1}</span><span>${esc(c)||"&nbsp;"}</span></div>`).join("");
+  const q = (cls,title,hint,items,rev) => `<div class="queue ${cls}"><h6>${title}<em>${hint}</em></h6>
+    <div class="items${rev?"":" row"}">${items.length ? items.map(i=>`<span class="qi">${esc(i)}</span>`).join("")
+      : `<span class="qi empty">empty</span>`}</div></div>`;
+  $("#el-queues").innerHTML =
+    q("q-stack","Call stack","runs to completion", st.stack, true) +
+    q("q-micro","Microtask queue","drained fully", st.micro, false) +
+    q("q-macro","Macrotask queue","one per turn", st.macro, false) +
+    q("q-out","Console output","", st.out, false);
+  $("#el-note").innerHTML = st.n;
+  $("#el-pos").textContent = `${elIdx+1} / ${p.steps.length}`;
+  $("#el-track").style.width = ((elIdx+1)/p.steps.length*100)+"%";
+}
+function elStop(){ if(elTimer){ clearInterval(elTimer); elTimer=null; $("#el-play").textContent="Play"; } }
+$("#el-next").addEventListener("click",()=>{ elStop(); elIdx=Math.min(elIdx+1, PROGRAMS[+state.elprog].steps.length-1); drawEL(); });
+$("#el-prev").addEventListener("click",()=>{ elStop(); elIdx=Math.max(0, elIdx-1); drawEL(); });
+$("#el-reset").addEventListener("click",()=>{ elStop(); elIdx=0; drawEL(); });
+$("#el-play").addEventListener("click",()=>{
+  if(elTimer){ elStop(); return; }
+  $("#el-play").textContent="Pause";
+  elTimer = setInterval(()=>{
+    const last = PROGRAMS[+state.elprog].steps.length-1;
+    if(elIdx>=last){ elStop(); return; }
+    elIdx++; drawEL();
+  }, 1500);
+});
+segGroup("elprog", ()=>{ elStop(); elIdx=0; drawEL(); });
+
+/* ==================== 2. closures ==================== */
+function drawClo(){
+  const kw = state.clo;
+  const perIter = kw === "let";
+  const envs = perIter
+    ? [0,1,2].map(i=>({label:`Block env #${i+1}`, binding:`i = ${i}`, note:`Created fresh for this iteration. The callback created here closes over <i>this</i> record.`}))
+    : [{label:"Function env (one only)", binding:"i = 3", note:"All three callbacks closed over the same record. By the time any of them runs, the loop has finished and <code>i</code> is 3."}];
+  $("#clo-out").innerHTML = `
+    <pre style="margin-bottom:16px"><b>for</b> (${kw} i = 0; i &lt; 3; i++) {
+  setTimeout(() =&gt; console.log(i), 0);
+}</pre>
+    <div class="cols3" style="margin-bottom:16px">
+      ${envs.map(e=>`<div class="card acc" style="--ac:${perIter?'var(--c-server)':'var(--c-wire)'}">
+        <h5>${e.label}</h5>
+        <p style="font-family:var(--mono); font-size:12.5px; color:var(--ink)">${e.binding}</p>
+        <p style="margin-top:7px">${e.note}</p></div>`).join("")}
+    </div>
+    <div class="verdict ${perIter?'ok':'no'}" style="margin-bottom:0">
+      <h5>Output</h5>
+      <p style="font-family:var(--mono); font-size:14px; color:var(--ink)">${perIter ? "0\n1\n2" : "3\n3\n3"}</p>
+      <p style="margin-bottom:0">${perIter
+        ? "<code>let</code> is block-scoped, and the specification gives each loop iteration its own binding. Three environments, three captured values — this is a language feature added precisely because the <code>var</code> version surprised everyone."
+        : "<code>var</code> is function-scoped: one binding for the entire loop. The callbacks did not capture the <i>value</i> 0, 1, 2 — they captured the <i>variable</i>, and by the time the timers fire it holds 3."}</p>
+    </div>`;
+}
+segGroup("clo", drawClo);
+
+/* ==================== 3. traps ==================== */
+const TRAPS = [
+{e:`function greet(name = "Student") { return name; }\n\ngreet(undefined)   // ?\ngreet(null)        // ?`,
+ a:`"Student"\nnull`,
+ w:"A default parameter fires <b>only</b> for <code>undefined</code>. <code>null</code> is a value, and passing a value means you do not want the default.",
+ b:"Spring Boot serialises an unset field as <code>null</code>, not as absent. Every default you wrote for that field is silently skipped, and <code>name.trim()</code> throws two components later."},
+
+{e:`const pageSize = 0;\nconst nickname = "";\n\npageSize || 20     // ?\npageSize ?? 20     // ?\nnickname  || "n/a" // ?\nnickname  ?? "n/a" // ?`,
+ a:`20\n0\n"n/a"\n""`,
+ w:"<code>||</code> falls back on every <i>falsy</i> value — <code>0</code>, <code>\"\"</code>, <code>false</code>, <code>NaN</code>. <code>??</code> falls back only on <code>null</code> and <code>undefined</code>, which is almost always what you meant.",
+ b:"A settings screen where “0 results per page”, an empty nickname and a disabled toggle are all legitimate choices the user cannot make, because <code>||</code> keeps overwriting them with the defaults."},
+
+{e:`const a = { user: { name: "Ira" }, tags: ["x"] };\nconst b = { ...a };\n\nb.user.name = "Asha";\na.user.name        // ?\nb.tags === a.tags  // ?`,
+ a:`"Asha"\ntrue`,
+ w:"Spread copies one level. Nested objects and arrays are shared references, so <code>b</code> is a new object containing all of <code>a</code>'s old insides.",
+ b:"The classic “immutable update” that mutates. React compares by reference: the nested object is identical, so a memoised child does not re-render — or worse, it does, showing data that was changed behind its back."},
+
+{e:`const scores = [10, 9, 100, 1];\nconst sorted = scores.sort();\n\nsorted             // ?\nscores === sorted  // ?`,
+ a:`[1, 10, 100, 9]\ntrue`,
+ w:"<code>sort()</code> converts elements to strings and compares them lexicographically unless you pass a comparator — and it sorts <b>in place</b>, returning the same array.",
+ b:"Sorting a numeric column gives visibly wrong order, and because it mutates, sorting a prop or a piece of state changes the parent's data without a state update. Use <code>[...rows].sort((a,b)=&gt;a-b)</code>, or <code>toSorted</code> where available."},
+
+{e:`function Row({ id, ...rest }) {\n  useEffect(() => { track(rest); }, [rest]);\n  // ...\n}`,
+ a:`the effect runs after every single render`,
+ w:"Rest destructuring builds a <b>new object</b> each time the function runs. A new object is never <code>Object.is</code>-equal to the previous one, so the dependency always looks changed.",
+ b:"The most common cause of an effect that will not settle. The same applies to inline objects, arrays and functions in a dependency array — stabilise them, or depend on the primitive fields you actually use."},
+
+{e:`["1", "7", "11"].map(parseInt)   // ?`,
+ a:`[1, NaN, 3]`,
+ w:"<code>map</code> passes three arguments: value, index, array. <code>parseInt</code> takes a second argument too — the radix. So the calls are <code>parseInt(\"1\",0)</code>, <code>parseInt(\"7\",1)</code> and <code>parseInt(\"11\",2)</code>, the last of which is binary 11 = 3.",
+ b:"Parsing IDs out of URL parameters. Fix by being explicit: <code>.map(s =&gt; parseInt(s, 10))</code>, or <code>.map(Number)</code>. Passing a multi-argument built-in straight to <code>map</code> is always worth a second look."},
+
+{e:`const config = { retries: 3 };\nconfig.retries = 5;      // ?\nconfig = {};             // ?`,
+ a:`5  — allowed\nTypeError: Assignment to constant variable.`,
+ w:"<code>const</code> freezes the <b>binding</b>, not the value. The variable cannot be reassigned; the object it points at is fully mutable.",
+ b:"A shared default-config object that any caller can quietly modify for everyone else. Use <code>Object.freeze</code> at runtime, <code>readonly</code> / <code>as const</code> at compile time — they solve different halves of the problem."},
+
+{e:`const student = undefined;\nstudent?.profile.school.name        // ?\n\nconst s2 = { profile: undefined };\ns2?.profile.school.name             // ?`,
+ a:`undefined\nTypeError: Cannot read properties of undefined (reading 'school')`,
+ w:"<code>?.</code> short-circuits the whole chain only when the value <i>immediately to its left</i> is nullish. It does not make everything after it safe.",
+ b:"Optional chaining added at the first link and assumed to protect the rest. Either guard each uncertain link, or — better — validate the shape at the boundary so the deep chain is genuinely guaranteed. That is module 09."},
+
+{e:`const draft = { submittedAt: new Date(), note: undefined, tags: new Set(["a"]) };\nconst clone = JSON.parse(JSON.stringify(draft));\n\ntypeof clone.submittedAt   // ?\n"note" in clone            // ?\nclone.tags                 // ?`,
+ a:`"string"\nfalse\n{}`,
+ w:"The JSON round trip is not a clone. Dates become strings, <code>undefined</code> properties vanish, <code>Map</code> and <code>Set</code> become empty objects, <code>NaN</code> and <code>Infinity</code> become <code>null</code>, and a cycle throws.",
+ b:"Cloning form state that holds a <code>Date</code>, then calling <code>.getTime()</code> on a string. Use <code>structuredClone(draft)</code>, which handles dates, maps, sets and cycles — it just cannot clone functions or DOM nodes."},
+
+{e:`Array(3).map((_, i) => i)          // ?\nArray.from({ length: 3 }, (_, i) => i)  // ?`,
+ a:`[empty × 3]     // callback never runs\n[0, 1, 2]`,
+ w:"<code>Array(3)</code> creates three <i>holes</i>, not three <code>undefined</code>s. <code>map</code>, <code>forEach</code> and <code>filter</code> skip holes entirely, so the callback is never invoked.",
+ b:"Generating skeleton rows or page numbers and rendering nothing. <code>Array.from({length:n}, fn)</code> or <code>[...Array(n)].map(fn)</code> both produce real elements."}
+];
+$("#traps").innerHTML = TRAPS.map(t=>`<details class="trap">
+  <summary><code class="expr">${esc(t.e)}</code><span class="ask">Predict, then open ▸</span></summary>
+  <div class="in"><div class="ans">${esc(t.a)}</div>
+    <p class="why">${t.w}</p>
+    <p class="bite"><b>Where it bites</b>${t.b}</p></div></details>`).join("");
+
+/* ==================== 4. concurrency timeline ==================== */
+function drawTL(){
+  const n = +state.cn, lat = +state.clat, strat = state.cstrat;
+  const rows = [];
+  if(strat === "seq"){ for(let i=0;i<n;i++) rows.push({s:i*lat, d:lat, fail:false}); }
+  else if(strat === "all"){ for(let i=0;i<n;i++) rows.push({s:0, d:lat, fail:false}); }
+  else if(strat === "settled"){ for(let i=0;i<n;i++) rows.push({s:0, d:lat, fail:i===2}); }
+  else { for(let i=0;i<n;i++) rows.push({s:Math.floor(i/3)*lat, d:lat, fail:false}); }
+  const total = Math.max(...rows.map(r=>r.s+r.d));
+  const rowH=19, padT=28, padB=24, labelW=136, right=54;
+  const svg = $("#tl");
+  const W = Math.max(580, svg.parentElement.clientWidth||580);
+  const H = padT + rows.length*rowH + padB, plotW = W-labelW-right;
+  const sc = v => (v/total)*plotW;
+  let g="",ax="",bars="";
+  const ticks=5;
+  for(let i=0;i<=ticks;i++){ const v=total*i/ticks, x=labelW+sc(v);
+    g += `<line class="grid" x1="${x}" y1="${padT-8}" x2="${x}" y2="${H-padB+2}" opacity="${i===0?1:.5}"/>`;
+    ax += `<text class="axis" x="${x}" y="${padT-14}" text-anchor="${i===0?'start':(i===ticks?'end':'middle')}">${Math.round(v)}</text>`;
+  }
+  ax += `<text class="axis" x="${labelW+plotW}" y="${H-6}" text-anchor="end">milliseconds</text>`;
+  rows.forEach((r,i)=>{
+    const y = padT+i*rowH;
+    bars += `<rect x="${labelW+sc(r.s)}" y="${y+3}" width="${Math.max(3,sc(r.d)-2)}" height="${rowH-8}"
+      fill="${r.fail?'var(--bad)':'var(--c-client)'}"></rect>`;
+    bars += `<text class="lbl" x="${labelW-10}" y="${y+rowH/2+3.5}" text-anchor="end">GET /students/${i+1}</text>`;
+    if(r.fail) bars += `<text class="axis" x="${labelW+sc(r.s)+sc(r.d)+7}" y="${y+rowH/2+3.5}" fill="var(--bad)">rejected</text>`;
+  });
+  svg.setAttribute("viewBox",`0 0 ${W} ${H}`); svg.setAttribute("height",H);
+  svg.innerHTML = g+ax+bars;
+
+  const seqTotal = n*lat;
+  const NOTES = {
+   seq:["no",`<b>${total} ms.</b> Each request waits for the one before it, for no reason — none of them depends on another's result. This is the shape of <code>for (const id of ids) await fetch(id)</code>, and it is the most common performance bug in React data layers.`],
+   all:["ok",`<b>${total} ms</b> instead of ${seqTotal} ms — a ${Math.round((1-total/seqTotal)*100)}% saving, and the code is <i>shorter</i>. The requests were already in flight the moment <code>ids.map(fetchStudent)</code> ran; <code>Promise.all</code> only decides when to stop waiting.`],
+   pool:["ok",`<b>${total} ms</b> with at most three requests in flight. Slower than unbounded parallelism, and usually the right production answer: it respects the browser's connection limit, your gateway's rate limit, and the connection pool at the far end.`],
+   settled:["warn",`<b>${total} ms</b>, and request 3 rejected — but you still have the other ${n-1} results. <code>Promise.all</code> would have thrown here and discarded every successful response. Use <code>allSettled</code> wherever partial success is meaningful, and remember the failed promise still needs handling or it becomes an unhandled rejection.`]
+  };
+  const [cls,txt] = NOTES[strat];
+  $("#tl-note").innerHTML = `<div class="verdict ${cls}" style="margin-bottom:0"><h5>${
+    strat==="seq"?"Sequential":strat==="all"?"Fully parallel":strat==="pool"?"Bounded to 3":"All settled"
+  }</h5><p style="margin-bottom:0">${txt}</p></div>`;
+}
+segGroup("cstrat", drawTL); segGroup("cn", drawTL); segGroup("clat", drawTL);
+addEventListener("resize", ()=>{ clearTimeout(window.__r); window.__r=setTimeout(()=>{drawTL();}, 150); });
+
+/* ==================== 7. narrowing walker ==================== */
+const NW = [
+{c:'function ScholarshipPanel(r: Result) {', t:'Result',
+ d:'{ status: "idle" }\n| { status: "loading" }\n| { status: "error";  error: ApiError }\n| { status: "ready";  data: Scholarship[] }',
+ n:'Nothing is known yet. <code>r.data</code> here is a compile error, and rightly so — three of the four members do not have it.'},
+{c:'  if (r.status === "loading") {', t:'Result',
+ d:'all four members',
+ n:'The comparison works because <code>status</code> is a <b>literal type</b>, not <code>string</code>. Widen it — say, by typing the field as <code>string</code> in an interface — and this <code>if</code> still compiles but narrows nothing at all. That failure is silent.'},
+{c:'    return <Skeleton />;', t:'{ status: "loading" }',
+ d:'{ status: "loading" }',
+ n:'Inside the branch, <code>r</code> is exactly one member. The compiler tracked the comparison through the control flow — no cast, no annotation.'},
+{c:'  }', t:'union of 3',
+ d:'{ status: "idle" }\n| { status: "error"; error: ApiError }\n| { status: "ready"; data: Scholarship[] }',
+ n:'Narrowing works in both directions. Falling past the <code>if</code> <b>removes</b> that member for the rest of the function — this is why early returns produce such clean TypeScript.'},
+{c:'  if (r.status === "error") {', t:'union of 3', d:'idle | error | ready', n:'Second discriminant check.'},
+{c:'    return <ErrorPanel problem={r.error.problem} />;', t:'{ status: "error"; error: ApiError }',
+ d:'{ status: "error"; error: ApiError }',
+ n:'<code>r.error</code> is accessible here and <b>only</b> here. Move this line below the last return and it stops compiling — which is the entire point: the impossible states were never representable.'},
+{c:'  }', t:'union of 2', d:'{ status: "idle" }\n| { status: "ready"; data: Scholarship[] }', n:'Two members left.'},
+{c:'  if (r.status === "idle") return <Empty />;', t:'union of 2', d:'idle | ready', n:'Third check, and a single-line early return narrows just as well as a block.'},
+{c:'', t:'', d:'', n:''},
+{c:'  return <Table rows={r.data} />;', t:'{ status: "ready"; data: Scholarship[] }',
+ d:'{ status: "ready"; data: Scholarship[] }',
+ n:'By elimination. <code>r.data</code> is <code>Scholarship[]</code> — not <code>Scholarship[] | null</code>, not an assertion, not a non-null bang. Add a fifth status to <code>Result</code> and this line becomes an error, telling you exactly where to handle it.'},
+{c:'}', t:'', d:'', n:''}
+];
+function drawNW(sel){
+  $("#nw-code").innerHTML = NW.map((l,i)=> l.c==="" ? `<div class="tsline">&nbsp;</div>` :
+    `<div class="tsline${i===sel?' on':''}" data-i="${i}">${esc(l.c)}</div>`).join("");
+  $$("#nw-code .tsline[data-i]").forEach(el=>el.addEventListener("click",()=>drawNW(+el.dataset.i)));
+  const l = NW[sel];
+  $("#nw-box").innerHTML = l.t
+    ? `<h6>What the compiler knows about <code>r</code> here</h6><pre>${esc(l.d)}</pre><p>${l.n}</p>`
+    : `<h6>Select a line</h6><p>Click any line on the left to see the narrowed type of <code>r</code> at that point.</p>`;
+}
+
+/* ==================== 8. generics ==================== */
+const GEN = [
+{q:"first([1, 2, 3])",
+ sig:"function first<T>(xs: T[]): T | undefined",
+ inf:"T = number",
+ res:"number | undefined",
+ n:"Inference reads <code>T</code> off the argument. The <code>| undefined</code> is not pessimism — an empty array is legal, so the honest return type says so and the compiler forces you to handle it."},
+{q:"first(applications)   // Application[]",
+ sig:"function first<T>(xs: T[]): T | undefined",
+ inf:"T = Application",
+ res:"Application | undefined",
+ n:"The same function, with your domain type carried through unchanged. This is what generics are for: a relationship between input and output, rather than a container."},
+{q:"first([])",
+ sig:"function first<T>(xs: T[]): T | undefined",
+ inf:"T = never",
+ res:"undefined",
+ n:"There is nothing to infer <code>T</code> from, so it collapses to <code>never</code> and the result is exactly <code>undefined</code>. Seeing <code>never</code> in a hover is usually the compiler telling you an inference site had no information."},
+{q:'apiGet("/applications", applicationSchema)',
+ sig:"function apiGet<T>(url: string, schema: ZodType<T>): Promise<T>",
+ inf:"T = Application",
+ res:"Promise<Application>",
+ n:"<code>T</code> is inferred from the <i>schema</i>, not from an annotation you wrote. The runtime check and the compile-time type now come from one source, and cannot disagree. This is the pattern module 09 builds."},
+{q:"pick(application, [\"id\", \"status\"])",
+ sig:"function pick<T, K extends keyof T>(o: T, ks: K[]): Pick<T, K>",
+ inf:'T = Application,  K = "id" | "status"',
+ res:'{ id: number; status: ApplicationStatus }',
+ n:"<code>K extends keyof T</code> is the constraint doing the work: it ties the second argument to the first, so a typo in the key list is a compile error and the result type is computed, not declared."},
+{q:'pick(application, ["id", "naem"])',
+ sig:"function pick<T, K extends keyof T>(o: T, ks: K[]): Pick<T, K>",
+ inf:"✗ constraint violated",
+ res:'Type \'"naem"\' is not assignable to type \'keyof Application\'.',
+ n:"The typo is caught at the call site, with the misspelled key named in the message. No test needed, no runtime, no logging — and it holds for every call site in the codebase, including the ones written next year."},
+{q:"type Data = Awaited<ReturnType<typeof loadApplications>>",
+ sig:"async function loadApplications(): Promise<Application[]>",
+ inf:"ReturnType = Promise<Application[]>",
+ res:"Data = Application[]",
+ n:"Deriving a type from a function rather than restating it. When <code>loadApplications</code> changes its return shape, every consumer of <code>Data</code> updates with it — and the ones that can no longer compile are exactly the ones that needed your attention."}
+];
+const gsel = $("#gen-sel");
+gsel.innerHTML = GEN.map((g,i)=>`<option value="${i}">${g.q}</option>`).join("");
+function drawGen(){
+  const g = GEN[+gsel.value], bad = g.inf.startsWith("✗");
+  $("#gen-out").innerHTML = `
+    <pre style="margin-bottom:16px">${esc(g.sig)}
+
+${esc(g.q)}</pre>
+    <div class="cols3" style="margin-bottom:16px">
+      <div class="card acc" style="--ac:var(--c-wire)"><h5>Inferred</h5>
+        <p style="font-family:var(--mono); font-size:12.5px; color:var(--ink)">${esc(g.inf)}</p></div>
+      <div class="card acc" style="--ac:${bad?'var(--bad)':'var(--c-server)'}; grid-column:span 2"><h5>${bad?"Compiler error":"Resulting type"}</h5>
+        <p style="font-family:var(--mono); font-size:12.5px; color:var(--ink)">${esc(g.res)}</p></div>
+    </div>
+    <div class="verdict ${bad?'no':'ok'}" style="margin-bottom:0"><h5>Why</h5><p style="margin-bottom:0">${g.n}</p></div>`;
+}
+gsel.addEventListener("change", drawGen);
+
+/* ==================== 9. boundary validator ==================== */
+const SCHEMA = [
+ {k:"id",            r:"z.number().int().positive()",           req:true},
+ {k:"studentName",   r:"z.string().min(2)",                     req:true},
+ {k:"cohort",        r:"z.number().int().min(2000).max(2100)",  req:true},
+ {k:"email",         r:"z.string().email()",                    req:true},
+ {k:"guardianEmail", r:"z.string().email().optional()",         req:false},
+ {k:"status",        r:'z.enum(["DRAFT","SUBMITTED","UNDER_REVIEW","AWARDED","REJECTED"])', req:true},
+ {k:"documents",     r:"z.array(z.object({ type, url }))",      req:true},
+ {k:"submittedAt",   r:"z.string().datetime().nullable()",      req:true}
+];
+const STATUSES = ["DRAFT","SUBMITTED","UNDER_REVIEW","AWARDED","REJECTED"];
+const BASE = {id:8891, studentName:"Ira Tiwari", cohort:2026, email:"ira@example.org",
+  status:"SUBMITTED", documents:[{type:"MARKSHEET", url:"https://cdn.example.org/m.pdf"}],
+  submittedAt:"2026-08-14T09:31:00Z"};
+const PAYLOADS = [
+ {name:"Valid", p:{...BASE},
+  story:"The contract holds. This is the case you tested against, and the only one you will see in development."},
+ {name:"Field renamed in a deploy", p:(()=>{const o={...BASE}; delete o.studentName; o.fullName="Ira Tiwari"; return o;})(),
+  story:"A backend refactor renamed <code>studentName</code> to <code>fullName</code>. TypeScript is entirely unaware — <code>as Application</code> asserted a shape that no longer exists."},
+ {name:"Number sent as string", p:{...BASE, cohort:"2026"},
+  story:"A serialiser change, a config flag, or a value that passed through a template. <code>cohort - 1</code> now yields 2025 by coercion and <code>cohort + 1</code> yields the string <code>\"20261\"</code>."},
+ {name:"null instead of missing", p:{...BASE, guardianEmail:null},
+  story:"Jackson writes an unset field as <code>null</code>, not as absent. <code>.optional()</code> permits <code>undefined</code> only — you almost certainly want <code>.nullish()</code> here, and finding that out at the boundary is the point."},
+ {name:"New enum value", p:{...BASE, status:"WAITLISTED"},
+  story:"A new workflow state shipped on the backend this morning. Without validation, your <code>switch</code> falls through to a default branch and the user sees a blank card with no error anywhere."}
+];
+function validate(p){
+  const out = [];
+  for(const f of SCHEMA){
+    const has = Object.prototype.hasOwnProperty.call(p, f.k);
+    const v = p[f.k];
+    if(!has || v === undefined){
+      out.push({...f, state: f.req ? "miss" : "ok", val: has ? "undefined" : "— absent —",
+        msg: f.req ? "Required — nothing to validate." : "Optional and absent. Fine."});
+      continue;
+    }
+    let ok = true, msg = "Matches the schema.";
+    if(f.k === "id")            { ok = Number.isInteger(v) && v > 0; if(!ok) msg = `Expected a positive integer, received ${typeof v}.`; }
+    if(f.k === "studentName")   { ok = typeof v === "string" && v.length >= 2; if(!ok) msg = "Expected a string of at least 2 characters."; }
+    if(f.k === "cohort")        { ok = Number.isInteger(v) && v >= 2000 && v <= 2100;
+                                  if(!ok) msg = typeof v === "string" ? `Expected number, received string. TypeScript said this was a number.` : "Expected an integer between 2000 and 2100."; }
+    if(f.k === "email" || f.k === "guardianEmail"){
+      if(v === null){ ok = false; msg = "Received null. <code>.optional()</code> accepts undefined, not null — use <code>.nullish()</code> if the backend sends null."; }
+      else { ok = typeof v === "string" && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v); if(!ok) msg = "Not a valid email address."; }
+    }
+    if(f.k === "status")        { ok = STATUSES.includes(v); if(!ok) msg = `"${v}" is not one of the five known values.`; }
+    if(f.k === "documents")     { ok = Array.isArray(v) && v.every(d=>d && typeof d.type==="string" && typeof d.url==="string");
+                                  if(!ok) msg = "Expected an array of { type, url }."; }
+    if(f.k === "submittedAt")   { ok = v === null || (typeof v === "string" && !isNaN(Date.parse(v))); if(!ok) msg = "Expected an ISO date-time string or null."; }
+    out.push({...f, state: ok ? "ok" : "bad", val: JSON.stringify(v), msg});
+  }
+  const extra = Object.keys(p).filter(k=>!SCHEMA.some(f=>f.k===k));
+  return {out, extra};
+}
+function drawVal(){
+  const sel = PAYLOADS[+state.payload];
+  const {out, extra} = validate(sel.p);
+  const fails = out.filter(o=>o.state!=="ok");
+  const cards = out.map(o=>`<div class="field ${o.state}">
+      <span class="pill ${o.state}">${o.state==="ok"?"pass":o.state==="miss"?"missing":"fail"}</span>
+      <div class="k">${o.k}</div>
+      <div class="v">${esc(String(o.val))}</div>
+      ${o.state!=="ok" ? `<div class="e">${o.msg}</div>` : ""}
+    </div>`).join("");
+  const extraCards = extra.map(k=>`<div class="field bad">
+      <span class="pill bad">unknown</span><div class="k">${k}</div>
+      <div class="v">${esc(JSON.stringify(sel.p[k]))}</div>
+      <div class="e">Not in the schema. With <code>.strict()</code> this is an error; by default Zod strips it — which is usually what you want from a forward-compatible client.</div>
+    </div>`).join("");
+  $("#val-out").innerHTML = `
+    <pre style="margin-bottom:16px">${esc(JSON.stringify(sel.p, null, 2))}</pre>
+    <div class="fieldgrid">${cards}${extraCards}</div>
+    <div class="verdict ${fails.length?'no':'ok'}" style="margin-bottom:14px">
+      <h5>${fails.length ? `safeParse → success: false · ${fails.length} issue${fails.length>1?"s":""}` : "safeParse → success: true"}</h5>
+      <p style="margin-bottom:0">${sel.story}</p>
+    </div>
+    <div class="verdict ${fails.length?'warn':'ok'}" style="margin-bottom:0">
+      <h5>Without the schema</h5>
+      <p style="margin-bottom:0">${fails.length
+        ? `<code>as Application</code> would have compiled, shipped, and handed this object to your components. The failure surfaces later, somewhere unrelated — a blank cell, an <code>undefined</code> in a template, a <code>.trim is not a function</code> in a stack trace that names none of the code responsible. With the schema, it surfaces here, names the field, and can page you.`
+        : `Nothing would have gone wrong today. That is exactly why this check has to be automatic rather than a habit — it earns its keep on the day the contract changes without you.`}</p>
+    </div>`;
+}
+segGroup("payload", drawVal);
+
+/* ==================== nav + theme ==================== */
+const SECTIONS = [["m1","Event loop"],["m2","Closures"],["m3","Ten traps"],["m4","Concurrency"],["m5","Failure"],
+                  ["m6","Types"],["m7","Narrowing"],["m8","Generics"],["m9","Boundary"],["m10","Close"]];
+$("#nav").innerHTML = SECTIONS.map((s,i)=>`<a href="#${s[0]}"${i===0?' class="on"':''}>${String(i+1).padStart(2,"0")} ${s[1]}</a>`).join("");
+const links = $$("#nav a");
+const obs = new IntersectionObserver(es=>{ es.forEach(e=>{ if(e.isIntersecting){
+  links.forEach(l=>l.classList.toggle("on", l.getAttribute("href")==="#"+e.target.id)); }}); },
+  {rootMargin:"-25% 0px -65% 0px"});
+SECTIONS.forEach(s=>obs.observe(document.getElementById(s[0])));
+
+try{ const t = localStorage.getItem("fsatlas.theme"); if(t) document.documentElement.setAttribute("data-theme",t); }catch(e){}
+$("#themebtn").addEventListener("click",()=>{
+  const cur = document.documentElement.getAttribute("data-theme");
+  const isDark = cur ? cur==="dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  const next = isDark ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  try{ localStorage.setItem("fsatlas.theme", next); }catch(e){}
+  drawTL();
+});
+
+drawEL(); drawClo(); drawTL(); drawNW(0); drawGen(); drawVal();
+</script>
+</body></html>

@@ -1,0 +1,1148 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Anatomy of a Request</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<style>
+:root{
+  --paper:#F1F4F3; --surface:#FFFFFF; --surface-2:#E8EDEC; --surface-3:#DDE5E3;
+  --ink:#0E1518; --ink-2:#3A484C; --ink-3:#65777B;
+  --rule:#D3DCDA; --rule-2:#C0CCC9;
+  /* UI ink (text-safe) */
+  --client:#005886; --wire:#A34800; --server:#007052; --data:#0B4739; --alert:#B3261E;
+  /* chart marks (validated: light PASS on all six checks) */
+  --c-client:#0072B2; --c-wire:#D55E00; --c-server:#009E73; --c-data:#00614A;
+  --client-wash:#0072B214; --wire-wash:#D55E0014; --server-wash:#009E7314; --data-wash:#00614A14; --alert-wash:#B3261E14;
+  --good:#007052; --warn:#A34800; --bad:#B3261E;
+  --shadow:0 1px 2px rgba(14,21,24,.05), 0 8px 24px -12px rgba(14,21,24,.16);
+  --display:'Archivo','Helvetica Neue',Arial,sans-serif;
+  --body:'Source Serif 4',Georgia,'Times New Roman',serif;
+  --mono:'JetBrains Mono','SF Mono',Menlo,Consolas,monospace;
+  --maxw:1120px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --paper:#0E1416; --surface:#151D1F; --surface-2:#1D2729; --surface-3:#263234;
+  --ink:#E6EDEC; --ink-2:#AFC0BE; --ink-3:#7E9291;
+  --rule:#2A383A; --rule-2:#3A4B4D;
+  --client:#7CBBE6; --wire:#F09A55; --server:#4FBE8A; --data:#A5DEC5; --alert:#F08A80;
+  --c-client:#4A9AD0; --c-wire:#DE7018; --c-server:#2FA76A; --c-data:#7ED3AF;
+  --client-wash:#4A9AD01A; --wire-wash:#DE70181A; --server-wash:#2FA76A1A; --data-wash:#7ED3AF1A; --alert-wash:#F08A801A;
+  --good:#4FBE8A; --warn:#F09A55; --bad:#F08A80;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+}}
+:root[data-theme="dark"]{
+  --paper:#0E1416; --surface:#151D1F; --surface-2:#1D2729; --surface-3:#263234;
+  --ink:#E6EDEC; --ink-2:#AFC0BE; --ink-3:#7E9291;
+  --rule:#2A383A; --rule-2:#3A4B4D;
+  --client:#7CBBE6; --wire:#F09A55; --server:#4FBE8A; --data:#A5DEC5; --alert:#F08A80;
+  --c-client:#4A9AD0; --c-wire:#DE7018; --c-server:#2FA76A; --c-data:#7ED3AF;
+  --client-wash:#4A9AD01A; --wire-wash:#DE70181A; --server-wash:#2FA76A1A; --data-wash:#7ED3AF1A; --alert-wash:#F08A801A;
+  --good:#4FBE8A; --warn:#F09A55; --bad:#F08A80;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+}
+
+*{box-sizing:border-box}
+body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--body); font-size:17px; line-height:1.64; -webkit-font-smoothing:antialiased}
+h1,h2,h3,h4,h5{font-family:var(--display); font-weight:700; letter-spacing:-.018em; text-wrap:balance; margin:0}
+p{margin:0 0 14px} p:last-child{margin-bottom:0}
+a{color:var(--client)}
+.wrap{max-width:var(--maxw); margin:0 auto; padding:0 24px}
+button{font-family:var(--mono); cursor:pointer}
+button:focus-visible,summary:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--c-client); outline-offset:2px}
+code{font-family:var(--mono); font-size:.855em; background:var(--surface-2); padding:1px 4px; border-radius:2px}
+pre{font-family:var(--mono); font-size:13px; line-height:1.62; background:var(--surface-2); border:1px solid var(--rule);
+    border-radius:3px; padding:14px 16px; overflow-x:auto; margin:0 0 14px}
+pre b{color:var(--client); font-weight:700}
+pre i{color:var(--ink-3); font-style:normal}
+
+/* masthead */
+.masthead{background:var(--surface); border-bottom:1px solid var(--rule)}
+.mast{max-width:var(--maxw); margin:0 auto; padding:38px 24px 30px; display:flex; flex-direction:column; gap:22px}
+.mast-top{display:flex; justify-content:space-between; gap:20px; align-items:flex-start; flex-wrap:wrap}
+.eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3)}
+h1{font-size:clamp(32px,5.2vw,56px); line-height:1.02; margin-top:6px}
+.lede{font-size:19px; color:var(--ink-2); max-width:62ch; margin:0}
+.themebtn{font-size:11px; letter-spacing:.1em; text-transform:uppercase; background:transparent; color:var(--ink-3);
+  border:1px solid var(--rule-2); border-radius:2px; padding:7px 11px; white-space:nowrap}
+.themebtn:hover{color:var(--ink); border-color:var(--ink-3)}
+
+/* section nav */
+.navbar{position:sticky; top:0; z-index:40; background:var(--paper); border-bottom:1px solid var(--rule)}
+.navinner{max-width:var(--maxw); margin:0 auto; padding:0 24px; display:flex; gap:2px; overflow-x:auto; scrollbar-width:thin}
+.navinner a{font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase; text-decoration:none;
+  color:var(--ink-3); padding:12px 11px; white-space:nowrap; border-bottom:2px solid transparent}
+.navinner a:hover{color:var(--ink)}
+.navinner a.on{color:var(--ink); border-bottom-color:var(--c-wire)}
+
+/* module */
+.module{padding:60px 0 10px; border-top:1px solid var(--rule)}
+.module:first-of-type{border-top:0}
+.mod-head{display:flex; gap:14px; align-items:baseline; margin-bottom:18px; flex-wrap:wrap}
+.mod-n{font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.14em; color:var(--tint,var(--ink-3))}
+.mod-head h2{font-size:clamp(25px,3.4vw,36px)}
+.mod-q{font-family:var(--body); font-size:19px; color:var(--ink-2); max-width:64ch; margin:0 0 26px; font-style:italic}
+.prose{max-width:68ch}
+.prose h3{font-size:21px; margin:30px 0 10px}
+.prose h4{font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3); margin:28px 0 9px}
+.prose ul,.prose ol{padding-left:20px; margin:0 0 14px}
+.prose li{margin-bottom:6px}
+.tag{font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; padding:3px 7px; border-radius:2px; white-space:nowrap}
+.t-client{background:var(--client-wash); color:var(--client)} .t-wire{background:var(--wire-wash); color:var(--wire)}
+.t-server{background:var(--server-wash); color:var(--server)} .t-data{background:var(--data-wash); color:var(--data)}
+
+/* lab panel */
+.lab{background:var(--surface); border:1px solid var(--rule); border-radius:5px; box-shadow:var(--shadow); margin:26px 0 8px; overflow:hidden}
+.lab-head{display:flex; justify-content:space-between; align-items:center; gap:14px; padding:13px 18px; border-bottom:1px solid var(--rule); background:var(--surface-2); flex-wrap:wrap}
+.lab-head h3{font-size:16px}
+.lab-head .kind{font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3)}
+.lab-body{padding:18px}
+.ctrls{display:flex; flex-wrap:wrap; gap:14px 22px; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--surface)}
+.ctrl{display:flex; flex-direction:column; gap:5px}
+.ctrl label{font-family:var(--mono); font-size:9.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3)}
+.seg{display:flex; border:1px solid var(--rule-2); border-radius:3px; overflow:hidden}
+.seg button{font-size:11px; padding:6px 10px; border:0; background:var(--surface); color:var(--ink-2); border-right:1px solid var(--rule-2)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--ink); color:var(--paper)}
+.tog{display:flex; align-items:center; gap:7px; font-family:var(--mono); font-size:11.5px; color:var(--ink-2); cursor:pointer; padding-top:14px}
+.tog input{width:15px; height:15px; accent-color:var(--c-wire); cursor:pointer}
+.runbtn{font-size:11px; letter-spacing:.12em; text-transform:uppercase; background:var(--ink); color:var(--paper); border:1px solid var(--ink); border-radius:2px; padding:8px 14px}
+.ghostbtn{font-size:11px; letter-spacing:.12em; text-transform:uppercase; background:transparent; color:var(--ink-2); border:1px solid var(--rule-2); border-radius:2px; padding:8px 12px}
+.ghostbtn[aria-pressed="true"]{background:var(--ink); color:var(--paper); border-color:var(--ink)}
+select{font-family:var(--mono); font-size:11.5px; padding:6px 8px; border:1px solid var(--rule-2); border-radius:3px; background:var(--surface); color:var(--ink)}
+input[type=text]{font-family:var(--mono); font-size:11.5px; padding:6px 8px; border:1px solid var(--rule-2); border-radius:3px; background:var(--surface); color:var(--ink); min-width:210px}
+
+/* waterfall */
+.wf-scroll{overflow-x:auto}
+.wf{width:100%; min-width:640px; display:block}
+.wf .lbl{font-family:var(--mono); font-size:10.5px; fill:var(--ink-2)}
+.wf .lbl.dim{fill:var(--ink-3)}
+.wf .ms{font-family:var(--mono); font-size:10px; fill:var(--ink-3)}
+.wf .grid{stroke:var(--rule); stroke-width:1}
+.wf .axis{font-family:var(--mono); font-size:9.5px; fill:var(--ink-3)}
+.wf rect.bar{rx:2; ry:2}
+.wf rect.bar:hover{opacity:.82}
+.wf .sep{stroke:var(--surface); stroke-width:2}
+.legend{display:flex; gap:16px; flex-wrap:wrap; font-family:var(--mono); font-size:10.5px; color:var(--ink-3); padding:0 0 12px}
+.legend i{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:-1px}
+.total{display:flex; gap:26px; flex-wrap:wrap; align-items:baseline; padding:14px 18px; border-top:1px solid var(--rule); background:var(--surface-2)}
+.total .big{font-family:var(--display); font-weight:700; font-size:32px; font-variant-numeric:tabular-nums; line-height:1}
+.total .sm{font-family:var(--mono); font-size:10px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3)}
+.tip{position:fixed; z-index:99; pointer-events:none; background:var(--ink); color:var(--paper); font-family:var(--mono);
+  font-size:11px; line-height:1.5; padding:8px 10px; border-radius:3px; max-width:290px; opacity:0; transition:opacity .12s}
+.tip.on{opacity:1}
+.tip b{color:#fff}
+
+.tablewrap{overflow-x:auto; border:1px solid var(--rule); border-radius:3px; margin-top:14px}
+table{border-collapse:collapse; width:100%; min-width:520px; background:var(--surface)}
+th,td{text-align:left; padding:8px 12px; border-bottom:1px solid var(--rule); font-size:14px}
+th{font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); background:var(--surface-2)}
+td.num{font-family:var(--mono); font-variant-numeric:tabular-nums; text-align:right}
+tbody tr:last-child td{border-bottom:0}
+
+/* verdict blocks */
+.verdict{border-left:3px solid var(--vc); background:var(--vw); padding:14px 16px; border-radius:0 3px 3px 0; margin-bottom:14px}
+.verdict.ok{--vc:var(--good); --vw:var(--server-wash)}
+.verdict.no{--vc:var(--bad); --vw:var(--alert-wash)}
+.verdict.warn{--vc:var(--warn); --vw:var(--wire-wash)}
+.verdict h5{font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--vc); margin-bottom:7px}
+.verdict p{font-size:15.5px; margin-bottom:8px}
+
+.cols{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:20px}
+.cols3{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px}
+
+.card{border:1px solid var(--rule); border-radius:4px; background:var(--surface); padding:14px 16px}
+.card h5{font-family:var(--display); font-size:15.5px; margin-bottom:6px}
+.card p{font-size:14.5px; color:var(--ink-2); margin-bottom:0; line-height:1.5}
+.card.acc{border-left:3px solid var(--ac)}
+
+/* instances */
+.rack{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:14px 0}
+.inst{border:1px solid var(--rule); border-radius:4px; padding:11px 12px; background:var(--surface); text-align:center}
+.inst.down{opacity:.45; border-style:dashed}
+.inst .nm{font-family:var(--mono); font-size:11px; color:var(--ink-3); letter-spacing:.08em}
+.inst .st{font-family:var(--display); font-weight:700; font-size:13px; margin-top:5px}
+.inst .ss{font-family:var(--mono); font-size:10px; color:var(--ink-3); margin-top:4px; min-height:14px}
+.reqs{display:flex; gap:5px; flex-wrap:wrap; margin-top:12px}
+.req{font-family:var(--mono); font-size:10.5px; padding:5px 8px; border-radius:2px; border:1px solid var(--rule-2); background:var(--surface)}
+.req.ok{border-color:var(--good); color:var(--good); background:var(--server-wash)}
+.req.fail{border-color:var(--bad); color:var(--bad); background:var(--alert-wash)}
+
+/* misc blocks */
+.callout{border:1px solid var(--rule); border-left:3px solid var(--c-wire); background:var(--wire-wash); border-radius:0 4px 4px 0; padding:15px 17px; margin:22px 0}
+.callout h4{font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--wire); margin-bottom:8px}
+.callout p,.callout li{font-size:15.5px}
+.mistakes{display:grid; gap:10px; margin:14px 0}
+.mistake{border:1px solid var(--rule); border-radius:4px; overflow:hidden; background:var(--surface)}
+.mistake summary{list-style:none; cursor:pointer; padding:12px 15px; font-family:var(--display); font-weight:600; font-size:15.5px; display:flex; gap:11px; align-items:flex-start}
+.mistake summary::-webkit-details-marker{display:none}
+.mistake summary:hover{background:var(--surface-2)}
+.mistake .x{font-family:var(--mono); color:var(--bad); font-weight:700; flex:none}
+.mistake .in{padding:0 15px 14px 41px; font-size:15px; color:var(--ink-2)}
+.mistake .in p{margin-bottom:9px}
+
+.taskbox{border:1px solid var(--rule-2); border-radius:4px; background:var(--surface); padding:15px 17px; margin:20px 0}
+.taskbox h4{font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3); margin-bottom:9px}
+.taskbox.exp{border-left:3px solid var(--c-client)}
+.taskbox.chal{border-left:3px solid var(--c-server)}
+.taskbox.arch{border-left:3px solid var(--c-data)}
+.reads{display:flex; flex-wrap:wrap; gap:6px; margin:16px 0 0}
+.reads a{font-family:var(--mono); font-size:11px; text-decoration:none; color:var(--ink-2); border:1px solid var(--rule-2); border-radius:2px; padding:4px 9px; background:var(--surface)}
+.reads a:hover{border-color:var(--c-client); color:var(--client)}
+.reads .src{font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3); margin-right:5px}
+
+.matrix2{overflow-x:auto}
+.matrix2 table{min-width:560px}
+.yes{color:var(--good); font-weight:700} .no2{color:var(--bad); font-weight:700}
+
+footer{border-top:1px solid var(--rule); background:var(--surface); padding:34px 0 50px; margin-top:60px}
+footer p{color:var(--ink-3); font-size:14.5px; max-width:72ch}
+@media (prefers-reduced-motion: reduce){*{transition:none!important; animation:none!important}}
+@media(max-width:640px){ .rack{grid-template-columns:1fr} body{font-size:16px} }
+</style></head><body>
+
+<header class="masthead">
+  <div class="mast">
+    <div class="mast-top">
+      <div>
+        <div class="eyebrow">Full-Stack Atlas · Stage 01 · Level 1 Foundations</div>
+        <h1>Anatomy of a Request</h1>
+      </div>
+      <button class="themebtn" id="themebtn" type="button">Theme</button>
+    </div>
+    <p class="lede">You cannot debug a system whose shape you cannot picture. Before any React or Spring Boot, this stage builds one durable mental model: what physically happens between a click and a rendered row — and where the milliseconds go.</p>
+  </div>
+</header>
+
+<nav class="navbar"><div class="navinner" id="nav"></div></nav>
+
+<main class="wrap">
+
+<!-- ============ 1 ============ -->
+<section class="module" id="m1" style="--tint:var(--wire)">
+  <div class="mod-head"><span class="mod-n">01 / THE PATH</span><h2>One request, end to end</h2></div>
+  <p class="mod-q">A student clicks “My scholarships”. Roughly 300 milliseconds later a table appears. What actually happened?</p>
+
+  <div class="prose">
+    <p>The honest answer is that about eighteen distinct things happened, on at least five machines, and only two of them were your code. Most engineers can name the pieces. Far fewer can say, when a page takes 1.4 seconds, which piece owns the second.</p>
+    <p>So start here, with a model you can run. The simulator below walks a real navigation to <code>https://app.scholarships.org/students?cohort=2026</code> and then the API call that fills the table. Every number is a plausible production number, not a placeholder — change a condition and watch the shape of the bar chart change with it.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Request lifecycle simulator</h3><span class="kind">Interactive · waterfall</span></div>
+    <div class="ctrls" id="lc-ctrls">
+      <div class="ctrl"><label>Network distance</label>
+        <div class="seg" data-group="rtt">
+          <button data-v="5" aria-pressed="false">Same city · 5ms</button>
+          <button data-v="28" aria-pressed="true">Same region · 28ms</button>
+          <button data-v="180" aria-pressed="false">Cross-continent · 180ms</button>
+        </div></div>
+      <div class="ctrl"><label>Transport</label>
+        <div class="seg" data-group="proto">
+          <button data-v="h1" aria-pressed="false">HTTP/1.1 + TLS 1.2</button>
+          <button data-v="h2" aria-pressed="true">HTTP/2 + TLS 1.3</button>
+        </div></div>
+      <label class="tog"><input type="checkbox" id="c-dns"> Cold DNS cache</label>
+      <label class="tog"><input type="checkbox" id="c-cdn"> CDN miss</label>
+      <label class="tog"><input type="checkbox" id="c-pre"> Cross-origin API (preflight)</label>
+      <label class="tog"><input type="checkbox" id="c-redis" checked> Redis cache hit</label>
+      <label class="tog"><input type="checkbox" id="c-n1"> N+1 query on the list <span style="color:var(--ink-3)">(implies cache miss)</span></label>
+      <div class="ctrl" style="justify-content:flex-end"><label>&nbsp;</label>
+        <div style="display:flex; gap:8px">
+          <button class="runbtn" id="lc-run" type="button">Replay</button>
+          <button class="ghostbtn" id="lc-table" type="button" aria-pressed="false">Table</button>
+        </div></div>
+    </div>
+    <div class="lab-body">
+      <div class="legend">
+        <span><i style="background:var(--c-client)"></i>Browser &amp; React</span>
+        <span><i style="background:var(--c-wire)"></i>Network &amp; protocol</span>
+        <span><i style="background:var(--c-server)"></i>Spring Boot</span>
+        <span><i style="background:var(--c-data)"></i>PostgreSQL &amp; Redis</span>
+      </div>
+      <div class="wf-scroll"><svg class="wf" id="wf" role="img" aria-label="Waterfall of request phases by duration"></svg></div>
+      <div id="lc-tablewrap" hidden></div>
+    </div>
+    <div class="total">
+      <div><div class="big" id="lc-total">—</div><div class="sm">Total, ms</div></div>
+      <div><div class="big" id="lc-net">—</div><div class="sm">On the network</div></div>
+      <div><div class="big" id="lc-srv">—</div><div class="sm">In Spring Boot + DB</div></div>
+      <div><div class="big" id="lc-cli">—</div><div class="sm">In the browser</div></div>
+      <div style="flex:1; min-width:240px; align-self:center"><p style="font-size:14.5px; color:var(--ink-2); margin:0" id="lc-verdict"></p></div>
+    </div>
+  </div>
+
+  <div class="prose">
+    <h4>What the simulator is showing you</h4>
+    <p>Three lessons are hiding in those toggles, and they are the reason this stage exists.</p>
+    <ol>
+      <li><b>Round trips dominate.</b> Turn distance up to cross-continent and watch the connection setup swamp everything your code does. Your database query is 18 ms. Three round trips at 180 ms are 540. You cannot optimise a query out of a geography problem — you move the compute, or you stop making round trips.</li>
+      <li><b>Layers you did not write are on the critical path.</b> DNS, TLS, the CDN, the preflight. None of them appear in your code, all of them appear in the user's stopwatch.</li>
+      <li><b>The N+1 is invisible until you look.</b> Toggle it on. One extra JPA relationship, lazily loaded inside a loop over forty rows, and the data tier goes from a rounding error to the largest bar on the chart. Stage 8 is where you learn to see this coming; this is where you learn what it costs.</li>
+    </ol>
+  </div>
+
+  <div class="callout">
+    <h4>The rule this stage is really teaching</h4>
+    <p>Find the bottleneck before you touch anything. Every optimisation you make without a measurement is a guess that adds complexity, and roughly two-thirds of guesses are wrong. The waterfall above is the shape of the measurement; Chrome DevTools' Network panel and a distributed trace are the real instruments — Stages 11 and 12.</p>
+  </div>
+
+  <div class="taskbox exp"><h4>Experiment</h4>
+    <p>Set distance to cross-continent, turn on <i>cold DNS</i> and <i>CDN miss</i>, and turn <i>Redis cache hit</i> off. Now ask yourself which single change buys the most: a CDN region closer to the user, connection reuse, or a faster query? Then verify against the chart. The answer is almost never the one engineers reach for first.</p></div>
+
+  <div class="taskbox chal"><h4>Challenge</h4>
+    <p>Open any real site with DevTools → Network, hard-reload, and identify the same phases in the timing breakdown of the document request: <i>Queueing, Stalled, DNS Lookup, Initial connection, SSL, Request sent, Waiting (TTFB), Content Download</i>. Write down which of them is your server's fault and which is not. TTFB is the only one that contains your backend.</p></div>
+</section>
+
+<!-- ============ 2 ============ -->
+<section class="module" id="m2" style="--tint:var(--wire)">
+  <div class="mod-head"><span class="mod-n">02 / RESOLUTION</span><h2>DNS, and why the first request is different</h2></div>
+  <p class="mod-q">The browser has a hostname and needs an IP address. Who does it ask, and how many times?</p>
+  <div class="prose">
+    <p>DNS is a distributed, aggressively cached, hierarchical lookup. The word that matters there is <i>cached</i>: in steady state DNS costs nothing, which is exactly why it surprises people when it costs 120 ms. Every layer below can answer, and the walk stops at the first one that can.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Resolver ladder</h3><span class="kind">Interactive · step through</span></div>
+    <div class="ctrls">
+      <div class="ctrl"><label>Cache state</label>
+        <div class="seg" data-group="dnsstate">
+          <button data-v="hot" aria-pressed="true">Browser cache warm</button>
+          <button data-v="os" aria-pressed="false">OS cache only</button>
+          <button data-v="cold" aria-pressed="false">Nothing cached</button>
+        </div></div>
+    </div>
+    <div class="lab-body"><div id="dns-out"></div></div>
+  </div>
+
+  <div class="prose">
+    <h4>Under the hood</h4>
+    <p>Records have a TTL, which is a promise about staleness, not a guarantee — resolvers routinely honour their own minimums. That has a practical consequence you will meet in Stage 14: <b>DNS is not a deployment mechanism.</b> Changing a record does not move traffic promptly, because you do not control the caches. Traffic shifting belongs to a load balancer or an Azure Front Door routing rule, where the change is immediate and reversible.</p>
+    <p>The other practical consequence is <code>preconnect</code>. If your React app is served from one origin and calls an API on another, the API's DNS lookup, TCP connect and TLS handshake all happen at the moment of the first fetch — inside the user's wait. One line in your <code>index.html</code> moves that cost earlier:</p>
+    <pre>&lt;link rel="preconnect" href="https://api.scholarships.org" crossorigin&gt;</pre>
+  </div>
+
+  <div class="mistakes">
+    <details class="mistake"><summary><span class="x">✕</span><span>“I changed the DNS record, so traffic has moved.”</span></summary>
+      <div class="in"><p>It has moved for resolvers whose TTL has expired, which is a fraction of them, arriving over hours. Some corporate resolvers pin records far longer than your TTL. Design rollbacks that do not depend on DNS propagation.</p></div></details>
+    <details class="mistake"><summary><span class="x">✕</span><span>“DNS is fast, it doesn't matter.”</span></summary>
+      <div class="in"><p>Warm, it is free. Cold — a first-time visitor, a new subdomain, a mobile network that just changed towers — it is a full walk of the hierarchy. Splitting your app across many hostnames multiplies that cost, which is one of several reasons the “shard across four CDN domains” trick from the HTTP/1.1 era is now an anti-pattern.</p></div></details>
+  </div>
+
+  <div class="reads">
+    <a href="https://developer.mozilla.org/en-US/docs/Glossary/DNS" target="_blank" rel="noopener"><span class="src">MDN</span>DNS</a>
+    <a href="https://www.rfc-editor.org/rfc/rfc1034" target="_blank" rel="noopener"><span class="src">Spec</span>RFC 1034 · Domain names</a>
+    <a href="https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/rel/preconnect" target="_blank" rel="noopener"><span class="src">MDN</span>rel=preconnect</a>
+  </div>
+</section>
+
+<!-- ============ 3 ============ -->
+<section class="module" id="m3" style="--tint:var(--wire)">
+  <div class="mod-head"><span class="mod-n">03 / TRANSPORT</span><h2>TCP, TLS, and the tyranny of the round trip</h2></div>
+  <p class="mod-q">Before a single byte of your JSON moves, how many times has the packet crossed the ocean?</p>
+  <div class="prose">
+    <p>TCP gives you an ordered, reliable byte stream, and charges one round trip to set it up. TLS gives you confidentiality, integrity and server identity, and charges one or two more depending on version. None of that is optional, and none of it is your application's code — but all of it is on the user's clock, and it is why <i>connection reuse</i> is one of the highest-leverage performance ideas in the stack.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Handshake cost calculator</h3><span class="kind">Interactive · model</span></div>
+    <div class="ctrls">
+      <div class="ctrl"><label>Round-trip time</label>
+        <div class="seg" data-group="hrtt">
+          <button data-v="5" aria-pressed="false">5 ms</button>
+          <button data-v="28" aria-pressed="true">28 ms</button>
+          <button data-v="180" aria-pressed="false">180 ms</button>
+        </div></div>
+      <div class="ctrl"><label>Protocol stack</label>
+        <div class="seg" data-group="hproto">
+          <button data-v="t12" aria-pressed="false">TCP + TLS 1.2</button>
+          <button data-v="t13" aria-pressed="true">TCP + TLS 1.3</button>
+          <button data-v="t13r" aria-pressed="false">TLS 1.3 resumed (0-RTT)</button>
+          <button data-v="q" aria-pressed="false">QUIC / HTTP-3</button>
+        </div></div>
+      <div class="ctrl"><label>Requests over this connection</label>
+        <div class="seg" data-group="hreqs">
+          <button data-v="1" aria-pressed="true">1</button>
+          <button data-v="10" aria-pressed="false">10</button>
+          <button data-v="50" aria-pressed="false">50</button>
+        </div></div>
+    </div>
+    <div class="lab-body"><div id="hs-out"></div></div>
+  </div>
+
+  <div class="prose">
+    <h4>What this means for your architecture</h4>
+    <ul>
+      <li><b>Keep-alive is not a micro-optimisation.</b> A connection pool on the server side (HikariCP to PostgreSQL) and connection reuse on the client side are the same idea applied at two tiers: setup is expensive, so amortise it.</li>
+      <li><b>HTTP/2 removed the reason to shard domains.</b> One connection, many multiplexed streams. Under HTTP/1.1 browsers opened about six connections per origin and everything else queued — which is why the old advice was to spread assets across hostnames, and why that advice is now actively harmful.</li>
+      <li><b>HTTP/3 runs over QUIC, on UDP.</b> It folds the transport and cryptographic handshakes together and removes TCP's head-of-line blocking, so one lost packet no longer stalls every stream. On a flaky mobile network this is the difference you feel.</li>
+    </ul>
+  </div>
+
+  <div class="taskbox arch"><h4>Architecture connection</h4>
+    <p>In the capstone, the React bundle is served from Azure Front Door at the edge (short path, cached, HTTP/3) while the API is a Spring Boot container in one region (long path, uncacheable). That asymmetry is the whole reason for splitting them: static bytes get to be near the user, dynamic bytes have to be near the data. Every CDN decision you make later is an argument about which of those two a given response is.</p></div>
+
+  <div class="reads">
+    <a href="https://developer.mozilla.org/en-US/docs/Web/Security/Transport_Layer_Security" target="_blank" rel="noopener"><span class="src">MDN</span>TLS</a>
+    <a href="https://www.rfc-editor.org/rfc/rfc8446" target="_blank" rel="noopener"><span class="src">Spec</span>RFC 8446 · TLS 1.3</a>
+    <a href="https://www.rfc-editor.org/rfc/rfc9114.html" target="_blank" rel="noopener"><span class="src">Spec</span>RFC 9114 · HTTP/3</a>
+  </div>
+</section>
+
+<!-- ============ 4 ============ -->
+<section class="module" id="m4" style="--tint:var(--wire)">
+  <div class="mod-head"><span class="mod-n">04 / PROTOCOL</span><h2>HTTP is a contract, not a transport detail</h2></div>
+  <p class="mod-q">Why is it wrong to expose “create a student” as <code>POST /createStudent</code> — and does it actually matter?</p>
+  <div class="prose">
+    <p>It matters because HTTP methods and status codes are not naming conventions. They are <i>promises</i>, and an entire layer of infrastructure you do not control — browsers, proxies, CDNs, retry libraries, service meshes — reads those promises and acts on them without asking you. Get them wrong and something between you and the user will do the wrong thing confidently.</p>
+    <p>Click any line below to see what it is for.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Raw HTTP, annotated</h3><span class="kind">Interactive · click any line</span></div>
+    <div class="lab-body">
+      <div class="cols">
+        <div>
+          <h4 style="font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3); margin-bottom:9px">Request</h4>
+          <pre id="http-req" style="cursor:pointer"></pre>
+        </div>
+        <div>
+          <h4 style="font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3); margin-bottom:9px">Response</h4>
+          <pre id="http-res" style="cursor:pointer"></pre>
+        </div>
+      </div>
+      <div class="verdict warn" id="http-note" style="margin-top:16px; margin-bottom:0">
+        <h5>Select a line</h5><p>Click any line in the request or response to see what it does, who reads it, and what breaks when it is wrong.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="prose">
+    <h4>The three properties that infrastructure relies on</h4>
+  </div>
+  <div class="matrix2">
+    <table>
+      <thead><tr><th>Method</th><th>Safe</th><th>Idempotent</th><th>Cacheable</th><th>What that buys you</th></tr></thead>
+      <tbody>
+        <tr><td class="mono"><code>GET</code></td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td>Browsers, CDNs and proxies may cache it, prefetch it, and retry it. Never change state in a GET — a link prefetcher will fire it.</td></tr>
+        <tr><td class="mono"><code>HEAD</code></td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Headers only. Useful for cheap existence and freshness checks.</td></tr>
+        <tr><td class="mono"><code>POST</code></td><td class="no2">No</td><td class="no2">No</td><td class="no2">No*</td><td>The general-purpose “do something”. Because it is not idempotent, a retry may create a second record — which is why Stage 7 gives you idempotency keys.</td></tr>
+        <tr><td class="mono"><code>PUT</code></td><td class="no2">No</td><td class="yes">Yes</td><td class="no2">No</td><td>Full replacement. Sending it twice leaves the same state, so a client may safely retry on timeout.</td></tr>
+        <tr><td class="mono"><code>PATCH</code></td><td class="no2">No</td><td class="no2">No</td><td class="no2">No</td><td>Partial update. Not idempotent in general — <code>{"credits": "+3"}</code> applied twice is a bug.</td></tr>
+        <tr><td class="mono"><code>DELETE</code></td><td class="no2">No</td><td class="yes">Yes</td><td class="no2">No</td><td>Idempotent by definition: after the first success the resource is gone, so repeat calls return 404 or 204 without further damage.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="font-size:14px; color:var(--ink-3); margin-top:8px">* A POST response is cacheable only with explicit freshness headers, and effectively never is in practice.</p>
+
+  <div class="callout">
+    <h4>Status codes, as a triage tool</h4>
+    <p>When you see a failure, the first digit tells you whose problem it is before you read a single log line. <b>4xx is the client's fault</b> — malformed, unauthenticated, forbidden, gone. <b>5xx is yours</b> — the server accepted a legal request and failed to honour it. That single distinction saves more debugging time than any tool.</p>
+    <ul style="margin-bottom:0">
+      <li><code>400</code> the body or parameters are invalid · <code>422</code> syntactically fine, semantically rejected</li>
+      <li><code>401</code> we do not know who you are — <i>authentication</i> · <code>403</code> we know, and you may not — <i>authorization</i></li>
+      <li><code>404</code> no such resource — also, deliberately, what a good API returns instead of 403 when the existence of the record is itself confidential</li>
+      <li><code>409</code> conflict, usually an optimistic-locking version clash · <code>429</code> rate limited, and the response should carry <code>Retry-After</code></li>
+      <li><code>500</code> unhandled · <code>502/503/504</code> the gateway could not reach, or waited too long for, the thing behind it</li>
+    </ul>
+  </div>
+
+  <div class="mistakes">
+    <details class="mistake"><summary><span class="x">✕</span><span>Returning <code>200 OK</code> with <code>{"error": "not found"}</code> in the body</span></summary>
+      <div class="in"><p>Every retry policy, alerting rule, CDN, and API client in the world now believes this request succeeded. Your error rate dashboard reads zero during an outage. The status line is machine-readable for a reason; the body is for humans and for detail.</p></div></details>
+    <details class="mistake"><summary><span class="x">✕</span><span>Using <code>GET /students/42/delete</code></span></summary>
+      <div class="in"><p>A GET is safe and prefetchable. A browser's link prefetcher, a crawler, a corporate proxy that pre-warms links, or a user's “open all in tabs” will delete your data. This is not hypothetical — it is how a well-known 2006 outage of Google Web Accelerator deleted a great deal of other people's content.</p></div></details>
+    <details class="mistake"><summary><span class="x">✕</span><span>Inventing your own error shape per endpoint</span></summary>
+      <div class="in"><p>Your React error handler then needs a branch per endpoint. Pick one envelope and enforce it in a single <code>@RestControllerAdvice</code>. RFC 9457 Problem Details is the standard shape, and Spring Framework 6+ supports it natively via <code>ProblemDetail</code>. Stage 7.</p></div></details>
+  </div>
+
+  <div class="reads">
+    <a href="https://www.rfc-editor.org/rfc/rfc9110.html" target="_blank" rel="noopener"><span class="src">Spec</span>RFC 9110 · HTTP Semantics</a>
+    <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Status" target="_blank" rel="noopener"><span class="src">MDN</span>Status codes</a>
+    <a href="https://www.rfc-editor.org/rfc/rfc9457.html" target="_blank" rel="noopener"><span class="src">Spec</span>RFC 9457 · Problem Details</a>
+  </div>
+</section>
+
+<!-- ============ 5 ============ -->
+<section class="module" id="m5" style="--tint:var(--wire)">
+  <div class="mod-head"><span class="mod-n">05 / ORIGINS</span><h2>CORS: the error everyone hits on day one</h2></div>
+  <p class="mod-q">Your React dev server is on <code>:5173</code>, Spring Boot is on <code>:8080</code>, and the browser refuses to show you the response. Why is the <i>browser</i> stopping you?</p>
+  <div class="prose">
+    <p>Here is the thing almost everyone gets backwards. CORS is not a server security feature. The server already sent the response — you can see it in the Network tab, status 200, body intact. The browser received it and then <b>refused to hand it to your JavaScript</b>, because the page's origin does not match the response's origin and the server did not explicitly opt in.</p>
+    <p>The rule being enforced is the <b>same-origin policy</b>, and it is the reason a random page cannot read your bank balance using your logged-in cookies. CORS is the controlled exception to it. Two consequences follow immediately: disabling CORS in the browser is not a fix, and CORS protects <i>users</i>, not your server — anything with a shell can call your API regardless.</p>
+    <p>Two origins match only if <b>scheme, host and port</b> are all identical. <code>http://localhost:5173</code> and <code>http://localhost:8080</code> are different origins. So are <code>https://app.example.org</code> and <code>https://api.example.org</code>.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>CORS preflight sandbox</h3><span class="kind">Interactive · rule engine</span></div>
+    <div class="ctrls" id="cors-ctrls">
+      <div class="ctrl"><label>Page origin</label><input type="text" id="co-origin" value="http://localhost:5173"></div>
+      <div class="ctrl"><label>Method</label>
+        <div class="seg" data-group="cmethod">
+          <button data-v="GET" aria-pressed="true">GET</button><button data-v="POST" aria-pressed="false">POST</button>
+          <button data-v="PUT" aria-pressed="false">PUT</button><button data-v="DELETE" aria-pressed="false">DELETE</button>
+        </div></div>
+      <div class="ctrl"><label>Content-Type</label>
+        <div class="seg" data-group="cctype">
+          <button data-v="none" aria-pressed="true">none</button>
+          <button data-v="text/plain" aria-pressed="false">text/plain</button>
+          <button data-v="application/json" aria-pressed="false">application/json</button>
+        </div></div>
+      <label class="tog"><input type="checkbox" id="co-auth"> Sends <code>Authorization</code> header</label>
+      <label class="tog"><input type="checkbox" id="co-cred"> <code>credentials: "include"</code> (cookies)</label>
+      <div class="ctrl"><label>Server config</label>
+        <div class="seg" data-group="cserver">
+          <button data-v="none" aria-pressed="false">No CORS config</button>
+          <button data-v="star" aria-pressed="true">allowedOrigins("*")</button>
+          <button data-v="exact" aria-pressed="false">Exact origin + credentials</button>
+        </div></div>
+    </div>
+    <div class="lab-body"><div id="cors-out"></div></div>
+  </div>
+
+  <div class="prose">
+    <h4>The preflight rule, precisely</h4>
+    <p>The browser skips the preflight only for a <b>simple request</b>: method is <code>GET</code>, <code>HEAD</code> or <code>POST</code>; every header is on the CORS-safelist; and if <code>Content-Type</code> is present it is one of <code>application/x-www-form-urlencoded</code>, <code>multipart/form-data</code> or <code>text/plain</code>. Notice what is missing from that list: <code>application/json</code>. Which is why essentially every real API call from a React app triggers a preflight, and why an <code>Authorization: Bearer …</code> header does too.</p>
+    <p>A preflight is an extra <code>OPTIONS</code> round trip before the real one — the second bar you saw in the simulator in Module 1. Cache it with <code>Access-Control-Max-Age</code> and the cost disappears for subsequent calls.</p>
+  </div>
+
+  <div class="mistakes">
+    <details class="mistake"><summary><span class="x">✕</span><span>Combining <code>allowedOrigins("*")</code> with <code>allowCredentials(true)</code></span></summary>
+      <div class="in"><p>The specification forbids it, and Spring will throw at startup rather than let you do it. A wildcard origin with credentials would mean “any site on the internet may make authenticated requests as this user”. Use <code>allowedOriginPatterns</code> or an explicit list.</p></div></details>
+    <details class="mistake"><summary><span class="x">✕</span><span>Fixing CORS with a browser extension or <code>--disable-web-security</code></span></summary>
+      <div class="in"><p>You have disabled the check on exactly one machine. Every user still fails. Worse, you have now removed the protection that keeps other sites out of your session on that machine. Fix it on the server, or use the Vite dev proxy so that in development everything is same-origin.</p></div></details>
+    <details class="mistake"><summary><span class="x">✕</span><span>Configuring CORS on the controller while Spring Security rejects the preflight</span></summary>
+      <div class="in"><p>The <code>OPTIONS</code> preflight carries no credentials — by design. If your security filter chain requires authentication for every request, it rejects the preflight with a 401 before your <code>@CrossOrigin</code> annotation is ever consulted, and the browser reports a CORS error that has nothing to do with your CORS config. Register CORS with Spring Security (<code>http.cors(Customizer.withDefaults())</code>) so the <code>CorsFilter</code> runs early in the chain. This is the single most common “my CORS config does nothing” bug.</p></div></details>
+  </div>
+
+  <div class="taskbox exp"><h4>Experiment</h4>
+    <p>In the sandbox, set method <code>POST</code>, Content-Type <code>text/plain</code>, no auth header — note that no preflight fires. Now change Content-Type to <code>application/json</code> and nothing else. One field, one extra round trip. That is the whole rule in one keystroke.</p></div>
+
+  <div class="taskbox chal"><h4>Challenge</h4>
+    <p>Write the Spring configuration that allows <code>https://app.scholarships.org</code> and <code>http://localhost:5173</code>, with credentials, for <code>GET/POST/PUT/DELETE</code>, exposing a <code>X-Total-Count</code> header to the client, cached for 30 minutes. Then explain why <code>exposedHeaders</code> is necessary at all — what happens to your pagination header without it?</p></div>
+
+  <div class="reads">
+    <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS" target="_blank" rel="noopener"><span class="src">MDN</span>CORS</a>
+    <a href="https://fetch.spec.whatwg.org/#cors-protocol" target="_blank" rel="noopener"><span class="src">Spec</span>Fetch · CORS protocol</a>
+    <a href="https://docs.spring.io/spring-framework/reference/web/webmvc-cors.html" target="_blank" rel="noopener"><span class="src">Official</span>Spring MVC CORS</a>
+  </div>
+</section>
+
+<!-- ============ 6 ============ -->
+<section class="module" id="m6" style="--tint:var(--server)">
+  <div class="mod-head"><span class="mod-n">06 / STATE</span><h2>Stateless or stateful — the decision that shapes everything</h2></div>
+  <p class="mod-q">Three instances behind a load balancer. The user logged in on instance 2. The next request lands on instance 3. What happens?</p>
+  <div class="prose">
+    <p>This is the most consequential architectural choice in this stage, and it is usually made by accident — by whoever picked the login tutorial. Run it instead.</p>
+    <p>Below, three Spring Boot instances sit behind a round-robin load balancer. Pick a session strategy, send some requests, then kill an instance and send more.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Session strategy under a load balancer</h3><span class="kind">Interactive · simulation</span></div>
+    <div class="ctrls">
+      <div class="ctrl"><label>Strategy</label>
+        <div class="seg" data-group="sess">
+          <button data-v="mem" aria-pressed="true">In-memory session</button>
+          <button data-v="sticky" aria-pressed="false">Sticky sessions</button>
+          <button data-v="redis" aria-pressed="false">Session in Redis</button>
+          <button data-v="jwt" aria-pressed="false">Stateless JWT</button>
+        </div></div>
+      <div class="ctrl"><label>&nbsp;</label><div style="display:flex; gap:8px">
+        <button class="runbtn" id="s-send" type="button">Send 6 requests</button>
+        <button class="ghostbtn" id="s-kill" type="button">Kill instance 2</button>
+        <button class="ghostbtn" id="s-reset" type="button">Reset</button>
+      </div></div>
+    </div>
+    <div class="lab-body"><div id="sess-out"></div></div>
+  </div>
+
+  <div class="prose">
+    <h4>Reading the result honestly</h4>
+    <p>Nothing here is free. Sticky sessions work until an instance dies or you deploy, and they wreck even load distribution. Redis-backed sessions scale horizontally and survive restarts, at the price of a network hop on every request and a new piece of infrastructure that can itself fail. JWTs remove the lookup entirely — and remove your ability to revoke, which is why access tokens must be short-lived and paired with refresh tokens you <i>can</i> revoke.</p>
+    <p>The trap is treating “stateless” as automatically superior. Stateless means <i>the server holds no per-user state between requests</i>. It does not mean simple. You have moved state to the client, and now you own token expiry, rotation, revocation, clock skew and key management. Sessions in Redis are a perfectly respectable production answer, and for an application with an admin who must be able to eject a user immediately — like a platform holding minors' records — it may be the better one.</p>
+  </div>
+
+  <div class="matrix2">
+    <table>
+      <thead><tr><th>Dimension</th><th>Server session (cookie)</th><th>Stateless JWT</th></tr></thead>
+      <tbody>
+        <tr><td>Where state lives</td><td>Server (memory or Redis)</td><td>In the token, on the client</td></tr>
+        <tr><td>Horizontal scaling</td><td>Needs shared store or stickiness</td><td>Free</td></tr>
+        <tr><td>Revocation</td><td>Immediate — delete the session</td><td>Hard — needs a denylist, which reintroduces state</td></tr>
+        <tr><td>Per-request cost</td><td>A store lookup</td><td>A signature verification (cheap, CPU-only)</td></tr>
+        <tr><td>Payload size</td><td>Tiny cookie</td><td>Hundreds of bytes on every request</td></tr>
+        <tr><td>Main exposure</td><td>CSRF (the browser attaches the cookie automatically)</td><td>XSS if stored in <code>localStorage</code>; theft is unrevokable</td></tr>
+        <tr><td>Good fit</td><td>First-party web app, admin needs instant eject</td><td>Multiple clients, mobile, service-to-service</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout">
+    <h4>The recommendation this curriculum makes — and why</h4>
+    <p>For the capstone: <b>short-lived access token in memory, refresh token in an <code>HttpOnly; Secure; SameSite=Strict</code> cookie.</b> This is an architectural recommendation, not a specification requirement, and reasonable engineers disagree. The reasoning: a token in <code>localStorage</code> is readable by any injected script, and a platform holding students' documents cannot accept “one XSS equals total account takeover”. An <code>HttpOnly</code> cookie is not readable by JavaScript at all; <code>SameSite=Strict</code> closes the CSRF hole that cookies otherwise open. You will build exactly this in Stage 9 — including the part the Eazy Bytes deck never shows you, which is Spring Boot actually issuing the token.</p>
+  </div>
+
+  <div class="taskbox arch"><h4>Architecture connection</h4>
+    <p>Stateless services are what make Stage 13's containers and Stage 14's rolling deployments boring. If any instance can serve any request, you can kill one mid-deploy and nobody notices. The moment a request must return to a specific instance, every operational procedure you have gets harder. That is the real payoff — not performance.</p></div>
+
+  <div class="reads">
+    <a href="https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html" target="_blank" rel="noopener"><span class="src">OWASP</span>Session management</a>
+    <a href="https://www.rfc-editor.org/rfc/rfc9700.html" target="_blank" rel="noopener"><span class="src">Spec</span>RFC 9700 · OAuth 2.0 BCP</a>
+    <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies" target="_blank" rel="noopener"><span class="src">MDN</span>Cookies &amp; SameSite</a>
+  </div>
+</section>
+
+<!-- ============ 7 ============ -->
+<section class="module" id="m7" style="--tint:var(--server)">
+  <div class="mod-head"><span class="mod-n">07 / IDENTITY</span><h2>Authentication is not authorization</h2></div>
+  <p class="mod-q">Same user, same token, same endpoint — one request returns 200 and the next returns 403. What changed?</p>
+  <div class="prose">
+    <p>Two questions, asked in order, by two different parts of your system.</p>
+    <ul>
+      <li><b>Authentication — who are you?</b> Answered once, at the edge of the request, by verifying a credential: a password against a BCrypt hash, a signature on a token, a session cookie against a store. Failure is <code>401 Unauthorized</code>, and the name is a historical misnomer — it means <i>unauthenticated</i>.</li>
+      <li><b>Authorization — may you do this, to this?</b> Answered at every protected operation, against roles, permissions and often the specific record. Failure is <code>403 Forbidden</code>.</li>
+    </ul>
+    <p>The distinction matters because the failures have opposite remedies. A 401 means <i>get a new credential</i> — your React client should refresh the token or redirect to login. A 403 means <i>stop asking</i> — refreshing changes nothing, and a client that retries on 403 will loop forever.</p>
+    <h4>The part that bites in real systems</h4>
+    <p>Role checks are the easy half. The half that produces breaches is <b>object-level authorization</b>: the NGO reviewer is legitimately authenticated, legitimately holds the <code>REVIEWER</code> role, and requests <code>GET /api/v1/applications/8891</code> — an application belonging to a different NGO. Every role check passes. The data still leaks. OWASP ranks this class of flaw first in its API Top 10, and the only fix is to check ownership against the authenticated principal at the service layer, on every single read and write.</p>
+    <pre><i>// Not enough — the role is right, the record may not be</i>
+<b>@PreAuthorize</b>("hasRole('REVIEWER')")
+Application get(Long id) { ... }
+
+<i>// The check that actually protects the record</i>
+<b>@PreAuthorize</b>("hasRole('REVIEWER') and @acl.canReview(#id, authentication)")
+Application get(Long id) { ... }</pre>
+  </div>
+
+  <div class="taskbox chal"><h4>Challenge</h4>
+    <p>For the capstone's five roles — student, guardian, school admin, NGO reviewer, platform admin — write the authorization matrix for <code>GET /applications/{id}</code>. For each role, state the rule in one sentence, and mark whether it is a role check or an ownership check. Count how many are ownership checks. It will be most of them.</p></div>
+
+  <div class="reads">
+    <a href="https://owasp.org/API-Security/editions/2023/en/0xa1-broken-object-level-authorization/" target="_blank" rel="noopener"><span class="src">OWASP</span>Broken object level authorization</a>
+    <a href="https://docs.spring.io/spring-security/reference/servlet/authorization/index.html" target="_blank" rel="noopener"><span class="src">Official</span>Spring Security authorization</a>
+  </div>
+</section>
+
+<!-- ============ 8 ============ -->
+<section class="module" id="m8" style="--tint:var(--client)">
+  <div class="mod-head"><span class="mod-n">08 / DIAGNOSIS</span><h2>Debugging clinic</h2></div>
+  <p class="mod-q">Something is broken. Where do you look first?</p>
+  <div class="prose">
+    <p>Everything above exists so that you can do this: read a symptom and know which layer to open. Pick a symptom.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Symptom → layer → check</h3><span class="kind">Interactive · triage</span></div>
+    <div class="ctrls" style="padding-bottom:0; border-bottom:0">
+      <div class="ctrl" style="flex:1"><label>Symptom</label>
+        <select id="dbg-sel"></select></div>
+    </div>
+    <div class="lab-body"><div id="dbg-out"></div></div>
+  </div>
+
+  <div class="prose">
+    <h4>The method, independent of the symptom</h4>
+    <ol>
+      <li><b>Reproduce, then bisect the path.</b> Does <code>curl</code> against the API succeed? Then the backend is fine and the problem is browser-side — CORS, auth header, base URL, service worker. Does it fail? Then the browser is innocent.</li>
+      <li><b>Read the status code before the message.</b> 4xx and 5xx send you to different machines.</li>
+      <li><b>Follow one request, not the aggregate.</b> A correlation ID that flows from the React fetch through the gateway into the Spring Boot MDC and out into the logs turns “it's slow sometimes” into a single trace you can read. Stage 12.</li>
+      <li><b>Change one thing.</b> Two simultaneous changes make the result uninterpretable even when it works.</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ============ 9 ============ -->
+<section class="module" id="m9" style="--tint:var(--data)">
+  <div class="mod-head"><span class="mod-n">09 / CLOSING</span><h2>What you should now be able to do</h2></div>
+  <div class="prose">
+    <p>Stage 1 has no code to run and no framework to install, and it is the stage most people skip. It is also the one that decides whether the next fourteen feel like memorising APIs or like understanding a machine.</p>
+    <h4>Self-check — answer these without looking</h4>
+    <ol>
+      <li>Name every hop between a click and a rendered row, and say which of them you control.</li>
+      <li>Your API responds in 40 ms and the page takes 2.1 seconds. List four places the rest could be.</li>
+      <li>Why does the browser block a cross-origin response it has already received in full?</li>
+      <li>Why does <code>allowedOrigins("*")</code> with credentials fail at startup rather than at runtime?</li>
+      <li>A load balancer moves a user's request to a different instance and they are logged out. Give three fixes and the cost of each.</li>
+      <li>Which failures are 401 and which are 403, and what should the React client do differently for each?</li>
+      <li>Why is <code>PUT</code> safe to retry on a timeout and <code>POST</code> not — and what does Stage 7 do about it?</li>
+    </ol>
+    <h4>The capstone increment for this stage</h4>
+    <p>Draw the target architecture for the Student Scholarship &amp; Progress Management Platform, on one page: the tiers, the trust boundaries, where the token lives, which calls cross a network, and which of those crossings you can cache. Keep it. Every later stage either fits inside this diagram or forces you to redraw it — and noticing which of those two is happening is most of what architecture actually is.</p>
+  </div>
+
+  <div class="callout" style="border-left-color:var(--c-server); background:var(--server-wash)">
+    <h4 style="color:var(--server)">Next</h4>
+    <p style="margin-bottom:0">Stage 2 — <i>JavaScript and TypeScript, for People Who Already Program</i>. The event loop, closures, and a type system used as a design tool rather than as decoration. It is the largest gap in your uploaded course deck, and everything in Stages 3–5 assumes it.</p>
+  </div>
+</section>
+
+</main>
+
+<footer><div class="wrap">
+  <p><b style="font-family:var(--display); color:var(--ink)">Sources.</b> Specifications and official documentation are linked inline at each module. Timing figures in the simulator are representative production values chosen for teaching, not measurements of any specific system — the shapes and ratios are what matter, and you should replace them with your own numbers from DevTools and a trace as soon as Stage 12 gives you the instruments.</p>
+  <p style="margin-top:12px">Where this page marks something as an <i>architectural recommendation</i>, that is an opinion with reasoning attached and reasonable engineers disagree. Where it cites a specification, the specification is linked and it is not an opinion.</p>
+</div></footer>
+
+<div class="tip" id="tip"></div>
+
+<script>
+/* ============================ helpers ============================ */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const state = {rtt:28, proto:"h2", dnsstate:"hot", hrtt:28, hproto:"t13", hreqs:1,
+  cmethod:"GET", cctype:"none", cserver:"star", sess:"mem"};
+
+function segGroup(group, cb){
+  $$(`.seg[data-group="${group}"] button`).forEach(b=>b.addEventListener("click",()=>{
+    $$(`.seg[data-group="${group}"] button`).forEach(x=>x.setAttribute("aria-pressed", x===b?"true":"false"));
+    state[group] = b.dataset.v; cb(b.dataset.v);
+  }));
+}
+const tip = $("#tip");
+function showTip(e, html){ tip.innerHTML = html; tip.classList.add("on");
+  const x = Math.min(e.clientX+14, innerWidth-310), y = Math.min(e.clientY+14, innerHeight-110);
+  tip.style.left = x+"px"; tip.style.top = y+"px"; }
+function hideTip(){ tip.classList.remove("on"); }
+
+/* ============================ 1. lifecycle ============================ */
+const TIERC = {client:"var(--c-client)", wire:"var(--c-wire)", server:"var(--c-server)", data:"var(--c-data)"};
+
+function phases(){
+  const rtt = +state.rtt, h2 = state.proto === "h2";
+  const cold = $("#c-dns").checked, cdnMiss = $("#c-cdn").checked,
+        pre = $("#c-pre").checked, redisHit = $("#c-redis").checked, n1 = $("#c-n1").checked;
+  const P = [];
+  const add = (name,tier,ms,note) => { if(ms > 0) P.push({name,tier,ms: ms < 1 ? Math.round(ms*10)/10 : Math.round(ms), note}); };
+
+  add("DNS lookup","wire", cold ? rtt*2 + 45 : 0.4,
+    cold ? "Nothing cached: the resolver walks root → TLD → authoritative. Warm, this is essentially free."
+         : "Answered from the browser's own DNS cache. This is the steady state — which is why cold-start cost surprises people.");
+  add("TCP connect","wire", rtt, "One round trip for the SYN / SYN-ACK / ACK handshake before any application byte moves.");
+  add("TLS handshake","wire", h2 ? rtt : rtt*2,
+    h2 ? "TLS 1.3 completes in one round trip." : "TLS 1.2 needs two. Upgrading the protocol removes a whole RTT for free.");
+  add("Edge / CDN","wire", cdnMiss ? 12 + rtt*2 + 70 : 11,
+    cdnMiss ? "Cache miss: the edge node has to fetch from origin, paying the long path you were trying to avoid."
+            : "Cache hit at the edge — the response never touches your origin.");
+  add("HTML document","client", h2 ? 22 : 30, "Small. It is a shell; the real weight is the JavaScript it points at.");
+  add("JS bundle download","client", h2 ? 165 : 310,
+    h2 ? "HTTP/2 multiplexes all chunks over one connection." : "HTTP/1.1 caps at ~6 connections per origin; the rest queue. This is the single biggest argument for HTTP/2.");
+  add("Parse + boot React","client", 88, "Parse, evaluate, mount the tree, run the first effects. CPU-bound — it gets much worse on a mid-range phone.");
+  add("Connection reuse (API)","wire", pre ? rtt*2 + 6 : 1.5,
+    pre ? "Cross-origin API: a new DNS/TCP/TLS setup, unless you preconnected." : "Same origin, connection already open — nearly free.");
+  add("CORS preflight (OPTIONS)","wire", pre ? rtt : 0,
+    "An extra round trip before the real request, triggered by application/json or an Authorization header. Cacheable with Access-Control-Max-Age.");
+  add("Request → gateway","wire", rtt*0.5, "The request travelling to the API gateway.");
+  add("JWT verification","server", 2.6, "Signature check only — no database lookup. This is the performance argument for stateless tokens.");
+  add("Security filter chain","server", 3.4, "Spring Security's filters run before your controller: CORS, CSRF, authentication, authorization.");
+  add("Controller + service","server", 4.2, "Your code. Almost always the smallest bar on this chart, which is the point.");
+  add("Redis lookup","data", 2.1, redisHit ? "Cache hit — the database is never touched." : "Cache miss — we pay for the lookup and then still go to PostgreSQL.");
+  if(!redisHit) add("PostgreSQL query","data", n1 ? 19 + 40*3.6 : 19,
+    n1 ? "One query for the list, then forty more as a lazy association is touched per row. This is the N+1 problem, and it is the most common performance bug in JPA applications."
+       : "A single indexed query returning the page of rows.");
+  add("Serialize JSON","server", 5.8, "Jackson turning entities or DTOs into bytes. Grows with payload size — another reason to return DTOs, not entity graphs.");
+  add("Response → browser","wire", rtt*0.5, "The response travelling back.");
+  add("React render + paint","client", 41, "Reconcile, commit to the DOM, style, layout, paint. The user's first sight of the data.");
+  return P;
+}
+
+function drawWF(){
+  const P = phases();
+  const total = Math.round(P.reduce((s,p)=>s+p.ms,0));
+  const rowH = 21, padT = 30, padB = 26, labelW = 176, right = 58;
+  const svg = $("#wf");
+  const W = Math.max(660, svg.parentElement.clientWidth || 660);
+  const H = padT + P.length*rowH + padB;
+  const plotW = W - labelW - right;
+  const sc = v => (v/total)*plotW;
+  let t = 0, bars = "", grid = "", axis = "";
+
+  const ticks = 6;
+  for(let i=0;i<=ticks;i++){
+    const v = total*i/ticks, x = labelW + sc(v);
+    grid += `<line class="grid" x1="${x}" y1="${padT-8}" x2="${x}" y2="${H-padB+2}" opacity="${i===0?1:.55}"/>`;
+    axis += `<text class="axis" x="${x}" y="${padT-14}" text-anchor="${i===0?'start':(i===ticks?'end':'middle')}">${Math.round(v)}</text>`;
+  }
+  axis += `<text class="axis" x="${labelW+plotW}" y="${H-6}" text-anchor="end">milliseconds, cumulative</text>`;
+
+  P.forEach((p,i)=>{
+    const y = padT + i*rowH;
+    const x = labelW + sc(t);
+    const w = Math.max(2.5, sc(p.ms) - 2);
+    bars += `<rect class="bar" x="${x}" y="${y+3.5}" width="${w}" height="${rowH-9}" fill="${TIERC[p.tier]}"
+              data-i="${i}"></rect>`;
+    bars += `<text class="lbl${p.ms<total*0.01?' dim':''}" x="${labelW-10}" y="${y+rowH/2+3.5}" text-anchor="end">${p.name}</text>`;
+    bars += `<text class="ms" x="${labelW+plotW+8}" y="${y+rowH/2+3.5}">${p.ms < 1 ? "&lt;1" : p.ms} ms</text>`;
+    t += p.ms;
+  });
+
+  svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+  svg.setAttribute("height",H);
+  svg.innerHTML = grid + axis + bars;
+
+  svg.querySelectorAll("rect.bar").forEach(r=>{
+    const p = P[+r.dataset.i];
+    r.addEventListener("mousemove", e=>showTip(e, `<b>${p.name}</b> · ${p.ms} ms<br>${p.note}`));
+    r.addEventListener("mouseleave", hideTip);
+  });
+
+  const net = Math.round(P.filter(p=>p.tier==="wire").reduce((s,p)=>s+p.ms,0));
+  const srv = Math.round(P.filter(p=>p.tier==="server"||p.tier==="data").reduce((s,p)=>s+p.ms,0));
+  const cli = Math.round(P.filter(p=>p.tier==="client").reduce((s,p)=>s+p.ms,0));
+  $("#lc-total").textContent = total;
+  $("#lc-net").textContent = net + " (" + Math.round(net/total*100) + "%)";
+  $("#lc-srv").textContent = srv + " (" + Math.round(srv/total*100) + "%)";
+  $("#lc-cli").textContent = cli + " (" + Math.round(cli/total*100) + "%)";
+
+  let v;
+  const biggest = P.reduce((a,b)=>b.ms>a.ms?b:a);
+  if(net/total > .5) v = `The network owns ${Math.round(net/total*100)}% of this page load. Tuning your query would move the needle by single-digit milliseconds — the leverage is in fewer round trips and a shorter path.`;
+  else if(srv/total > .4) v = `The backend owns ${Math.round(srv/total*100)}%, and "${biggest.name}" is the largest single bar. This is the case where profiling the server is the right instinct.`;
+  else v = `The browser owns ${Math.round(cli/total*100)}% — bundle download, parse and render. Code splitting and a smaller critical bundle beat any backend change here.`;
+  $("#lc-verdict").textContent = v;
+
+  const tw = $("#lc-tablewrap");
+  if(!tw.hidden){
+    let cum = 0;
+    tw.innerHTML = `<div class="tablewrap"><table><thead><tr><th>#</th><th>Phase</th><th>Tier</th><th>Duration</th><th>Cumulative</th></tr></thead><tbody>`
+      + P.map((p,i)=>{ cum += p.ms; return `<tr><td class="num">${i+1}</td><td>${p.name}</td><td>${p.tier}</td><td class="num">${p.ms} ms</td><td class="num">${Math.round(cum)} ms</td></tr>`; }).join("")
+      + `</tbody></table></div>`;
+  }
+}
+segGroup("rtt", drawWF); segGroup("proto", drawWF);
+/* an N+1 only manifests when the query actually reaches PostgreSQL */
+$("#c-n1").addEventListener("change", ()=>{ if($("#c-n1").checked) $("#c-redis").checked = false; });
+$("#c-redis").addEventListener("change", ()=>{ if($("#c-redis").checked) $("#c-n1").checked = false; });
+["#c-dns","#c-cdn","#c-pre","#c-redis","#c-n1"].forEach(s=>$(s).addEventListener("change", drawWF));
+$("#lc-run").addEventListener("click", drawWF);
+$("#lc-table").addEventListener("click", e=>{
+  const tw = $("#lc-tablewrap"); tw.hidden = !tw.hidden;
+  e.currentTarget.setAttribute("aria-pressed", tw.hidden ? "false":"true"); drawWF();
+});
+addEventListener("resize", ()=>{ clearTimeout(window.__r); window.__r = setTimeout(drawWF, 150); });
+
+/* ============================ 2. DNS ============================ */
+const DNS_LADDER = [
+  ["Browser DNS cache","In-process, tens of seconds to a few minutes. Chrome keeps its own, separate from the OS.","0.2 ms"],
+  ["OS resolver cache","The stub resolver on your machine, plus <code>/etc/hosts</code>.","0.5 ms"],
+  ["Recursive resolver","Your ISP, or 8.8.8.8 / 1.1.1.1. Caches on behalf of many users, so it is usually warm for popular names.","~20 ms"],
+  ["Root nameservers","Answer only: “ask the .org servers”.","~40 ms"],
+  ["TLD nameservers (.org)","Answer only: “ask ns1.scholarships.org”.","~40 ms"],
+  ["Authoritative nameserver","The one that actually holds the A/AAAA record. Returns the address and a TTL.","~40 ms"]
+];
+function drawDNS(){
+  const s = state.dnsstate;
+  const stop = s === "hot" ? 0 : s === "os" ? 1 : 5;
+  let total = 0;
+  const rows = DNS_LADDER.map((d,i)=>{
+    const used = i <= stop;
+    if(used) total += parseFloat(d[2].replace(/[^\d.]/g,""));
+    const hit = i === stop;
+    return `<div class="card acc" style="--ac:${used?(hit?'var(--c-server)':'var(--c-wire)'):'var(--rule)'}; opacity:${used?1:.4}; margin-bottom:8px">
+      <div style="display:flex; justify-content:space-between; gap:12px; align-items:baseline; flex-wrap:wrap">
+        <h5>${i+1}. ${d[0]}</h5>
+        <span class="tag ${hit?'t-server':(used?'t-wire':'')}" style="${used?'':'color:var(--ink-3)'}">${hit?'ANSWERED HERE':(used?'miss · continue':'not reached')}</span>
+      </div>
+      <p>${d[1]}</p>
+      <p style="font-family:var(--mono); font-size:11.5px; color:var(--ink-3); margin-top:6px">${used ? d[2] : '—'}</p>
+    </div>`;
+  }).join("");
+  $("#dns-out").innerHTML = rows +
+   `<div class="verdict ${stop===0?'ok':(stop===1?'warn':'no')}" style="margin-top:14px; margin-bottom:0">
+      <h5>Cost of this lookup</h5>
+      <p style="margin-bottom:0"><b style="font-family:var(--display); font-size:21px">${total.toFixed(1)} ms</b> —
+      ${stop===0 ? "free, and this is the case for almost every request in a session. Which is exactly why the cold case gets forgotten."
+       : stop===1 ? "still cheap. The OS answered without leaving the machine."
+       : "a full recursive walk. First-time visitors, new subdomains, and freshly-expired TTLs all pay this, and it lands entirely before your first byte."}</p>
+    </div>`;
+}
+segGroup("dnsstate", drawDNS);
+
+/* ============================ 3. handshake ============================ */
+function drawHS(){
+  const rtt = +state.hrtt, n = +state.hreqs, p = state.hproto;
+  const setup = {t12:{rtts:3, label:"TCP (1 RTT) + TLS 1.2 (2 RTT)"},
+                 t13:{rtts:2, label:"TCP (1 RTT) + TLS 1.3 (1 RTT)"},
+                 t13r:{rtts:1, label:"TCP (1 RTT) + TLS 1.3 resumption (0 RTT)"},
+                 q:{rtts:1, label:"QUIC combines transport + crypto (1 RTT; 0 on resumption)"}}[p];
+  const setupMs = setup.rtts * rtt;
+  const perReq = rtt;               /* one RTT per request/response */
+  const reuse = setupMs + n*perReq;
+  const noReuse = n*(setupMs + perReq);
+  const saved = noReuse - reuse;
+  $("#hs-out").innerHTML = `
+    <div class="cols3">
+      <div class="card acc" style="--ac:var(--c-wire)"><h5>${setupMs} ms</h5><p>Connection setup — ${setup.label}. Paid before any application data moves.</p></div>
+      <div class="card acc" style="--ac:var(--c-client)"><h5>${reuse} ms</h5><p>${n} request${n>1?'s':''} over <b>one reused connection</b>: setup once, then one round trip each.</p></div>
+      <div class="card acc" style="--ac:var(--bad)"><h5>${noReuse} ms</h5><p>The same ${n} request${n>1?'s':''} if every one opened a <b>fresh connection</b>.</p></div>
+    </div>
+    <div class="verdict ${saved>0?'ok':'warn'}" style="margin-top:16px; margin-bottom:0">
+      <h5>Connection reuse saves ${saved} ms here</h5>
+      <p style="margin-bottom:0">${n===1
+        ? "With a single request there is nothing to amortise — which is why the very first request of a session is the expensive one, and why <code>preconnect</code> exists."
+        : `That is <b>${Math.round(saved/noReuse*100)}%</b> of the total, and it required no change to your application code at all — only keep-alive, which is on by default and which you can break by accident (a proxy that closes connections, <code>Connection: close</code>, a client that creates a new HTTP client per call).`}</p>
+    </div>`;
+}
+segGroup("hrtt", drawHS); segGroup("hproto", drawHS); segGroup("hreqs", drawHS);
+
+/* ============================ 4. HTTP anatomy ============================ */
+const REQ_LINES = [
+ ["GET /api/v1/students?cohort=2026&amp;page=0&amp;size=20 HTTP/1.1","Request line","Method, target and version. <code>GET</code> promises this is safe and idempotent — infrastructure may cache, prefetch and retry it. The query string carries pagination; putting it here rather than in a body is what makes the URL a shareable, bookmarkable state."],
+ ["Host: api.scholarships.org","Header","Mandatory since HTTP/1.1. It is how one IP address serves many domains — and how a reverse proxy or Azure Front Door decides which backend to route to."],
+ ["Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5…","Header","The access token. Because this header is not on the CORS safelist, its mere presence forces a preflight on cross-origin calls. Also: it is not encryption. Anyone who intercepts it is you, until it expires."],
+ ["Accept: application/json","Header","Content negotiation. The server may use it to choose a representation — and it is one of the four API versioning strategies (<code>application/vnd.scholarships.v2+json</code>)."],
+ ["Accept-Encoding: gzip, br","Header","The client advertising which compressions it understands. Brotli typically beats gzip by 15–20% on JSON. Free bytes, one config line."],
+ ["Origin: https://app.scholarships.org","Header","Set by the browser, not by your code, and unforgeable from JavaScript. This is the value the server compares against its allowed-origins list."],
+ ["If-None-Match: \"a3f91c\"","Header","Conditional request. If the resource still has this ETag the server replies <code>304 Not Modified</code> with no body — a full round trip, but almost no bytes."]
+];
+const RES_LINES = [
+ ["HTTP/1.1 200 OK","Status line","The machine-readable verdict. 2xx succeeded, 4xx the client erred, 5xx the server erred. Every monitor, retry policy and CDN in the path reads this before anything else."],
+ ["Content-Type: application/json","Header","How to interpret the bytes. Get it wrong and the browser may sniff, or refuse. For downloads it also decides render-inline versus save."],
+ ["Cache-Control: private, max-age=0, must-revalidate","Header","<code>private</code> forbids shared caches from storing it — correct for per-user data, and the header whose absence leaks one student's record into another's browser via a proxy. Static assets get the opposite: <code>public, max-age=31536000, immutable</code>."],
+ ["ETag: \"a3f91c\"","Header","A version fingerprint. The client sends it back in <code>If-None-Match</code>; the server can then answer 304 instead of resending the payload."],
+ ["Access-Control-Allow-Origin: https://app.scholarships.org","Header","The opt-in that lets the browser hand this response to your JavaScript. Absent, the browser discards a response it has already fully received."],
+ ["Access-Control-Expose-Headers: X-Total-Count","Header","Without this, your JavaScript can read only the seven CORS-safelisted response headers. Your pagination header exists on the wire and is invisible in <code>fetch</code> — a genuinely baffling bug the first time."],
+ ["X-Total-Count: 412","Header","Total matching rows, for the pagination control. Only readable because of the line above."],
+ ["Content-Encoding: br","Header","The body is Brotli-compressed. The browser decompresses transparently."],
+ ["","",""],
+ ["{ \"content\": [ { \"id\": 8891, \"name\": \"…\" } ], \"page\": 0 }","Body","The representation. Note it is a DTO shape with an explicit envelope, not a serialised JPA entity — which is what keeps a lazy association from becoming a serialisation failure or an accidental data leak."]
+];
+function renderHTTP(el, lines){
+  el.innerHTML = lines.map((l,i)=> l[0]==="" ? "<br>" :
+    `<span data-l="${i}" style="display:block; padding:1px 4px; border-radius:2px">${l[0]}</span>`).join("");
+  el.querySelectorAll("[data-l]").forEach(sp=>{
+    sp.addEventListener("click",()=>{
+      $$("#http-req [data-l],#http-res [data-l]").forEach(x=>{x.style.background="";x.style.color="";});
+      sp.style.background = "var(--ink)"; sp.style.color = "var(--paper)";
+      const l = lines[+sp.dataset.l];
+      $("#http-note").className = "verdict ok";
+      $("#http-note").innerHTML = `<h5>${l[1]}</h5><p style="margin-bottom:0">${l[2]}</p>`;
+    });
+  });
+}
+renderHTTP($("#http-req"), REQ_LINES);
+renderHTTP($("#http-res"), RES_LINES);
+
+/* ============================ 5. CORS ============================ */
+const SAFELIST_CT = ["none","text/plain"]; /* + urlencoded, multipart */
+function drawCORS(){
+  const origin = $("#co-origin").value.trim() || "http://localhost:5173";
+  const auth = $("#co-auth").checked, cred = $("#co-cred").checked;
+  const m = state.cmethod, ct = state.cctype, srv = state.cserver;
+  const simpleMethod = ["GET","HEAD","POST"].includes(m);
+  const simpleCT = SAFELIST_CT.includes(ct);
+  const preflight = !(simpleMethod && simpleCT && !auth);
+
+  const reasons = [];
+  if(!simpleMethod) reasons.push(`the method <code>${m}</code> is not GET, HEAD or POST`);
+  if(!simpleCT) reasons.push(`<code>Content-Type: ${ct}</code> is not on the CORS safelist`);
+  if(auth) reasons.push("an <code>Authorization</code> header is not CORS-safelisted");
+
+  let ok = true, why = "", fix = "";
+  if(srv === "none"){ ok = false; why = "The server sends no <code>Access-Control-Allow-Origin</code> header at all, so the browser has nothing to match against and discards the response."; }
+  else if(srv === "star" && cred){ ok = false; why = "<code>Access-Control-Allow-Origin: *</code> is <b>never</b> valid together with credentials. The browser rejects it, and Spring itself will refuse this combination at startup — a wildcard origin plus cookies would mean any site on the internet could act as this user."; }
+  else if(srv === "star" && !cred){ ok = true; why = "A wildcard origin is accepted because no credentials are being sent. Fine for a public read-only API; not something to ship for an authenticated one."; }
+  else if(srv === "exact"){ ok = true; why = `The server echoes <code>Access-Control-Allow-Origin: ${origin}</code> and, because credentials are in play, must also send <code>Access-Control-Allow-Credentials: true</code> and must not use a wildcard. This is the correct production configuration.`; }
+
+  const optionsBlock = preflight ? `<h4 style="font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 8px">1 · The browser sends a preflight first</h4>
+<pre><b>OPTIONS</b> /api/v1/applications HTTP/1.1
+Host: api.scholarships.org
+Origin: ${origin}
+Access-Control-Request-Method: ${m}
+Access-Control-Request-Headers: ${[ct!=="none"?"content-type":null, auth?"authorization":null].filter(Boolean).join(", ")||"(none)"}</pre>` : "";
+
+  const respBlock = `<h4 style="font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 8px">${preflight?"2 · The server must answer it like this":"The server response must carry"}</h4>
+<pre>HTTP/1.1 ${preflight?"204 No Content":"200 OK"}
+Access-Control-Allow-Origin: ${srv==="none" ? "<i>(missing — this is the failure)</i>" : srv==="star" ? "*" : origin}${preflight?`
+Access-Control-Allow-Methods: GET, POST, PUT, DELETE
+Access-Control-Allow-Headers: content-type, authorization
+Access-Control-Max-Age: 1800`:""}${cred?`
+Access-Control-Allow-Credentials: true`:""}</pre>`;
+
+  const springFix = srv === "exact" ? "" : `<h4 style="font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 8px">${ok ? "The configuration you would actually ship" : "The Spring Boot configuration that fixes this"}</h4>
+<pre><b>@Bean</b>
+CorsConfigurationSource corsConfigurationSource() {
+    var c = <b>new</b> CorsConfiguration();
+    c.setAllowedOrigins(List.of("${origin}", "https://app.scholarships.org"));
+    c.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE"));
+    c.setAllowedHeaders(List.of("Authorization","Content-Type"));
+    c.setExposedHeaders(List.of("X-Total-Count"));
+    c.setAllowCredentials(<b>true</b>);          <i>// then origins may NOT be "*"</i>
+    c.setMaxAge(1800L);                  <i>// cache the preflight for 30 min</i>
+    <b>var</b> src = <b>new</b> UrlBasedCorsConfigurationSource();
+    src.registerCorsConfiguration("/api/**", c);
+    <b>return</b> src;
+}
+
+<i>// and, critically, hand it to Spring Security so the CorsFilter runs
+// early enough to let the unauthenticated OPTIONS preflight through:</i>
+http.cors(Customizer.withDefaults());</pre>`;
+
+  $("#cors-out").innerHTML = `
+    <div class="cols3" style="margin-bottom:6px">
+      <div class="card acc" style="--ac:${preflight?'var(--c-wire)':'var(--c-server)'}">
+        <h5>${preflight ? "Preflight required" : "Simple request"}</h5>
+        <p>${preflight ? "Because "+reasons.join("; ")+". That is one extra round trip before the real one."
+                       : "Method, headers and content type are all CORS-safelisted, so the browser sends the real request directly."}</p></div>
+      <div class="card acc" style="--ac:${cred?'var(--c-wire)':'var(--rule-2)'}">
+        <h5>${cred ? "Credentials included" : "No credentials"}</h5>
+        <p>${cred ? "Cookies travel with the request, so the server must name the exact origin and set Allow-Credentials." : "No cookies. The server may use a wildcard origin."}</p></div>
+      <div class="card acc" style="--ac:${ok?'var(--good)':'var(--bad)'}">
+        <h5>${ok ? "Browser delivers the response" : "Browser blocks the response"}</h5>
+        <p>${ok ? "Your fetch() promise resolves and your JavaScript can read the body." : "Your fetch() promise rejects with a TypeError. The response arrived; you just cannot see it."}</p></div>
+    </div>
+    <div class="verdict ${ok?'ok':'no'}" style="margin-top:16px"><h5>${ok?'Allowed':'Blocked'}</h5><p style="margin-bottom:0">${why}</p></div>
+    ${!ok ? `<h4 style="font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 8px">What you will see in the console</h4>
+      <pre style="color:var(--bad)">Access to fetch at 'https://api.scholarships.org/api/v1/applications'
+from origin '${origin}' has been blocked by CORS policy:
+${srv==="none" ? "No 'Access-Control-Allow-Origin' header is present on the requested resource."
+ : "The value of the 'Access-Control-Allow-Origin' header in the response must not\nbe the wildcard '*' when the request's credentials mode is 'include'."}</pre>` : ""}
+    ${optionsBlock}${respBlock}${springFix}`;
+}
+segGroup("cmethod", drawCORS); segGroup("cctype", drawCORS); segGroup("cserver", drawCORS);
+["#co-auth","#co-cred"].forEach(s=>$(s).addEventListener("change", drawCORS));
+$("#co-origin").addEventListener("input", drawCORS);
+
+/* ============================ 6. sessions ============================ */
+let sessState = {down:false, requests:[], loginInstance:1};
+function drawSess(){
+  const strat = state.sess;
+  const names = ["Instance 1","Instance 2","Instance 3"];
+  const rack = names.map((n,i)=>{
+    const down = sessState.down && i===1;
+    let holds = "—";
+    if(strat==="mem") holds = (i===sessState.loginInstance) ? "holds the session" : "no session";
+    else if(strat==="sticky") holds = (i===sessState.loginInstance) ? "pinned by cookie" : "not pinned";
+    else if(strat==="redis") holds = "reads Redis";
+    else holds = "verifies signature";
+    return `<div class="inst ${down?'down':''}"><div class="nm">${n}</div>
+      <div class="st" style="color:${down?'var(--bad)':'var(--good)'}">${down?'DOWN':'UP'}</div>
+      <div class="ss">${down?'&nbsp;':holds}</div></div>`;
+  }).join("");
+
+  const reqs = sessState.requests.map((r,i)=>
+    `<span class="req ${r.ok?'ok':'fail'}">#${i+1} → ${r.inst===null?'—':'inst '+(r.inst+1)} · ${r.ok?'200':(r.code||'401')}</span>`).join("");
+
+  const NOTES = {
+    mem:["no","Round-robin plus in-memory sessions is broken from the first extra instance. Two out of three requests land on a server that has never heard of this user, and the client is logged out at random. Almost every local tutorial works only because it runs one instance."],
+    sticky:[sessState.down?"no":"warn","Sticky sessions pin the user to the instance that authenticated them, and it works — until that instance dies or you deploy, at which point the session vanishes. It also defeats even load distribution: a hot instance stays hot."],
+    redis:["ok","Every instance reads the session from a shared store, so any instance can serve any request and an instance dying costs nothing. The price is a network hop per request and one more piece of infrastructure whose failure is now your failure."],
+    jwt:["ok","No lookup at all — each instance verifies the signature with a public key it already holds. Infinitely horizontal, and immune to instance death. The price is revocation: until the token expires, you cannot take it back without reintroducing shared state."]
+  };
+  const [cls, txt] = NOTES[strat];
+  $("#sess-out").innerHTML = `<div class="rack">${rack}</div>
+    ${sessState.requests.length ? `<div class="reqs">${reqs}</div>` : `<p style="font-family:var(--mono); font-size:11.5px; color:var(--ink-3); margin:6px 0 0">The user authenticated on instance ${sessState.loginInstance+1}. Send some requests.</p>`}
+    <div class="verdict ${cls==='ok'?'ok':cls==='warn'?'warn':'no'}" style="margin-top:16px; margin-bottom:0">
+      <h5>${strat==="mem"?"In-memory session":strat==="sticky"?"Sticky sessions":strat==="redis"?"Session in Redis":"Stateless JWT"}</h5>
+      <p style="margin-bottom:0">${txt}</p></div>`;
+}
+function sendReqs(){
+  const strat = state.sess;
+  for(let i=0;i<6;i++){
+    let inst;
+    const healthy = [0,1,2].filter(k => !(sessState.down && k===1));
+    if(strat==="sticky"){
+      if(sessState.down && sessState.loginInstance===1){
+        /* the pinned instance is gone: the LB re-routes and the session is lost */
+        inst = healthy[(sessState.requests.length + i) % healthy.length];
+        sessState.requests.push({inst, ok:false, code:"401"}); continue;
+      }
+      inst = sessState.loginInstance;
+    } else {
+      inst = healthy[(sessState.requests.length + i) % healthy.length];
+    }
+    const ok = !(strat==="mem" && inst !== sessState.loginInstance);
+    sessState.requests.push({inst, ok, code: ok ? "200" : "401"});
+  }
+  sessState.requests = sessState.requests.slice(-12);
+  drawSess();
+}
+segGroup("sess", ()=>{ sessState.requests = []; drawSess(); });
+$("#s-send").addEventListener("click", sendReqs);
+$("#s-kill").addEventListener("click", ()=>{ sessState.down = !sessState.down; sessState.requests = []; drawSess(); });
+$("#s-reset").addEventListener("click", ()=>{ sessState = {down:false, requests:[], loginInstance:1}; drawSess(); });
+
+/* ============================ 8. debugging ============================ */
+const SYMPTOMS = [
+ {q:"CORS error in the console, but curl against the same endpoint works",
+  layer:"Browser · not your backend",
+  cause:"The response is arriving. The browser is withholding it from your JavaScript because the origin was not approved. curl has no origin and no same-origin policy, so it never checks.",
+  checks:["Is <code>Access-Control-Allow-Origin</code> present on the <i>actual</i> response, and does it match exactly (scheme, host, port)?",
+          "Did the OPTIONS preflight return 2xx? If it returned 401, Spring Security rejected it before your CORS config ran — <code>http.cors(Customizer.withDefaults())</code>.",
+          "Are you sending credentials with a wildcard origin? That combination is always rejected.",
+          "In development, side-step it entirely with a Vite proxy so the browser sees one origin."]},
+ {q:"401 on every request after a page refresh",
+  layer:"Client state · token lifetime",
+  cause:"The credential did not survive the reload, or it expired and nothing refreshed it.",
+  checks:["Where is the token held? In memory it is gone on refresh by design — that is the trade-off of not using localStorage.",
+          "If it is a cookie: is <code>SameSite</code> blocking it on this navigation? Is <code>Secure</code> set on an <code>http://</code> origin?",
+          "Is the clock skewed? A JWT <code>exp</code> is absolute time; a container with a drifting clock rejects valid tokens.",
+          "Does your fetch wrapper actually attach the Authorization header on <i>every</i> call, including the ones added last week?"]},
+ {q:"403 for a user who definitely has the right role",
+  layer:"Spring Security · authorization",
+  cause:"Either the authority string does not match, or the check is an ownership check failing correctly.",
+  checks:["<code>hasRole('ADMIN')</code> looks for the authority <code>ROLE_ADMIN</code>. <code>hasAuthority('ADMIN')</code> looks for <code>ADMIN</code>. Mixing them is the single most common 403.",
+          "Log the actual authorities on the <code>Authentication</code> object rather than assuming what the token contains.",
+          "Is this genuinely an object-level rule — right role, wrong record? Then the 403 is correct and the UI should not have offered the action.",
+          "Is CSRF enabled and the token missing? Spring returns 403 for a failed CSRF check, which reads as an authorization bug and is not one."]},
+ {q:"The API is fast in Postman and slow in the browser",
+  layer:"Network · protocol",
+  cause:"Postman is measuring one request on a warm connection with no browser in the way.",
+  checks:["Is a CORS preflight doubling every call? Set <code>Access-Control-Max-Age</code>.",
+          "Is the browser opening a new connection per call — a new client instance, or a proxy sending <code>Connection: close</code>?",
+          "Is the payload uncompressed? Postman and the browser negotiate encoding differently in some setups.",
+          "Is the time actually in render rather than the network? Split it in the Performance panel, not the Network panel."]},
+ {q:"One endpoint gets slower as the dataset grows; the others do not",
+  layer:"Data tier · almost certainly N+1",
+  cause:"A lazily-loaded association is being touched inside a loop, so the query count grows linearly with rows returned.",
+  checks:["Turn on <code>spring.jpa.show-sql</code> or Hibernate statistics and count the queries for one request. Forty-one queries for a twenty-row page is the signature.",
+          "Fix with a fetch join, an <code>@EntityGraph</code>, or — usually best — a DTO projection that selects only what the endpoint returns.",
+          "Confirm with <code>EXPLAIN (ANALYZE, BUFFERS)</code> that the remaining query uses the index you think it does.",
+          "Then, and only then, consider caching. Caching an N+1 hides it until the cache misses."]},
+ {q:"Intermittent 502s under load, healthy pods, no errors in the app log",
+  layer:"Infrastructure · pools and timeouts",
+  cause:"Something in front of the app is giving up before the app answers, or a pool is exhausted.",
+  checks:["Compare timeouts along the path: browser, Front Door, gateway, Tomcat, HikariCP, PostgreSQL <code>statement_timeout</code>. The shortest one wins and it is rarely the one you tuned.",
+          "Is the connection pool exhausted? HikariCP logs pool statistics; a queue depth above zero under normal load means it is undersized or connections are leaking.",
+          "Is a long-running request holding a connection across an external HTTP call? That is a pool leak wearing a disguise.",
+          "Check <code>/actuator/metrics/http.server.requests</code> for the p99, not the mean. The mean will look fine throughout."]}
+];
+const sel = $("#dbg-sel");
+sel.innerHTML = SYMPTOMS.map((s,i)=>`<option value="${i}">${s.q.replace(/<[^>]+>/g,"")}</option>`).join("");
+function drawDbg(){
+  const s = SYMPTOMS[+sel.value];
+  $("#dbg-out").innerHTML = `
+    <div class="cols3" style="margin-bottom:16px">
+      <div class="card acc" style="--ac:var(--c-wire)"><h5>Where to look</h5><p>${s.layer}</p></div>
+      <div class="card acc" style="--ac:var(--c-client); grid-column:span 2"><h5>What is actually happening</h5><p>${s.cause}</p></div>
+    </div>
+    <h4 style="font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);margin:0 0 9px">Checks, in order</h4>
+    <ol style="padding-left:20px; margin:0">${s.checks.map(c=>`<li style="margin-bottom:8px; font-size:15.5px">${c}</li>`).join("")}</ol>`;
+}
+sel.addEventListener("change", drawDbg);
+
+/* ============================ nav ============================ */
+const SECTIONS = [["m1","The path"],["m2","DNS"],["m3","TCP / TLS"],["m4","HTTP"],["m5","CORS"],
+                  ["m6","State"],["m7","AuthN / AuthZ"],["m8","Debugging"],["m9","Close"]];
+$("#nav").innerHTML = SECTIONS.map((s,i)=>`<a href="#${s[0]}"${i===0?' class="on"':''}>${String(i+1).padStart(2,"0")} ${s[1]}</a>`).join("");
+const links = $$("#nav a");
+const obs = new IntersectionObserver(es=>{
+  es.forEach(e=>{ if(e.isIntersecting){
+    links.forEach(l=>l.classList.toggle("on", l.getAttribute("href")==="#"+e.target.id));
+  }});
+},{rootMargin:"-25% 0px -65% 0px"});
+SECTIONS.forEach(s=>obs.observe(document.getElementById(s[0])));
+
+/* ============================ theme ============================ */
+try{ const t = localStorage.getItem("fsatlas.theme"); if(t) document.documentElement.setAttribute("data-theme",t); }catch(e){}
+$("#themebtn").addEventListener("click",()=>{
+  const cur = document.documentElement.getAttribute("data-theme");
+  const isDark = cur ? cur==="dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  const next = isDark ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  try{ localStorage.setItem("fsatlas.theme", next); }catch(e){}
+  drawWF();
+});
+
+/* ============================ boot ============================ */
+drawWF(); drawDNS(); drawHS(); drawCORS(); drawSess(); drawDbg();
+</script>
+</body></html>

@@ -1,0 +1,1273 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>The Rendering Model</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+:root{
+  --paper:#F1F4F3; --surface:#FFFFFF; --surface-2:#E8EDEC; --surface-3:#DDE5E3;
+  --ink:#0E1518; --ink-2:#3A484C; --ink-3:#65777B;
+  --rule:#D3DCDA; --rule-2:#C0CCC9;
+  /* UI ink (text-safe) */
+  --client:#005886; --wire:#A34800; --server:#007052; --data:#0B4739; --alert:#B3261E;
+  /* chart marks (validated: light PASS on all six checks) */
+  --c-client:#0072B2; --c-wire:#D55E00; --c-server:#009E73; --c-data:#00614A;
+  --client-wash:#0072B214; --wire-wash:#D55E0014; --server-wash:#009E7314; --data-wash:#00614A14; --alert-wash:#B3261E14;
+  --good:#007052; --warn:#A34800; --bad:#B3261E;
+  --shadow:0 1px 2px rgba(14,21,24,.05), 0 8px 24px -12px rgba(14,21,24,.16);
+  --display:'Archivo','Helvetica Neue',Arial,sans-serif;
+  --body:'Source Serif 4',Georgia,'Times New Roman',serif;
+  --mono:'JetBrains Mono','SF Mono',Menlo,Consolas,monospace;
+  --maxw:1120px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --paper:#0E1416; --surface:#151D1F; --surface-2:#1D2729; --surface-3:#263234;
+  --ink:#E6EDEC; --ink-2:#AFC0BE; --ink-3:#7E9291;
+  --rule:#2A383A; --rule-2:#3A4B4D;
+  --client:#7CBBE6; --wire:#F09A55; --server:#4FBE8A; --data:#A5DEC5; --alert:#F08A80;
+  --c-client:#4A9AD0; --c-wire:#DE7018; --c-server:#2FA76A; --c-data:#7ED3AF;
+  --client-wash:#4A9AD01A; --wire-wash:#DE70181A; --server-wash:#2FA76A1A; --data-wash:#7ED3AF1A; --alert-wash:#F08A801A;
+  --good:#4FBE8A; --warn:#F09A55; --bad:#F08A80;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+}}
+:root[data-theme="dark"]{
+  --paper:#0E1416; --surface:#151D1F; --surface-2:#1D2729; --surface-3:#263234;
+  --ink:#E6EDEC; --ink-2:#AFC0BE; --ink-3:#7E9291;
+  --rule:#2A383A; --rule-2:#3A4B4D;
+  --client:#7CBBE6; --wire:#F09A55; --server:#4FBE8A; --data:#A5DEC5; --alert:#F08A80;
+  --c-client:#4A9AD0; --c-wire:#DE7018; --c-server:#2FA76A; --c-data:#7ED3AF;
+  --client-wash:#4A9AD01A; --wire-wash:#DE70181A; --server-wash:#2FA76A1A; --data-wash:#7ED3AF1A; --alert-wash:#F08A801A;
+  --good:#4FBE8A; --warn:#F09A55; --bad:#F08A80;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+}
+
+*{box-sizing:border-box}
+body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--body); font-size:17px; line-height:1.64; -webkit-font-smoothing:antialiased}
+h1,h2,h3,h4,h5{font-family:var(--display); font-weight:700; letter-spacing:-.018em; text-wrap:balance; margin:0}
+p{margin:0 0 14px} p:last-child{margin-bottom:0}
+a{color:var(--client)}
+.wrap{max-width:var(--maxw); margin:0 auto; padding:0 24px}
+button{font-family:var(--mono); cursor:pointer}
+button:focus-visible,summary:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--c-client); outline-offset:2px}
+code{font-family:var(--mono); font-size:.855em; background:var(--surface-2); padding:1px 4px; border-radius:2px}
+pre{font-family:var(--mono); font-size:13px; line-height:1.62; background:var(--surface-2); border:1px solid var(--rule);
+    border-radius:3px; padding:14px 16px; overflow-x:auto; margin:0 0 14px}
+pre b{color:var(--client); font-weight:700}
+pre i{color:var(--ink-3); font-style:normal}
+
+/* masthead */
+.masthead{background:var(--surface); border-bottom:1px solid var(--rule)}
+.mast{max-width:var(--maxw); margin:0 auto; padding:38px 24px 30px; display:flex; flex-direction:column; gap:22px}
+.mast-top{display:flex; justify-content:space-between; gap:20px; align-items:flex-start; flex-wrap:wrap}
+.eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3)}
+h1{font-size:clamp(32px,5.2vw,56px); line-height:1.02; margin-top:6px}
+.lede{font-size:19px; color:var(--ink-2); max-width:62ch; margin:0}
+.themebtn{font-size:11px; letter-spacing:.1em; text-transform:uppercase; background:transparent; color:var(--ink-3);
+  border:1px solid var(--rule-2); border-radius:2px; padding:7px 11px; white-space:nowrap}
+.themebtn:hover{color:var(--ink); border-color:var(--ink-3)}
+
+/* section nav */
+.navbar{position:sticky; top:0; z-index:40; background:var(--paper); border-bottom:1px solid var(--rule)}
+.navinner{max-width:var(--maxw); margin:0 auto; padding:0 24px; display:flex; gap:2px; overflow-x:auto; scrollbar-width:thin}
+.navinner a{font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase; text-decoration:none;
+  color:var(--ink-3); padding:12px 11px; white-space:nowrap; border-bottom:2px solid transparent}
+.navinner a:hover{color:var(--ink)}
+.navinner a.on{color:var(--ink); border-bottom-color:var(--c-wire)}
+
+/* module */
+.module{padding:60px 0 10px; border-top:1px solid var(--rule)}
+.module:first-of-type{border-top:0}
+.mod-head{display:flex; gap:14px; align-items:baseline; margin-bottom:18px; flex-wrap:wrap}
+.mod-n{font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.14em; color:var(--tint,var(--ink-3))}
+.mod-head h2{font-size:clamp(25px,3.4vw,36px)}
+.mod-q{font-family:var(--body); font-size:19px; color:var(--ink-2); max-width:64ch; margin:0 0 26px; font-style:italic}
+.prose{max-width:68ch}
+.prose h3{font-size:21px; margin:30px 0 10px}
+.prose h4{font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3); margin:28px 0 9px}
+.prose ul,.prose ol{padding-left:20px; margin:0 0 14px}
+.prose li{margin-bottom:6px}
+.tag{font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; padding:3px 7px; border-radius:2px; white-space:nowrap}
+.t-client{background:var(--client-wash); color:var(--client)} .t-wire{background:var(--wire-wash); color:var(--wire)}
+.t-server{background:var(--server-wash); color:var(--server)} .t-data{background:var(--data-wash); color:var(--data)}
+
+/* lab panel */
+.lab{background:var(--surface); border:1px solid var(--rule); border-radius:5px; box-shadow:var(--shadow); margin:26px 0 8px; overflow:hidden}
+.lab-head{display:flex; justify-content:space-between; align-items:center; gap:14px; padding:13px 18px; border-bottom:1px solid var(--rule); background:var(--surface-2); flex-wrap:wrap}
+.lab-head h3{font-size:16px}
+.lab-head .kind{font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3)}
+.lab-body{padding:18px}
+.ctrls{display:flex; flex-wrap:wrap; gap:14px 22px; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--surface)}
+.ctrl{display:flex; flex-direction:column; gap:5px}
+.ctrl label{font-family:var(--mono); font-size:9.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3)}
+.seg{display:flex; border:1px solid var(--rule-2); border-radius:3px; overflow:hidden}
+.seg button{font-size:11px; padding:6px 10px; border:0; background:var(--surface); color:var(--ink-2); border-right:1px solid var(--rule-2)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--ink); color:var(--paper)}
+.tog{display:flex; align-items:center; gap:7px; font-family:var(--mono); font-size:11.5px; color:var(--ink-2); cursor:pointer; padding-top:14px}
+.tog input{width:15px; height:15px; accent-color:var(--c-wire); cursor:pointer}
+.runbtn{font-size:11px; letter-spacing:.12em; text-transform:uppercase; background:var(--ink); color:var(--paper); border:1px solid var(--ink); border-radius:2px; padding:8px 14px}
+.ghostbtn{font-size:11px; letter-spacing:.12em; text-transform:uppercase; background:transparent; color:var(--ink-2); border:1px solid var(--rule-2); border-radius:2px; padding:8px 12px}
+.ghostbtn[aria-pressed="true"]{background:var(--ink); color:var(--paper); border-color:var(--ink)}
+select{font-family:var(--mono); font-size:11.5px; padding:6px 8px; border:1px solid var(--rule-2); border-radius:3px; background:var(--surface); color:var(--ink)}
+input[type=text]{font-family:var(--mono); font-size:11.5px; padding:6px 8px; border:1px solid var(--rule-2); border-radius:3px; background:var(--surface); color:var(--ink); min-width:210px}
+
+/* waterfall */
+.wf-scroll{overflow-x:auto}
+.wf{width:100%; min-width:640px; display:block}
+.wf .lbl{font-family:var(--mono); font-size:10.5px; fill:var(--ink-2)}
+.wf .lbl.dim{fill:var(--ink-3)}
+.wf .ms{font-family:var(--mono); font-size:10px; fill:var(--ink-3)}
+.wf .grid{stroke:var(--rule); stroke-width:1}
+.wf .axis{font-family:var(--mono); font-size:9.5px; fill:var(--ink-3)}
+.wf rect.bar{rx:2; ry:2}
+.wf rect.bar:hover{opacity:.82}
+.wf .sep{stroke:var(--surface); stroke-width:2}
+.legend{display:flex; gap:16px; flex-wrap:wrap; font-family:var(--mono); font-size:10.5px; color:var(--ink-3); padding:0 0 12px}
+.legend i{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:-1px}
+.total{display:flex; gap:26px; flex-wrap:wrap; align-items:baseline; padding:14px 18px; border-top:1px solid var(--rule); background:var(--surface-2)}
+.total .big{font-family:var(--display); font-weight:700; font-size:32px; font-variant-numeric:tabular-nums; line-height:1}
+.total .sm{font-family:var(--mono); font-size:10px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3)}
+.tip{position:fixed; z-index:99; pointer-events:none; background:var(--ink); color:var(--paper); font-family:var(--mono);
+  font-size:11px; line-height:1.5; padding:8px 10px; border-radius:3px; max-width:290px; opacity:0; transition:opacity .12s}
+.tip.on{opacity:1}
+.tip b{color:#fff}
+
+.tablewrap{overflow-x:auto; border:1px solid var(--rule); border-radius:3px; margin-top:14px}
+table{border-collapse:collapse; width:100%; min-width:520px; background:var(--surface)}
+th,td{text-align:left; padding:8px 12px; border-bottom:1px solid var(--rule); font-size:14px}
+th{font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); background:var(--surface-2)}
+td.num{font-family:var(--mono); font-variant-numeric:tabular-nums; text-align:right}
+tbody tr:last-child td{border-bottom:0}
+
+/* verdict blocks */
+.verdict{border-left:3px solid var(--vc); background:var(--vw); padding:14px 16px; border-radius:0 3px 3px 0; margin-bottom:14px}
+.verdict.ok{--vc:var(--good); --vw:var(--server-wash)}
+.verdict.no{--vc:var(--bad); --vw:var(--alert-wash)}
+.verdict.warn{--vc:var(--warn); --vw:var(--wire-wash)}
+.verdict h5{font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--vc); margin-bottom:7px}
+.verdict p{font-size:15.5px; margin-bottom:8px}
+
+.cols{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:20px}
+.cols3{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px}
+
+.card{border:1px solid var(--rule); border-radius:4px; background:var(--surface); padding:14px 16px}
+.card h5{font-family:var(--display); font-size:15.5px; margin-bottom:6px}
+.card p{font-size:14.5px; color:var(--ink-2); margin-bottom:0; line-height:1.5}
+.card.acc{border-left:3px solid var(--ac)}
+
+/* instances */
+.rack{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:14px 0}
+.inst{border:1px solid var(--rule); border-radius:4px; padding:11px 12px; background:var(--surface); text-align:center}
+.inst.down{opacity:.45; border-style:dashed}
+.inst .nm{font-family:var(--mono); font-size:11px; color:var(--ink-3); letter-spacing:.08em}
+.inst .st{font-family:var(--display); font-weight:700; font-size:13px; margin-top:5px}
+.inst .ss{font-family:var(--mono); font-size:10px; color:var(--ink-3); margin-top:4px; min-height:14px}
+.reqs{display:flex; gap:5px; flex-wrap:wrap; margin-top:12px}
+.req{font-family:var(--mono); font-size:10.5px; padding:5px 8px; border-radius:2px; border:1px solid var(--rule-2); background:var(--surface)}
+.req.ok{border-color:var(--good); color:var(--good); background:var(--server-wash)}
+.req.fail{border-color:var(--bad); color:var(--bad); background:var(--alert-wash)}
+
+/* misc blocks */
+.callout{border:1px solid var(--rule); border-left:3px solid var(--c-wire); background:var(--wire-wash); border-radius:0 4px 4px 0; padding:15px 17px; margin:22px 0}
+.callout h4{font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--wire); margin-bottom:8px}
+.callout p,.callout li{font-size:15.5px}
+.mistakes{display:grid; gap:10px; margin:14px 0}
+.mistake{border:1px solid var(--rule); border-radius:4px; overflow:hidden; background:var(--surface)}
+.mistake summary{list-style:none; cursor:pointer; padding:12px 15px; font-family:var(--display); font-weight:600; font-size:15.5px; display:flex; gap:11px; align-items:flex-start}
+.mistake summary::-webkit-details-marker{display:none}
+.mistake summary:hover{background:var(--surface-2)}
+.mistake .x{font-family:var(--mono); color:var(--bad); font-weight:700; flex:none}
+.mistake .in{padding:0 15px 14px 41px; font-size:15px; color:var(--ink-2)}
+.mistake .in p{margin-bottom:9px}
+
+.taskbox{border:1px solid var(--rule-2); border-radius:4px; background:var(--surface); padding:15px 17px; margin:20px 0}
+.taskbox h4{font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3); margin-bottom:9px}
+.taskbox.exp{border-left:3px solid var(--c-client)}
+.taskbox.chal{border-left:3px solid var(--c-server)}
+.taskbox.arch{border-left:3px solid var(--c-data)}
+.reads{display:flex; flex-wrap:wrap; gap:6px; margin:16px 0 0}
+.reads a{font-family:var(--mono); font-size:11px; text-decoration:none; color:var(--ink-2); border:1px solid var(--rule-2); border-radius:2px; padding:4px 9px; background:var(--surface)}
+.reads a:hover{border-color:var(--c-client); color:var(--client)}
+.reads .src{font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3); margin-right:5px}
+
+.matrix2{overflow-x:auto}
+.matrix2 table{min-width:560px}
+.yes{color:var(--good); font-weight:700} .no2{color:var(--bad); font-weight:700}
+
+footer{border-top:1px solid var(--rule); background:var(--surface); padding:34px 0 50px; margin-top:60px}
+footer p{color:var(--ink-3); font-size:14.5px; max-width:72ch}
+@media (prefers-reduced-motion: reduce){*{transition:none!important; animation:none!important}}
+@media(max-width:640px){ .rack{grid-template-columns:1fr} body{font-size:16px} }
+</style></head><body><style>
+/* ---------- component tree ---------- */
+.tree{font-family:var(--mono); font-size:12.5px; line-height:1.5}
+.tnode{display:flex; align-items:center; gap:9px; padding:5px 9px; border-radius:3px; margin-bottom:3px;
+  border:1px solid var(--rule); background:var(--surface); transition:background .18s, border-color .18s}
+.tkids{margin-left:20px; padding-left:14px; border-left:1px solid var(--rule)}
+.tname{font-weight:700; color:var(--ink)}
+.tbadge{font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; padding:2px 6px; border-radius:2px; margin-left:auto; white-space:nowrap}
+.tnode.ran{border-color:var(--c-wire); background:var(--wire-wash)}
+.tnode.ran .tbadge{background:var(--c-wire); color:#fff}
+.tnode.bail{border-color:var(--c-server); background:var(--server-wash)}
+.tnode.bail .tbadge{background:var(--c-server); color:#fff}
+.tnode.idle{opacity:.5}
+.tnode.idle .tbadge{color:var(--ink-3); border:1px solid var(--rule-2)}
+.tnode.dom{box-shadow:inset 0 0 0 2px var(--c-data)}
+.tnode.dom .tname::after{content:" ● DOM"; color:var(--c-data); font-size:10px; letter-spacing:.08em}
+.towner{font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--c-client); border:1px solid var(--c-client); padding:1px 5px; border-radius:2px}
+.tmemo{font-size:9.5px; color:var(--ink-3)}
+
+.phases{display:flex; gap:0; border:1px solid var(--rule); border-radius:3px; overflow:hidden; margin-bottom:16px}
+.phase{flex:1; padding:9px 11px; border-right:1px solid var(--rule); background:var(--surface); opacity:.42}
+.phase:last-child{border-right:0}
+.phase.on{opacity:1; background:var(--wire-wash)}
+.phase .pn{font-family:var(--mono); font-size:9.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3)}
+.phase .pt{font-family:var(--display); font-weight:600; font-size:14px; margin-top:3px}
+.counters{display:flex; gap:22px; flex-wrap:wrap; padding:13px 16px; border-top:1px solid var(--rule); background:var(--surface-2)}
+.counters .c{display:flex; flex-direction:column}
+.counters .cv{font-family:var(--display); font-weight:700; font-size:26px; line-height:1; font-variant-numeric:tabular-nums}
+.counters .cl{font-family:var(--mono); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); margin-top:6px}
+
+/* ---------- keys demo ---------- */
+.rows{display:flex; flex-direction:column; gap:6px; margin:6px 0 14px}
+.rowitem{display:grid; grid-template-columns:74px minmax(0,1fr) minmax(0,170px); gap:10px; align-items:center;
+  border:1px solid var(--rule); border-radius:3px; padding:8px 10px; background:var(--surface)}
+@media(max-width:620px){.rowitem{grid-template-columns:64px 1fr}}
+.rowitem .keytag{font-family:var(--mono); font-size:10.5px; color:var(--kc,var(--ink-3)); border:1px solid var(--kc,var(--rule-2));
+  border-radius:2px; padding:2px 5px; text-align:center}
+.rowitem .rlab{font-family:var(--mono); font-size:12.5px; color:var(--ink)}
+.rowitem input{width:100%; min-width:0}
+.rowitem.moved{border-color:var(--c-wire); background:var(--wire-wash)}
+.k-id{--kc:var(--c-server)} .k-idx{--kc:var(--c-wire)}
+
+/* ---------- decision walker ---------- */
+.qbtns{display:flex; flex-direction:column; gap:7px}
+.qbtn{text-align:left; font-family:var(--body); font-size:15.5px; padding:11px 14px; border:1px solid var(--rule-2);
+  border-radius:3px; background:var(--surface); color:var(--ink); line-height:1.45}
+.qbtn:hover{border-color:var(--c-client); background:var(--client-wash)}
+.qbtn[aria-pressed="true"]{border-color:var(--ink); background:var(--ink); color:var(--paper)}
+
+/* ---------- hooks explorer ---------- */
+.hooklist{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:2px}
+.hookbtn{font-family:var(--mono); font-size:11.5px; padding:6px 10px; border:1px solid var(--rule-2); border-radius:2px;
+  background:var(--surface); color:var(--ink-2)}
+.hookbtn[aria-pressed="true"]{background:var(--ink); color:var(--paper); border-color:var(--ink)}
+.hookbtn.taught{border-style:dashed}
+
+/* ---------- memo model ---------- */
+.slider{display:flex; flex-direction:column; gap:5px; min-width:190px}
+.slider label{font-family:var(--mono); font-size:9.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3);
+  display:flex; justify-content:space-between; gap:10px}
+.slider label b{color:var(--ink); font-variant-numeric:tabular-nums}
+input[type=range]{accent-color:var(--c-wire); width:100%}
+.bar2{height:26px; border-radius:2px; display:flex; overflow:hidden; border:1px solid var(--rule); background:var(--surface)}
+.bar2 span{display:block; height:100%}
+.barrow{display:grid; grid-template-columns:132px 1fr 86px; gap:12px; align-items:center; margin-bottom:9px}
+.barrow .bl{font-family:var(--mono); font-size:11px; color:var(--ink-2)}
+.barrow .bv{font-family:var(--mono); font-size:12px; text-align:right; font-variant-numeric:tabular-nums; color:var(--ink)}
+</style>
+<header class="masthead">
+  <div class="mast">
+    <div class="mast-top">
+      <div>
+        <div class="eyebrow">Full-Stack Atlas · Stage 03 · Level 2 Frontend</div>
+        <h1>The Rendering Model</h1>
+      </div>
+      <button class="themebtn" id="themebtn" type="button">Theme</button>
+    </div>
+    <p class="lede">React is not a collection of hooks. It is one idea — describe the UI as a function of state, and let the library work out the DOM operations — plus the consequences of that idea. Learn the consequences and the API stops needing to be memorised.</p>
+  </div>
+</header>
+
+<nav class="navbar"><div class="navinner" id="nav"></div></nav>
+
+<main class="wrap">
+
+<!-- =============== 1 =============== -->
+<section class="module" id="m1" style="--tint:var(--client)">
+  <div class="mod-head"><span class="mod-n">01 / WHY</span><h2>The problem React was built to delete</h2></div>
+  <p class="mod-q">Before asking how React works, ask what it replaced — because the cost it charges you only makes sense against that.</p>
+
+  <div class="prose">
+    <p>Consider a modest feature from the capstone: a scholarship list with a search box, a loading state, an empty state, an error state, and a selected row. Written imperatively — the way the deck's slide 21 writes it with the DOM API, and the way jQuery-era code wrote everything — you do not describe the UI. You describe the <b>transitions between UIs</b>.</p>
+    <p>And there are a lot of them. Loading → ready. Ready → empty. Empty → ready. Ready → error. Error → loading. Selected → different row selected. Search text changed while loading. Each transition is code you write, and — this is the part that kills you — each one must undo whatever the previous state left behind. Miss one and you get the bug everyone has seen: an empty-state message still on screen underneath a table full of rows.</p>
+    <p>The number of transitions grows roughly as the square of the number of states. The number of <i>descriptions</i> grows linearly. That is the entire trade.</p>
+  </div>
+
+  <div class="cols">
+    <div>
+      <h4 style="font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3); margin-bottom:9px">Imperative — describe the transitions</h4>
+      <pre><b>function</b> showLoading() {
+  list.innerHTML = "";
+  empty.hidden = <b>true</b>;
+  error.hidden = <b>true</b>;          <i>// must remember to hide</i>
+  spinner.hidden = <b>false</b>;
+}
+<b>function</b> showResults(rows) {
+  spinner.hidden = <b>true</b>;
+  error.hidden = <b>true</b>;
+  empty.hidden = rows.length &gt; 0;
+  list.innerHTML = rows.map(rowHtml).join("");
+  <i>// …and re-attach every event listener you just destroyed</i>
+}
+<i>// showError, showEmpty, clearSelection, restoreSelection, …</i></pre>
+    </div>
+    <div>
+      <h4 style="font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3); margin-bottom:9px">Declarative — describe the states</h4>
+      <pre><b>function</b> ScholarshipList({ result, selectedId }) {
+  <b>if</b> (result.status === "loading") <b>return</b> &lt;Skeleton /&gt;;
+  <b>if</b> (result.status === "error")   <b>return</b> &lt;ErrorPanel …/&gt;;
+  <b>if</b> (result.data.length === 0)    <b>return</b> &lt;Empty /&gt;;
+  <b>return</b> (
+    &lt;ul&gt;
+      {result.data.map(s =&gt;
+        &lt;Row key={s.id} row={s} selected={s.id === selectedId} /&gt;)}
+    &lt;/ul&gt;
+  );
+}
+<i>// There is no transition code. There is nothing to forget to undo.</i></pre>
+    </div>
+  </div>
+
+  <div class="prose">
+    <p>Notice that the declarative version is not merely shorter. It is <b>impossible to leave in an inconsistent state</b>, because no state is left over from the previous render — the function computes the whole answer from its inputs every time. That is the guarantee you are buying, and everything difficult about React is the price.</p>
+    <h4>What you are paying</h4>
+    <ul>
+      <li><b>Re-running your components a lot.</b> If the UI is a function of state, then a state change means calling the function again. React's bet — and it is a bet that mostly pays — is that calling JavaScript functions is cheap and touching the DOM is expensive, so it will do a lot of the former to minimise the latter.</li>
+      <li><b>Purity as a requirement, not a style.</b> A render must not mutate anything outside itself, because React reserves the right to call it more often than you expect, discard the result, or call it twice on purpose (Strict Mode does exactly that, to find the components that lied).</li>
+      <li><b>An escape hatch problem.</b> Focus, scroll position, media playback, a chart library that owns its own DOM — these are all outside the model, and every one of them is why <code>useRef</code> and <code>useEffect</code> exist. Both are covered in module 05 and 06 as what they are: doors out of the model, to be used deliberately.</li>
+    </ul>
+  </div>
+
+  <div class="callout">
+    <h4>Where your deck starts, and where this stage starts</h4>
+    <p>The Eazy Bytes deck builds the same page three ways — plain HTML, then vanilla DOM manipulation, then React via CDN — which is a genuinely good way in, and it is roughly slides 18 to 22. It then moves to JSX syntax. This stage assumes you have absorbed that and spends its budget on what the deck does not cover: what happens <i>after</i> you call <code>setState</code>, why keys are identity rather than housekeeping, and the seven hooks the deck lists on one slide and never returns to.</p>
+  </div>
+</section>
+
+<!-- =============== 2 =============== -->
+<section class="module" id="m2" style="--tint:var(--wire)">
+  <div class="mod-head"><span class="mod-n">02 / PIPELINE</span><h2>What happens after <code>setState</code></h2></div>
+  <p class="mod-q">One click changes one CSS class. How many of your component functions just ran?</p>
+
+  <div class="prose">
+    <p>The single most useful mental correction for people coming to React from anywhere else: <b>“re-render” does not mean “update the DOM”.</b> They are separate phases, and the expensive one is not the one you think.</p>
+    <ol>
+      <li><b>Trigger.</b> A state setter is called. React marks the owning component as needing work and schedules it — it does not run anything yet.</li>
+      <li><b>Render.</b> React calls the owning component's function, and then the functions of its children, and their children. This produces a tree of plain objects describing what the UI should be. No DOM is touched. This phase must be pure.</li>
+      <li><b>Reconcile.</b> React compares the new tree against the previous one, position by position. Same component type in the same position means the existing DOM node is kept and updated; a different type means the subtree is destroyed and rebuilt, state and all.</li>
+      <li><b>Commit.</b> The minimum set of DOM mutations is applied, synchronously. Refs are attached, <code>useLayoutEffect</code> runs, and only then does the browser get to paint.</li>
+    </ol>
+    <p>Step through it on a real tree.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Render pipeline visualiser</h3><span class="kind">Interactive · step through</span></div>
+    <div class="ctrls">
+      <div class="ctrl"><label>Where <code>selectedId</code> lives</label>
+        <div class="seg" data-group="owner">
+          <button data-v="list" aria-pressed="true">ScholarshipList</button>
+          <button data-v="app" aria-pressed="false">App (lifted too high)</button>
+        </div></div>
+      <label class="tog"><input type="checkbox" id="rp-memo"> <code>React.memo</code> on Row</label>
+      <label class="tog"><input type="checkbox" id="rp-cb"> Stable <code>onSelect</code> (<code>useCallback</code>)</label>
+      <div class="ctrl"><label>&nbsp;</label><div style="display:flex; gap:8px">
+        <button class="ghostbtn" id="rp-prev" type="button">‹ Back</button>
+        <button class="runbtn" id="rp-next" type="button">Next phase ›</button>
+        <button class="ghostbtn" id="rp-reset" type="button">Reset</button>
+      </div></div>
+    </div>
+    <div class="lab-body">
+      <div class="phases" id="rp-phases"></div>
+      <div class="cols">
+        <div class="tree" id="rp-tree"></div>
+        <div>
+          <div class="verdict warn" id="rp-note" style="margin-bottom:0"></div>
+          <div id="rp-legend" style="margin-top:14px"></div>
+        </div>
+      </div>
+    </div>
+    <div class="counters" id="rp-counters"></div>
+  </div>
+
+  <div class="prose">
+    <h4>The three findings hiding in those toggles</h4>
+    <ol>
+      <li><b>Children re-render because their parent did, not because their props changed.</b> This surprises almost everyone. A <code>Row</code> whose props are byte-identical still has its function called, because React does not compare props unless you ask it to. That is usually fine — the render is cheap and the commit is empty.</li>
+      <li><b>Lifting state higher costs you the whole subtree.</b> Move <code>selectedId</code> to <code>App</code> and watch the header, the sidebar and the filter panel start re-rendering on every row click. State belongs at the lowest common ancestor that needs it, and “lift it up just in case” is a real performance decision made carelessly.</li>
+      <li><b><code>React.memo</code> without stable props does nothing at all.</b> Turn on memo and leave the callback inline: the rows still re-render, because <code>onSelect</code> is a brand-new function object every render and <code>memo</code>'s shallow comparison sees a changed prop. You have added a comparison cost and bought nothing. Turn on <code>useCallback</code> too and the bailout finally works. This pairing is the single most common ineffective optimisation in React codebases.</li>
+    </ol>
+  </div>
+
+  <div class="taskbox exp"><h4>Experiment</h4>
+    <p>Set the owner to <code>App</code>, turn both optimisations off, and count the components that run to change one CSS class. Then turn memo and <code>useCallback</code> on and count again. Then ask the question that matters: was any of this ever slow? For eight components it is nanoseconds, and the memo version is <i>more</i> code and <i>more</i> comparisons. Module 07 is about knowing when this stops being true.</p></div>
+
+  <div class="reads">
+    <a href="https://react.dev/learn/render-and-commit" target="_blank" rel="noopener"><span class="src">Official</span>Render and commit</a>
+    <a href="https://react.dev/learn/preserving-and-resetting-state" target="_blank" rel="noopener"><span class="src">Official</span>Preserving and resetting state</a>
+    <a href="https://react.dev/reference/react/memo" target="_blank" rel="noopener"><span class="src">Official</span>memo</a>
+  </div>
+</section>
+
+<!-- =============== 3 =============== -->
+<section class="module" id="m3" style="--tint:var(--client)">
+  <div class="mod-head"><span class="mod-n">03 / SNAPSHOT</span><h2>State is a snapshot, not a variable</h2></div>
+  <p class="mod-q">You call <code>setCount(count + 1)</code> three times in one handler. What is the count afterwards?</p>
+
+  <div class="prose">
+    <p>The answer is one, and every explanation that involves the word “asynchronous” is wrong in a way that will hurt you later. <code>count</code> is a <code>const</code> in the current render's scope. It has a value — say 0 — and nothing can change it, because it is a <code>const</code> in a function that has already returned. All three calls therefore compute <code>0 + 1</code>.</p>
+    <p>This is the closure model from Stage 2, and it is not a wart. A render is a snapshot: every value in it is frozen for the lifetime of that render, which is precisely what makes a render a pure description of one state of the world.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Update queue</h3><span class="kind">Interactive · run the handler</span></div>
+    <div class="ctrls">
+      <div class="ctrl"><label>Handler body</label>
+        <div class="seg" data-group="upd">
+          <button data-v="value" aria-pressed="true">setCount(count + 1) ×3</button>
+          <button data-v="fn" aria-pressed="false">setCount(c =&gt; c + 1) ×3</button>
+          <button data-v="mixed" aria-pressed="false">Mixed</button>
+          <button data-v="await" aria-pressed="false">After an await</button>
+        </div></div>
+    </div>
+    <div class="lab-body"><div id="upd-out"></div></div>
+  </div>
+
+  <div class="prose">
+    <h4>Two rules that follow</h4>
+    <ul>
+      <li><b>When the next value depends on the previous one, pass a function.</b> <code>setCount(c =&gt; c + 1)</code> is not a style preference — it is the only form that is correct when updates can queue, which includes every handler that fires more than once and every update issued from an interval or a subscription.</li>
+      <li><b>Never mutate state.</b> <code>rows.push(newRow); setRows(rows)</code> passes React the same array reference, so <code>Object.is</code> says nothing changed and no re-render happens. This is the shallow-copy trap from Stage 2 landing in React: <code>setRows([...rows, newRow])</code>, and for nested structures either copy each level or reach for Immer, which Redux Toolkit already bundles — your deck covers that on its final slides.</li>
+    </ul>
+    <h4>Batching, precisely</h4>
+    <p>React 18 and later batch <b>every</b> update in the same tick — including those after an <code>await</code>, inside a <code>setTimeout</code>, or in a native event handler. Before 18 only React event handlers were batched, which is why older answers on this topic are misleading. Batching means the three setter calls above produce exactly one render, not three, and the intermediate values are never rendered at all. If you genuinely need to escape it, <code>flushSync</code> exists — and needing it is nearly always a sign that a measurement should have been a layout effect.</p>
+  </div>
+
+  <div class="mistakes">
+    <details class="mistake"><summary><span class="x">✕</span><span>Reading state right after setting it</span></summary>
+      <div class="in"><p><code>setOpen(true); console.log(open);</code> logs the old value, always. <code>open</code> belongs to this render; the new value belongs to the next one. If you need the value you just computed, you already have it — you passed it to the setter.</p></div></details>
+    <details class="mistake"><summary><span class="x">✕</span><span>Deriving state into state</span></summary>
+      <div class="in"><p><code>const [total, setTotal] = useState(0)</code> plus an effect that recomputes it from <code>rows</code>. Now there are two sources of truth and one render where they disagree. Anything computable from existing state or props should be computed <b>during render</b> — <code>const total = rows.reduce(…)</code> — and memoised only if profiling says so.</p></div></details>
+    <details class="mistake"><summary><span class="x">✕</span><span>Putting props into state “so they can be edited”</span></summary>
+      <div class="in"><p><code>useState(props.name)</code> captures the prop once, at mount, and then ignores it forever. When the parent sends a different student, the form keeps showing the old one. Either lift the edit state up, or reset the subtree deliberately with a <code>key</code> — which is module 04's mechanism used on purpose.</p></div></details>
+  </div>
+
+  <div class="reads">
+    <a href="https://react.dev/learn/state-as-a-snapshot" target="_blank" rel="noopener"><span class="src">Official</span>State as a snapshot</a>
+    <a href="https://react.dev/learn/queueing-a-series-of-state-updates" target="_blank" rel="noopener"><span class="src">Official</span>Queueing updates</a>
+    <a href="https://react.dev/reference/react-dom/flushSync" target="_blank" rel="noopener"><span class="src">Official</span>flushSync</a>
+  </div>
+</section>
+
+<!-- =============== 4 =============== -->
+<section class="module" id="m4" style="--tint:var(--data)">
+  <div class="mod-head"><span class="mod-n">04 / IDENTITY</span><h2>Keys are identity, and identity owns state</h2></div>
+  <p class="mod-q">The deck says “don't use the array index as a key”. Here is what actually happens when you do.</p>
+
+  <div class="prose">
+    <p>A key is not a React bookkeeping detail and it is not for performance. It answers one question during reconciliation: <b>is this element in the new tree the same thing as that element in the old tree?</b> Everything that lives in a DOM node but not in your props — typed text in an uncontrolled input, focus, scroll position, an in-progress CSS transition, a video's playback position, and the entire state of every component inside it — follows the answer.</p>
+    <p>Type something into the rows below, then prepend, delete or reorder, and watch where your text ends up.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Key identity, live</h3><span class="kind">Interactive · type, then reorder</span></div>
+    <div class="ctrls">
+      <div class="ctrl"><label>key=</label>
+        <div class="seg" data-group="keymode">
+          <button data-v="idx" aria-pressed="true">index</button>
+          <button data-v="id" aria-pressed="false">row.id</button>
+        </div></div>
+      <div class="ctrl"><label>&nbsp;</label><div style="display:flex; gap:8px; flex-wrap:wrap">
+        <button class="runbtn" id="k-prepend" type="button">Prepend a row</button>
+        <button class="ghostbtn" id="k-delete" type="button">Delete the first row</button>
+        <button class="ghostbtn" id="k-move" type="button">Move last to top</button>
+        <button class="ghostbtn" id="k-reset" type="button">Reset</button>
+      </div></div>
+    </div>
+    <div class="lab-body">
+      <p style="font-size:15px; color:var(--ink-2); margin-bottom:12px">These inputs are <b>uncontrolled</b> — their text lives in the DOM node, not in React state. That is exactly the state a key decides the fate of.</p>
+      <div class="rows" id="k-rows"></div>
+      <div id="k-note"></div>
+    </div>
+  </div>
+
+  <div class="prose">
+    <h4>What the reconciler is doing</h4>
+    <p>With <b><code>key={index}</code></b>, the element at position 0 in the new tree has the same key as the element that was at position 0 before. React concludes they are the same component, keeps the DOM node, and only updates the props that differ. Your typed text stays at <i>position</i> 0 while the data moves out from under it.</p>
+    <p>With <b><code>key={row.id}</code></b>, React matches by identity regardless of position. It <i>moves</i> the existing DOM node — with everything inside it — to the new position. Your text follows the row it belongs to, because it belongs to the row.</p>
+    <p>Index keys are correct in exactly one case: a list that is append-only and never reordered, filtered or deleted from. Since almost no list stays that way, the rule of thumb “always use a stable id” is right — and now you know what it is protecting.</p>
+    <h4>The same mechanism, used deliberately</h4>
+    <pre><i>// A key on a single element is a reset button for its entire subtree.
+// Switch students and the edit form starts completely fresh — no stale
+// draft, no leftover validation errors, no scroll position.</i>
+&lt;ApplicationForm key={studentId} student={student} /&gt;</pre>
+    <p>This is the clean answer to the “props into state” mistake from module 03. Rather than syncing with an effect, tell React the component is a different instance now.</p>
+  </div>
+
+  <div class="mistakes">
+    <details class="mistake"><summary><span class="x">✕</span><span><code>key={Math.random()}</code> to silence the warning</span></summary>
+      <div class="in"><p>Every render produces new keys, so React destroys and recreates every row, every time — losing focus mid-typing, restarting animations, and doing the maximum possible DOM work. It is strictly worse than the index key it was meant to improve on.</p></div></details>
+    <details class="mistake"><summary><span class="x">✕</span><span>Assuming keys must be globally unique</span></summary>
+      <div class="in"><p>They only need to be unique among siblings. Two different lists may both use key <code>1</code>. What they must be is <i>stable</i> — the same item gets the same key across renders.</p></div></details>
+    <details class="mistake"><summary><span class="x">✕</span><span>Changing an element's type or nesting to “refactor”</span></summary>
+      <div class="in"><p>Reconciliation matches by position and type. Wrapping a subtree in a new <code>&lt;div&gt;</code>, or swapping <code>&lt;Table&gt;</code> for <code>&lt;Grid&gt;</code> at the same position, unmounts everything below it and remounts it fresh — all state gone, all effects re-run. Cosmetic-looking changes to the tree shape are not cosmetic.</p></div></details>
+  </div>
+
+  <div class="reads">
+    <a href="https://react.dev/learn/rendering-lists#keeping-list-items-in-order-with-key" target="_blank" rel="noopener"><span class="src">Official</span>Keys</a>
+    <a href="https://react.dev/learn/preserving-and-resetting-state#resetting-state-with-a-key" target="_blank" rel="noopener"><span class="src">Official</span>Resetting state with a key</a>
+  </div>
+</section>
+
+<!-- =============== 5 =============== -->
+<section class="module" id="m5" style="--tint:var(--server)">
+  <div class="mod-head"><span class="mod-n">05 / EFFECTS</span><h2>You probably do not need an effect</h2></div>
+  <p class="mod-q">Most <code>useEffect</code> calls in most codebases should not exist. Is yours one of them?</p>
+
+  <div class="prose">
+    <p><code>useEffect</code> has one job: <b>synchronise with something outside React</b>. A subscription, a browser API, a chart library, a WebSocket, an analytics SDK. That is the whole remit. It is not a lifecycle hook, it is not “run this after render”, and it is not where data transformation goes.</p>
+    <p>Using it for anything else buys you an extra render pass, a state that is briefly wrong, a dependency array to maintain, and a class of bugs — races, stale closures, double-fetches — that simply do not exist in the alternatives. Work through what you are actually trying to do.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Do I need an effect?</h3><span class="kind">Interactive · decision walker</span></div>
+    <div class="lab-body">
+      <div class="cols">
+        <div><h4 style="font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3); margin-bottom:10px">I want to…</h4>
+          <div class="qbtns" id="eff-q"></div></div>
+        <div id="eff-a"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="prose">
+    <h4>When you do need one, the lifecycle matters</h4>
+    <p>An effect is not “run on mount”. It is “run after commit, and again whenever a dependency changes — cleaning up the previous run first”. Step through it, including what Strict Mode does and why.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Effect lifecycle</h3><span class="kind">Interactive · step through</span></div>
+    <div class="ctrls">
+      <div class="ctrl"><label>Mode</label>
+        <div class="seg" data-group="strict">
+          <button data-v="off" aria-pressed="true">Production</button>
+          <button data-v="on" aria-pressed="false">Strict Mode (dev)</button>
+        </div></div>
+      <div class="ctrl"><label>&nbsp;</label><div style="display:flex; gap:8px">
+        <button class="ghostbtn" id="ef-prev" type="button">‹ Back</button>
+        <button class="runbtn" id="ef-next" type="button">Step ›</button>
+        <button class="ghostbtn" id="ef-reset" type="button">Reset</button>
+      </div></div>
+    </div>
+    <div class="lab-body">
+      <div class="cols">
+        <div><pre id="ef-code" style="margin-bottom:0"></pre></div>
+        <div><div class="queue q-out"><h6>Log<em>in order</em></h6><div class="items" id="ef-log"></div></div>
+          <div class="stepnote" id="ef-note" style="margin-top:14px"></div></div>
+      </div>
+      <div class="stepbar"><span class="pos" id="ef-pos">0 / 0</span><span class="track"><i id="ef-track" style="width:0%"></i></span></div>
+    </div>
+  </div>
+
+  <div class="prose">
+    <h4>Why Strict Mode mounts twice, and why you should want it</h4>
+    <p>In development, React 18+ mounts every component, runs its effects, runs the cleanups, and runs the effects again. It is not a bug and it cannot be “fixed” by removing the double invocation. It is a test: an effect that is correct is one whose cleanup fully undoes it, and running it twice proves that. If your component breaks under Strict Mode — a doubled request, two WebSockets, a listener added twice — it would also break in production the moment React remounted it, which it does whenever a key changes, a parent conditionally renders it, or a future feature restores state on back-navigation.</p>
+    <p>Every effect that acquires something must return a cleanup that releases it. A subscription needs an unsubscribe, a listener needs a removal, an interval needs a clear, a fetch needs an <code>AbortController</code>.</p>
+    <pre><i>// The race this cleanup prevents is not hypothetical: type "de", then "del",
+// and the slower first response can arrive last and overwrite the newer one.</i>
+useEffect(() =&gt; {
+  <b>const</b> ac = <b>new</b> AbortController();
+  apiGet(`/scholarships?q=${query}`, listSchema, { signal: ac.signal })
+    .then(setResult)
+    .catch(e =&gt; { <b>if</b> (e.name !== "AbortError") setResult(errorOf(e)); });
+  <b>return</b> () =&gt; ac.abort();      <i>// ← the entire point</i>
+}, [query]);</pre>
+    <p>And then the honest note: you should not be writing that at all. Stage 5 replaces it with TanStack Query, which handles the abort, the race, the cache, the retry, the deduplication and the stale-while-revalidate for you. Fetching in an effect is worth understanding precisely so that you can recognise everything a query library is doing on your behalf.</p>
+  </div>
+
+  <div class="taskbox arch"><h4>Architecture connection</h4>
+    <p>Every effect is a seam between React's world and something else. Stage 1's request lifecycle, Stage 2's promises and abort signals, Stage 5's server-state cache and Stage 9's token refresh all live on the far side of one. Counting your effects is a decent proxy for counting your integration points — and a component with five of them is usually one component doing five jobs.</p></div>
+
+  <div class="reads">
+    <a href="https://react.dev/learn/you-might-not-need-an-effect" target="_blank" rel="noopener"><span class="src">Official</span>You might not need an effect</a>
+    <a href="https://react.dev/learn/synchronizing-with-effects" target="_blank" rel="noopener"><span class="src">Official</span>Synchronizing with effects</a>
+    <a href="https://react.dev/reference/react/StrictMode" target="_blank" rel="noopener"><span class="src">Official</span>StrictMode</a>
+  </div>
+</section>
+
+<!-- =============== 6 =============== -->
+<section class="module" id="m6" style="--tint:var(--server)">
+  <div class="mod-head"><span class="mod-n">06 / HOOKS</span><h2>The seven your deck lists and never teaches</h2></div>
+  <p class="mod-q">Slide 185 names twelve hooks. Five get examples. Here are the other seven, in the order you will actually need them.</p>
+
+  <div class="prose">
+    <p>Each of these exists for a specific problem that the core hooks cannot solve. None is an optimisation you sprinkle. Pick one to see the problem it solves, the shape of the answer, and — more usefully — when it is the wrong tool.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Hook explorer</h3><span class="kind">Interactive · pick a hook</span></div>
+    <div class="ctrls" style="gap:0"><div class="hooklist" id="hooklist"></div></div>
+    <div class="lab-body"><div id="hook-out"></div></div>
+  </div>
+
+  <div class="prose">
+    <h4>The rules, and the reason behind them</h4>
+    <p>Hooks must be called at the top level, in the same order, on every render — never inside a condition, loop or nested function. The deck states this correctly. The reason is worth knowing, because it makes the rule obvious rather than arbitrary: <b>React identifies your hooks by call order, not by name.</b> There is no registry mapping <code>"count"</code> to a value; there is a list, and the third <code>useState</code> call gets slot three. Wrap one in an <code>if</code> and on some renders slot three is your count and on others it is your search query.</p>
+  </div>
+
+  <div class="reads">
+    <a href="https://react.dev/reference/react/hooks" target="_blank" rel="noopener"><span class="src">Official</span>Hooks reference</a>
+    <a href="https://react.dev/reference/rules/rules-of-hooks" target="_blank" rel="noopener"><span class="src">Official</span>Rules of hooks</a>
+  </div>
+</section>
+
+<!-- =============== 7 =============== -->
+<section class="module" id="m7" style="--tint:var(--wire)">
+  <div class="mod-head"><span class="mod-n">07 / MEMOISATION</span><h2>When memoising is a net loss</h2></div>
+  <p class="mod-q"><code>useMemo</code> is not free. What does it cost, and when does the cost exceed the saving?</p>
+
+  <div class="prose">
+    <p>Memoisation is a cache, and every cache has three costs: memory to hold the entry, time to compute the key, and the risk of the entry being wrong. In React the key comparison is a shallow scan of the dependency array on every render, and the entry is wrong whenever a dependency is a fresh object — which, as module 02 showed, is the default for anything you write inline.</p>
+    <p>Move the sliders and watch the arithmetic. The point is not that memoisation is bad. It is that whether it helps is an empirical question with a number attached, and you can only answer it after measuring.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Memoisation cost model</h3><span class="kind">Interactive · model</span></div>
+    <div class="ctrls">
+      <div class="slider"><label>Child components <b id="mm-n-v">40</b></label><input type="range" id="mm-n" min="1" max="400" value="40"></div>
+      <div class="slider"><label>Render cost each <b id="mm-c-v">0.05 ms</b></label><input type="range" id="mm-c" min="1" max="200" value="5"></div>
+      <div class="slider"><label>Props actually change <b id="mm-p-v">10%</b></label><input type="range" id="mm-p" min="0" max="100" value="10"></div>
+      <label class="tog"><input type="checkbox" id="mm-stable" checked> Dependencies are referentially stable</label>
+    </div>
+    <div class="lab-body"><div id="mm-out"></div></div>
+  </div>
+
+  <div class="prose">
+    <h4>The order to work in</h4>
+    <ol>
+      <li><b>Measure.</b> React DevTools Profiler, with CPU throttling on. “It feels slow” is not a measurement, and neither is a render count.</li>
+      <li><b>Fix the structure.</b> Move state down to the component that needs it. Pass expensive subtrees as <code>children</code> so a state change in the wrapper cannot re-render them. Split the component. These are free at runtime and usually make the code better; memoisation makes it worse.</li>
+      <li><b>Then memoise, and re-measure.</b> If the number did not move, take it back out. Dead memoisation is not neutral — it is comparison cost, retained memory, and a dependency array that will be wrong within two sprints.</li>
+    </ol>
+    <p>Two cases genuinely need <code>useMemo</code> regardless of profiling, because they are about correctness rather than speed: a value used in another hook's dependency array (an unstable object there causes an infinite loop, which is a bug, not a slowdown), and a genuinely expensive pure computation — parsing, sorting thousands of rows, building a lookup — where the cost is visible in a single render.</p>
+    <p>The React team's own compiler exists precisely because this reasoning is hard to do by hand at scale; where it is available, it applies these optimisations automatically and the right amount of manual memoisation drops close to zero. Treat that as the direction of travel, not as permission to stop understanding the mechanism.</p>
+  </div>
+
+  <div class="mistakes">
+    <details class="mistake"><summary><span class="x">✕</span><span>Wrapping every component in <code>React.memo</code> as a policy</span></summary>
+      <div class="in"><p>You have added a shallow prop comparison to every component in the tree, and bought a bailout only for those whose props are stable — which, with inline objects and callbacks, is few of them. Net negative, and it makes every future prop addition a performance question.</p></div></details>
+    <details class="mistake"><summary><span class="x">✕</span><span><code>useCallback</code> on a handler passed to a plain DOM element</span></summary>
+      <div class="in"><p><code>&lt;button onClick={handleClick}&gt;</code> — a DOM element has no memo comparison to satisfy. The <code>useCallback</code> does nothing except cost a dependency array. It only pays when the consumer is a memoised component, a dependency array, or a context value.</p></div></details>
+    <details class="mistake"><summary><span class="x">✕</span><span>Memoising to fix a render loop instead of finding the cause</span></summary>
+      <div class="in"><p>An effect that runs forever is telling you a dependency is unstable. <code>useMemo</code> can silence it, but so can removing the object from the dependencies entirely, or moving it outside the component where it never changes. Silencing a symptom leaves the unstable reference in place to cause the next one.</p></div></details>
+  </div>
+
+  <div class="reads">
+    <a href="https://react.dev/reference/react/useMemo#skipping-expensive-recalculations" target="_blank" rel="noopener"><span class="src">Official</span>useMemo</a>
+    <a href="https://react.dev/learn/render-and-commit" target="_blank" rel="noopener"><span class="src">Official</span>Render and commit</a>
+    <a href="https://react.dev/learn/react-compiler" target="_blank" rel="noopener"><span class="src">Official</span>React Compiler</a>
+  </div>
+</section>
+
+<!-- =============== 8 =============== -->
+<section class="module" id="m8" style="--tint:var(--client)">
+  <div class="mod-head"><span class="mod-n">08 / EXTRACTION</span><h2>Custom hooks: behaviour, not indirection</h2></div>
+  <p class="mod-q">Your deck mentions custom hooks once, as a naming rule. What are they actually for?</p>
+
+  <div class="prose">
+    <p>A custom hook is a function that calls other hooks. That is the entire definition — there is no registration, no special runtime, nothing magic. The <code>use</code> prefix exists so the linter can enforce the rules of hooks on it.</p>
+    <p>What makes one worth writing is that it extracts <b>stateful behaviour</b>, not markup and not a pure function. If your candidate hook calls no hooks, it should be a plain function. If it only returns JSX, it should be a component.</p>
+    <p>The test that keeps them honest: <b>a custom hook should have a name that describes a capability, and two callers.</b> <code>useDebouncedValue</code>, <code>useMediaQuery</code>, <code>useLocalStorage</code>, <code>useIntersectionObserver</code>, <code>useScholarshipFilters</code> — each names a thing a component can do. A <code>useStudentPageLogic</code> that exists once, to make one component's file shorter, has moved code without abstracting anything, and has made the data flow harder to follow in exchange.</p>
+    <pre><i>// Two capabilities the capstone needs everywhere, extracted once.</i>
+
+<b>export function</b> useDebouncedValue&lt;T&gt;(value: T, delay = 300): T {
+  <b>const</b> [debounced, setDebounced] = useState(value);
+  useEffect(() =&gt; {
+    <b>const</b> id = setTimeout(() =&gt; setDebounced(value), delay);
+    <b>return</b> () =&gt; clearTimeout(id);   <i>// cleanup cancels the superseded timer</i>
+  }, [value, delay]);
+  <b>return</b> debounced;
+}
+
+<i>// Filters that live in the URL, so a filtered view is a shareable link
+// and the back button works. Stage 5 calls this "URL state".</i>
+<b>export function</b> useScholarshipFilters() {
+  <b>const</b> [params, setParams] = useSearchParams();
+  <b>const</b> filters = useMemo(() =&gt; ({
+    q:      params.get("q") ?? "",
+    cohort: Number(params.get("cohort")) || <b>undefined</b>,
+    status: params.get("status") <b>as</b> Status | <b>null</b>,
+    page:   Number(params.get("page")) || 0,
+  }), [params]);                     <i>// memo needed: this object feeds a query key</i>
+
+  <b>const</b> setFilter = useCallback((patch: Partial&lt;<b>typeof</b> filters&gt;) =&gt; {
+    setParams(prev =&gt; {
+      <b>const</b> next = <b>new</b> URLSearchParams(prev);
+      <b>for</b> (<b>const</b> [k, v] <b>of</b> Object.entries(patch)) {
+        v == <b>null</b> || v === "" ? next.delete(k) : next.set(k, String(v));
+      }
+      <b>if</b> (!("page" <b>in</b> patch)) next.delete("page");   <i>// changing a filter resets paging</i>
+      <b>return</b> next;
+    });
+  }, [setParams]);
+
+  <b>return</b> { filters, setFilter };
+}</pre>
+    <p>Note what the second one does not do: it holds no state of its own. The URL is the state. That is a Stage 5 idea arriving early, and it is the reason this hook is worth extracting — every consumer gets the same rules about resetting pagination, dropping empty values, and typing the result.</p>
+    <h4>What hooks do not share</h4>
+    <p>Two components calling <code>useScholarshipFilters</code> get two independent pieces of state. A custom hook shares <i>logic</i>, never <i>state</i>. When you want shared state, the answers are lifting it up, context, or a store — which is the whole of Stage 5.</p>
+  </div>
+
+  <div class="taskbox chal"><h4>Challenge</h4>
+    <p>The capstone's search box needs to debounce input, keep the query in the URL, reset to page 0 whenever the query changes, and cancel the in-flight request when the query changes again. Write it as composed custom hooks and decide, explicitly, which piece of state lives where — component, URL, or server cache. Then compare your answer with Stage 5's classification. The disagreements are the interesting part.</p></div>
+
+  <div class="reads">
+    <a href="https://react.dev/learn/reusing-logic-with-custom-hooks" target="_blank" rel="noopener"><span class="src">Official</span>Reusing logic with custom hooks</a>
+  </div>
+</section>
+
+<!-- =============== 9 =============== -->
+<section class="module" id="m9" style="--tint:var(--data)">
+  <div class="mod-head"><span class="mod-n">09 / CLOSING</span><h2>What you should now be able to do</h2></div>
+  <div class="prose">
+    <h4>Self-check</h4>
+    <ol>
+      <li>Name the four phases after <code>setState</code> and say which of them touches the DOM.</li>
+      <li>A parent re-renders and a child's props are identical. Does the child's function run? Does its DOM change?</li>
+      <li>Why does <code>React.memo</code> alone often do nothing, and what is the second half of the fix?</li>
+      <li><code>setCount(count + 1)</code> three times versus <code>setCount(c =&gt; c + 1)</code> three times — explain both results without the word “asynchronous”.</li>
+      <li>What state is lost when you use an index key on a list you then reorder, and where does that state live?</li>
+      <li>Give three things that should be computed during render rather than in an effect.</li>
+      <li>Why does Strict Mode mount twice, and what does surviving it prove?</li>
+      <li>Name a hook that is about correctness rather than performance, and one that is the reverse.</li>
+    </ol>
+
+    <h4>The capstone increment</h4>
+    <p>Build the scholarship list surface properly, on top of Stage 2's typed foundation:</p>
+    <ul>
+      <li><code>ScholarshipList</code> rendering from a <code>Result&lt;Scholarship[]&gt;</code> discriminated union, with real skeleton, empty and error branches — not three booleans.</li>
+      <li><code>Row</code> keyed by <code>scholarship.id</code>, with an expandable detail panel whose open state survives a re-sort. Prove it does.</li>
+      <li>A search box using <code>useDebouncedValue</code>, and a <code>useScholarshipFilters</code> hook holding query, cohort, status and page in the URL.</li>
+      <li>An <code>ApplicationForm</code> that resets cleanly via <code>key={studentId}</code> rather than syncing props into state with an effect.</li>
+      <li>A profiler run before and after any memoisation you add, with the numbers written down. If a number did not move, delete the memo.</li>
+    </ul>
+
+    <h4>Where your deck is strong, and where to stop trusting it</h4>
+    <p>Slides 16–68 and 182–196 are a solid grounding in JSX, components, props, keys and the first five hooks, and they are worth reading alongside this stage. Three things to carry differently: the deck's examples are JavaScript, and every one of yours should be TypeScript; it treats <code>useEffect</code> as a general-purpose lifecycle hook rather than a synchronisation escape hatch; and its component-state examples predate the URL-and-server-state distinction that Stage 5 will insist on.</p>
+  </div>
+
+  <div class="callout" style="border-left-color:var(--c-server); background:var(--server-wash)">
+    <h4 style="color:var(--server)">Next</h4>
+    <p style="margin-bottom:0">Stage 4 — <i>Professional React Applications</i>. Component architecture with real boundaries, the four states every async surface has, forms with React Hook Form and Zod, nested and protected routes, and paginated, filterable, sortable lists whose state lives in the URL. Then Stage 5 takes the state question apart properly.</p>
+  </div>
+</section>
+
+</main>
+
+<footer><div class="wrap">
+  <p><b style="font-family:var(--display); color:var(--ink)">Sources.</b> React behaviour is stated per the official documentation at react.dev, linked inline at each module. The render pipeline visualiser, update queue and effect lifecycle are faithful models of documented semantics rather than instrumented runs of React itself; the key-identity demo reproduces the reconciler's matching rule directly, on real DOM nodes.</p>
+  <p style="margin-top:12px">Where this page recommends a practice — state at the lowest common ancestor, measure before memoising, effects only for external synchronisation — that is an architectural recommendation with reasoning attached. Stage 3 of the Full-Stack Atlas.</p>
+</div></footer>
+
+<div class="tip" id="tip"></div>
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const state = {owner:"list", upd:"value", keymode:"idx", strict:"off"};
+function segGroup(g, cb){
+  $$(`.seg[data-group="${g}"] button`).forEach(b=>b.addEventListener("click",()=>{
+    $$(`.seg[data-group="${g}"] button`).forEach(x=>x.setAttribute("aria-pressed", x===b?"true":"false"));
+    state[g]=b.dataset.v; cb(b.dataset.v);
+  }));
+}
+
+/* ============ 2. render pipeline ============ */
+const TREE = {n:"App", k:[
+  {n:"Header", k:[{n:"UserMenu"}]},
+  {n:"Sidebar", k:[{n:"FilterPanel"}]},
+  {n:"ScholarshipList", k:[{n:"SearchBar"},{n:"Row 1"},{n:"Row 2"},{n:"Row 3"},{n:"Pagination"}]}
+]};
+const DOMSET = ["Row 1","Row 3"];
+const PHASES = [["01","Trigger"],["02","Render"],["03","Reconcile"],["04","Commit"],["05","Paint"]];
+let rpPhase = 0;
+
+function rpModel(){
+  const owner = state.owner === "app" ? "App" : "ScholarshipList";
+  const memo = $("#rp-memo").checked, cb = $("#rp-cb").checked;
+  const involved = new Set();
+  (function walk(node, on){
+    const isOwner = node.n === owner;
+    const active = on || isOwner;
+    if(active) involved.add(node.n);
+    (node.k||[]).forEach(c=>walk(c, active));
+  })(TREE, false);
+  const bail = new Set();
+  if(memo){
+    ["Row 1","Row 2","Row 3"].forEach(r=>{
+      // memo compares props shallowly. An inline callback is a new object every render,
+      // so the comparison fails for every row. With useCallback it only fails where
+      // `selected` genuinely changed — Row 1 (deselected) and Row 3 (selected).
+      if(cb && !DOMSET.includes(r)) bail.add(r);
+    });
+  }
+  const ran = [...involved].filter(n=>!bail.has(n));
+  return {owner, memo, cb, involved, bail, ran};
+}
+function rpBadge(name, m){
+  const inv = m.involved.has(name), bail = m.bail.has(name), dom = DOMSET.includes(name);
+  if(rpPhase===0) return name===m.owner ? ["ran","Scheduled"] : ["idle","—"];
+  if(rpPhase===1) return !inv ? ["idle","Not involved"] : bail ? ["bail","memo bailout"] : ["ran","Function ran"];
+  if(rpPhase===2) return !inv ? ["idle","—"] : bail ? ["bail","Subtree reused"]
+                    : dom ? ["ran","Output differs"] : ["bail","Same output"];
+  return !dom ? ["idle","No change"] : ["ran","DOM updated"];
+}
+function rpTree(){
+  const m = rpModel();
+  const node = (nd, depth) => {
+    const [cls, badge] = rpBadge(nd.n, m);
+    const dom = rpPhase>=3 && DOMSET.includes(nd.n) ? " dom" : "";
+    const own = nd.n === m.owner ? `<span class="towner">state</span>` : "";
+    const mm = m.memo && nd.n.startsWith("Row") ? `<span class="tmemo">memo</span>` : "";
+    return `<div><div class="tnode ${cls}${dom}"><span class="tname">${nd.n}</span>${own}${mm}
+      <span class="tbadge">${badge}</span></div>
+      ${(nd.k||[]).length ? `<div class="tkids">${nd.k.map(c=>node(c,depth+1)).join("")}</div>` : ""}</div>`;
+  };
+  $("#rp-tree").innerHTML = node(TREE,0);
+  $("#rp-phases").innerHTML = PHASES.map((p,i)=>
+    `<div class="phase${i===rpPhase?' on':''}"><div class="pn">${p[0]}</div><div class="pt">${p[1]}</div></div>`).join("");
+
+  const ranN = m.ran.length, domN = DOMSET.length, waste = Math.max(0, ranN - domN);
+  $("#rp-counters").innerHTML = `
+    <div class="c"><span class="cv">${rpPhase>=1?ranN:0}</span><span class="cl">Component functions run</span></div>
+    <div class="c"><span class="cv">${rpPhase>=1?m.bail.size:0}</span><span class="cl">Bailed out</span></div>
+    <div class="c"><span class="cv">${rpPhase>=3?domN:0}</span><span class="cl">DOM nodes mutated</span></div>
+    <div class="c"><span class="cv">${rpPhase>=2?waste:0}</span><span class="cl">Renders that changed nothing</span></div>`;
+
+  const NOTES = [
+   ["warn","Trigger",`<code>setSelectedId(3)</code> fires inside Row 2's click handler. React marks <b>${m.owner}</b> — the component that owns the state — as needing work and returns immediately. Nothing has rendered and nothing has been read from the DOM.`],
+   ["warn","Render",`React calls <b>${m.owner}</b>'s function, then every descendant's, top down. ${
+      m.memo && m.cb ? `<code>React.memo</code> plus a stable <code>onSelect</code> lets Row 2 bail out — its props are shallowly equal.`
+      : m.memo ? `<code>React.memo</code> is on, but <code>onSelect</code> is a new function object each render, so the shallow comparison fails and every row renders anyway. The memo is pure overhead here.`
+      : `No memoisation, so every descendant runs regardless of whether its props changed.`} Still no DOM access — this phase must be pure.`],
+   ["warn","Reconcile",`React diffs the new element tree against the previous one, matching by position and component type. Most subtrees produced <b>identical output</b> — those cost a function call and nothing else. Only Row 1 (losing the selected class) and Row 3 (gaining it) differ.`],
+   ["ok","Commit",`React applies the minimum mutation set: <b>two</b> DOM nodes touched, synchronously. Refs are attached and <code>useLayoutEffect</code> runs here — before the browser can paint, which is why layout effects can measure and correct without flicker.`],
+   ["ok","Paint",`The browser paints. <code>useEffect</code> callbacks run <i>after</i> this, which is why they never delay the frame — and why measuring layout in one is already too late.`]
+  ];
+  const [c,t,txt] = NOTES[rpPhase];
+  $("#rp-note").className = "verdict "+c;
+  $("#rp-note").innerHTML = `<h5>${PHASES[rpPhase][0]} · ${t}</h5><p style="margin-bottom:0">${txt}</p>`;
+  $("#rp-legend").innerHTML = `<div class="legend">
+    <span><i style="background:var(--c-wire)"></i>Function ran</span>
+    <span><i style="background:var(--c-server)"></i>Bailed out / unchanged</span>
+    <span><i style="background:var(--c-data)"></i>DOM mutated</span>
+    <span><i style="background:var(--rule-2)"></i>Not involved</span></div>`;
+}
+$("#rp-next").addEventListener("click",()=>{ rpPhase=Math.min(4,rpPhase+1); rpTree(); });
+$("#rp-prev").addEventListener("click",()=>{ rpPhase=Math.max(0,rpPhase-1); rpTree(); });
+$("#rp-reset").addEventListener("click",()=>{ rpPhase=0; rpTree(); });
+segGroup("owner", ()=>{ rpPhase=0; rpTree(); });
+["#rp-memo","#rp-cb"].forEach(s=>$(s).addEventListener("change",()=>{ rpPhase=0; rpTree(); }));
+
+/* ============ 3. update queue ============ */
+const UPD = {
+ value:{
+  code:`<b>const</b> [count, setCount] = useState(0);   <i>// count is 0 in this render</i>
+
+<b>function</b> handleClick() {
+  setCount(count + 1);   <i>// queues: replace with 0 + 1 = 1</i>
+  setCount(count + 1);   <i>// queues: replace with 0 + 1 = 1</i>
+  setCount(count + 1);   <i>// queues: replace with 0 + 1 = 1</i>
+}`,
+  q:["set → 1","set → 1","set → 1"], res:1, cls:"no",
+  n:"<code>count</code> is a <code>const</code> bound to <b>0</b> for the whole of this render. All three calls compute <code>0 + 1</code> and queue “replace with 1”. React processes the queue and lands on 1. Nothing here is asynchronous — the value simply cannot change inside a render that has already been created."},
+ fn:{
+  code:`<b>const</b> [count, setCount] = useState(0);
+
+<b>function</b> handleClick() {
+  setCount(c =&gt; c + 1);   <i>// queues the function itself</i>
+  setCount(c =&gt; c + 1);
+  setCount(c =&gt; c + 1);
+}`,
+  q:["c ⇒ c + 1","c ⇒ c + 1","c ⇒ c + 1"], res:3, cls:"ok",
+  n:"An updater function is queued unevaluated. When React processes the queue it threads the running value through: 0→1→2→3. This is the only correct form when the next value depends on the previous one, and it is why it appears in every counter example that survives review."},
+ mixed:{
+  code:`<b>const</b> [count, setCount] = useState(0);
+
+<b>function</b> handleClick() {
+  setCount(count + 5);    <i>// replace with 5</i>
+  setCount(c =&gt; c + 1);   <i>// then apply to whatever is there</i>
+  setCount(42);           <i>// then replace outright</i>
+}`,
+  q:["set → 5","c ⇒ c + 1","set → 42"], res:42, cls:"warn",
+  n:"The queue is processed strictly in order, and a plain value <b>discards</b> everything before it. 0 → 5 → 6 → 42. Worth understanding once so that you never write it: mixing the two forms in one handler is a readability failure even when the result is correct."},
+ await:{
+  code:`<b>async function</b> handleSave() {
+  setSaving(<b>true</b>);
+  <b>await</b> apiPost("/applications", body, appSchema);
+  setSaving(<b>false</b>);      <i>// after an await — still batched (React 18+)</i>
+  setSaved(<b>true</b>);
+}`,
+  q:["saving → false","saved → true"], res:"one render", cls:"ok",
+  n:"React 18 introduced automatic batching everywhere — after an <code>await</code>, inside <code>setTimeout</code>, in native event handlers. These two setters produce <b>one</b> render, not two, so there is no frame where <code>saving</code> is false but <code>saved</code> is still false. Pre-18 answers on this are wrong for the version you are writing, and the intermediate render they warn about is the exact flicker automatic batching removed."}
+};
+function drawUpd(){
+  const u = UPD[state.upd];
+  $("#upd-out").innerHTML = `
+    <pre style="margin-bottom:16px">${u.code}</pre>
+    <div class="cols">
+      <div><div class="queue q-micro"><h6>Update queue<em>processed in order</em></h6>
+        <div class="items">${u.q.map(x=>`<span class="qi">${esc(x)}</span>`).join("")}</div></div></div>
+      <div><div class="queue q-out"><h6>Result<em>next render</em></h6>
+        <div class="items row"><span class="qi" style="font-size:15px; font-family:var(--display); font-weight:700">${u.res}</span></div></div></div>
+    </div>
+    <div class="verdict ${u.cls}" style="margin-top:16px; margin-bottom:0"><h5>Why</h5><p style="margin-bottom:0">${u.n}</p></div>`;
+}
+segGroup("upd", drawUpd);
+
+/* ============ 4. keys ============ */
+const SEED = [{id:1,label:"Merit Scholarship"},{id:2,label:"STEM Grant"},{id:3,label:"Rural Access Bursary"}];
+let items, byId, byIdx, nextId, kNote;
+function kReset(){
+  items = SEED.map(o=>({...o}));
+  byId = {1:"draft: merit",2:"draft: stem",3:"draft: rural"};
+  byIdx = {0:"draft: merit",1:"draft: stem",2:"draft: rural"};
+  nextId = 4;
+  kNote = null; drawKeys();
+}
+function drawKeys(){
+  const idx = state.keymode === "idx";
+  $("#k-rows").innerHTML = items.map((it,i)=>`
+    <div class="rowitem ${idx?'k-idx':'k-id'}">
+      <span class="keytag">key=${idx?i:it.id}</span>
+      <span class="rlab">${esc(it.label)}</span>
+      <input type="text" data-i="${i}" data-id="${it.id}" value="${esc((idx?byIdx[i]:byId[it.id])||"")}" aria-label="note for ${esc(it.label)}">
+    </div>`).join("");
+  $$("#k-rows input").forEach(inp=>inp.addEventListener("input",e=>{
+    if(state.keymode==="idx") byIdx[+e.target.dataset.i] = e.target.value;
+    else byId[+e.target.dataset.id] = e.target.value;
+  }));
+  $("#k-note").innerHTML = kNote
+    ? `<div class="verdict ${kNote[0]}" style="margin-bottom:0"><h5>${kNote[1]}</h5><p style="margin-bottom:0">${kNote[2]}</p></div>`
+    : `<div class="verdict warn" style="margin-bottom:0"><h5>Try it</h5><p style="margin-bottom:0">Edit the notes above so you can tell the inputs apart, then prepend, delete or reorder — with <code>key=index</code> first, then with <code>key=row.id</code>. The labels come from React state; the notes live in the DOM node.</p></div>`;
+}
+function kAct(fn, noteIdx, noteId){
+  fn();
+  kNote = state.keymode==="idx" ? ["no", noteIdx[0], noteIdx[1]] : ["ok", noteId[0], noteId[1]];
+  drawKeys();
+}
+$("#k-prepend").addEventListener("click",()=>kAct(()=>{
+  const id = nextId++;
+  items.unshift({id, label:`New Bursary ${id}`});
+  byId[id] = "";                      /* id keys: the new row starts empty */
+  byIdx[items.length-1] = byIdx[items.length-1] ?? "";   /* index keys: the LAST slot is the new node */
+},
+["Every note is now sitting on the row above its own","With index keys the element at position 0 in the new tree has the same key as the old element at position 0, so React reuses that DOM node and just changes its label. Your note stayed at the <i>position</i> while the data shifted beneath it. The genuinely new node ended up at the bottom, empty."],
+["The new row is empty; every note stayed with its row","Keys matched by id, so React inserted a new DOM node at the top and moved the three existing ones down — with their contents intact. This is what you meant to happen."]));
+$("#k-delete").addEventListener("click",()=>kAct(()=>{
+  if(items.length<=1) return;
+  const gone = items.shift();
+  delete byId[gone.id];
+  const last = items.length;          /* index keys: the tail node is removed, notes shift up */
+  delete byIdx[last];
+},
+["The deleted row's note is now attached to the row below it","React kept the DOM node at position 0 and re-pointed it at the next item. The note belonging to the deleted row survived and is now sitting on a row it has nothing to do with. In a real form this is how one student's draft ends up on another's record."],
+["The note went with the row that was deleted","React removed that specific DOM node and left the others alone."]));
+$("#k-move").addEventListener("click",()=>kAct(()=>{
+  if(items.length<2) return;
+  items.unshift(items.pop());
+},
+["The notes did not move at all","Positions are unchanged, so with index keys React sees the same three keys in the same three places and only updates the labels. Every note is now on the wrong row."],
+["The notes travelled with their rows","React matched by id, found the last element now first, and <i>moved</i> the DOM node rather than rebuilding it — carrying its uncontrolled state, focus and any running animation with it."]));
+$("#k-reset").addEventListener("click", kReset);
+segGroup("keymode", ()=>{ kNote=null; drawKeys(); });
+
+/* ============ 5a. effect decision walker ============ */
+const EFFQ = [
+ {q:"…transform data for display — a total, a sorted list, a filtered view",
+  v:"no", t:"Compute it during render",
+  c:`<i>// ✗ two renders, one of them wrong, plus a dependency array to maintain</i>
+<b>const</b> [total, setTotal] = useState(0);
+useEffect(() =&gt; setTotal(rows.reduce((a,r) =&gt; a + r.amount, 0)), [rows]);
+
+<i>// ✓ one render, always consistent, nothing to keep in sync</i>
+<b>const</b> total = rows.reduce((a, r) =&gt; a + r.amount, 0);`,
+  n:"Anything derivable from existing props or state is not state. Compute it in the body of the component. Reach for <code>useMemo</code> only if a profile shows the computation itself is expensive — and note that even then, the effect version was never the alternative."},
+ {q:"…reset or update state when a prop changes",
+  v:"no", t:"Derive it, or reset the subtree with a key",
+  c:`<i>// ✗ renders the old student's data once, then corrects itself</i>
+useEffect(() =&gt; { setDraft(student); }, [student]);
+
+<i>// ✓ a different student is a different form instance</i>
+&lt;ApplicationForm key={student.id} student={student} /&gt;`,
+  n:"Syncing props into state with an effect always produces one render showing the stale value. A <code>key</code> tells React this is a new instance, so it discards the old state wholesale — no effect, no flicker, no dependency array."},
+ {q:"…do something in response to a user action",
+  v:"no", t:"Put it in the event handler",
+  c:`<i>// ✗ fires whenever anything else happens to set this flag too</i>
+useEffect(() =&gt; { <b>if</b> (submitted) toast("Application sent"); }, [submitted]);
+
+<i>// ✓ the toast belongs to the click that caused it</i>
+<b>async function</b> handleSubmit() {
+  <b>await</b> apiPost("/applications", body, appSchema);
+  toast("Application sent");
+}`,
+  n:"The question to ask is <i>why</i> the code should run. If the answer is “because the user did something”, it belongs in the handler. Effects are for “because this component is on screen and needs to stay in sync with something”."},
+ {q:"…fetch data when the component mounts",
+  v:"maybe", t:"Technically yes — but use a query library",
+  c:`<i>// The honest minimum: abort on change, or you will race.</i>
+useEffect(() =&gt; {
+  <b>const</b> ac = <b>new</b> AbortController();
+  apiGet("/scholarships", listSchema, { signal: ac.signal }).then(setData);
+  <b>return</b> () =&gt; ac.abort();
+}, []);
+
+<i>// What you should actually ship (Stage 5)</i>
+<b>const</b> { data, isPending, error } = useQuery({
+  queryKey: ["scholarships"], queryFn: () =&gt; apiGet("/scholarships", listSchema),
+});`,
+  n:"Fetching is genuine external synchronisation, so an effect is not wrong. It is just the hard way: you now own caching, deduplication, retries, race conditions, refetch-on-focus and stale-while-revalidate. Write it once to understand it, then never again."},
+ {q:"…subscribe to a WebSocket, a media query, or a browser event",
+  v:"yes", t:"This is what effects are for",
+  c:`useEffect(() =&gt; {
+  <b>const</b> mq = matchMedia("(max-width: 720px)");
+  <b>const</b> onChange = e =&gt; setCompact(e.matches);
+  setCompact(mq.matches);
+  mq.addEventListener("change", onChange);
+  <b>return</b> () =&gt; mq.removeEventListener("change", onChange);
+}, []);`,
+  n:"An external system exists whether or not your component is mounted, and it must be connected and disconnected in step with the component. That is the definition of the job. Note the cleanup is exactly the inverse of the setup — if you cannot write that inverse, the effect is wrong."},
+ {q:"…measure a DOM node and adjust before the user sees it",
+  v:"layout", t:"<code>useLayoutEffect</code>, not <code>useEffect</code>",
+  c:`useLayoutEffect(() =&gt; {
+  <b>const</b> { height } = tooltipRef.current.getBoundingClientRect();
+  setPlaceAbove(height &gt; spaceBelow);   <i>// applied before paint — no flicker</i>
+}, [content]);`,
+  n:"<code>useEffect</code> runs after paint, so a correction made there is visible as a jump. <code>useLayoutEffect</code> runs synchronously after commit and before paint — which is also why it blocks the frame and should stay small and rare."},
+ {q:"…initialise a third-party widget that owns its own DOM",
+  v:"yes", t:"Effect, with a ref and a real teardown",
+  c:`<b>const</b> ref = useRef&lt;HTMLDivElement&gt;(<b>null</b>);
+useEffect(() =&gt; {
+  <b>const</b> chart = <b>new</b> Chart(ref.current, options);
+  <b>return</b> () =&gt; chart.destroy();     <i>// or Strict Mode will show you two charts</i>
+}, [options]);`,
+  n:"The canonical escape hatch: React owns the container, the library owns everything inside it. This is also the clearest demonstration of why Strict Mode's double mount is useful — a missing <code>destroy()</code> is invisible in production until the day the component remounts."},
+ {q:"…log an analytics event when a page is viewed",
+  v:"maybe", t:"Depends on what caused the view",
+  c:`<i>// If the user navigated: the router already knows. Handle it there.</i>
+<i>// If visibility is genuinely driven by external state, an effect is fair:</i>
+useEffect(() =&gt; { track("scholarship_viewed", { id }); }, [id]);`,
+  n:"The trap is Strict Mode: this fires twice in development, and any effect that sends something to a server needs to be idempotent or deduplicated. If a single user action caused the view, putting the call in that action's handler is both simpler and exactly once."}
+];
+function drawEff(sel){
+  $("#eff-q").innerHTML = EFFQ.map((e,i)=>
+    `<button class="qbtn" data-i="${i}" aria-pressed="${i===sel}" type="button">${e.q}</button>`).join("");
+  $$("#eff-q .qbtn").forEach(b=>b.addEventListener("click",()=>drawEff(+b.dataset.i)));
+  const e = EFFQ[sel];
+  const cls = e.v==="no" ? "no" : e.v==="yes" ? "ok" : "warn";
+  const verdict = e.v==="no" ? "No effect needed" : e.v==="yes" ? "Yes — a real effect" : e.v==="layout" ? "Wrong hook" : "It depends";
+  $("#eff-a").innerHTML = `
+    <div class="verdict ${cls}"><h5>${verdict} — ${e.t}</h5><p style="margin-bottom:0">${e.n}</p></div>
+    <pre style="margin-bottom:0">${e.c}</pre>`;
+}
+
+/* ============ 5b. effect lifecycle ============ */
+const EF_CODE = `useEffect(() =&gt; {
+  <b>const</b> conn = connect(roomId);
+  conn.on("message", onMessage);
+  <b>return</b> () =&gt; conn.close();
+}, [roomId]);`;
+const EF_BASE = [
+ {log:["render #1 · roomId = 'general'"], n:"The component renders. The effect has been <i>declared</i>, not run — React only records it."},
+ {log:["DOM committed","browser paints"], n:"React commits the DOM and the browser paints. The user can already see the UI; the effect still has not run."},
+ {log:["✦ connect('general')"], n:"<b>Now</b> the effect runs — after paint. This ordering is why <code>useEffect</code> never delays the first frame, and why measuring layout inside one is already too late."},
+ {log:["render #2 · roomId = 'awards'","DOM committed","browser paints"], n:"A state change sets <code>roomId</code> to <code>'awards'</code>. React renders and commits as usual."},
+ {log:["✕ close('general')"], n:"<code>roomId</code> is in the dependency array, so before running the effect again React runs the <b>previous</b> cleanup — closing over the old value, <code>'general'</code>. This is the closure model from Stage 2 doing exactly the right thing."},
+ {log:["✦ connect('awards')"], n:"Then the effect runs with the new value. Notice the pattern: cleanup-then-setup on every dependency change, not just on unmount."},
+ {log:["✕ close('awards')"], n:"The component unmounts and the final cleanup runs. Total connections opened: 2. Total closed: 2. That balance is the property to check."}
+];
+const EF_STRICT = [
+ EF_BASE[0], EF_BASE[1], EF_BASE[2],
+ {log:["✕ close('general')"], n:"<b>Strict Mode, development only.</b> React immediately runs the cleanup…"},
+ {log:["✦ connect('general')"], n:"…and then the effect again. This is deliberate: it is a test that your cleanup fully undoes your setup. An effect that opens two connections here would open two in production the first time React remounted the component."},
+ EF_BASE[3], EF_BASE[4], EF_BASE[5], EF_BASE[6]
+];
+let efIdx = 0;
+function drawEf(){
+  const steps = state.strict==="on" ? EF_STRICT : EF_BASE;
+  efIdx = Math.min(efIdx, steps.length-1);
+  $("#ef-code").innerHTML = EF_CODE;
+  const log = steps.slice(0, efIdx+1).flatMap(s=>s.log);
+  $("#ef-log").innerHTML = log.map(l=>`<span class="qi">${esc(l)}</span>`).join("");
+  $("#ef-note").innerHTML = steps[efIdx].n;
+  $("#ef-pos").textContent = `${efIdx+1} / ${steps.length}`;
+  $("#ef-track").style.width = ((efIdx+1)/steps.length*100)+"%";
+}
+$("#ef-next").addEventListener("click",()=>{ const s=state.strict==="on"?EF_STRICT:EF_BASE; efIdx=Math.min(s.length-1,efIdx+1); drawEf(); });
+$("#ef-prev").addEventListener("click",()=>{ efIdx=Math.max(0,efIdx-1); drawEf(); });
+$("#ef-reset").addEventListener("click",()=>{ efIdx=0; drawEf(); });
+segGroup("strict", ()=>{ efIdx=0; drawEf(); });
+
+/* ============ 6. hooks ============ */
+const HOOKS = [
+{k:"useRef", p:"I need a value that survives re-renders but must not cause one — or a handle to a real DOM node.",
+ s:"const ref = useRef(initialValue)   //  ref.current is mutable",
+ c:`<i>// 1. A DOM handle — the escape hatch out of the declarative model</i>
+<b>const</b> inputRef = useRef&lt;HTMLInputElement&gt;(<b>null</b>);
+useEffect(() =&gt; { inputRef.current?.focus(); }, []);
+&lt;input ref={inputRef} /&gt;
+
+<i>// 2. An instance variable: changing it must NOT re-render</i>
+<b>const</b> timerRef = useRef&lt;number&gt;();
+timerRef.current = setTimeout(save, 800);   <i>// no render caused</i>
+
+<i>// 3. The latest value, for a callback that must not be recreated</i>
+<b>const</b> latestQuery = useRef(query);
+latestQuery.current = query;   <i>// read inside a long-lived subscription</i>`,
+ no:"Not as a substitute for state. Mutating a ref does not re-render, so anything the user must <i>see</i> belongs in state. Also: <code>ref.current</code> is <code>null</code> during render — reading it there is a bug the compiler cannot catch.",
+ d:"Absent from the deck. Every focus, scroll, measurement and third-party-library integration you will write needs it."},
+{k:"useCallback", p:"A function's identity keeps changing, and something downstream compares it.",
+ s:"const fn = useCallback(() => { … }, [deps])",
+ c:`<i>// Only pays when the consumer actually compares identity:</i>
+<b>const</b> onSelect = useCallback((id: number) =&gt; setSelectedId(id), []);
+&lt;MemoisedRow onSelect={onSelect} /&gt;      <i>// ✓ memo can now bail out</i>
+
+useEffect(() =&gt; { … }, [onSelect]);       <i>// ✓ stops an infinite loop</i>
+<b>const</b> ctx = useMemo(() =&gt; ({ user, onSelect }), [user, onSelect]);  <i>// ✓ context value</i>`,
+ no:"On a handler passed to a plain DOM element — <code>&lt;button onClick={…}&gt;</code> compares nothing, so you have added a dependency array for no benefit. As module 02 showed, <code>useCallback</code> without <code>React.memo</code> on the consumer is usually inert, and <code>React.memo</code> without <code>useCallback</code> is usually inert too. They are one technique with two halves.",
+ d:"Listed on slide 185, never taught. This is half of why memoisation in most codebases does nothing."},
+{k:"useLayoutEffect", p:"I must read layout and correct it before the user ever sees the wrong version.",
+ s:"useLayoutEffect(setup, [deps])   // runs after commit, before paint",
+ c:`<b>const</b> ref = useRef&lt;HTMLDivElement&gt;(<b>null</b>);
+<b>const</b> [above, setAbove] = useState(<b>false</b>);
+
+useLayoutEffect(() =&gt; {
+  <b>const</b> r = ref.current!.getBoundingClientRect();
+  setAbove(r.bottom &gt; innerHeight);   <i>// re-render happens before paint</i>
+}, [content]);`,
+ no:"For anything that does not need to block the frame — which is nearly everything. It runs synchronously before paint, so slow work here is dropped frames, and it does not run at all during server rendering (React warns about this). Default to <code>useEffect</code> and switch only when you can see the flicker.",
+ d:"Listed, never taught. The tooltip and popover positioning you will write in Stage 4 needs it."},
+{k:"useTransition", p:"An urgent update (typing) is being blocked by an expensive one (filtering 5,000 rows).",
+ s:"const [isPending, startTransition] = useTransition()",
+ c:`<b>const</b> [query, setQuery] = useState("");
+<b>const</b> [results, setResults] = useState(all);
+<b>const</b> [isPending, startTransition] = useTransition();
+
+<b>function</b> onChange(e) {
+  setQuery(e.target.value);            <i>// urgent: the input must keep up</i>
+  startTransition(() =&gt; {
+    setResults(filter(all, e.target.value));   <i>// interruptible</i>
+  });
+}
+<b>return</b> &lt;List rows={results} className={isPending ? "stale" : ""} /&gt;;`,
+ no:"As a general performance fix. It does not make the work faster — it makes it <i>interruptible</i>, so the keystroke wins the race. If the work is slow because it is doing something silly, fix that first. It also does nothing for work that is not a React state update.",
+ d:"Listed, never taught. This is the correct answer to “typing in the search box is laggy”, which the capstone will hit."},
+{k:"useDeferredValue", p:"Same problem as a transition, but I do not own the setter — the value arrives as a prop.",
+ s:"const deferred = useDeferredValue(value)",
+ c:`<b>function</b> Results({ query }) {          <i>// query is a prop; no setter here</i>
+  <b>const</b> deferred = useDeferredValue(query);
+  <b>const</b> stale = query !== deferred;
+  <b>const</b> rows = useMemo(() =&gt; filter(all, deferred), [deferred]);
+  <b>return</b> &lt;List rows={rows} style={{ opacity: stale ? 0.6 : 1 }} /&gt;;
+}`,
+ no:"Without memoising the expensive computation on the deferred value. The hook only lets React render an older value while the new one is computed — if you filter on <code>query</code> anyway, nothing is deferred and you have added a variable.",
+ d:"Listed, never taught. Pair it with <code>React.memo</code> or <code>useMemo</code> or it does nothing."},
+{k:"useImperativeHandle", p:"A parent legitimately needs to command a child — focus it, scroll it, play it.",
+ s:"useImperativeHandle(ref, () => ({ … }), [deps])",
+ c:`<b>type</b> FormHandle = { focusFirstError(): <b>void</b> };
+
+<b>function</b> ApplicationForm({ ref, …props }: Props &amp; { ref?: Ref&lt;FormHandle&gt; }) {
+  useImperativeHandle(ref, () =&gt; ({
+    focusFirstError() { firstInvalidRef.current?.focus(); },
+  }), []);
+  …
+}
+<i>// The parent gets a narrow API — not the DOM node, not the internals.</i>`,
+ no:"To avoid designing props. If the parent is calling <code>child.setValue()</code>, the value belongs in the parent. Reserve it for genuinely imperative actions that have no declarative expression: focus, scroll, select, play, animate.",
+ d:"Listed, never taught. Note that React 19 lets you take <code>ref</code> as an ordinary prop, so <code>forwardRef</code> is no longer needed for this."},
+{k:"useInsertionEffect", p:"I am writing a CSS-in-JS library and must inject style rules before any layout effect reads layout.",
+ s:"useInsertionEffect(setup, [deps])   // runs before all layout effects",
+ c:`<i>// Library code, essentially never application code.</i>
+useInsertionEffect(() =&gt; {
+  <b>if</b> (!inserted.has(rule)) { styleSheet.insertRule(rule); inserted.add(rule); }
+}, [rule]);`,
+ no:"Basically always. It cannot read layout and cannot update state. If you are reaching for it in application code, the answer is almost certainly a stylesheet, a CSS variable, or a class name.",
+ d:"Listed, never taught — correctly, in this one case. Know that it exists so you recognise it in a library's stack trace."}
+];
+let hookSel = 0;
+function drawHooks(){
+  $("#hooklist").innerHTML = HOOKS.map((h,i)=>
+    `<button class="hookbtn" data-i="${i}" aria-pressed="${i===hookSel}" type="button">${h.k}</button>`).join("");
+  $$("#hooklist .hookbtn").forEach(b=>b.addEventListener("click",()=>{ hookSel=+b.dataset.i; drawHooks(); }));
+  const h = HOOKS[hookSel];
+  $("#hook-out").innerHTML = `
+    <div class="verdict warn"><h5>The problem it solves</h5><p style="margin-bottom:0">${h.p}</p></div>
+    <pre style="margin-bottom:16px"><b>${esc(h.s)}</b></pre>
+    <pre style="margin-bottom:16px">${h.c}</pre>
+    <div class="cols">
+      <div class="verdict no" style="margin-bottom:0"><h5>When not to reach for it</h5><p style="margin-bottom:0">${h.no}</p></div>
+      <div class="verdict ok" style="margin-bottom:0"><h5>In your deck</h5><p style="margin-bottom:0">${h.d}</p></div>
+    </div>`;
+}
+
+/* ============ 7. memo cost model ============ */
+const CMP = 0.005;   /* shallow prop comparison, ms per child */
+function drawMemo(){
+  const n = +$("#mm-n").value;
+  const c = +$("#mm-c").value/100;
+  const p = +$("#mm-p").value;
+  const stable = $("#mm-stable").checked;
+  $("#mm-n-v").textContent = n;
+  $("#mm-c-v").textContent = c.toFixed(2)+" ms";
+  $("#mm-p-v").textContent = p+"%";
+
+  const plain = n*c;
+  const changed = stable ? n*p/100 : n;
+  const memo = n*CMP + changed*c;
+  const saving = plain - memo;
+  const max = Math.max(plain, memo, 1);
+  const bar = (val, parts) => `<div class="bar2">${parts.map(([w,col])=>
+    `<span style="width:${(w/max*100).toFixed(2)}%; background:${col}"></span>`).join("")}</div>`;
+
+  const budget = 16.7;
+  $("#mm-out").innerHTML = `
+    <div class="barrow"><span class="bl">No memoisation</span>${bar(plain,[[plain,"var(--c-wire)"]])}<span class="bv">${plain.toFixed(2)} ms</span></div>
+    <div class="barrow"><span class="bl">React.memo</span>${bar(memo,[[n*CMP,"var(--c-data)"],[changed*c,"var(--c-server)"]])}<span class="bv">${memo.toFixed(2)} ms</span></div>
+    <div class="legend" style="padding-top:4px">
+      <span><i style="background:var(--c-wire)"></i>Unmemoised render work</span>
+      <span><i style="background:var(--c-data)"></i>Prop comparison</span>
+      <span><i style="background:var(--c-server)"></i>Renders memo could not avoid</span>
+    </div>
+    <div class="verdict ${saving > 1 ? "ok" : saving > 0 ? "warn" : "no"}" style="margin-top:6px; margin-bottom:0">
+      <h5>${saving > 0 ? `Memo saves ${saving.toFixed(2)} ms per render` : `Memo costs you ${Math.abs(saving).toFixed(2)} ms per render`}</h5>
+      <p style="margin-bottom:0">${
+        !stable ? `Dependencies are unstable — an inline object, array or callback — so the shallow comparison fails for <b>every</b> child. You pay ${(n*CMP).toFixed(2)}&nbsp;ms of comparisons and avoid nothing. This is the most common state of memoised code in the wild, and it is strictly worse than no memoisation at all.`
+        : saving > 3 ? `A real saving, and worth keeping — provided a profile agrees. At ${n} children costing ${c.toFixed(2)}&nbsp;ms each, the unmemoised version is ${(plain/budget*100).toFixed(0)}% of a 16.7&nbsp;ms frame budget on its own.`
+        : saving > 0 ? `A saving, but a small one: ${saving.toFixed(2)}&nbsp;ms against a 16.7&nbsp;ms frame. No user can perceive this. Ask whether the extra code, the dependency arrays and the future maintenance are worth it — usually the honest answer is to move the state down instead.`
+        : `Negative. The comparisons cost more than the renders they avoid. Small components with frequently-changing props are exactly where memoisation loses.`
+      }</p>
+    </div>`;
+}
+["#mm-n","#mm-c","#mm-p"].forEach(s=>$(s).addEventListener("input", drawMemo));
+$("#mm-stable").addEventListener("change", drawMemo);
+
+/* ============ nav + theme ============ */
+const SECTIONS = [["m1","Why"],["m2","Pipeline"],["m3","Snapshot"],["m4","Keys"],["m5","Effects"],
+                  ["m6","Seven hooks"],["m7","Memoisation"],["m8","Custom hooks"],["m9","Close"]];
+$("#nav").innerHTML = SECTIONS.map((s,i)=>`<a href="#${s[0]}"${i===0?' class="on"':''}>${String(i+1).padStart(2,"0")} ${s[1]}</a>`).join("");
+const links = $$("#nav a");
+const obs = new IntersectionObserver(es=>{ es.forEach(e=>{ if(e.isIntersecting){
+  links.forEach(l=>l.classList.toggle("on", l.getAttribute("href")==="#"+e.target.id)); }}); },
+  {rootMargin:"-25% 0px -65% 0px"});
+SECTIONS.forEach(s=>obs.observe(document.getElementById(s[0])));
+
+try{ const t = localStorage.getItem("fsatlas.theme"); if(t) document.documentElement.setAttribute("data-theme",t); }catch(e){}
+$("#themebtn").addEventListener("click",()=>{
+  const cur = document.documentElement.getAttribute("data-theme");
+  const isDark = cur ? cur==="dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  const next = isDark ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  try{ localStorage.setItem("fsatlas.theme", next); }catch(e){}
+});
+
+rpTree(); drawUpd(); kReset(); drawEff(0); drawEf(); drawHooks(); drawMemo();
+</script>
+</body></html>

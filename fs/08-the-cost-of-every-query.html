@@ -1,0 +1,1469 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>The Cost of Every Query</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+:root{
+  --paper:#F1F4F3; --surface:#FFFFFF; --surface-2:#E8EDEC; --surface-3:#DDE5E3;
+  --ink:#0E1518; --ink-2:#3A484C; --ink-3:#65777B;
+  --rule:#D3DCDA; --rule-2:#C0CCC9;
+  /* UI ink (text-safe) */
+  --client:#005886; --wire:#A34800; --server:#007052; --data:#0B4739; --alert:#B3261E;
+  /* chart marks (validated: light PASS on all six checks) */
+  --c-client:#0072B2; --c-wire:#D55E00; --c-server:#009E73; --c-data:#00614A;
+  --client-wash:#0072B214; --wire-wash:#D55E0014; --server-wash:#009E7314; --data-wash:#00614A14; --alert-wash:#B3261E14;
+  --good:#007052; --warn:#A34800; --bad:#B3261E;
+  --shadow:0 1px 2px rgba(14,21,24,.05), 0 8px 24px -12px rgba(14,21,24,.16);
+  --display:'Archivo','Helvetica Neue',Arial,sans-serif;
+  --body:'Source Serif 4',Georgia,'Times New Roman',serif;
+  --mono:'JetBrains Mono','SF Mono',Menlo,Consolas,monospace;
+  --maxw:1120px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --paper:#0E1416; --surface:#151D1F; --surface-2:#1D2729; --surface-3:#263234;
+  --ink:#E6EDEC; --ink-2:#AFC0BE; --ink-3:#7E9291;
+  --rule:#2A383A; --rule-2:#3A4B4D;
+  --client:#7CBBE6; --wire:#F09A55; --server:#4FBE8A; --data:#A5DEC5; --alert:#F08A80;
+  --c-client:#4A9AD0; --c-wire:#DE7018; --c-server:#2FA76A; --c-data:#7ED3AF;
+  --client-wash:#4A9AD01A; --wire-wash:#DE70181A; --server-wash:#2FA76A1A; --data-wash:#7ED3AF1A; --alert-wash:#F08A801A;
+  --good:#4FBE8A; --warn:#F09A55; --bad:#F08A80;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+}}
+:root[data-theme="dark"]{
+  --paper:#0E1416; --surface:#151D1F; --surface-2:#1D2729; --surface-3:#263234;
+  --ink:#E6EDEC; --ink-2:#AFC0BE; --ink-3:#7E9291;
+  --rule:#2A383A; --rule-2:#3A4B4D;
+  --client:#7CBBE6; --wire:#F09A55; --server:#4FBE8A; --data:#A5DEC5; --alert:#F08A80;
+  --c-client:#4A9AD0; --c-wire:#DE7018; --c-server:#2FA76A; --c-data:#7ED3AF;
+  --client-wash:#4A9AD01A; --wire-wash:#DE70181A; --server-wash:#2FA76A1A; --data-wash:#7ED3AF1A; --alert-wash:#F08A801A;
+  --good:#4FBE8A; --warn:#F09A55; --bad:#F08A80;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+}
+
+*{box-sizing:border-box}
+body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--body); font-size:17px; line-height:1.64; -webkit-font-smoothing:antialiased}
+h1,h2,h3,h4,h5{font-family:var(--display); font-weight:700; letter-spacing:-.018em; text-wrap:balance; margin:0}
+p{margin:0 0 14px} p:last-child{margin-bottom:0}
+a{color:var(--client)}
+.wrap{max-width:var(--maxw); margin:0 auto; padding:0 24px}
+button{font-family:var(--mono); cursor:pointer}
+button:focus-visible,summary:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--c-client); outline-offset:2px}
+code{font-family:var(--mono); font-size:.855em; background:var(--surface-2); padding:1px 4px; border-radius:2px}
+pre{font-family:var(--mono); font-size:13px; line-height:1.62; background:var(--surface-2); border:1px solid var(--rule);
+    border-radius:3px; padding:14px 16px; overflow-x:auto; margin:0 0 14px}
+pre b{color:var(--client); font-weight:700}
+pre i{color:var(--ink-3); font-style:normal}
+
+/* masthead */
+.masthead{background:var(--surface); border-bottom:1px solid var(--rule)}
+.mast{max-width:var(--maxw); margin:0 auto; padding:38px 24px 30px; display:flex; flex-direction:column; gap:22px}
+.mast-top{display:flex; justify-content:space-between; gap:20px; align-items:flex-start; flex-wrap:wrap}
+.eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3)}
+h1{font-size:clamp(32px,5.2vw,56px); line-height:1.02; margin-top:6px}
+.lede{font-size:19px; color:var(--ink-2); max-width:62ch; margin:0}
+.themebtn{font-size:11px; letter-spacing:.1em; text-transform:uppercase; background:transparent; color:var(--ink-3);
+  border:1px solid var(--rule-2); border-radius:2px; padding:7px 11px; white-space:nowrap}
+.themebtn:hover{color:var(--ink); border-color:var(--ink-3)}
+
+/* section nav */
+.navbar{position:sticky; top:0; z-index:40; background:var(--paper); border-bottom:1px solid var(--rule)}
+.navinner{max-width:var(--maxw); margin:0 auto; padding:0 24px; display:flex; gap:2px; overflow-x:auto; scrollbar-width:thin}
+.navinner a{font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase; text-decoration:none;
+  color:var(--ink-3); padding:12px 11px; white-space:nowrap; border-bottom:2px solid transparent}
+.navinner a:hover{color:var(--ink)}
+.navinner a.on{color:var(--ink); border-bottom-color:var(--c-wire)}
+
+/* module */
+.module{padding:60px 0 10px; border-top:1px solid var(--rule)}
+.module:first-of-type{border-top:0}
+.mod-head{display:flex; gap:14px; align-items:baseline; margin-bottom:18px; flex-wrap:wrap}
+.mod-n{font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.14em; color:var(--tint,var(--ink-3))}
+.mod-head h2{font-size:clamp(25px,3.4vw,36px)}
+.mod-q{font-family:var(--body); font-size:19px; color:var(--ink-2); max-width:64ch; margin:0 0 26px; font-style:italic}
+.prose{max-width:68ch}
+.prose h3{font-size:21px; margin:30px 0 10px}
+.prose h4{font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3); margin:28px 0 9px}
+.prose ul,.prose ol{padding-left:20px; margin:0 0 14px}
+.prose li{margin-bottom:6px}
+.tag{font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; padding:3px 7px; border-radius:2px; white-space:nowrap}
+.t-client{background:var(--client-wash); color:var(--client)} .t-wire{background:var(--wire-wash); color:var(--wire)}
+.t-server{background:var(--server-wash); color:var(--server)} .t-data{background:var(--data-wash); color:var(--data)}
+
+/* lab panel */
+.lab{background:var(--surface); border:1px solid var(--rule); border-radius:5px; box-shadow:var(--shadow); margin:26px 0 8px; overflow:hidden}
+.lab-head{display:flex; justify-content:space-between; align-items:center; gap:14px; padding:13px 18px; border-bottom:1px solid var(--rule); background:var(--surface-2); flex-wrap:wrap}
+.lab-head h3{font-size:16px}
+.lab-head .kind{font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3)}
+.lab-body{padding:18px}
+.ctrls{display:flex; flex-wrap:wrap; gap:14px 22px; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--surface)}
+.ctrl{display:flex; flex-direction:column; gap:5px}
+.ctrl label{font-family:var(--mono); font-size:9.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3)}
+.seg{display:flex; border:1px solid var(--rule-2); border-radius:3px; overflow:hidden}
+.seg button{font-size:11px; padding:6px 10px; border:0; background:var(--surface); color:var(--ink-2); border-right:1px solid var(--rule-2)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--ink); color:var(--paper)}
+.tog{display:flex; align-items:center; gap:7px; font-family:var(--mono); font-size:11.5px; color:var(--ink-2); cursor:pointer; padding-top:14px}
+.tog input{width:15px; height:15px; accent-color:var(--c-wire); cursor:pointer}
+.runbtn{font-size:11px; letter-spacing:.12em; text-transform:uppercase; background:var(--ink); color:var(--paper); border:1px solid var(--ink); border-radius:2px; padding:8px 14px}
+.ghostbtn{font-size:11px; letter-spacing:.12em; text-transform:uppercase; background:transparent; color:var(--ink-2); border:1px solid var(--rule-2); border-radius:2px; padding:8px 12px}
+.ghostbtn[aria-pressed="true"]{background:var(--ink); color:var(--paper); border-color:var(--ink)}
+select{font-family:var(--mono); font-size:11.5px; padding:6px 8px; border:1px solid var(--rule-2); border-radius:3px; background:var(--surface); color:var(--ink)}
+input[type=text]{font-family:var(--mono); font-size:11.5px; padding:6px 8px; border:1px solid var(--rule-2); border-radius:3px; background:var(--surface); color:var(--ink); min-width:210px}
+
+/* waterfall */
+.wf-scroll{overflow-x:auto}
+.wf{width:100%; min-width:640px; display:block}
+.wf .lbl{font-family:var(--mono); font-size:10.5px; fill:var(--ink-2)}
+.wf .lbl.dim{fill:var(--ink-3)}
+.wf .ms{font-family:var(--mono); font-size:10px; fill:var(--ink-3)}
+.wf .grid{stroke:var(--rule); stroke-width:1}
+.wf .axis{font-family:var(--mono); font-size:9.5px; fill:var(--ink-3)}
+.wf rect.bar{rx:2; ry:2}
+.wf rect.bar:hover{opacity:.82}
+.wf .sep{stroke:var(--surface); stroke-width:2}
+.legend{display:flex; gap:16px; flex-wrap:wrap; font-family:var(--mono); font-size:10.5px; color:var(--ink-3); padding:0 0 12px}
+.legend i{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:-1px}
+.total{display:flex; gap:26px; flex-wrap:wrap; align-items:baseline; padding:14px 18px; border-top:1px solid var(--rule); background:var(--surface-2)}
+.total .big{font-family:var(--display); font-weight:700; font-size:32px; font-variant-numeric:tabular-nums; line-height:1}
+.total .sm{font-family:var(--mono); font-size:10px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3)}
+.tip{position:fixed; z-index:99; pointer-events:none; background:var(--ink); color:var(--paper); font-family:var(--mono);
+  font-size:11px; line-height:1.5; padding:8px 10px; border-radius:3px; max-width:290px; opacity:0; transition:opacity .12s}
+.tip.on{opacity:1}
+.tip b{color:#fff}
+
+.tablewrap{overflow-x:auto; border:1px solid var(--rule); border-radius:3px; margin-top:14px}
+table{border-collapse:collapse; width:100%; min-width:520px; background:var(--surface)}
+th,td{text-align:left; padding:8px 12px; border-bottom:1px solid var(--rule); font-size:14px}
+th{font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); background:var(--surface-2)}
+td.num{font-family:var(--mono); font-variant-numeric:tabular-nums; text-align:right}
+tbody tr:last-child td{border-bottom:0}
+
+/* verdict blocks */
+.verdict{border-left:3px solid var(--vc); background:var(--vw); padding:14px 16px; border-radius:0 3px 3px 0; margin-bottom:14px}
+.verdict.ok{--vc:var(--good); --vw:var(--server-wash)}
+.verdict.no{--vc:var(--bad); --vw:var(--alert-wash)}
+.verdict.warn{--vc:var(--warn); --vw:var(--wire-wash)}
+.verdict h5{font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--vc); margin-bottom:7px}
+.verdict p{font-size:15.5px; margin-bottom:8px}
+
+.cols{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:20px}
+.cols3{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px}
+
+.card{border:1px solid var(--rule); border-radius:4px; background:var(--surface); padding:14px 16px}
+.card h5{font-family:var(--display); font-size:15.5px; margin-bottom:6px}
+.card p{font-size:14.5px; color:var(--ink-2); margin-bottom:0; line-height:1.5}
+.card.acc{border-left:3px solid var(--ac)}
+
+/* instances */
+.rack{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:14px 0}
+.inst{border:1px solid var(--rule); border-radius:4px; padding:11px 12px; background:var(--surface); text-align:center}
+.inst.down{opacity:.45; border-style:dashed}
+.inst .nm{font-family:var(--mono); font-size:11px; color:var(--ink-3); letter-spacing:.08em}
+.inst .st{font-family:var(--display); font-weight:700; font-size:13px; margin-top:5px}
+.inst .ss{font-family:var(--mono); font-size:10px; color:var(--ink-3); margin-top:4px; min-height:14px}
+.reqs{display:flex; gap:5px; flex-wrap:wrap; margin-top:12px}
+.req{font-family:var(--mono); font-size:10.5px; padding:5px 8px; border-radius:2px; border:1px solid var(--rule-2); background:var(--surface)}
+.req.ok{border-color:var(--good); color:var(--good); background:var(--server-wash)}
+.req.fail{border-color:var(--bad); color:var(--bad); background:var(--alert-wash)}
+
+/* misc blocks */
+.callout{border:1px solid var(--rule); border-left:3px solid var(--c-wire); background:var(--wire-wash); border-radius:0 4px 4px 0; padding:15px 17px; margin:22px 0}
+.callout h4{font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--wire); margin-bottom:8px}
+.callout p,.callout li{font-size:15.5px}
+.mistakes{display:grid; gap:10px; margin:14px 0}
+.mistake{border:1px solid var(--rule); border-radius:4px; overflow:hidden; background:var(--surface)}
+.mistake summary{list-style:none; cursor:pointer; padding:12px 15px; font-family:var(--display); font-weight:600; font-size:15.5px; display:flex; gap:11px; align-items:flex-start}
+.mistake summary::-webkit-details-marker{display:none}
+.mistake summary:hover{background:var(--surface-2)}
+.mistake .x{font-family:var(--mono); color:var(--bad); font-weight:700; flex:none}
+.mistake .in{padding:0 15px 14px 41px; font-size:15px; color:var(--ink-2)}
+.mistake .in p{margin-bottom:9px}
+
+.taskbox{border:1px solid var(--rule-2); border-radius:4px; background:var(--surface); padding:15px 17px; margin:20px 0}
+.taskbox h4{font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3); margin-bottom:9px}
+.taskbox.exp{border-left:3px solid var(--c-client)}
+.taskbox.chal{border-left:3px solid var(--c-server)}
+.taskbox.arch{border-left:3px solid var(--c-data)}
+.reads{display:flex; flex-wrap:wrap; gap:6px; margin:16px 0 0}
+.reads a{font-family:var(--mono); font-size:11px; text-decoration:none; color:var(--ink-2); border:1px solid var(--rule-2); border-radius:2px; padding:4px 9px; background:var(--surface)}
+.reads a:hover{border-color:var(--c-client); color:var(--client)}
+.reads .src{font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3); margin-right:5px}
+
+.matrix2{overflow-x:auto}
+.matrix2 table{min-width:560px}
+.yes{color:var(--good); font-weight:700} .no2{color:var(--bad); font-weight:700}
+
+footer{border-top:1px solid var(--rule); background:var(--surface); padding:34px 0 50px; margin-top:60px}
+footer p{color:var(--ink-3); font-size:14.5px; max-width:72ch}
+@media (prefers-reduced-motion: reduce){*{transition:none!important; animation:none!important}}
+@media(max-width:640px){ .rack{grid-template-columns:1fr} body{font-size:16px} }
+</style></head><body><style>
+/* ---------- two-transaction timeline ---------- */
+.txgrid{display:grid; grid-template-columns:34px 1fr 1fr; gap:0 12px; align-items:stretch}
+.txhead{font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3);
+  padding:0 0 8px; border-bottom:1px solid var(--rule); margin-bottom:8px}
+.txhead.t1{color:var(--c-client)} .txhead.t2{color:var(--c-wire)}
+.txt{font-family:var(--mono); font-size:10.5px; color:var(--ink-3); text-align:right; padding-top:11px}
+.txcell{border:1px solid var(--rule); border-left:3px solid var(--xc,var(--rule-2)); border-radius:3px;
+  padding:8px 11px; margin-bottom:7px; background:var(--surface); font-family:var(--mono); font-size:11.5px; line-height:1.5;
+  white-space:pre-wrap; overflow-wrap:anywhere}
+.txcell.empty{border:1px dashed var(--rule); border-left:1px dashed var(--rule); background:transparent; opacity:.4}
+.txcell.t1{--xc:var(--c-client)} .txcell.t2{--xc:var(--c-wire)}
+.txcell.bad2{--xc:var(--bad); background:var(--alert-wash)}
+.txcell.good2{--xc:var(--good); background:var(--server-wash)}
+.txcell .res{color:var(--ink); font-weight:700; display:block; margin-top:4px}
+.txcell .res.err{color:var(--bad)}
+.txcell .res.okr{color:var(--good)}
+@media(max-width:760px){
+  .txgrid{display:block}
+  .txgrid .txhead{display:none}
+  .txt{text-align:left; padding:8px 0 3px}
+  .txcell.empty{display:none}
+  .txcell::before{content:attr(data-tx); display:block; font-size:9px; letter-spacing:.11em;
+    text-transform:uppercase; color:var(--ink-3); margin-bottom:5px}
+}
+
+/* ---------- join tables ---------- */
+.jtabs{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px; margin-bottom:16px}
+.jt{border:1px solid var(--rule); border-radius:3px; overflow:hidden; background:var(--surface)}
+.jt .jh{background:var(--surface-2); border-bottom:1px solid var(--rule); padding:7px 11px;
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3)}
+.jt table{width:100%; border-collapse:collapse; min-width:0; table-layout:fixed}
+.jt td{overflow-wrap:anywhere}
+.jt td,.jt th{font-family:var(--mono); font-size:11.5px; padding:5px 11px; border-bottom:1px solid var(--rule); text-align:left}
+.jt th{color:var(--ink-3); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase}
+.jt tr:last-child td{border-bottom:0}
+.jt tr.matched{background:var(--server-wash)}
+.jt tr.unmatched{opacity:.45}
+.nullv{color:var(--ink-3); font-style:italic}
+
+/* ---------- plan tree ---------- */
+.plan{font-family:var(--mono); font-size:12px; line-height:1.7; background:var(--surface-2); border:1px solid var(--rule);
+  border-radius:3px; padding:14px 16px; overflow-x:auto; white-space:pre}
+.plan .node{color:var(--ink); font-weight:700}
+.plan .cost{color:var(--ink-3)}
+.plan .hot2{color:var(--bad); font-weight:700}
+.plan .cool{color:var(--good); font-weight:700}
+.idxlist{display:flex; flex-direction:column; gap:6px}
+.idxrow{display:flex; gap:10px; align-items:flex-start; border:1px solid var(--rule); border-radius:3px;
+  padding:8px 11px; background:var(--surface); cursor:pointer}
+.idxrow input{margin-top:3px; accent-color:var(--c-server); flex:none}
+.idxrow .ix{display:block; font-family:var(--mono); font-size:11.5px; color:var(--ink); line-height:1.5}
+.idxrow .ixd{display:block; font-size:13px; color:var(--ink-3); margin-top:3px; line-height:1.4}
+.idxrow.used{border-color:var(--c-server); background:var(--server-wash)}
+.gauge{display:flex; gap:14px; flex-wrap:wrap; margin-top:14px}
+.gauge .g{flex:1; min-width:110px; border:1px solid var(--rule); border-radius:3px; padding:10px 12px; background:var(--surface)}
+.gauge .gv{font-family:var(--display); font-weight:700; font-size:22px; line-height:1; font-variant-numeric:tabular-nums}
+.gauge .gl{font-family:var(--mono); font-size:9.5px; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-3); margin-top:6px}
+
+/* ---------- n+1 ---------- */
+.qlog{border:1px solid var(--rule); border-radius:3px; background:var(--surface); max-height:270px; overflow-y:auto}
+.qline{font-family:var(--mono); font-size:11px; padding:5px 11px; border-bottom:1px solid var(--rule); line-height:1.45;
+  display:grid; grid-template-columns:34px 1fr; gap:9px}
+.qline:last-child{border-bottom:0}
+.qline .qn2{color:var(--ink-3); text-align:right}
+.qline.extra{background:var(--alert-wash)} .qline.extra .qs{color:var(--bad)}
+.qline.one{background:var(--server-wash)} .qline.one .qs{color:var(--good)}
+.stratlist{display:grid; grid-template-columns:repeat(auto-fit,minmax(196px,1fr)); gap:7px; margin-bottom:16px}
+.strat{border:1px solid var(--rule); border-left:3px solid var(--rule-2); border-radius:3px; padding:10px 12px;
+  background:var(--surface); text-align:left; font-family:var(--body); font-size:14px; color:var(--ink); line-height:1.35}
+.strat:hover{border-color:var(--c-client)}
+.strat[aria-pressed="true"]{border-left-color:var(--c-wire); background:var(--wire-wash)}
+.strat code{font-size:11.5px}
+
+/* ---------- migrations ---------- */
+.miglist{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:7px; margin-bottom:16px}
+.migbtn{border:1px solid var(--rule); border-radius:3px; padding:9px 12px; background:var(--surface); text-align:left;
+  font-family:var(--mono); font-size:11.5px; color:var(--ink-2); line-height:1.45}
+.migbtn:hover{border-color:var(--c-client); color:var(--ink)}
+.migbtn[aria-pressed="true"]{background:var(--ink); color:var(--paper); border-color:var(--ink)}
+.lockbar{display:grid; grid-template-columns:150px 1fr 90px; gap:12px; align-items:center; margin-bottom:8px}
+@media(max-width:620px){.lockbar{grid-template-columns:1fr}}
+.lockbar .ln3{font-family:var(--mono); font-size:11px; color:var(--ink-2)}
+.lockbar .lbar{height:20px; border:1px solid var(--rule); border-radius:2px; background:var(--surface-2); overflow:hidden}
+.lockbar .lbar i{display:block; height:100%}
+.lockbar .lv{font-family:var(--mono); font-size:11px; text-align:right; color:var(--ink); font-variant-numeric:tabular-nums}
+
+/* ---------- redis ---------- */
+.usecards{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:8px; margin-bottom:16px}
+.usecard{border:1px solid var(--rule); border-left:3px solid var(--rule-2); border-radius:3px; padding:11px 13px;
+  background:var(--surface); text-align:left; font-family:var(--body); color:var(--ink)}
+.usecard:hover{border-color:var(--c-client)}
+.usecard[aria-pressed="true"]{border-left-color:var(--c-data); background:var(--data-wash)}
+.usecard .un{font-family:var(--display); font-weight:600; font-size:15px}
+.usecard .ud{font-size:13.5px; color:var(--ink-3); margin-top:4px; line-height:1.4}
+/* ---------- narrow-screen fixes ---------- */
+code{overflow-wrap:anywhere}
+.ctrls .seg{width:max-content; max-width:100%}
+@media(max-width:760px){
+  .ctrls .seg{width:auto}
+  .ctrls > .ctrl{min-width:0; width:100%; flex:1 1 100%}
+  .seg{flex-wrap:wrap; min-width:0}
+  .seg button{border-right:0; flex:1 1 auto; min-width:0}
+  .idxrow .ix,.idxrow .ixd{overflow-wrap:anywhere}
+  .migbtn,.opbtn,.strat{overflow-wrap:anywhere}
+  .gauge .g{min-width:0; flex:1 1 44%}
+}
+</style>
+<header class="masthead">
+  <div class="mast">
+    <div class="mast-top">
+      <div>
+        <div class="eyebrow">Full-Stack Atlas · Stage 08 · Level 3 Backend</div>
+        <h1>The Cost of Every Query</h1>
+      </div>
+      <button class="themebtn" id="themebtn" type="button">Theme</button>
+    </div>
+    <p class="lede">This is the largest gap in your course deck and the one that costs most. It builds against H2 in memory, never teaches SQL, never mentions an index or a query plan, never names the N+1 problem, and has no migrations at all. Everything below is the half that decides whether the API from Stage 7 is still fast at a hundred thousand rows.</p>
+  </div>
+</header>
+
+<nav class="navbar"><div class="navinner" id="nav"></div></nav>
+
+<main class="wrap">
+
+<!-- ============ 1 ============ -->
+<section class="module" id="m1" style="--tint:var(--data)">
+  <div class="mod-head"><span class="mod-n">01 / CONSTRAINTS</span><h2>The database is the only thing that is actually true</h2></div>
+  <p class="mod-q">Your service checks that a student has not already applied. Two requests arrive four milliseconds apart. What happens?</p>
+
+  <div class="prose">
+    <p>Stage 7 said a uniqueness rule must exist in both the service and the database. This is the demonstration, because the argument only lands once you have watched the interleaving.</p>
+    <p>The service check is a <code>SELECT</code> followed by an <code>INSERT</code>, and those are two statements. Between them, anything can happen — including the identical pair of statements from another request on another thread on another instance. No amount of care in application code closes that window, because the window is created by the gap between reading and writing.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Constraints under concurrency</h3><span class="kind">Interactive · two transactions</span></div>
+    <div class="ctrls">
+      <div class="ctrl" style="flex:1"><label>Business rule</label>
+        <div class="seg" data-group="rule" id="rule-seg"></div></div>
+      <div class="ctrl"><label>Enforced by</label>
+        <div class="seg" data-group="enf">
+          <button data-v="app" aria-pressed="true">Application code only</button>
+          <button data-v="db" aria-pressed="false">…plus a database constraint</button>
+        </div></div>
+    </div>
+    <div class="lab-body">
+      <pre id="rule-ddl" style="margin-bottom:16px"></pre>
+      <div class="txgrid" id="rule-grid"></div>
+      <div id="rule-note" style="margin-top:14px"></div>
+    </div>
+  </div>
+
+  <div class="prose">
+    <h4>What belongs in the schema</h4>
+    <p>The rule is not “put everything in the database”. It is: <b>an invariant that must hold no matter which code path wrote the row belongs in the schema.</b> That includes every rule your future self might violate from a migration script, a batch import, a support engineer's <code>psql</code> session, or a second service written next year.</p>
+    <ul>
+      <li><b><code>NOT NULL</code></b> on everything that is genuinely required. This is free, and it removes an entire category of null-handling from your Java. If you cannot decide, the answer is <code>NOT NULL</code> with a default.</li>
+      <li><b><code>UNIQUE</code></b> for identity rules. Note the composite case — <code>UNIQUE (email, cohort)</code> — and the partial case, which PostgreSQL supports and most people never discover: <code>CREATE UNIQUE INDEX … WHERE deleted_at IS NULL</code> gives you “unique among non-deleted rows”.</li>
+      <li><b><code>FOREIGN KEY</code></b> for every reference. An application row pointing at a deleted NGO is corruption, and the only reliable prevention is the database refusing it. Choose <code>ON DELETE</code> behaviour deliberately: <code>RESTRICT</code> by default, <code>CASCADE</code> only where the child genuinely cannot exist alone.</li>
+      <li><b><code>CHECK</code></b> for value rules — <code>amount &gt; 0</code>, <code>deadline &gt; created_at</code>, <code>status IN (…)</code>. Cheap, and they document the domain in the place people actually look.</li>
+    </ul>
+    <p>What does <i>not</i> belong: anything requiring a decision, a lookup across many rows, or a policy that will change. “A reviewer may not approve an application from their own NGO” is a service rule; the database has no business knowing about roles.</p>
+
+    <h4>Normalisation, briefly and practically</h4>
+    <p>Third normal form is worth reaching and rarely worth agonising over. The practical version: <b>store each fact once.</b> If an NGO's name appears in the application table, you now have two places to change it and a guaranteed drift. Denormalise deliberately and only with a measurement in hand — a materialised count, a cached display name — and when you do, write down what keeps it in sync.</p>
+    <p>The exception worth knowing: <b>historical facts are not the same fact.</b> An application's <code>awarded_amount</code> must be stored on the award row, not read through a join to the scholarship, because the scholarship's amount may change next year and the award happened at a specific one. Confusing “the current value” with “the value at the time” is the most common data-modelling bug in financial and academic systems alike.</p>
+
+    <h4>Choosing a primary key</h4>
+    <div class="matrix2">
+      <table>
+        <thead><tr><th>Strategy</th><th>Good</th><th>Bad</th></tr></thead>
+        <tbody>
+          <tr><td class="mono"><code>bigint GENERATED … AS IDENTITY</code></td>
+            <td>Small (8 bytes), sequential so index inserts land on the same page, fast joins, readable in logs.</td>
+            <td>Guessable and enumerable — never expose it in a URL without an authorization check, and Stage 9's object-level rule assumes you did not.</td></tr>
+          <tr><td class="mono"><code>uuid</code> (v4, random)</td>
+            <td>Generated by the client, safe to expose, no coordination needed across services.</td>
+            <td>16 bytes, and randomness scatters inserts across the whole B-tree — page splits, cache misses, and a measurably slower write path on large tables.</td></tr>
+          <tr><td class="mono"><code>uuid</code> (v7, time-ordered)</td>
+            <td>The modern compromise: opaque like v4, sequential like an identity column, so inserts stay clustered.</td>
+            <td>Still 16 bytes, and it leaks a creation timestamp — which is usually harmless and occasionally is not.</td></tr>
+          <tr><td class="mono">Natural key</td>
+            <td>No surrogate to maintain; the key means something.</td>
+            <td>Natural keys change. An email address, a registration number, a national identifier — every one of them has an edge case where it must be updated, and then you are cascading a key change through six tables.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>The recommendation for the capstone: <b><code>bigint</code> identity as the primary key, plus a separate <code>uuid</code> public identifier</b> on anything exposed in a URL. Internal joins stay small and fast; external references stay opaque and non-enumerable. It costs one extra column and one unique index.</p>
+  </div>
+
+  <div class="reads">
+    <a href="https://www.postgresql.org/docs/current/ddl-constraints.html" target="_blank" rel="noopener"><span class="src">Official</span>PostgreSQL constraints</a>
+    <a href="https://www.postgresql.org/docs/current/indexes-partial.html" target="_blank" rel="noopener"><span class="src">Official</span>Partial indexes</a>
+  </div>
+</section>
+
+<!-- ============ 2 ============ -->
+<section class="module" id="m2" style="--tint:var(--data)">
+  <div class="mod-head"><span class="mod-n">02 / SQL</span><h2>Joins, and the one that silently becomes another one</h2></div>
+  <p class="mod-q">Your deck teaches JPA's derived queries in seven slides and SQL in none. This is the twenty minutes that makes the rest of the stage readable.</p>
+
+  <div class="prose">
+    <p>You will read far more SQL than you write — in logs, in query plans, in Hibernate's output — and every abstraction above it leaks. Two small tables, every join type, and the result set as it actually comes back.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Join visualiser</h3><span class="kind">Interactive · pick a join</span></div>
+    <div class="ctrls">
+      <div class="ctrl" style="flex:1"><label>Join</label>
+        <div class="seg" data-group="join">
+          <button data-v="inner" aria-pressed="true">INNER</button>
+          <button data-v="left" aria-pressed="false">LEFT</button>
+          <button data-v="right" aria-pressed="false">RIGHT</button>
+          <button data-v="full" aria-pressed="false">FULL OUTER</button>
+          <button data-v="cross" aria-pressed="false">CROSS</button>
+          <button data-v="trap" aria-pressed="false">LEFT + WHERE</button>
+        </div></div>
+    </div>
+    <div class="lab-body">
+      <div class="jtabs" id="join-src"></div>
+      <pre id="join-sql" style="margin-bottom:14px"></pre>
+      <div class="cols">
+        <div id="join-res"></div>
+        <div id="join-note"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="prose">
+    <h4>The SQL worth being fluent in</h4>
+    <pre><i>-- Aggregation. Every non-aggregated column must be in GROUP BY;
+-- HAVING filters groups, WHERE filters rows, and the difference matters
+-- because WHERE runs first and is therefore much cheaper.</i>
+SELECT n.name, count(*) AS applications, sum(a.amount) AS requested
+FROM   application a
+JOIN   ngo n ON n.id = a.ngo_id
+WHERE  a.cohort = 2026                <i>-- filters rows, before grouping</i>
+GROUP  BY n.id, n.name
+HAVING count(*) &gt; 10                  <i>-- filters groups, after</i>
+ORDER  BY requested DESC;
+
+<i>-- Window functions: aggregate without collapsing rows. This is the tool
+-- most people reach for a loop in Java instead of, and it is not close.</i>
+SELECT id, student_name, amount,
+       rank() OVER (PARTITION BY cohort ORDER BY amount DESC) AS rank_in_cohort,
+       amount - avg(amount) OVER (PARTITION BY cohort)        AS vs_cohort_avg
+FROM   application;
+
+<i>-- A CTE for readability. In PostgreSQL 12+ these are inlined by the planner
+-- unless you write MATERIALIZED, so they are free to use for clarity.</i>
+WITH awarded AS (
+    SELECT application_id, sum(amount) AS total
+    FROM   award GROUP BY application_id
+)
+SELECT a.id, a.student_name, coalesce(w.total, 0) AS awarded
+FROM   application a
+LEFT   JOIN awarded w ON w.application_id = a.id;</pre>
+    <p>Two habits worth forming immediately. <b>Never <code>SELECT *</code> in application code</b> — it transfers columns you do not need, breaks when someone adds a column, and prevents index-only scans. And <b>always alias your tables</b>, because a three-table join without aliases is unreadable and a self-join without them is impossible.</p>
+  </div>
+
+  <div class="reads">
+    <a href="https://www.postgresql.org/docs/current/queries-table-expressions.html" target="_blank" rel="noopener"><span class="src">Official</span>PostgreSQL joins</a>
+    <a href="https://www.postgresql.org/docs/current/tutorial-window.html" target="_blank" rel="noopener"><span class="src">Official</span>Window functions</a>
+  </div>
+</section>
+
+<!-- ============ 3 ============ -->
+<section class="module" id="m3" style="--tint:var(--data)">
+  <div class="mod-head"><span class="mod-n">03 / PLANS</span><h2>Indexes, and reading what the planner decided</h2></div>
+  <p class="mod-q">240,000 applications. The list endpoint from Stage 4 takes 340 ms. Which index fixes it, and how would you know?</p>
+
+  <div class="prose">
+    <p>An index is a sorted structure that lets the database find rows without reading the table. That is the whole idea, and everything interesting follows from three consequences: an index can only help if the query's predicate matches its <b>leading columns</b>, an index that also covers the <code>ORDER BY</code> removes the sort entirely, and every index makes every write slower.</p>
+    <p>Pick a query, add indexes, and read the plan. The numbers are modelled on a 240,000-row table.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Plan explorer</h3><span class="kind">Interactive · toggle indexes</span></div>
+    <div class="ctrls">
+      <div class="ctrl" style="flex:1"><label>Query</label>
+        <div class="seg" data-group="q" id="q-seg"></div></div>
+      <div class="ctrl"><label>&nbsp;</label>
+        <button class="ghostbtn" id="ix-none" type="button">Drop all indexes</button></div>
+    </div>
+    <div class="lab-body">
+      <pre id="q-sql" style="margin-bottom:16px"></pre>
+      <div class="cols">
+        <div>
+          <div class="rlabel">Indexes on <code>application</code></div>
+          <div class="idxlist" id="ix-list"></div>
+        </div>
+        <div>
+          <div class="rlabel">EXPLAIN (ANALYZE, BUFFERS)</div>
+          <div class="plan" id="q-plan"></div>
+          <div class="gauge" id="q-gauge"></div>
+        </div>
+      </div>
+      <div id="q-note" style="margin-top:16px"></div>
+    </div>
+  </div>
+
+  <div class="prose">
+    <h4>Reading a plan, in the order that matters</h4>
+    <p>Read it inside out — the most indented node runs first — and look at four things before anything else:</p>
+    <ul>
+      <li><b>Seq Scan on a large table</b> with a selective filter. Usually means no usable index, occasionally means the planner correctly decided a scan is cheaper. On a small table it is right and you should leave it alone.</li>
+      <li><b>The gap between <code>rows=</code> and <code>actual rows=</code>.</b> The first is the planner's estimate, the second is reality. A large divergence means the statistics are stale (<code>ANALYZE</code>) or the data is correlated in a way the planner cannot see — and every bad plan downstream follows from a bad estimate here.</li>
+      <li><b>A <code>Sort</code> node with a large <code>Sort Method: external merge Disk</code>.</b> The sort spilled out of <code>work_mem</code>. Either index the ordering away or give the sort more memory.</li>
+      <li><b><code>Rows Removed by Filter</code>.</b> This is wasted work made visible: rows the database read and then discarded. A big number next to a small result is the signature of a missing or wrong index.</li>
+    </ul>
+    <p>Use <code>EXPLAIN (ANALYZE, BUFFERS)</code>, not bare <code>EXPLAIN</code>. <code>ANALYZE</code> actually runs the query and reports real timings; <code>BUFFERS</code> shows how many pages came from cache versus disk, which is what separates “slow query” from “cold cache”. Be aware that <code>ANALYZE</code> executes the statement — wrap a write in a transaction you roll back.</p>
+
+    <h4>Composite index column order</h4>
+    <p>The single most useful rule in this module: <b>equality columns first, then the range or sort column.</b> An index on <code>(cohort, status, deadline)</code> serves <code>WHERE cohort = ? AND status = ? ORDER BY deadline</code> perfectly — it seeks straight to the matching block and reads it already in order. The same columns as <code>(deadline, cohort, status)</code> serve it not at all, because the leading column is not in the predicate. Same columns, same size, completely different index.</p>
+
+    <h4>What indexes cost</h4>
+    <p>Every index is a second structure that must be updated on every <code>INSERT</code>, <code>UPDATE</code> of an indexed column, and <code>DELETE</code>. Eight indexes on a hot table means every write does nine writes. They also consume memory that would otherwise cache the table, and they must be maintained during migrations. The discipline is to <b>add indexes in response to measured queries, and to periodically look for unused ones</b> — PostgreSQL's <code>pg_stat_user_indexes</code> tells you which have never been scanned, and dropping those is one of the cheapest performance wins available.</p>
+  </div>
+
+  <div class="taskbox exp"><h4>Experiment</h4>
+    <p>Run the list-endpoint query with only <code>idx_status</code> enabled, then swap it for <code>idx_cohort_status_deadline</code>. The first gives you a bitmap scan over seventy thousand rows and a sort; the second returns twenty rows without sorting anything. Then enable the covering index and watch the plan lose its heap access entirely — an <b>Index Only Scan</b>, which is the fastest thing in this module and the reason <code>INCLUDE</code> exists.</p></div>
+
+  <div class="reads">
+    <a href="https://www.postgresql.org/docs/current/using-explain.html" target="_blank" rel="noopener"><span class="src">Official</span>Using EXPLAIN</a>
+    <a href="https://www.postgresql.org/docs/current/indexes-index-only-scans.html" target="_blank" rel="noopener"><span class="src">Official</span>Index-only scans</a>
+    <a href="https://use-the-index-luke.com/" target="_blank" rel="noopener"><span class="src">Reference</span>Use The Index, Luke</a>
+  </div>
+</section>
+
+<!-- ============ 4 ============ -->
+<section class="module" id="m4" style="--tint:var(--server)">
+  <div class="mod-head"><span class="mod-n">04 / N+1</span><h2>The problem your deck never names</h2></div>
+  <p class="mod-q">One endpoint, twenty rows on the page. Forty-one queries went to the database. Nothing in your code says “forty-one”.</p>
+
+  <div class="prose">
+    <p>This is the most common performance bug in JPA applications, it is invisible in code review, and it does not appear in your course material at any point — including in the slides that teach lazy loading, which is the mechanism that causes it.</p>
+    <p>The setup is ordinary: an endpoint returns twenty applications; each has a student (a <code>@ManyToOne</code>) and some documents (a <code>@OneToMany</code>); the mapper reads both while building the response DTO. Every one of those reads on a lazy association is a separate <code>SELECT</code>. Try the strategies.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Query counter</h3><span class="kind">Interactive · pick a strategy</span></div>
+    <div class="lab-body">
+      <div class="stratlist" id="n1-list"></div>
+      <div class="gauge" id="n1-gauge" style="margin-bottom:16px"></div>
+      <div class="cols">
+        <div><div class="rlabel">Hibernate SQL log</div><div class="qlog" id="n1-log"></div></div>
+        <div><pre id="n1-code" style="margin-bottom:14px"></pre><div id="n1-note"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="prose">
+    <h4>How to notice it before production does</h4>
+    <p>An N+1 is undetectable by reading the code and trivially detectable by counting queries. Three ways, in increasing order of how much you should trust them:</p>
+    <ol>
+      <li><b><code>spring.jpa.show-sql</code></b> in development. Crude, noisy, and enough to spot forty-one statements where you expected one.</li>
+      <li><b>Hibernate statistics</b> — <code>spring.jpa.properties.hibernate.generate_statistics=true</code> logs the query count per session. Better, because it gives you a number rather than a wall of text.</li>
+      <li><b>An assertion in your tests.</b> This is the one that actually holds the line: a test that fails when an endpoint issues more queries than it should. Libraries exist for it, and Stage 10's Testcontainers setup is where it belongs. An N+1 that cannot reappear is worth more than one you fixed.</li>
+    </ol>
+
+    <h4>The pagination trap</h4>
+    <p>The single nastiest interaction in this module, and it deserves its own warning. Combine a <code>JOIN FETCH</code> of a collection with a <code>Pageable</code> and Hibernate logs this:</p>
+    <pre class="err">HHH90003004: firstResult/maxResults specified with collection fetch;
+             applying in memory</pre>
+    <p>It is telling you that it <b>loaded every matching row into heap and paginated in Java</b>. Page 1 of 240,000 applications is now a full table load. It is a warning, not an error; the endpoint works, returns correct data, and destroys the server under load. The fix is two queries — page the ids first, then fetch the collections for that page — which is exactly what <code>@BatchSize</code> or a two-step repository method does for you.</p>
+
+    <h4>The strategy that ends most of this</h4>
+    <p>Notice which row in the counter above is best on every axis: the <b>DTO projection</b>. It selects exactly the columns the response needs, in one query, with no entities, no lazy associations, no dirty checking, and no persistence context to manage. Stage 7 already established that entities must not cross the controller boundary — this is the same decision paying off again, because once the response is a record, there is no reason to load an entity graph at all.</p>
+    <pre><i>// One query, one row per application, only the columns that get serialised.</i>
+<b>public interface</b> ApplicationRepository <b>extends</b> JpaRepository&lt;Application, Long&gt; {
+
+    <b>@Query</b>("""
+        select new org.scholarships.web.ApplicationRow(
+                 a.id, s.fullName, a.status, a.deadline, count(d.id))
+        from   Application a
+        join   a.student s
+        left   join a.documents d
+        where  a.cohort = :cohort and a.status = :status
+        group  by a.id, s.fullName, a.status, a.deadline
+        """)
+    Page&lt;ApplicationRow&gt; findRows(<b>@Param</b>("cohort") <b>int</b> cohort,
+                                 <b>@Param</b>("status") ApplicationStatus status,
+                                 Pageable pageable);
+}
+
+<i>// Keep entities for the write side, where you need dirty checking and
+// the domain model. Use projections for the read side, where you do not.
+// That split is the useful half of CQRS, and it costs nothing — Stage 15.</i></pre>
+  </div>
+
+  <div class="mistakes">
+    <details class="mistake"><summary><span class="x">✕</span><span>Setting <code>FetchType.EAGER</code> to “fix” it</span></summary>
+      <div class="in"><p>It moves the problem rather than solving it: every query that touches the entity now loads the association, including the ones that did not want it, and collections are still fetched with separate selects. <code>EAGER</code> is a global decision made to satisfy one local case. Keep everything <code>LAZY</code> and fetch explicitly per query — which is the reverse of what many tutorials suggest, and is the consensus of every team that has maintained a JPA application for two years.</p></div></details>
+    <details class="mistake"><summary><span class="x">✕</span><span>Two <code>JOIN FETCH</code>es on collections in one query</span></summary>
+      <div class="in"><p><code>MultipleBagFetchException</code>, or — if you use <code>Set</code> instead of <code>List</code> and dodge the exception — a silent cartesian product: twenty applications × three documents × four reviews is 240 rows to build 20 objects. Fetch one collection per query, and use <code>@BatchSize</code> for the rest.</p></div></details>
+    <details class="mistake"><summary><span class="x">✕</span><span>Open Session In View</span></summary>
+      <div class="in"><p>Spring Boot enables it by default, and it hides N+1 problems by keeping the persistence context — and a database connection — open for the whole request, including while Jackson serialises. That is a connection held during work that has nothing to do with the database, which Stage 11 will show you is exactly how a connection pool gets exhausted. Set <code>spring.jpa.open-in-view=false</code> on day one and fix the <code>LazyInitializationException</code>s it reveals: each one is a place you were loading data outside a transaction without meaning to.</p></div></details>
+  </div>
+
+  <div class="reads">
+    <a href="https://docs.spring.io/spring-data/jpa/reference/jpa/entity-graph.html" target="_blank" rel="noopener"><span class="src">Official</span>Entity graphs</a>
+    <a href="https://docs.spring.io/spring-data/jpa/reference/repositories/projections.html" target="_blank" rel="noopener"><span class="src">Official</span>Projections</a>
+    <a href="https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html#fetching" target="_blank" rel="noopener"><span class="src">Reference</span>Hibernate fetching</a>
+  </div>
+</section>
+
+<!-- ============ 5 ============ -->
+<section class="module" id="m5" style="--tint:var(--wire)">
+  <div class="mod-head"><span class="mod-n">05 / TRANSACTIONS</span><h2>Isolation, and the anomalies you are choosing to allow</h2></div>
+  <p class="mod-q">Your deck teaches <code>@Transactional</code>'s mechanics well. It does not mention that the default isolation level permits three distinct ways to be wrong.</p>
+
+  <div class="prose">
+    <p>A transaction gives you atomicity and durability whatever you do. <b>Isolation is the part you configure</b>, and the default — <code>READ COMMITTED</code> in PostgreSQL, which is also Spring's default — is a deliberate trade of correctness for concurrency. It is the right default. It is not a guarantee that concurrent transactions behave as if they ran one after another, and the gap is where a class of bugs lives that testing almost never finds.</p>
+    <p>Run each anomaly at each level.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Isolation explorer</h3><span class="kind">Interactive · two transactions</span></div>
+    <div class="ctrls">
+      <div class="ctrl"><label>Scenario</label>
+        <div class="seg" data-group="anom">
+          <button data-v="nonrep" aria-pressed="true">Non-repeatable read</button>
+          <button data-v="phantom" aria-pressed="false">Phantom</button>
+          <button data-v="lost" aria-pressed="false">Lost update</button>
+          <button data-v="skew" aria-pressed="false">Write skew</button>
+        </div></div>
+      <div class="ctrl"><label>Isolation level</label>
+        <div class="seg" data-group="iso">
+          <button data-v="rc" aria-pressed="true">READ COMMITTED</button>
+          <button data-v="rr" aria-pressed="false">REPEATABLE READ</button>
+          <button data-v="ser" aria-pressed="false">SERIALIZABLE</button>
+        </div></div>
+    </div>
+    <div class="lab-body">
+      <div class="txgrid" id="iso-grid"></div>
+      <div id="iso-note" style="margin-top:14px"></div>
+    </div>
+  </div>
+
+  <div class="prose">
+    <h4>Two things about PostgreSQL specifically</h4>
+    <p><b>Dirty reads never happen.</b> PostgreSQL's <code>READ UNCOMMITTED</code> behaves as <code>READ COMMITTED</code>; its multi-version storage makes uncommitted data invisible by construction. So the classic four-anomaly table you may have memorised has one row that simply does not apply here.</p>
+    <p><b><code>REPEATABLE READ</code> also prevents phantoms.</b> The SQL standard permits them at that level; PostgreSQL's snapshot isolation does not, because the whole transaction sees one consistent snapshot. What it does not prevent is <b>write skew</b> — two transactions each reading a condition, each finding it satisfied, and each writing something that invalidates it for the other. That is what <code>SERIALIZABLE</code> and its predicate locking exist for.</p>
+    <p>The practical consequence: at <code>REPEATABLE READ</code> and above, <b>your transaction can fail with a serialization error at commit time and that is normal.</b> The application must be prepared to retry it — which means the transaction must be idempotent or retryable, which is the same design pressure as Stage 7's idempotency key, arriving from a different direction.</p>
+
+    <h4>Locking, and which one to reach for</h4>
+    <pre><i>// Optimistic — the default choice. A version column, checked on write.
+// No locks are held; a conflict is detected at flush and becomes a 409.</i>
+<b>@Entity</b>
+<b>class</b> Application {
+    <b>@Version</b> <b>private long</b> version;      <i>// Hibernate manages this</i>
+}
+<i>// UPDATE application SET …, version = 4 WHERE id = ? AND version = 3
+//   → 0 rows updated → OptimisticLockingFailureException → Stage 7's 409</i>
+
+<i>// Pessimistic — take the lock up front. Correct when a conflict is likely
+// and a retry is expensive, and dangerous because locks are held for the
+// whole transaction and can deadlock.</i>
+<b>@Lock</b>(LockModeType.PESSIMISTIC_WRITE)
+<b>@Query</b>("select b from CohortBudget b where b.cohort = :cohort")
+Optional&lt;CohortBudget&gt; findForUpdate(<b>@Param</b>("cohort") <b>int</b> cohort);
+<i>// SELECT … FOR UPDATE — other transactions block here until you commit.</i>
+
+<i>// Often better than either: let the database do the arithmetic atomically.
+// No read, no version, no lock held across application code.</i>
+<b>@Modifying</b>
+<b>@Query</b>("update CohortBudget b set b.remaining = b.remaining - 1 " +
+       "where b.cohort = :cohort and b.remaining &gt; 0")
+<b>int</b> tryConsume(<b>@Param</b>("cohort") <b>int</b> cohort);   <i>// returns 0 if it failed</i></pre>
+    <p>That last form deserves emphasis, because it is the one people reach for last and should reach for first. <code>UPDATE … WHERE remaining &gt; 0</code> returning a row count is a compare-and-swap: it is atomic, needs no isolation level above the default, holds no lock across your code, and cannot lose an update. When a business rule can be expressed as a conditional write, express it as one.</p>
+
+    <h4>Transaction scope</h4>
+    <p>Three rules that follow from Stage 6's proxy trace. Transactions belong on the <b>service</b>, not the controller and not the repository — one business operation, one transaction. Keep them <b>short</b>: a transaction that spans an HTTP call to a payment provider holds a database connection for the duration of somebody else's outage. And mark read-only work <code>@Transactional(readOnly = true)</code>, which lets Hibernate skip dirty checking and lets PostgreSQL route to a replica if you have one.</p>
+  </div>
+
+  <div class="reads">
+    <a href="https://www.postgresql.org/docs/current/transaction-iso.html" target="_blank" rel="noopener"><span class="src">Official</span>PostgreSQL transaction isolation</a>
+    <a href="https://docs.spring.io/spring-framework/reference/data-access/transaction/declarative.html" target="_blank" rel="noopener"><span class="src">Official</span>Declarative transactions</a>
+  </div>
+</section>
+
+<!-- ============ 6 ============ -->
+<section class="module" id="m6" style="--tint:var(--server)">
+  <div class="mod-head"><span class="mod-n">06 / MIGRATIONS</span><h2>Changing a schema that is being used right now</h2></div>
+  <p class="mod-q">Your deck has no migrations at all — the schema comes from Hibernate's <code>ddl-auto</code> and a <code>data.sql</code>. That works exactly until there is data you cannot lose.</p>
+
+  <div class="prose">
+    <p>Two things need saying before the mechanics. First: <b><code>spring.jpa.hibernate.ddl-auto</code> must be <code>validate</code> in every environment above your laptop</b>, and never <code>update</code>. <code>update</code> makes changes it thinks are safe, never removes anything, cannot be reviewed, cannot be rolled back, and behaves differently depending on what the schema already happened to be. It is not a migration tool and was never intended as one.</p>
+    <p>Second: the schema is code. It belongs in version control, in numbered files, applied in order, with a checksum so a file that changed after being applied is an error rather than a mystery. That is what Flyway does, and the whole of it is four conventions.</p>
+    <pre>src/main/resources/db/migration/
+  V1__initial_schema.sql
+  V2__add_cohort_budget.sql
+  V3__add_application_status_index.sql
+  V4__backfill_public_ids.sql
+  R__reporting_views.sql        <i># repeatable — re-applied whenever it changes</i></pre>
+    <p>Flyway records each applied version in a <code>flyway_schema_history</code> table with a checksum, runs pending migrations at startup inside a transaction where the database supports it (PostgreSQL does, for DDL), and refuses to start if history and files disagree. Combined with <code>ddl-auto: validate</code>, Hibernate then checks that the entities match the schema Flyway produced — so a mismatch fails at boot rather than on the first request.</p>
+    <p>The interesting part is not writing migrations. It is knowing which ones lock the table.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>Migration safety</h3><span class="kind">Interactive · pick a change</span></div>
+    <div class="lab-body">
+      <div class="miglist" id="mig-list"></div>
+      <div id="mig-out"></div>
+    </div>
+  </div>
+
+  <div class="prose">
+    <h4>Expand and contract</h4>
+    <p>Every genuinely breaking schema change becomes safe when you split it across releases, and the pattern is always the same four steps. Renaming <code>student_name</code> to <code>full_name</code>:</p>
+    <ol>
+      <li><b>Expand.</b> Add <code>full_name</code> as nullable. Deploy. Nothing reads it yet.</li>
+      <li><b>Backfill and dual-write.</b> Copy existing values in batches; change the application to write both columns and read the old one. Deploy.</li>
+      <li><b>Switch reads.</b> Read <code>full_name</code>, still write both. Deploy. This is the release you can roll back without losing data.</li>
+      <li><b>Contract.</b> Stop writing the old column, then drop it in a later migration.</li>
+    </ol>
+    <p>Four deploys instead of one, and at no point is there a moment where a running instance of either version is broken. That matters because <b>a rolling deploy runs both versions simultaneously</b> — which is the fact that makes “just rename it” wrong, and which Stage 14 will make unavoidable.</p>
+    <p>Two more habits worth adopting now: <b>never edit an applied migration</b> (Flyway's checksum will catch it, and the fix is a new file), and <b>separate schema changes from data backfills</b> — a <code>V5__add_column.sql</code> that also updates ten million rows holds a transaction open for an hour, bloats the table, and cannot be reasoned about. Backfill in batches, from application code or a separate job, with a commit per batch.</p>
+  </div>
+
+  <div class="taskbox chal"><h4>Challenge</h4>
+    <p>Write the capstone's <code>V1__initial_schema.sql</code> by hand — students, guardians, schools, NGOs, scholarships, applications, documents, awards, consents, audit entries — with every foreign key, every check constraint, every unique index (including the partial one for soft-deleted rows), and no Hibernate involvement at all. Then set <code>ddl-auto: validate</code> and start the application. Every mismatch it reports is a place where your mental model and your entities disagreed, and finding them now is much cheaper than finding them in Stage 14.</p></div>
+
+  <div class="reads">
+    <a href="https://documentation.red-gate.com/fd" target="_blank" rel="noopener"><span class="src">Official</span>Flyway</a>
+    <a href="https://www.postgresql.org/docs/current/sql-altertable.html" target="_blank" rel="noopener"><span class="src">Official</span>ALTER TABLE &amp; locking</a>
+    <a href="https://www.postgresql.org/docs/current/explicit-locking.html" target="_blank" rel="noopener"><span class="src">Official</span>Lock modes</a>
+  </div>
+</section>
+
+<!-- ============ 7 ============ -->
+<section class="module" id="m7" style="--tint:var(--data)">
+  <div class="mod-head"><span class="mod-n">07 / REDIS</span><h2>The second data store, and the four jobs it is for</h2></div>
+  <p class="mod-q">Redis appears nowhere in your deck. It appears in your target architecture, so here is what it is actually for.</p>
+
+  <div class="prose">
+    <p>Redis is an in-memory data structure server. That phrasing matters: it is not “a cache”, it is a set of primitives — strings, hashes, sorted sets, atomic counters, expiry, pub/sub — that happen to be excellent for four jobs a relational database is bad at. Pick one.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><h3>What goes in Redis</h3><span class="kind">Interactive · pick a job</span></div>
+    <div class="lab-body">
+      <div class="usecards" id="rd-list"></div>
+      <div id="rd-out"></div>
+    </div>
+  </div>
+
+  <div class="prose">
+    <h4>The rule that keeps a cache honest</h4>
+    <p><b>A cache must be able to disappear without the application becoming incorrect.</b> If losing Redis loses data, it was not a cache — it was your primary store, chosen by accident. Session state is the usual place this line gets crossed, and it is a legitimate crossing as long as you have decided it deliberately: sessions in Redis means a Redis failure logs everybody out, which is an availability decision with a product consequence, not a technical detail.</p>
+    <p>The corollary is that every cache read must have a fallback path, and every cache write must be allowed to fail silently. A <code>@Cacheable</code> method whose cache is unreachable should hit the database and log, not return a 500.</p>
+
+    <h4>What your deck taught, and where it stops</h4>
+    <p>Slides 355–361 cover Spring's cache abstraction properly — <code>@EnableCaching</code>, <code>@Cacheable</code>, <code>@CachePut</code>, <code>@CacheEvict</code>, and Caffeine with a TTL. That abstraction is the right one, and switching from Caffeine to Redis is a dependency and a configuration block, not a code change. The distinction the deck does not draw is the one that decides which you want:</p>
+    <ul>
+      <li><b>Caffeine is in-process.</b> Nanosecond reads, zero network, and <i>a separate copy per instance</i>. Three instances means three caches that can disagree, and an eviction on one does nothing to the other two. Correct for immutable reference data; wrong for anything a mutation must invalidate.</li>
+      <li><b>Redis is shared.</b> A network hop per read — hundreds of microseconds rather than nanoseconds — in exchange for one truth across every instance, invalidation that actually works, and survival across restarts and deploys.</li>
+    </ul>
+    <p>Most systems want both: Caffeine in front of Redis in front of PostgreSQL, with the in-process layer holding only things that never need invalidating. Reaching for that arrangement before you have measured anything is, however, exactly the mistake Stage 11 is about.</p>
+    <pre><i>// The same annotations from your deck, now backed by Redis and shared
+// across every instance. Note the eviction: a mutation must invalidate,
+// and this is the line people forget until the data goes stale in production.</i>
+<b>@Cacheable</b>(value = "scholarships", key = "#id")
+Scholarship find(<b>long</b> id) { <b>return</b> repository.findById(id).orElseThrow(); }
+
+<b>@CacheEvict</b>(value = "scholarships", key = "#s.id")
+Scholarship update(Scholarship s) { <b>return</b> repository.save(s); }
+
+<i>// Configure per-cache TTLs — one global TTL for every cache is a smell,
+// because reference data and a user's dashboard do not decay at the same rate.</i>
+<b>@Bean</b>
+RedisCacheManagerBuilderCustomizer ttls() {
+    <b>return</b> b -&gt; b
+        .withCacheConfiguration("scholarships",
+            RedisCacheConfiguration.defaultCacheConfig().entryTtl(Duration.ofMinutes(10)))
+        .withCacheConfiguration("ngos",
+            RedisCacheConfiguration.defaultCacheConfig().entryTtl(Duration.ofHours(6)));
+}</pre>
+  </div>
+
+  <div class="reads">
+    <a href="https://redis.io/docs/latest/develop/" target="_blank" rel="noopener"><span class="src">Official</span>Redis data types</a>
+    <a href="https://docs.spring.io/spring-boot/reference/io/caching.html" target="_blank" rel="noopener"><span class="src">Official</span>Spring Boot caching</a>
+    <a href="https://redis.io/docs/latest/develop/use/patterns/distributed-locks/" target="_blank" rel="noopener"><span class="src">Official</span>Distributed locks &amp; their caveats</a>
+  </div>
+</section>
+
+<!-- ============ 8 ============ -->
+<section class="module" id="m8" style="--tint:var(--data)">
+  <div class="mod-head"><span class="mod-n">08 / CLOSING</span><h2>What you should now be able to do</h2></div>
+  <div class="prose">
+    <h4>Self-check</h4>
+    <ol>
+      <li>Why can a uniqueness check in your service never be sufficient on its own?</li>
+      <li>Which invariants belong in the schema, and which belong in the service?</li>
+      <li>Why is a <code>LEFT JOIN</code> with a <code>WHERE</code> on the right-hand table usually a bug?</li>
+      <li>Same three columns, two orders: <code>(cohort, status, deadline)</code> versus <code>(deadline, cohort, status)</code>. Why does only one serve the list query?</li>
+      <li>Name four things to look at first in an <code>EXPLAIN ANALYZE</code> output.</li>
+      <li>What is an Index Only Scan and what makes one possible?</li>
+      <li>Twenty rows, forty-one queries. Explain the arithmetic and give three fixes with different trade-offs.</li>
+      <li>What does <code>HHH90003004</code> mean and why is it worse than an exception?</li>
+      <li>Which anomalies does PostgreSQL's <code>READ COMMITTED</code> permit, and which does <code>REPEATABLE READ</code> still permit?</li>
+      <li>When would you use a conditional <code>UPDATE … WHERE remaining &gt; 0</code> rather than a version column or a lock?</li>
+      <li>Why is <code>ddl-auto: update</code> unacceptable outside a laptop?</li>
+      <li>Rename a column with zero downtime. List the deploys.</li>
+      <li>Caffeine or Redis — what is the one question that decides it?</li>
+    </ol>
+
+    <h4>The capstone increment</h4>
+    <ul>
+      <li><b>PostgreSQL, from a container</b>, replacing H2 everywhere except fast slice tests — with a <code>docker compose</code> service you will reuse verbatim in Stage 13.</li>
+      <li><b>A hand-written <code>V1__initial_schema.sql</code></b> under Flyway, with every foreign key, check constraint and unique index — including a partial unique index for soft deletes — and <code>ddl-auto: validate</code> so the entities are checked against it at boot.</li>
+      <li><b>The full domain</b> mapped: students, guardians, schools, NGOs, scholarships, applications, documents, awards, consents and audit entries, with all four cardinalities, everything <code>LAZY</code>, and <code>open-in-view</code> off.</li>
+      <li><b>The list endpoint as a DTO projection</b> — one query, exactly the columns the response needs, with a composite index that serves both the filter and the sort, proven by <code>EXPLAIN (ANALYZE, BUFFERS)</code> before and after.</li>
+      <li><b>A query-count assertion</b> on the two hottest endpoints, so an N+1 cannot be reintroduced silently.</li>
+      <li><b>Optimistic locking</b> via <code>@Version</code> on applications and awards, surfacing as Stage 7's <code>409</code>; and a conditional <code>UPDATE</code> for the cohort budget, so the double-award from Stage 5 is impossible at the storage layer as well as at the API.</li>
+      <li><b>Redis</b> for the scholarship and NGO caches with per-cache TTLs, the rate limiter in front of the write endpoints, and a distributed lock guarding the nightly award-disbursement job.</li>
+    </ul>
+
+    <h4>Where your deck helps, and where it stops</h4>
+    <p>Slides 164–176, 298–312 and 337–354 are genuinely thorough on the JPA <i>mapping</i> layer: the repository hierarchy, derived-query keywords, all four relationship types, fetch and cascade semantics, <code>orphanRemoval</code>, <code>@Query</code> with JPQL and native SQL, <code>@Modifying</code>, and <code>@Transactional</code>'s rollback rules and proxy limitations. Read them for the annotations. What they cannot give you is the layer underneath — the deck's working database is H2 in memory, so there is never a real query plan, a real index, a real lock, or a real migration to look at, and the N+1 problem that lazy loading creates is never named even though lazy loading is taught. Those four absences are the whole of this stage.</p>
+  </div>
+
+  <div class="callout" style="border-left-color:var(--c-server); background:var(--server-wash)">
+    <h4 style="color:var(--server)">Next</h4>
+    <p style="margin-bottom:0">Stage 9 — <i>Authentication, Authorization and the Attacks You Invite</i>. The end-to-end flow your deck explains conceptually and never implements: Spring Boot actually issuing a JWT, a filter that validates it, refresh and revocation, a JPA-backed <code>UserDetailsService</code>, method security, and the object-level authorization rule that decides whether one NGO can read another's applications.</p>
+  </div>
+</section>
+
+</main>
+
+<footer><div class="wrap">
+  <p><b style="font-family:var(--display); color:var(--ink)">Sources.</b> PostgreSQL behaviour — isolation levels, lock modes, index types, <code>ALTER TABLE</code> semantics — is stated per the official documentation for the current release, linked inline; JPA and Spring Data behaviour per their reference documentation. The plan explorer, query counter and isolation explorer are models built on those documented semantics with representative numbers for a 240,000-row table; they are teaching instruments, not measurements of your database. Run <code>EXPLAIN (ANALYZE, BUFFERS)</code> against your own data before believing anything about your own queries.</p>
+  <p style="margin-top:12px">Where this page recommends a practice — <code>bigint</code> keys with a separate public UUID, everything <code>LAZY</code>, <code>open-in-view</code> off, DTO projections for reads, <code>ddl-auto: validate</code> with Flyway, expand-and-contract for every breaking change — that is an architectural recommendation with reasoning attached. Stage 8 of the Full-Stack Atlas.</p>
+</div></footer>
+
+<div class="tip" id="tip"></div>
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const state = {rule:"dup", enf:"app", join:"inner", q:"list", anom:"nonrep", iso:"rc"};
+function segGroup(g, cb){
+  $$(`.seg[data-group="${g}"] button`).forEach(b=>b.addEventListener("click",()=>{
+    $$(`.seg[data-group="${g}"] button`).forEach(x=>x.setAttribute("aria-pressed", x===b?"true":"false"));
+    state[g]=b.dataset.v; cb(b.dataset.v);
+  }));
+}
+function txGrid(steps, el){
+  let h = `<div></div><div class="txhead t1">Transaction 1</div><div class="txhead t2">Transaction 2</div>`;
+  steps.forEach((s,i)=>{
+    const cell = `<div class="txcell t${s.side} ${s.cls||""}" data-tx="Transaction ${s.side}">${esc(s.sql)}${s.res?`<span class="res ${s.rc||""}">${esc(s.res)}</span>`:""}</div>`;
+    h += `<div class="txt">t${i}</div>`;
+    h += s.side===1 ? cell + `<div class="txcell empty"></div>` : `<div class="txcell empty"></div>` + cell;
+  });
+  el.innerHTML = h;
+}
+
+/* ============ 1. constraints ============ */
+const RULES = [
+{v:"dup", k:"One application per cohort",
+ ddl:`<i>-- The rule, expressed where it is actually enforceable</i>
+ALTER TABLE application
+  ADD CONSTRAINT uk_application_email_cohort UNIQUE (email, cohort);`,
+ steps:[
+  {side:1, sql:"SELECT count(*) FROM application\n WHERE email = 'ira@example.org' AND cohort = 2026;", res:"0 — service concludes: no duplicate"},
+  {side:2, sql:"SELECT count(*) FROM application\n WHERE email = 'ira@example.org' AND cohort = 2026;", res:"0 — service concludes: no duplicate"},
+  {side:1, sql:"INSERT INTO application (email, cohort, …)\n VALUES ('ira@example.org', 2026, …);", res:"INSERT 0 1", rc:"okr"},
+  {side:2, sql:"INSERT INTO application (email, cohort, …)\n VALUES ('ira@example.org', 2026, …);",
+   res:"INSERT 0 1", rc:"okr", cls:"bad2",
+   dbRes:"ERROR: duplicate key value violates\nunique constraint \"uk_application_email_cohort\"", dbRc:"err", dbCls:"good2"}],
+ app:["no","Two applications, and no bug in your code",
+  "Both transactions read before either wrote, so both correctly concluded there was no duplicate. The check was not wrong — it was <b>not atomic</b>. Nothing you can write in Java closes a window created by the gap between a <code>SELECT</code> and an <code>INSERT</code>; only the database, which owns both, can."],
+ db:["ok","One application, and a clean error to translate",
+  "The second insert violates the unique index and PostgreSQL rejects it. Your service catches <code>DataIntegrityViolationException</code> and turns it into Stage 7's <code>409</code> with a human message. Keep the service check too — it produces a friendly error in the common case — but understand that it is a courtesy and the index is the guarantee."]},
+
+{v:"fk", k:"An award must reference a real application",
+ ddl:`ALTER TABLE award
+  ADD CONSTRAINT fk_award_application
+  FOREIGN KEY (application_id) REFERENCES application (id)
+  ON DELETE RESTRICT;`,
+ steps:[
+  {side:1, sql:"SELECT id FROM application WHERE id = 8891;", res:"1 row — it exists, proceed"},
+  {side:2, sql:"DELETE FROM application WHERE id = 8891;", res:"DELETE 1", rc:"okr", cls:"bad2",
+   dbRes:"ERROR: update or delete on table \"application\"\nviolates foreign key constraint on table \"award\"", dbRc:"err", dbCls:"good2"},
+  {side:1, sql:"INSERT INTO award (application_id, amount)\n VALUES (8891, 60000);", res:"INSERT 0 1 — pointing at nothing", rc:"err", cls:"bad2",
+   dbRes:"INSERT 0 1 — the row it references still exists", dbRc:"okr", dbCls:"good2"}],
+ app:["no","An orphaned award",
+  "There is now a row in <code>award</code> whose <code>application_id</code> refers to nothing. Every join from it returns no rows, every report undercounts, and nothing will tell you — corruption of this kind is silent by nature. The service's existence check was true when it ran and false four milliseconds later."],
+ db:["ok","The delete is refused instead",
+  "<code>ON DELETE RESTRICT</code> makes the referenced row undeletable while children exist. Choose this behaviour per relationship: <code>RESTRICT</code> where the child is meaningful on its own, <code>CASCADE</code> where it genuinely cannot exist without the parent (a document belongs to its application; an award arguably does not, because it is a financial record)."]},
+
+{v:"check", k:"Amount must be positive",
+ ddl:`ALTER TABLE application
+  ADD CONSTRAINT ck_application_amount_positive CHECK (amount &gt; 0);`,
+ steps:[
+  {side:1, sql:"-- through the service, where @Positive ran\nINSERT INTO application (amount, …) VALUES (60000, …);", res:"INSERT 0 1", rc:"okr"},
+  {side:2, sql:"-- the nightly CSV importer, which does not\n-- go through your controller at all\nINSERT INTO application (amount, …) VALUES (-5000, …);",
+   res:"INSERT 0 1", rc:"okr", cls:"bad2",
+   dbRes:"ERROR: new row for relation \"application\" violates\ncheck constraint \"ck_application_amount_positive\"", dbRc:"err", dbCls:"good2"}],
+ app:["no","The validation was never the problem",
+  "Nothing here is concurrent. The negative row got in because <b>your controller is not the only thing that writes to this table</b> — an importer, a migration, a support engineer's <code>psql</code> session, or a second service written next year. Jakarta validation protects one code path; a <code>CHECK</code> constraint protects the data."],
+ db:["ok","Every writer is held to the same rule",
+  "This is the argument for constraints in one sentence: an invariant that must hold regardless of which code path wrote the row belongs in the schema. <code>CHECK</code> constraints are cheap, they are documentation in the place people actually look, and they turn a silent data bug into a loud error at the moment of writing."]},
+
+{v:"cascade", k:"Deleting an application removes its documents",
+ ddl:`ALTER TABLE document
+  ADD CONSTRAINT fk_document_application
+  FOREIGN KEY (application_id) REFERENCES application (id)
+  ON DELETE CASCADE;`,
+ steps:[
+  {side:1, sql:"-- service code, deleting in a loop\nDELETE FROM application WHERE id = 8891;", res:"DELETE 1", rc:"okr",
+   dbRes:"DELETE 1 — and 4 documents, atomically", dbRc:"okr", dbCls:"good2"},
+  {side:1, sql:"-- then, in the same method:\nfor (Document d : documents) repository.delete(d);", res:"⚡ the instance is terminated mid-loop", rc:"err", cls:"bad2",
+   dbRes:"-- not needed; the database already did it", dbRc:"okr", dbCls:"good2"},
+  {side:2, sql:"SELECT count(*) FROM document\n WHERE application_id = 8891;", res:"3 — orphaned documents survive", rc:"err", cls:"bad2",
+   dbRes:"0", dbRc:"okr", dbCls:"good2"}],
+ app:["no","Orphans, and only if the two deletes were in one transaction would this be safe",
+  "The honest version of this failure is subtler than a crash: if both deletes are inside one <code>@Transactional</code> method they <i>are</i> atomic, and the loop is merely slow. The problem is that it is one <code>DELETE</code> per document instead of one statement, and that it depends on every future writer remembering the same order. <code>ON DELETE CASCADE</code> makes it structural."],
+ db:["ok","One statement, atomic by construction",
+  "Note the distinction your deck draws on slide 312 and it is worth restating: <code>ON DELETE CASCADE</code> is enforced by the <i>database</i> and applies to every writer, while JPA's <code>CascadeType.REMOVE</code> is enforced by <i>Hibernate</i> and applies only when the deletion goes through an entity it is managing. A bulk <code>@Modifying</code> delete bypasses the second entirely. Use the database constraint as the guarantee and the JPA cascade as the convenience."]}
+];
+function drawRule(){
+  const r = RULES.find(x=>x.v===state.rule) || RULES[0];
+  const db = state.enf === "db";
+  $("#rule-ddl").innerHTML = db ? r.ddl : `<i>-- No database constraint. The rule lives only in Java:</i>
+<b>if</b> (repository.existsByEmailAndCohort(email, cohort))
+    <b>throw new</b> DuplicateApplicationException(email, cohort);
+repository.save(application);`;
+  txGrid(r.steps.map(s=>({...s,
+    sql:s.sql, res:(db && s.dbRes) ? s.dbRes : s.res,
+    rc:(db && s.dbRc) ? s.dbRc : s.rc,
+    cls:db ? (s.dbCls||"") : (s.cls||"")})), $("#rule-grid"));
+  const n = db ? r.db : r.app;
+  $("#rule-note").innerHTML = `<div class="verdict ${n[0]}" style="margin-bottom:0"><h5>${n[1]}</h5><p style="margin-bottom:0">${n[2]}</p></div>`;
+}
+$("#rule-seg").innerHTML = RULES.map((r,i)=>`<button data-v="${r.v}" aria-pressed="${i===0}">${r.k}</button>`).join("");
+segGroup("rule", drawRule); segGroup("enf", drawRule);
+
+/* ============ 2. joins ============ */
+const APPS8 = [[8801,"Ira Tiwari",45],[8802,"Asha Devi",45],[8803,"Ravi Kumar",46],[8804,"Meera Nair",null],[8805,"Dev Sharma",null]];
+const NGOS8 = [[45,"Vidya Trust"],[46,"Anveshan Foundation"],[47,"Gramin Shiksha"]];
+const JOINS = {
+ inner:{sql:`SELECT a.id, a.student_name, n.name AS ngo
+FROM   application a
+JOIN   ngo n ON n.id = a.ngo_id;`,
+  n:["ok","Only rows that match on both sides",
+   "The default, and the one to reach for when a missing match means the row is not interesting. Note what it silently does: the two applications with no NGO have disappeared from your report, and nothing in the output says so."]},
+ left:{sql:`SELECT a.id, a.student_name, n.name AS ngo
+FROM   application a
+LEFT   JOIN ngo n ON n.id = a.ngo_id;`,
+  n:["ok","Every row from the left, matched or not",
+   "The right-hand columns become <code>NULL</code> where there is no match. This is what you want for “list all applications, with their NGO if they have one” — which is most reporting queries, and the reason <code>LEFT JOIN</code> is more common in application code than <code>INNER</code>."]},
+ right:{sql:`SELECT a.id, a.student_name, n.name AS ngo
+FROM   application a
+RIGHT  JOIN ngo n ON n.id = a.ngo_id;`,
+  n:["warn","Every row from the right — including the NGO with no applications",
+   "Correct, and rare in practice: almost everyone writes it as a <code>LEFT JOIN</code> with the tables swapped, because reading a query where the driving table is second is unnecessarily hard. Use it if it genuinely reads better; most style guides say it never does."]},
+ full:{sql:`SELECT a.id, a.student_name, n.name AS ngo
+FROM   application a
+FULL   OUTER JOIN ngo n ON n.id = a.ngo_id;`,
+  n:["warn","Everything from both sides",
+   "Unmatched rows from either table appear with <code>NULL</code>s on the other. Genuinely useful for reconciliation — “what is in one system and not the other” — and almost never what you want in an application query."]},
+ cross:{sql:`SELECT a.id, a.student_name, n.name AS ngo
+FROM   application a
+CROSS  JOIN ngo n;      -- 5 × 3 = 15 rows`,
+  n:["no","Every combination — and the shape of an accident",
+   "Deliberate uses exist (generating a calendar, filling a matrix). What matters is recognising it: a join whose <code>ON</code> condition is missing or never matches produces this, and 5 × 3 is instructive where 20,000 × 400 is an outage. A row count that is suspiciously close to the product of two table sizes is the signature."]},
+ trap:{sql:`SELECT a.id, a.student_name, n.name AS ngo
+FROM   application a
+LEFT   JOIN ngo n ON n.id = a.ngo_id
+WHERE  n.name &lt;&gt; 'Anveshan Foundation';   -- the trap`,
+  n:["no","The LEFT JOIN just became an INNER JOIN",
+   "The unmatched rows have <code>n.name = NULL</code>, and <code>NULL &lt;&gt; 'anything'</code> is not true — it is <b>unknown</b>, and <code>WHERE</code> keeps only rows that are true. So every application without an NGO is filtered out, and the <code>LEFT</code> has done nothing. The fix is to put the condition in the <code>ON</code> clause, or to write <code>WHERE n.name IS NULL OR n.name &lt;&gt; '…'</code>. This is the most common SQL bug there is, and it produces a plausible-looking result with rows quietly missing."]}
+};
+function joinRows(){
+  const j = state.join, out = [];
+  if(j==="cross"){ APPS8.forEach(a=>NGOS8.forEach(n=>out.push([a[0],a[1],n[1]]))); return out; }
+  APPS8.forEach(a=>{
+    const n = NGOS8.find(x=>x[0]===a[2]);
+    if(n) out.push([a[0],a[1],n[1]]);
+    else if(j==="left"||j==="full") out.push([a[0],a[1],null]);
+  });
+  if(j==="right"||j==="full") NGOS8.filter(n=>!APPS8.some(a=>a[2]===n[0])).forEach(n=>out.push([null,null,n[1]]));
+  if(j==="trap") return out.filter(r=>r[2] && r[2]!=="Anveshan Foundation");
+  return out;
+}
+function drawJoin(){
+  const matched = id => APPS8.some(a=>a[2]===id);
+  $("#join-src").innerHTML = `
+    <div class="jt"><div class="jh">application</div><table><thead><tr><th>id</th><th>student_name</th><th>ngo_id</th></tr></thead>
+      <tbody>${APPS8.map(a=>`<tr class="${a[2]?'matched':'unmatched'}"><td>${a[0]}</td><td>${a[1]}</td>
+        <td>${a[2] ?? '<span class="nullv">NULL</span>'}</td></tr>`).join("")}</tbody></table></div>
+    <div class="jt"><div class="jh">ngo</div><table><thead><tr><th>id</th><th>name</th></tr></thead>
+      <tbody>${NGOS8.map(n=>`<tr class="${matched(n[0])?'matched':'unmatched'}"><td>${n[0]}</td><td>${n[1]}</td></tr>`).join("")}</tbody></table></div>`;
+  $("#join-sql").innerHTML = JOINS[state.join].sql;
+  const rows = joinRows();
+  const shown = rows.slice(0,10);
+  $("#join-res").innerHTML = `<div class="rlabel">Result — ${rows.length} row${rows.length===1?"":"s"}</div>
+    <div class="jt"><table><thead><tr><th>id</th><th>student_name</th><th>ngo</th></tr></thead><tbody>${
+      shown.map(r=>`<tr><td>${r[0] ?? '<span class="nullv">NULL</span>'}</td>
+        <td>${r[1] ?? '<span class="nullv">NULL</span>'}</td>
+        <td>${r[2] ?? '<span class="nullv">NULL</span>'}</td></tr>`).join("")}${
+      rows.length>10?`<tr><td colspan="3" style="color:var(--ink-3)">… ${rows.length-10} more</td></tr>`:""}</tbody></table></div>`;
+  const n = JOINS[state.join].n;
+  $("#join-note").innerHTML = `<div class="verdict ${n[0]}" style="margin-bottom:0"><h5>${n[1]}</h5><p style="margin-bottom:0">${n[2]}</p></div>`;
+}
+segGroup("join", drawJoin);
+
+/* ============ 3. plan explorer ============ */
+const IX = [
+ {id:"ix1", d:"idx_status ON application (status)", w:"Low selectivity — 30% of the table is SUBMITTED. An index that matches most rows is usually worse than no index."},
+ {id:"ix2", d:"idx_cohort_status_deadline ON application (cohort, status, deadline)", w:"Equality columns first, then the sort column. Serves the list query's filter and its ORDER BY in one structure."},
+ {id:"ix3", d:"idx_status_cohort ON application (status, cohort)", w:"The same two columns as above, leading with the less selective one and omitting the sort column."},
+ {id:"ix4", d:"idx_name_lower ON application (lower(student_name) text_pattern_ops)", w:"An expression index. A plain index on student_name cannot serve lower(...) or a LIKE pattern under the default collation."},
+ {id:"ix5", d:"idx_ngo_amount ON application (ngo_id, amount DESC)", w:"Equality on ngo_id, then the sort column in the direction the query asks for."},
+ {id:"ix6", d:"idx_list_covering ON application (cohort, status, deadline) INCLUDE (id, student_name, amount)", w:"Adds the selected columns as index payload, so the query can be answered without touching the table at all."}
+];
+let ixOn = {ix1:false, ix2:false, ix3:false, ix4:false, ix5:false, ix6:false};
+const QS = [
+ {v:"list", k:"The list endpoint", sql:`SELECT id, student_name, status, deadline, amount
+FROM   application
+WHERE  status = 'SUBMITTED' AND cohort = 2026
+ORDER  BY deadline ASC, id ASC
+LIMIT  20;`},
+ {v:"search", k:"Name search", sql:`SELECT id, student_name
+FROM   application
+WHERE  lower(student_name) LIKE 'ira%'
+LIMIT  20;`},
+ {v:"ngo", k:"NGO dashboard", sql:`SELECT id, student_name, amount
+FROM   application
+WHERE  ngo_id = 45
+ORDER  BY amount DESC
+LIMIT  10;`},
+ {v:"count", k:"The pagination count", sql:`SELECT count(*)
+FROM   application
+WHERE  status = 'SUBMITTED' AND cohort = 2026;`}
+];
+function plan(){
+  const q = state.q, N = 240000;
+  const line = (indent,node,detail,cls="") =>
+    `${" ".repeat(indent)}<span class="node ${cls}">${node}</span>  <span class="cost">${detail}</span>`;
+  if(q==="list"){
+    if(ixOn.ix6) return {rows:20, read:24, ms:0.09, idx:"ix6", plan:[
+      line(0,"Limit","(cost=0.42..4.10 rows=20 width=48) (actual time=0.02..0.08 rows=20 loops=1)"),
+      line(2,"Index Only Scan using idx_list_covering on application","(actual time=0.02..0.07 rows=20 loops=1)","cool"),
+      `        <span class="cost">Index Cond: (cohort = 2026 AND status = 'SUBMITTED')</span>`,
+      `        <span class="cool">Heap Fetches: 0</span>`,
+      `        <span class="cost">Buffers: shared hit=5</span>`],
+      note:["ok","Index Only Scan — the fastest shape there is",
+       "<b>Heap Fetches: 0</b> is the line to look for. Every column the query selects is in the index, so PostgreSQL never touched the table — no random I/O, no visibility check against the heap for pages the visibility map says are all-visible. This is what <code>INCLUDE</code> is for, and it is why the covering index is worth its extra size for a query you run on every page load."]};
+    if(ixOn.ix2) return {rows:20, read:44, ms:0.21, idx:"ix2", plan:[
+      line(0,"Limit","(cost=0.42..6.31 rows=20 width=48) (actual time=0.03..0.19 rows=20 loops=1)"),
+      line(2,"Index Scan using idx_cohort_status_deadline on application","(actual time=0.03..0.18 rows=20 loops=1)","cool"),
+      `        <span class="cost">Index Cond: (cohort = 2026 AND status = 'SUBMITTED')</span>`,
+      `        <span class="cost">Buffers: shared hit=24</span>`],
+      note:["ok","Index Scan, and — crucially — no Sort node",
+       "The index already stores rows in <code>deadline</code> order within each <code>(cohort, status)</code> group, so the database reads twenty entries and stops. Compare this with the bitmap plans below, which read eighteen thousand rows in order to return twenty. <b>The absence of a <code>Sort</code> node is the whole win.</b>"]};
+    if(ixOn.ix3) return {rows:18000, read:6100, ms:46, idx:"ix3", plan:[
+      line(0,"Limit","(cost=4821..4821 rows=20 width=48) (actual time=44.9..44.9 rows=20 loops=1)"),
+      line(2,"Sort","(actual time=44.8..44.9 rows=20 loops=1)","hot2"),
+      `        <span class="cost">Sort Key: deadline, id</span>`,
+      `        <span class="hot2">Sort Method: top-N heapsort  Memory: 27kB</span>`,
+      line(4,"Bitmap Heap Scan on application","(actual time=6.1..38.4 rows=18000 loops=1)","hot2"),
+      `          <span class="cost">Recheck Cond: (status = 'SUBMITTED' AND cohort = 2026)</span>`,
+      `          <span class="cost">Buffers: shared hit=1204 read=4896</span>`,
+      line(6,"Bitmap Index Scan on idx_status_cohort","(actual time=5.9..5.9 rows=18000 loops=1)")],
+      note:["warn","Right columns, wrong order — and no help with the sort",
+       "The index finds the eighteen thousand matching rows, and then every one of them is fetched from the table and sorted so that twenty can be returned. Same two columns as <code>idx_cohort_status_deadline</code>, roughly two hundred times slower, because it does not include <code>deadline</code> and therefore cannot satisfy the <code>ORDER BY</code>. <b>Composite index column order is not a detail.</b>"]};
+    if(ixOn.ix1) return {rows:72000, read:9800, ms:181, idx:"ix1", plan:[
+      line(0,"Limit","(actual time=179.2..179.2 rows=20 loops=1)"),
+      line(2,"Sort","(actual time=179.1..179.2 rows=20 loops=1)","hot2"),
+      `        <span class="hot2">Sort Method: top-N heapsort  Memory: 27kB</span>`,
+      line(4,"Bitmap Heap Scan on application","(actual time=18.7..164.0 rows=18000 loops=1)","hot2"),
+      `          <span class="cost">Recheck Cond: (status = 'SUBMITTED')</span>`,
+      `          <span class="hot2">Rows Removed by Filter: 54000</span>`,
+      `          <span class="cost">Filter: (cohort = 2026)</span>`,
+      line(6,"Bitmap Index Scan on idx_status","(actual time=17.9..17.9 rows=72000 loops=1)")],
+      note:["no","<code>Rows Removed by Filter: 54000</code> — wasted work, made visible",
+       "The index matched seventy-two thousand rows because thirty per cent of the table is <code>SUBMITTED</code>. Fifty-four thousand of them were read from disk and then discarded because their cohort was wrong. A single-column index on a low-selectivity column is frequently <i>worse</i> than no index, because the random I/O of a bitmap heap scan costs more than a sequential read of the same data."]};
+    return {rows:240000, read:5333, ms:342, idx:null, plan:[
+      line(0,"Limit","(actual time=340.1..340.1 rows=20 loops=1)"),
+      line(2,"Sort","(actual time=340.0..340.1 rows=20 loops=1)","hot2"),
+      `        <span class="cost">Sort Key: deadline, id</span>`,
+      line(4,"Seq Scan on application","(actual time=0.02..312.4 rows=18000 loops=1)","hot2"),
+      `          <span class="cost">Filter: (status = 'SUBMITTED' AND cohort = 2026)</span>`,
+      `          <span class="hot2">Rows Removed by Filter: 222000</span>`,
+      `          <span class="cost">Buffers: shared hit=1104 read=4229</span>`],
+      note:["no","Seq Scan — every row read, 92% discarded",
+       "The whole table is read to find eighteen thousand rows, which are then sorted to return twenty. This is the 340&nbsp;ms endpoint from the module heading. Note that a Seq Scan is not automatically wrong — on a small table it is the <i>right</i> plan, and forcing an index there would be slower. It is wrong here because of the ratio between rows read and rows returned."]};
+  }
+  if(q==="search"){
+    if(ixOn.ix4) return {rows:120, read:38, ms:0.6, idx:"ix4", plan:[
+      line(0,"Limit","(actual time=0.09..0.58 rows=20 loops=1)"),
+      line(2,"Bitmap Heap Scan on application","(actual time=0.09..0.55 rows=120 loops=1)","cool"),
+      `        <span class="cost">Recheck Cond: (lower(student_name) ~~ 'ira%')</span>`,
+      line(4,"Bitmap Index Scan on idx_name_lower","(actual time=0.07..0.07 rows=120 loops=1)")],
+      note:["ok","An expression index, matching the expression in the query",
+       "The index stores <code>lower(student_name)</code>, so the planner can use it for a predicate written exactly that way. Two things to know: a plain index on <code>student_name</code> would not have helped, and <code>text_pattern_ops</code> is required for <code>LIKE 'prefix%'</code> under most non-C collations. A <i>leading</i> wildcard (<code>'%ira%'</code>) cannot use a B-tree at all — that is what a trigram index or full-text search is for."]};
+    return {rows:240000, read:5333, ms:298, idx:null, plan:[
+      line(0,"Limit","(actual time=2.1..296.4 rows=20 loops=1)"),
+      line(2,"Seq Scan on application","(actual time=2.1..296.3 rows=120 loops=1)","hot2"),
+      `        <span class="cost">Filter: (lower(student_name) ~~ 'ira%')</span>`,
+      `        <span class="hot2">Rows Removed by Filter: 239880</span>`],
+      note:["no","No index can be used, because none matches the expression",
+       "Even with an index on <code>student_name</code> present, wrapping the column in <code>lower()</code> makes it unusable — the index stores the original values, not the lowercased ones. <b>Any function applied to an indexed column defeats the index</b> unless you built an index on that function. This is the most common reason a query is slow despite “having an index on that column”."]};
+  }
+  if(q==="ngo"){
+    if(ixOn.ix5) return {rows:10, read:14, ms:0.05, idx:"ix5", plan:[
+      line(0,"Limit","(actual time=0.02..0.04 rows=10 loops=1)"),
+      line(2,"Index Scan using idx_ngo_amount on application","(actual time=0.02..0.04 rows=10 loops=1)","cool"),
+      `        <span class="cost">Index Cond: (ngo_id = 45)</span>`,
+      `        <span class="cost">Buffers: shared hit=14</span>`],
+      note:["ok","Filter and sort in one index, with the sort direction baked in",
+       "<code>(ngo_id, amount DESC)</code> stores each NGO's applications already ordered by amount descending, so this is ten index entries and ten heap fetches. Note that PostgreSQL can also read a plain ascending index backwards, so the explicit <code>DESC</code> matters mainly for multi-column sorts with mixed directions."]};
+    return {rows:240000, read:5333, ms:311, idx:null, plan:[
+      line(0,"Limit","(actual time=309.4..309.4 rows=10 loops=1)"),
+      line(2,"Sort","(actual time=309.3..309.4 rows=10 loops=1)","hot2"),
+      `        <span class="hot2">Sort Method: top-N heapsort  Memory: 26kB</span>`,
+      line(4,"Seq Scan on application","(actual time=0.03..305.1 rows=960 loops=1)","hot2"),
+      `          <span class="hot2">Rows Removed by Filter: 239040</span>`],
+      note:["no","0.4% selectivity and still a full scan",
+       "Only nine hundred and sixty rows match, which is exactly the case an index is best at — and there is no index on <code>ngo_id</code>, so all two hundred and forty thousand rows are read. A foreign-key column is not indexed automatically in PostgreSQL, which surprises people coming from other databases and is worth checking on every FK you create."]};
+  }
+  if(ixOn.ix6 || ixOn.ix2) return {rows:18000, read:96, ms:4.4, idx:ixOn.ix6?"ix6":"ix2", plan:[
+    line(0,"Aggregate","(actual time=4.3..4.3 rows=1 loops=1)"),
+    line(2,"Index Only Scan using "+(ixOn.ix6?"idx_list_covering":"idx_cohort_status_deadline")+" on application","(actual time=0.03..3.1 rows=18000 loops=1)","cool"),
+    `        <span class="cost">Index Cond: (cohort = 2026 AND status = 'SUBMITTED')</span>`,
+    `        <span class="cool">Heap Fetches: 0</span>`],
+    note:["ok","The count is answered from the index alone",
+     "A count still has to visit every matching entry — there is no shortcut — but it can do so in the index rather than the table, which is roughly thirty times less I/O. This is the query behind <code>Page.totalElements</code> from Stage 7, and it is why <code>Slice</code> exists: even at its best, this is work you may not need to do on every page load."]};
+  if(ixOn.ix3 || ixOn.ix1) return {rows:72000, read:6100, ms:ixOn.ix3?24:91, idx:ixOn.ix3?"ix3":"ix1", plan:[
+    line(0,"Aggregate",`(actual time=${ixOn.ix3?23.6:89.9}..${ixOn.ix3?23.6:89.9} rows=1 loops=1)`),
+    line(2,"Bitmap Heap Scan on application",`(actual time=5.4..${ixOn.ix3?20.1:82.3} rows=18000 loops=1)`,"hot2"),
+    ixOn.ix3 ? `        <span class="cost">Recheck Cond: (status = 'SUBMITTED' AND cohort = 2026)</span>`
+             : `        <span class="hot2">Rows Removed by Filter: 54000</span>`,
+    line(4,"Bitmap Index Scan on "+(ixOn.ix3?"idx_status_cohort":"idx_status"),"(actual time=5.3..5.3 loops=1)")],
+    note:["warn","Usable, but it has to visit the table",
+     "The index identifies the rows; the heap scan then reads each page to check visibility. Adding <code>deadline</code> to the index — or the <code>INCLUDE</code> columns — would turn this into an index-only scan and remove the heap access entirely."]};
+  return {rows:240000, read:5333, ms:152, idx:null, plan:[
+    line(0,"Aggregate","(actual time=151.4..151.4 rows=1 loops=1)"),
+    line(2,"Seq Scan on application","(actual time=0.02..147.9 rows=18000 loops=1)","hot2"),
+    `        <span class="hot2">Rows Removed by Filter: 222000</span>`],
+    note:["no","Counting by reading everything",
+     "The count that Stage 7 said was free at small scale. At two hundred and forty thousand rows it is a hundred and fifty milliseconds on every page load of the list screen — and it is the reason to ask whether your UI needs a total at all."]};
+}
+function drawPlan(){
+  $("#q-seg").innerHTML = QS.map(q=>`<button data-v="${q.v}" aria-pressed="${q.v===state.q}">${q.k}</button>`).join("");
+  $$('.seg[data-group="q"] button').forEach(b=>b.addEventListener("click",()=>{
+    state.q=b.dataset.v; drawPlan(); }));
+  $("#q-sql").innerHTML = esc(QS.find(q=>q.v===state.q).sql);
+  const p = plan();
+  $("#ix-list").innerHTML = IX.map(i=>
+    `<label class="idxrow ${p.idx===i.id?'used':''}"><input type="checkbox" data-ix="${i.id}" ${ixOn[i.id]?"checked":""}>
+      <span><span class="ix">${esc(i.d)}</span><span class="ixd">${i.w}</span></span></label>`).join("");
+  $$("#ix-list input").forEach(c=>c.addEventListener("change",()=>{ ixOn[c.dataset.ix]=c.checked; drawPlan(); }));
+  $("#q-plan").innerHTML = p.plan.join("\n");
+  const nIdx = Object.values(ixOn).filter(Boolean).length;
+  $("#q-gauge").innerHTML = `
+    <div class="g"><div class="gv" style="color:${p.ms>50?'var(--bad)':p.ms>5?'var(--warn)':'var(--good)'}">${p.ms} ms</div><div class="gl">Execution time</div></div>
+    <div class="g"><div class="gv">${p.rows.toLocaleString("en-IN")}</div><div class="gl">Rows examined</div></div>
+    <div class="g"><div class="gv">${p.read.toLocaleString("en-IN")}</div><div class="gl">Pages read</div></div>
+    <div class="g"><div class="gv" style="color:${nIdx>3?'var(--warn)':'var(--ink)'}">${nIdx+1}×</div><div class="gl">Writes per INSERT</div></div>`;
+  $("#q-note").innerHTML = `<div class="verdict ${p.note[0]}" style="margin-bottom:0"><h5>${p.note[1]}</h5><p style="margin-bottom:0">${p.note[2]}</p></div>`
+    + (nIdx>3 ? `<div class="verdict warn" style="margin-top:12px; margin-bottom:0"><h5>${nIdx} indexes on one table</h5>
+        <p style="margin-bottom:0">Every <code>INSERT</code> now writes ${nIdx+1} structures, every <code>UPDATE</code> of an indexed column rewrites its entries, and every one of these competes for the memory that would otherwise cache the table. Indexes are not free and they are not additive-only: add them in response to measured queries, and check <code>pg_stat_user_indexes</code> periodically for ones that have never been scanned.</p></div>` : "");
+}
+$("#ix-none").addEventListener("click",()=>{ Object.keys(ixOn).forEach(k=>ixOn[k]=false); drawPlan(); });
+
+/* ============ 4. N+1 ============ */
+const N1 = [
+{k:"Lazy, touched in the mapper", q:41, rows:100, ms:62, cls:"no",
+ log:[["1","select a.* from application a where a.cohort=? and a.status=? order by a.deadline limit 20","one"],
+      ["2","select s.* from student s where s.id=?","extra"],["3","select s.* from student s where s.id=?","extra"],
+      ["…","… 18 more student selects, one per row","extra"],
+      ["22","select d.* from document d where d.application_id=?","extra"],
+      ["…","… 19 more document selects, one per row","extra"]],
+ code:`<i>// Nothing here says "forty-one".</i>
+<b>var</b> page = repository.findByCohortAndStatus(cohort, status, pageable);
+<b>return</b> page.map(a -&gt; <b>new</b> ApplicationRow(
+    a.getId(),
+    a.getStudent().getFullName(),        <i>// ← lazy proxy → SELECT</i>
+    a.getStatus(),
+    a.getDocuments().size()));           <i>// ← lazy collection → SELECT</i>`,
+ n:["no","1 + 20 + 20 = 41 round trips",
+  "Each lazy association is resolved the first time it is touched, one row at a time. At twenty rows it is 62&nbsp;ms and nobody notices; at a page size of a hundred it is 201 queries, and the endpoint's latency grows linearly with the page size while the SQL in your code stays exactly the same length."]},
+{k:"FetchType.EAGER on both", q:21, rows:100, ms:34, cls:"no",
+ log:[["1","select a.*, s.* from application a join student s on s.id=a.student_id where … limit 20","one"],
+      ["2","select d.* from document d where d.application_id=?","extra"],
+      ["…","… 19 more document selects","extra"]],
+ code:`<b>@ManyToOne</b>(fetch = FetchType.EAGER)   <i>// the default for @ManyToOne</i>
+<b>private</b> Student student;
+
+<b>@OneToMany</b>(mappedBy = "application", fetch = FetchType.EAGER)
+<b>private</b> List&lt;Document&gt; documents;`,
+ n:["no","Half fixed, globally, forever",
+  "The <code>@ManyToOne</code> is joined into the root query — genuine improvement — but the collection is still fetched with one select per row, because Hibernate cannot join two collections into one result without a cartesian product. And the cost is now paid by <b>every</b> query that loads an <code>Application</code>, including the ones that never look at the student. <code>EAGER</code> is a global answer to a local question."]},
+{k:"JOIN FETCH the collection", q:1, rows:60, ms:11, cls:"warn",
+ log:[["1","select a.*, s.*, d.* from application a join student s on … left join document d on … where …","one"]],
+ code:`<b>@Query</b>("""
+    select distinct a from Application a
+    join fetch a.student
+    left join fetch a.documents
+    where a.cohort = :cohort and a.status = :status
+    """)
+List&lt;Application&gt; findWithGraph(<b>@Param</b>("cohort") <b>int</b> cohort,
+                               <b>@Param</b>("status") ApplicationStatus status);`,
+ n:["warn","One query — and two traps waiting",
+  "Sixty rows come back to build twenty objects, because each application is repeated once per document. That is the cartesian product, and it multiplies: add a second collection fetch and you get <code>MultipleBagFetchException</code>, or — if you use <code>Set</code> — twenty × three × four = 240 rows in silence. <b>And this method cannot be paginated.</b> Add a <code>Pageable</code> and Hibernate logs <code>HHH90003004</code>, loads every matching row into heap, and paginates in Java."]},
+{k:"@BatchSize on the collection", q:3, rows:100, ms:9, cls:"ok",
+ log:[["1","select a.* from application a where … order by a.deadline limit 20","one"],
+      ["2","select s.* from student s where s.id in (?,?,?, … 20 ids)","one"],
+      ["3","select d.* from document d where d.application_id in (?,?,?, … 20 ids)","one"]],
+ code:`<b>@BatchSize</b>(size = 25)
+<b>@OneToMany</b>(mappedBy = "application")
+<b>private</b> List&lt;Document&gt; documents;
+
+<i>// or globally, which is usually the right call:</i>
+spring.jpa.properties.hibernate.default_batch_fetch_size: 25`,
+ n:["ok","Three queries, and pagination still works",
+  "Hibernate collects the ids it needs and resolves them in one <code>IN</code> query per association instead of one per row. It is the least invasive fix — a single property changes the shape of every lazy load in the application — and it composes with pagination, unlike <code>JOIN FETCH</code> on a collection. Set <code>default_batch_fetch_size</code> on day one; it is close to free and it turns most N+1s into N/25+1."]},
+{k:"@EntityGraph", q:1, rows:60, ms:11, cls:"warn",
+ log:[["1","select a.*, s.*, d.* from application a left join student s on … left join document d on …","one"]],
+ code:`<b>@EntityGraph</b>(attributePaths = {"student", "documents"})
+<b>@Query</b>("select a from Application a where a.cohort = :cohort")
+List&lt;Application&gt; findWithGraph(<b>@Param</b>("cohort") <b>int</b> cohort);`,
+ n:["warn","<code>JOIN FETCH</code> declaratively — same benefits, same traps",
+  "An entity graph is a cleaner way to say which associations to load, and it can be reused across repository methods. It produces the same SQL as a fetch join, so it inherits the same cartesian product and the same pagination problem. Use it for loading <i>one</i> aggregate by id, where both are non-issues."]},
+{k:"DTO projection", q:1, rows:20, ms:4, cls:"ok",
+ log:[["1","select a.id, s.full_name, a.status, a.deadline, count(d.id) from application a join student s on … left join document d on … where … group by a.id, s.full_name, a.status, a.deadline order by a.deadline limit 20","one"]],
+ code:`<b>@Query</b>("""
+    select new org.scholarships.web.ApplicationRow(
+             a.id, s.fullName, a.status, a.deadline, count(d.id))
+    from   Application a
+    join   a.student s
+    left   join a.documents d
+    where  a.cohort = :cohort and a.status = :status
+    group  by a.id, s.fullName, a.status, a.deadline
+    """)
+Page&lt;ApplicationRow&gt; findRows(<b>@Param</b>("cohort") <b>int</b> cohort,
+                             <b>@Param</b>("status") ApplicationStatus status,
+                             Pageable pageable);`,
+ n:["ok","One query, twenty rows, exactly the columns the response needs",
+  "Best on every axis, and not a compromise: no entities are created, so there is no persistence context to manage, no dirty checking on flush, no lazy proxies, and no risk of an association being touched by accident later. Stage 7 already decided that entities do not cross the controller boundary — this is the same decision applied one layer down, and it is why the read path and the write path can reasonably use different models."]}
+];
+let n1Sel = 0;
+function drawN1(){
+  $("#n1-list").innerHTML = N1.map((s,i)=>
+    `<button class="strat" data-i="${i}" aria-pressed="${i===n1Sel}" type="button">${s.k}</button>`).join("");
+  $$("#n1-list .strat").forEach(b=>b.addEventListener("click",()=>{ n1Sel=+b.dataset.i; drawN1(); }));
+  const s = N1[n1Sel];
+  $("#n1-gauge").innerHTML = `
+    <div class="g"><div class="gv" style="color:${s.q>5?'var(--bad)':s.q>1?'var(--warn)':'var(--good)'}">${s.q}</div><div class="gl">Queries</div></div>
+    <div class="g"><div class="gv" style="color:${s.rows>40?'var(--warn)':'var(--ink)'}">${s.rows}</div><div class="gl">Rows transferred</div></div>
+    <div class="g"><div class="gv" style="color:${s.ms>30?'var(--bad)':s.ms>10?'var(--warn)':'var(--good)'}">${s.ms} ms</div><div class="gl">Endpoint time</div></div>
+    <div class="g"><div class="gv" style="font-size:15px">${s.q===1&&s.rows===20?"Yes":s.k.includes("FETCH")||s.k.includes("Graph")?"No":"Yes"}</div><div class="gl">Paginates correctly</div></div>`;
+  $("#n1-log").innerHTML = s.log.map(l=>
+    `<div class="qline ${l[2]}"><span class="qn2">${l[0]}</span><span class="qs">${esc(l[1])}</span></div>`).join("");
+  $("#n1-code").innerHTML = s.code;
+  $("#n1-note").innerHTML = `<div class="verdict ${s.n[0]}" style="margin-bottom:0"><h5>${s.n[1]}</h5><p style="margin-bottom:0">${s.n[2]}</p></div>`;
+}
+
+/* ============ 5. isolation ============ */
+const ANOM = {
+ nonrep:{k:"Non-repeatable read", steps:[
+  {side:1, sql:"BEGIN;\nSELECT remaining FROM cohort_budget WHERE cohort = 2026;", r:{rc:"5",rr:"5",ser:"5"}},
+  {side:2, sql:"BEGIN;\nUPDATE cohort_budget SET remaining = 4 WHERE cohort = 2026;\nCOMMIT;", r:{rc:"UPDATE 1",rr:"UPDATE 1",ser:"UPDATE 1"}},
+  {side:1, sql:"SELECT remaining FROM cohort_budget WHERE cohort = 2026;", r:{rc:"4 ← changed mid-transaction",rr:"5",ser:"5"}, bad:["rc"]},
+  {side:1, sql:"COMMIT;", r:{rc:"COMMIT",rr:"COMMIT",ser:"COMMIT"}}],
+  n:{rc:["no","The same query returned two different answers",
+    "<code>READ COMMITTED</code> takes a <b>new snapshot for every statement</b>, so anything committed in between becomes visible. A method that reads a value, does some work, and reads it again can act on two different worlds. Most of the time this is fine and is the reason the default has the concurrency it does — but a calculation spread over several reads is not safe here."],
+   rr:["ok","One snapshot for the whole transaction",
+    "<code>REPEATABLE READ</code> takes its snapshot at the first statement and keeps it. Every read in the transaction sees the same consistent view of the database, whatever anyone else commits. This is the right level for a report or a multi-step calculation that must be internally consistent."],
+   ser:["ok","Same guarantee, plus more",
+    "<code>SERIALIZABLE</code> includes everything <code>REPEATABLE READ</code> gives you. It costs more only when there is genuine contention, and then it costs an abort you must retry."]}},
+
+ phantom:{k:"Phantom read", steps:[
+  {side:1, sql:"BEGIN;\nSELECT count(*) FROM application WHERE cohort = 2026;", r:{rc:"120",rr:"120",ser:"120"}},
+  {side:2, sql:"INSERT INTO application (cohort, …) VALUES (2026, …);\nCOMMIT;", r:{rc:"INSERT 0 1",rr:"INSERT 0 1",ser:"INSERT 0 1"}},
+  {side:1, sql:"SELECT count(*) FROM application WHERE cohort = 2026;", r:{rc:"121 ← a row appeared",rr:"120",ser:"120"}, bad:["rc"]},
+  {side:1, sql:"COMMIT;", r:{rc:"COMMIT",rr:"COMMIT",ser:"COMMIT"}}],
+  n:{rc:["no","A row that did not exist when the transaction started",
+    "Same mechanism as the previous scenario, applied to a set rather than a row. Reconciliation logic — “count them, then process them” — is where this bites, because the count and the processing disagree."],
+   rr:["ok","No phantoms — and this is PostgreSQL-specific",
+    "The SQL standard <i>permits</i> phantom reads at <code>REPEATABLE READ</code>; PostgreSQL's snapshot isolation prevents them, because the whole transaction sees one snapshot. If you memorised the four-anomaly table from a database course, this is the row where PostgreSQL is stricter than the standard requires — and the reason a portable application should not rely on it."],
+   ser:["ok","Prevented, by the same snapshot","Nothing additional is needed here; the snapshot already covers it."]}},
+
+ lost:{k:"Lost update", steps:[
+  {side:1, sql:"BEGIN;\nSELECT remaining FROM cohort_budget WHERE cohort = 2026;", r:{rc:"5",rr:"5",ser:"5"}},
+  {side:2, sql:"BEGIN;\nSELECT remaining FROM cohort_budget WHERE cohort = 2026;", r:{rc:"5",rr:"5",ser:"5"}},
+  {side:1, sql:"UPDATE cohort_budget SET remaining = 4 WHERE cohort = 2026;\nCOMMIT;", r:{rc:"UPDATE 1",rr:"UPDATE 1",ser:"UPDATE 1"}},
+  {side:2, sql:"UPDATE cohort_budget SET remaining = 4 WHERE cohort = 2026;\nCOMMIT;",
+   r:{rc:"UPDATE 1 ← two awards, one decrement",rr:"ERROR: could not serialize access\ndue to concurrent update",ser:"ERROR: could not serialize access\ndue to concurrent update"}, bad:["rc"], good:["rr","ser"]}],
+  n:{rc:["no","Two awards were made and the budget fell by one",
+    "Both transactions read 5, both computed 4, both wrote 4. The second write silently overwrote the first, and no error was raised anywhere. This is Stage 5's double-award, seen at the storage layer — and note that the client-side fix and the idempotency key both address the <i>request</i>, while this is happening to the <i>data</i>."],
+   rr:["ok","PostgreSQL refuses the second write",
+    "At <code>REPEATABLE READ</code>, updating a row that has been modified since your snapshot began raises a serialization failure. Your application must catch it and <b>retry the whole transaction</b> — which means the transaction has to be retryable, which is a design constraint worth knowing about before you set the level."],
+   ser:["ok","Same protection","Detected the same way. Neither level makes the retry go away — they make the silent corruption go away, which is the trade."]}},
+
+ skew:{k:"Write skew", steps:[
+  {side:1, sql:"BEGIN;\n-- rule: an application must keep ≥1 assigned reviewer\nSELECT count(*) FROM assignment WHERE application_id = 8891;", r:{rc:"2",rr:"2",ser:"2"}},
+  {side:2, sql:"BEGIN;\nSELECT count(*) FROM assignment WHERE application_id = 8891;", r:{rc:"2",rr:"2",ser:"2"}},
+  {side:1, sql:"-- 2 > 1, so it is safe for me to step away\nDELETE FROM assignment WHERE application_id = 8891 AND reviewer = 'r1';\nCOMMIT;", r:{rc:"DELETE 1",rr:"DELETE 1",ser:"DELETE 1"}},
+  {side:2, sql:"-- 2 > 1, so it is safe for me to step away\nDELETE FROM assignment WHERE application_id = 8891 AND reviewer = 'r2';\nCOMMIT;",
+   r:{rc:"DELETE 1 ← zero reviewers remain",rr:"DELETE 1 ← zero reviewers remain",ser:"ERROR: could not serialize access due to\nread/write dependencies among transactions"}, bad:["rc","rr"], good:["ser"]}],
+  n:{rc:["no","The invariant held for each transaction and is now broken",
+    "Neither transaction did anything wrong by itself, and they touched <b>different rows</b>, so there is no update conflict to detect. Both read a condition, both found it satisfied, and each one's write invalidated it for the other."],
+   rr:["no","Snapshot isolation does not prevent this",
+    "This is the anomaly <code>REPEATABLE READ</code> lets through, and it is the reason snapshot isolation is not serializability. The two transactions wrote disjoint rows, so there is nothing for the concurrent-update check to catch. If you assumed <code>REPEATABLE READ</code> meant “as if they ran one after another”, this is the counterexample."],
+   ser:["ok","Serializable Snapshot Isolation detects the dependency",
+    "PostgreSQL tracks read/write dependencies between concurrent transactions and aborts one when the pattern could not have arisen from any serial order. The cost is that transactions can now fail at commit for reasons unrelated to their own data — so every transaction at this level needs a retry loop. The alternatives are an explicit <code>SELECT … FOR UPDATE</code> on a row both transactions must touch, or expressing the invariant as a constraint the database can check."]}}
+};
+function drawIso(){
+  const a = ANOM[state.anom], iso = state.iso;
+  txGrid(a.steps.map(s=>({side:s.side, sql:s.sql, res:s.r[iso],
+    rc:(s.good||[]).includes(iso) ? "okr" : (s.bad||[]).includes(iso) ? "err" : "",
+    cls:(s.good||[]).includes(iso) ? "good2" : (s.bad||[]).includes(iso) ? "bad2" : ""})), $("#iso-grid"));
+  const n = a.n[iso];
+  $("#iso-note").innerHTML = `<div class="verdict ${n[0]}" style="margin-bottom:0"><h5>${n[1]}</h5><p style="margin-bottom:0">${n[2]}</p></div>`;
+}
+segGroup("anom", drawIso); segGroup("iso", drawIso);
+
+/* ============ 6. migrations ============ */
+const MIGS = [
+{k:"ADD COLUMN, nullable", sql:"ALTER TABLE application ADD COLUMN public_id uuid;",
+ lock:"ACCESS EXCLUSIVE", ms:1, safe:"ok", roll:"Safe",
+ n:"A catalogue change only — no rows are touched, whatever the table size. The lock is exclusive but held for microseconds. This is the first step of every expand-and-contract sequence."},
+{k:"ADD COLUMN NOT NULL with a constant default", sql:"ALTER TABLE application\n  ADD COLUMN reviewed boolean NOT NULL DEFAULT false;",
+ lock:"ACCESS EXCLUSIVE", ms:2, safe:"ok", roll:"Safe",
+ n:"Since PostgreSQL 11 a non-volatile default is stored in the catalogue and applied on read, so this does not rewrite the table. On PostgreSQL 10 and earlier the same statement rewrote every row — which is why this advice varies so much depending on when it was written."},
+{k:"ADD COLUMN with a volatile default", sql:"ALTER TABLE application\n  ADD COLUMN public_id uuid NOT NULL DEFAULT gen_random_uuid();",
+ lock:"ACCESS EXCLUSIVE", ms:47000, safe:"no", roll:"Blocks everything",
+ n:"A volatile default must produce a different value per row, so the whole table is rewritten under an exclusive lock — reads and writes both blocked for the duration. Do it in three steps instead: add the column nullable, backfill in batches, then set the default and the NOT NULL."},
+{k:"SET NOT NULL on an existing column", sql:"ALTER TABLE application ALTER COLUMN cohort SET NOT NULL;",
+ lock:"ACCESS EXCLUSIVE", ms:1400, safe:"warn", roll:"Blocks briefly",
+ n:"PostgreSQL must verify every existing row, holding an exclusive lock throughout. On 240,000 rows that is a second or so; on ten million it is minutes of downtime. The safe sequence: <code>ADD CONSTRAINT … CHECK (cohort IS NOT NULL) NOT VALID</code> (instant), then <code>VALIDATE CONSTRAINT</code> (a scan under a weak lock that permits writes), then <code>SET NOT NULL</code> — which PostgreSQL 12+ recognises as already proven and applies instantly."},
+{k:"CREATE INDEX", sql:"CREATE INDEX idx_cohort_status_deadline\n  ON application (cohort, status, deadline);",
+ lock:"SHARE — writes blocked", ms:2100, safe:"warn", roll:"Blocks writes",
+ n:"A plain <code>CREATE INDEX</code> blocks every write to the table until it finishes. Use <code>CREATE INDEX CONCURRENTLY</code>: it takes two passes and is slower overall, but it never blocks writers. Two caveats — it cannot run inside a transaction, so Flyway needs the migration marked to run outside one, and if it fails it leaves an <code>INVALID</code> index you must drop by hand."},
+{k:"ADD FOREIGN KEY", sql:"ALTER TABLE award ADD CONSTRAINT fk_award_application\n  FOREIGN KEY (application_id) REFERENCES application (id);",
+ lock:"ACCESS EXCLUSIVE on both tables", ms:1900, safe:"warn", roll:"Blocks briefly",
+ n:"Adding the constraint validates every existing row while holding an exclusive lock on <i>both</i> tables. Split it: <code>ADD CONSTRAINT … NOT VALID</code> takes the lock for a moment and enforces the rule for all new rows immediately; a later <code>VALIDATE CONSTRAINT</code> checks the existing ones under a lock that permits reads and writes."},
+{k:"DROP COLUMN", sql:"ALTER TABLE application DROP COLUMN student_name;",
+ lock:"ACCESS EXCLUSIVE", ms:1, safe:"no", roll:"Breaks old instances",
+ n:"Instant at the database level — the column is marked dropped and the space is reclaimed later. The danger is entirely at the application level: during a rolling deploy the old version is still running and still selecting that column, so it starts failing the moment this lands. A drop belongs only in the <b>contract</b> phase, at least one release after nothing reads it."},
+{k:"RENAME COLUMN", sql:"ALTER TABLE application RENAME COLUMN student_name TO full_name;",
+ lock:"ACCESS EXCLUSIVE", ms:1, safe:"no", roll:"Breaks every instance",
+ n:"The worst of both worlds: instant and catastrophic. Every running instance — including the new version, if it deploys a moment later — refers to a column that no longer exists. There is no version of this that is safe as a single step; it is always expand-and-contract, and it is the canonical example of why."},
+{k:"Widen a varchar", sql:"ALTER TABLE application ALTER COLUMN student_name TYPE text;",
+ lock:"ACCESS EXCLUSIVE", ms:2, safe:"ok", roll:"Safe",
+ n:"<code>varchar(n)</code> to <code>text</code>, or to a longer <code>varchar</code>, is binary-coercible in PostgreSQL — no rewrite, no scan. Narrowing is the opposite: a full rewrite, and it fails outright if any row is too long. Prefer <code>text</code> with a <code>CHECK</code> constraint over <code>varchar(n)</code> for exactly this reason; the check can be changed without a rewrite."},
+{k:"Backfill ten million rows", sql:"UPDATE application SET public_id = gen_random_uuid()\n  WHERE public_id IS NULL;",
+ lock:"Row locks — but on every row", ms:38000, safe:"no", roll:"Bloats and blocks",
+ n:"One statement, one transaction, ten million row locks held to the end, ten million dead tuples for autovacuum to clean up, and a WAL burst that can stall replication. Batch it: update a few thousand rows per transaction in a loop, with a short pause, driven from application code or a scheduled job — and keep it out of the migration file entirely, so a slow backfill never blocks a deployment."}
+];
+let migSel = 0;
+function drawMig(){
+  $("#mig-list").innerHTML = MIGS.map((m,i)=>
+    `<button class="migbtn" data-i="${i}" aria-pressed="${i===migSel}" type="button">${m.k}</button>`).join("");
+  $$("#mig-list .migbtn").forEach(b=>b.addEventListener("click",()=>{ migSel=+b.dataset.i; drawMig(); }));
+  const m = MIGS[migSel];
+  const col = m.safe==="ok"?"var(--good)":m.safe==="warn"?"var(--warn)":"var(--bad)";
+  const pct = Math.min(100, Math.max(1.5, Math.log10(m.ms+1)/Math.log10(50000)*100));
+  $("#mig-out").innerHTML = `
+    <pre style="margin-bottom:16px">${esc(m.sql)}</pre>
+    <div class="lockbar"><span class="ln3">Lock held</span>
+      <span class="lbar"><i style="width:${pct}%; background:${col}"></i></span>
+      <span class="lv">${m.ms<1000?m.ms+" ms":(m.ms/1000).toFixed(0)+" s"}</span></div>
+    <div class="cols3" style="margin:16px 0">
+      <div class="card acc" style="--ac:${col}"><h5 style="font-size:14px">${m.lock}</h5><p>Lock mode taken</p></div>
+      <div class="card acc" style="--ac:${col}"><h5 style="font-size:14px">${m.roll}</h5><p>During a rolling deploy</p></div>
+      <div class="card acc" style="--ac:${col}"><h5 style="font-size:14px">240k rows</h5><p>Figures modelled at this size — multiply for yours</p></div>
+    </div>
+    <div class="verdict ${m.safe==="ok"?"ok":m.safe==="warn"?"warn":"no"}" style="margin-bottom:0">
+      <h5>${m.safe==="ok"?"Safe as written":m.safe==="warn"?"Safe with a different sequence":"Do not do this as a single step"}</h5>
+      <p style="margin-bottom:0">${m.n}</p></div>`;
+}
+
+/* ============ 7. redis ============ */
+const REDIS = [
+{k:"Cache", d:"Avoid recomputing or re-fetching something expensive",
+ code:`<i>// Cache-aside, which is what @Cacheable implements: look in the cache,
+// fall through to the source, populate on the way back.</i>
+<b>@Cacheable</b>(value = "scholarships", key = "#id", unless = "#result == null")
+<b>public</b> Scholarship find(<b>long</b> id) {
+    <b>return</b> repository.findById(id).orElseThrow(ScholarshipNotFound::new);
+}
+
+<b>@CacheEvict</b>(value = "scholarships", key = "#s.id")
+<b>public</b> Scholarship update(Scholarship s) { <b>return</b> repository.save(s); }`,
+ y:"Read-heavy data that is expensive to produce and tolerant of being slightly stale: reference lists, computed aggregates, a rendered dashboard. Set a TTL per cache — reference data and a user's dashboard do not decay at the same rate.",
+ no:"Anything that must be correct the instant it changes, and anything you have not measured. A cache in front of a query that takes two milliseconds adds a network hop and a consistency problem in exchange for nothing. Also beware the <b>stampede</b>: when a popular key expires, every request misses at once and they all hit the database together — mitigate with a short randomised jitter on the TTL, or by refreshing ahead of expiry."},
+{k:"Session store", d:"Shared session state across instances",
+ code:`<i>// Spring Session — one dependency and one property. Every instance now
+// reads the same session, so Stage 1's load-balancer problem disappears.</i>
+implementation("org.springframework.session:spring-session-data-redis")
+
+spring.session.store-type: redis
+spring.session.timeout: 30m
+server.servlet.session.cookie:
+  http-only: true
+  secure: true
+  same-site: strict`,
+ y:"A first-party web application where an administrator must be able to eject a user immediately — which the capstone's platform admin arguably must. This is the answer Stage 1's load-balancer experiment pointed at, and Stage 6 called it a legitimate production choice.",
+ no:"When you have already chosen stateless tokens, or when a Redis outage logging every user out is unacceptable. Note carefully that this crosses the line drawn below: sessions in Redis are <b>not</b> a cache, because losing them loses data. That can be the right call, but it must be a decision rather than a default."},
+{k:"Rate limiting", d:"Count events per key per window, atomically",
+ code:`<i>// A fixed window in two atomic commands. The INCR is what makes this
+// safe across instances — no read-modify-write, no race.</i>
+<b>public boolean</b> allow(String key, <b>int</b> limit, Duration window) {
+    Long count = redis.opsForValue().increment(key);
+    <b>if</b> (count != <b>null</b> &amp;&amp; count == 1L) redis.expire(key, window);
+    <b>return</b> count != <b>null</b> &amp;&amp; count &lt;= limit;
+}
+
+<i>// A fixed window allows a burst of 2× the limit across a boundary.
+// A sliding window or token bucket (Bucket4j, backed by Redis) fixes that
+// — and either is far better than the alternative, which is no limiting.</i>`,
+ y:"Any endpoint an anonymous caller can reach, login especially, and any write endpoint a partner integrates against. Return <code>429</code> with <code>Retry-After</code>, which Stage 7's error contract already has a shape for. This is one of the cheapest security controls there is.",
+ no:"As your only defence against a determined attacker — a distributed source defeats per-IP limits, and the real answers are at the edge (Azure Front Door, a WAF). Also do not put the limiter behind your application's own thread pool if the point is to shed load: a request you rejected still consumed a thread."},
+{k:"Distributed lock", d:"Ensure only one instance runs something at a time",
+ code:`<i>// SET key value NX PX ttl — set only if absent, with an expiry so a dead
+// holder cannot block forever. The value is a token only we know.</i>
+String token = UUID.randomUUID().toString();
+<b>boolean</b> acquired = Boolean.TRUE.equals(
+    redis.opsForValue().setIfAbsent("lock:disbursement", token, Duration.ofMinutes(5)));
+
+<b>if</b> (acquired) {
+    <b>try</b> { disbursementJob.run(); }
+    <b>finally</b> { releaseIfStillOurs("lock:disbursement", token); }  <i>// compare-and-delete, in Lua</i>
+}`,
+ y:"Coordinating work that is wasteful but not catastrophic to run twice: a nightly job, a cache warm-up, a report generation. Spring's <code>ShedLock</code> wraps this pattern for scheduled tasks and is usually the right thing to reach for rather than hand-rolling it.",
+ no:"<b>Anything where running twice would be incorrect.</b> A Redis lock is an availability optimisation, not a correctness guarantee — the holder can pause for longer than the TTL (a garbage-collection stall is enough) and lose the lock while still believing it holds it. This is the substance of the long-running Redlock debate, and the practical conclusion is unambiguous: for correctness, use a database transaction, a unique constraint, or a conditional <code>UPDATE</code>. Stage 7's idempotency key is that answer for requests; a <code>SELECT … FOR UPDATE</code> is it for rows."}
+];
+let rdSel = 0;
+function drawRd(){
+  $("#rd-list").innerHTML = REDIS.map((r,i)=>
+    `<button class="usecard" data-i="${i}" aria-pressed="${i===rdSel}" type="button">
+      <span class="un">${r.k}</span><span class="ud">${r.d}</span></button>`).join("");
+  $$("#rd-list .usecard").forEach(b=>b.addEventListener("click",()=>{ rdSel=+b.dataset.i; drawRd(); }));
+  const r = REDIS[rdSel];
+  $("#rd-out").innerHTML = `
+    <pre style="margin-bottom:16px">${r.code}</pre>
+    <div class="cols">
+      <div class="verdict ok" style="margin-bottom:0"><h5>Reach for it when</h5><p style="margin-bottom:0">${r.y}</p></div>
+      <div class="verdict no" style="margin-bottom:0"><h5>Do not</h5><p style="margin-bottom:0">${r.no}</p></div>
+    </div>`;
+}
+
+/* ============ nav + theme ============ */
+const SECTIONS = [["m1","Constraints"],["m2","SQL"],["m3","Plans"],["m4","N+1"],["m5","Transactions"],
+                  ["m6","Migrations"],["m7","Redis"],["m8","Close"]];
+$("#nav").innerHTML = SECTIONS.map((s,i)=>`<a href="#${s[0]}"${i===0?' class="on"':''}>${String(i+1).padStart(2,"0")} ${s[1]}</a>`).join("");
+const links = $$("#nav a");
+const obs = new IntersectionObserver(es=>{ es.forEach(e=>{ if(e.isIntersecting){
+  links.forEach(l=>l.classList.toggle("on", l.getAttribute("href")==="#"+e.target.id)); }}); },
+  {rootMargin:"-25% 0px -65% 0px"});
+SECTIONS.forEach(s=>obs.observe(document.getElementById(s[0])));
+
+try{ const t = localStorage.getItem("fsatlas.theme"); if(t) document.documentElement.setAttribute("data-theme",t); }catch(e){}
+$("#themebtn").addEventListener("click",()=>{
+  const cur = document.documentElement.getAttribute("data-theme");
+  const isDark = cur ? cur==="dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.setAttribute("data-theme", isDark?"light":"dark");
+  try{ localStorage.setItem("fsatlas.theme", isDark?"light":"dark"); }catch(e){}
+});
+
+drawRule(); drawJoin(); drawPlan(); drawN1(); drawIso(); drawMig(); drawRd();
+</script>
+</body></html>
