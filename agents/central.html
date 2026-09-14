@@ -1,0 +1,491 @@
+<title>Three Ways to Build the Same Loop</title>
+
+<style>
+  /* ============================================================
+     The hub deliberately has NO accent of its own. The neutrals
+     are cool-biased and quiet; every hue on this page is borrowed
+     from the guide it belongs to. The frame is not the subject.
+     ============================================================ */
+  :root {
+    --paper:       #F6F7F9;
+    --surface:     #ECEEF2;
+    --surface-2:   #E0E3EA;
+    --ink:         #14171D;
+    --ink-soft:    #454B57;
+    --ink-faint:   #6E7482;
+    --rule:        #D7DAE2;
+    --rule-strong: #B9BEC9;
+    --link:        #2C3341;
+
+    /* borrowed identities — one pair per guide */
+    --a-agents:      #1B4C86;   --a-agents-tint:  #E6ECF4;   --a-agents-edge:  #B9C9DF;
+    --a-crewai:      #8A5A16;   --a-crewai-tint:  #F4EDE0;   --a-crewai-edge:  #DFCCA6;
+    --a-sdk:         #0E5A50;   --a-sdk-tint:     #E1EFEC;   --a-sdk-edge:     #ABCFC8;
+
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --measure: 64ch;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:       #0D0F13;
+      --surface:     #161A21;
+      --surface-2:   #1F242D;
+      --ink:         #E8EBF1;
+      --ink-soft:    #AAB1BE;
+      --ink-faint:   #7A8290;
+      --rule:        #242A34;
+      --rule-strong: #39414E;
+      --link:        #C6CCD8;
+
+      --a-agents:  #7FABDE;  --a-agents-tint: #121C29;  --a-agents-edge: #29394F;
+      --a-crewai:  #D3A45C;  --a-crewai-tint: #211A0F;  --a-crewai-edge: #443219;
+      --a-sdk:     #5FBCAC;  --a-sdk-tint:    #0E1F1C;  --a-sdk-edge:    #1E3E39;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper:       #0D0F13;
+    --surface:     #161A21;
+    --surface-2:   #1F242D;
+    --ink:         #E8EBF1;
+    --ink-soft:    #AAB1BE;
+    --ink-faint:   #7A8290;
+    --rule:        #242A34;
+    --rule-strong: #39414E;
+    --link:        #C6CCD8;
+
+    --a-agents:  #7FABDE;  --a-agents-tint: #121C29;  --a-agents-edge: #29394F;
+    --a-crewai:  #D3A45C;  --a-crewai-tint: #211A0F;  --a-crewai-edge: #443219;
+    --a-sdk:     #5FBCAC;  --a-sdk-tint:    #0E1F1C;  --a-sdk-edge:    #1E3E39;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 clamp(20px, 5vw, 52px); }
+  .col  { max-width: var(--measure); }
+
+  h1, h2, h3 { margin: 0; font-weight: 640; letter-spacing: -.026em; text-wrap: balance; }
+  h1 { font-size: clamp(2rem, 5.4vw, 3.1rem); line-height: 1.08; }
+  h2 { font-size: clamp(1.35rem, 2.8vw, 1.7rem); line-height: 1.22; }
+  h3 { font-size: 1.35rem; line-height: 1.25; }
+  p  { margin: 0; }
+
+  a { color: var(--link); text-underline-offset: 3px; }
+  a:focus-visible { outline: 2px solid var(--rule-strong); outline-offset: 4px; border-radius: 4px; }
+
+  code {
+    font-family: var(--mono); font-size: .85em;
+    background: var(--surface-2); padding: .1em .38em; border-radius: 3px;
+  }
+
+  .eyebrow {
+    font-family: var(--mono); font-size: .7rem; font-weight: 500;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--ink-faint);
+  }
+
+  /* ---------- masthead ---------- */
+  header.mast { padding: clamp(50px, 9vw, 96px) 0 clamp(30px, 5vw, 48px); border-bottom: 1px solid var(--rule); }
+  header.mast h1 { margin: 14px 0 20px; max-width: 17ch; }
+  .standfirst { font-size: clamp(1.02rem, 2vw, 1.14rem); color: var(--ink-soft); max-width: 58ch; }
+
+  /* ---------- sections ---------- */
+  section { padding: clamp(46px, 7vw, 76px) 0; border-bottom: 1px solid var(--rule); }
+  .sec-head { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
+  .sec-head p { color: var(--ink-soft); max-width: 60ch; }
+
+  /* ---------- the three cards ---------- */
+  .guides { display: flex; flex-direction: column; gap: 22px; }
+
+  .guide {
+    display: grid;
+    grid-template-columns: 5px 1fr;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color .16s ease, transform .16s ease;
+  }
+  .guide:hover { border-color: var(--stripe); transform: translateY(-2px); }
+  .guide:focus-visible { outline: 2px solid var(--stripe); outline-offset: 3px; }
+  .guide .spine { background: var(--stripe); }
+
+  .guide-body {
+    padding: 26px clamp(20px, 3.4vw, 34px) 28px;
+    display: grid;
+    grid-template-columns: 1fr minmax(0, 250px);
+    gap: 16px clamp(24px, 4vw, 46px);
+    align-items: start;
+  }
+  .guide-main { display: flex; flex-direction: column; gap: 13px; min-width: 0; }
+
+  .guide-top { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .glyph { font-size: 1.1rem; line-height: 1; }
+  .level { font-family: var(--mono); font-size: .7rem; letter-spacing: .13em; text-transform: uppercase; color: var(--stripe); font-weight: 600; }
+  .guide h3 { color: var(--stripe); }
+  .guide-sub { font-size: .97rem; color: var(--ink-soft); }
+  .guide p.blurb { color: var(--ink-soft); font-size: .98rem; }
+
+  .filechip {
+    font-family: var(--mono); font-size: .78rem;
+    color: var(--stripe); background: var(--tintbg);
+    border: 1px solid var(--edgec);
+    padding: .28em .62em; border-radius: 5px;
+    display: inline-flex; align-items: center; gap: .5em; align-self: flex-start;
+  }
+  .filechip::after { content: "→"; opacity: .65; }
+
+  .guide-aside {
+    background: var(--tintbg); border: 1px solid var(--edgec);
+    border-radius: 9px; padding: 15px 17px;
+    display: flex; flex-direction: column; gap: 9px;
+  }
+  .guide-aside .eyebrow { color: var(--stripe); }
+  .guide-aside ul { margin: 0; padding-left: 1.05em; display: flex; flex-direction: column; gap: 5px; }
+  .guide-aside li { font-size: .87rem; color: var(--ink-soft); line-height: 1.45; }
+  .guide-aside li::marker { color: var(--stripe); }
+
+  .g-agents { --stripe: var(--a-agents); --tintbg: var(--a-agents-tint); --edgec: var(--a-agents-edge); }
+  .g-sdk    { --stripe: var(--a-sdk);    --tintbg: var(--a-sdk-tint);    --edgec: var(--a-sdk-edge); }
+  .g-crewai { --stripe: var(--a-crewai); --tintbg: var(--a-crewai-tint); --edgec: var(--a-crewai-edge); }
+
+  /* the comparison belongs to two guides, so its spine carries both hues */
+  .g-compare { --stripe: var(--a-sdk); --tintbg: var(--surface-2); --edgec: var(--rule-strong); }
+  .g-compare .spine {
+    background: linear-gradient(180deg, var(--a-sdk) 0%, var(--a-sdk) 46%, var(--a-crewai) 54%, var(--a-crewai) 100%);
+  }
+  .g-compare:hover { border-color: var(--rule-strong); }
+  .g-compare h3 { color: var(--ink); }
+  .g-compare .level { color: var(--ink-faint); }
+  .g-compare .filechip { color: var(--ink-soft); }
+  .g-compare .guide-aside .eyebrow { color: var(--ink-faint); }
+  .g-compare .guide-aside li::marker { color: var(--rule-strong); }
+  .pair { display: inline-flex; gap: 7px; align-items: baseline; }
+  .pair b { font-weight: 600; font-family: var(--mono); font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; }
+  .pair .p-sdk  { color: var(--a-sdk); }
+  .pair .p-crew { color: var(--a-crewai); }
+  .pair .p-x    { color: var(--ink-faint); }
+
+  @media (max-width: 760px) {
+    .guide-body { grid-template-columns: 1fr; }
+  }
+
+  /* ---------- tables ---------- */
+  .tw { overflow-x: auto; border: 1px solid var(--rule); border-radius: 10px; }
+  table { border-collapse: collapse; width: 100%; font-size: .93rem; min-width: 560px; }
+  th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  thead th {
+    font-family: var(--mono); font-size: .7rem; font-weight: 500;
+    letter-spacing: .11em; text-transform: uppercase;
+    color: var(--ink-faint); background: var(--surface);
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  td:first-child { color: var(--ink-soft); }
+  .m-agents { color: var(--a-agents); font-weight: 600; }
+  .m-sdk    { color: var(--a-sdk);    font-weight: 600; }
+  .m-crewai { color: var(--a-crewai); font-weight: 600; }
+
+  /* ---------- misc ---------- */
+  .note {
+    background: var(--surface); border: 1px solid var(--rule);
+    border-radius: 10px; padding: 18px 20px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .note .eyebrow { color: var(--ink-faint); }
+  .note p { font-size: .95rem; color: var(--ink-soft); }
+
+  .also { display: flex; flex-direction: column; gap: 10px; }
+  .also a { font-family: var(--mono); font-size: .87rem; }
+
+  footer { padding: clamp(40px, 6vw, 64px) 0 clamp(54px, 8vw, 84px); }
+  footer .col { display: flex; flex-direction: column; gap: 12px; }
+  footer p { font-size: .9rem; color: var(--ink-faint); }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<header class="mast">
+  <div class="wrap">
+    <span class="eyebrow">Agent frameworks — reading room</span>
+    <h1>Three Ways to Build the Same Loop</h1>
+    <p class="standfirst">
+      Three guides to agentic development, built from the same source corpus and meant to be read
+      in order. Each one answers the same question at a different level of abstraction: what is
+      actually sent to the model, and who decides what happens next.
+    </p>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head col">
+      <span class="eyebrow">How to read these</span>
+      <h2>Same machine, different amounts of clothing</h2>
+      <p>
+        Every agent framework abstracts the same three things — orchestration, tool calling, and
+        structured outputs. The guides are ordered by how much of that a library does for you, so
+        the sequence below is a ladder, not a menu. Start at the bottom rung and each abstraction
+        above it stops being magic.
+      </p>
+    </div>
+
+    <div class="guides">
+
+      <!-- 1 -->
+      <a class="guide g-agents" href="agents.html">
+        <div class="spine"></div>
+        <div class="guide-body">
+          <div class="guide-main">
+            <div class="guide-top">
+              <span class="glyph">🔁</span>
+              <span class="level">Rung one · no framework</span>
+            </div>
+            <h3>Just Python and a While Loop</h3>
+            <p class="guide-sub">Agents in plain Python, with nothing installed.</p>
+            <p class="blurb">
+              Builds an agent from a bare model call in eight incremental steps — role, structured
+              output, choice, tools, the loop, memory, planning. Every step shows the naive version
+              beside the one that survives production, because going frameworkless means you own
+              the hardening. Ends at <code>mini-swe-agent</code>: roughly 100 lines, bash only, and
+              over 74% on SWE-bench Verified.
+            </p>
+            <span class="filechip">agents.html</span>
+          </div>
+          <div class="guide-aside">
+            <span class="eyebrow">Read it for</span>
+            <ul>
+              <li>What a framework is actually doing for you</li>
+              <li>Why <code>globals()</code> dispatch is a vulnerability</li>
+              <li>The four limits that bound a runaway loop</li>
+              <li>Evals and telemetry you still owe the system</li>
+            </ul>
+          </div>
+        </div>
+      </a>
+
+      <!-- 2 -->
+      <a class="guide g-sdk" href="openaisdk.html">
+        <div class="spine"></div>
+        <div class="guide-body">
+          <div class="guide-main">
+            <div class="guide-top">
+              <span class="glyph">🔩</span>
+              <span class="level">Rung two · thin abstraction</span>
+            </div>
+            <h3>What the Agents SDK Reduces To</h3>
+            <p class="guide-sub">The OpenAI Agents SDK, unwrapped.</p>
+            <p class="blurb">
+              A lightweight library that hands you <code>instructions</code> and gets out of the
+              way: what you write is what the model sees. Covers agents and runners, tools from
+              plain functions, the handoff-versus-agents-as-tools distinction, guardrails with
+              tripwires, sessions, and sandboxing — each traced back to the prompt and messages
+              underneath.
+            </p>
+            <span class="filechip">openaisdk.html</span>
+          </div>
+          <div class="guide-aside">
+            <span class="eyebrow">Read it for</span>
+            <ul>
+              <li>"Help me do this" vs. "you take over from here"</li>
+              <li>Guardrails, tripwires, and where they run</li>
+              <li>Why memory is off by default</li>
+              <li>Which seams create lock-in</li>
+            </ul>
+          </div>
+        </div>
+      </a>
+
+      <!-- 3 -->
+      <a class="guide g-crewai" href="crewai.html">
+        <div class="spine"></div>
+        <div class="guide-body">
+          <div class="guide-main">
+            <div class="guide-top">
+              <span class="glyph">⛵</span>
+              <span class="level">Rung three · thick abstraction</span>
+            </div>
+            <h3>What CrewAI Actually Sends</h3>
+            <p class="guide-sub">An opinionated framework, read through its traces.</p>
+            <p class="blurb">
+              You write role, goal, and backstory; CrewAI composes the system prompt. That single
+              decision explains everything downstream — YAML separated from code, tasks as
+              first-class objects, one-line switching between code-driven and LLM-driven
+              orchestration, and an implicit context default that quietly grows your prompt on
+              every task.
+            </p>
+            <span class="filechip">crewai.html</span>
+          </div>
+          <div class="guide-aside">
+            <span class="eyebrow">Read it for</span>
+            <ul>
+              <li>What the framework adds to your prompt</li>
+              <li><code>sequential</code> vs. <code>hierarchical</code> in one line</li>
+              <li>Why being explicit <em>narrows</em> context here</li>
+              <li>Debugging when the trace is your only documentation</li>
+            </ul>
+          </div>
+        </div>
+      </a>
+
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head col">
+      <span class="eyebrow">Side by side</span>
+      <h2>One question, three answers</h2>
+      <p>The rows are the decisions every agent has to make. The columns are where each guide puts them.</p>
+    </div>
+
+    <div class="tw">
+      <table>
+        <thead>
+          <tr>
+            <th>Decision</th>
+            <th class="m-agents">Plain Python</th>
+            <th class="m-sdk">Agents SDK</th>
+            <th class="m-crewai">CrewAI</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Who writes the system prompt</td>
+            <td>you, literally</td>
+            <td>you, via <code>instructions</code></td>
+            <td>the framework, from role / goal / backstory</td>
+          </tr>
+          <tr>
+            <td>Who owns the loop</td>
+            <td>your <code>while</code></td>
+            <td><code>Runner.run()</code></td>
+            <td><code>Crew.kickoff()</code></td>
+          </tr>
+          <tr>
+            <td>How tools are declared</td>
+            <td>a dict allow-list you maintain</td>
+            <td><code>@function_tool</code></td>
+            <td><code>@tool</code> + a built-in library</td>
+          </tr>
+          <tr>
+            <td>Context between steps</td>
+            <td>whatever you append</td>
+            <td>whatever you pass</td>
+            <td>all prior outputs, unless narrowed</td>
+          </tr>
+          <tr>
+            <td>Memory across runs</td>
+            <td>a list you write</td>
+            <td><code>Session</code>, opt-in</td>
+            <td><code>memory=True</code>, opt-in</td>
+          </tr>
+          <tr>
+            <td>Delegation</td>
+            <td>you call the next function</td>
+            <td>handoffs or agents-as-tools</td>
+            <td>manager agent + delegation</td>
+          </tr>
+          <tr>
+            <td>Bounding a runaway loop</td>
+            <td>yours to build</td>
+            <td>guardrails + tripwires</td>
+            <td>not covered in the sources</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="col" style="margin-top:28px">
+      <div class="note">
+        <span class="eyebrow">A caveat that applies to all three</span>
+        <p>
+          No source in the corpus benchmarks these against each other, and none measures framework
+          overhead against a hand-written loop. The guides reason from documented behaviour and
+          traces, not from measurement — and each one says so where it matters.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head col">
+      <span class="eyebrow">Across the rungs</span>
+      <h2>And one comparison</h2>
+      <p>
+        The two framework guides read on their own, but the interesting question is what separates
+        them. This page puts them side by side — and is honest that no source benchmarks one
+        against the other.
+      </p>
+    </div>
+
+    <div class="guides">
+      <a class="guide g-compare" href="comparison.html">
+        <div class="spine"></div>
+        <div class="guide-body">
+          <div class="guide-main">
+            <div class="guide-top">
+              <span class="glyph">⚖️</span>
+              <span class="pair">
+                <b class="p-sdk">Agents SDK</b><b class="p-x">vs.</b><b class="p-crew">CrewAI</b>
+              </span>
+            </div>
+            <h3>Same Machine, Different Clothing</h3>
+            <p class="guide-sub">A head-to-head of rungs two and three.</p>
+            <p class="blurb">
+              What is genuinely identical (tool definition, structured outputs, opt-in memory), the
+              full difference ledger, and the four differences that actually change your
+              engineering — all of which trace back to one decision: who writes the system prompt.
+              Ends with seven things the sources cannot tell you.
+            </p>
+            <span class="filechip">comparison.html</span>
+          </div>
+          <div class="guide-aside">
+            <span class="eyebrow">Read it for</span>
+            <ul>
+              <li>Why being explicit <em>narrows</em> context in CrewAI</li>
+              <li>Transparency tolerance as the deciding question</li>
+              <li>What "not covered in the sources" does and doesn't mean</li>
+              <li>The seven open gaps between them</li>
+            </ul>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="col">
+      <span class="eyebrow">About this set</span>
+      <p>
+        All three guides are derived from the project's <code>raw/</code> corpus — course
+        transcripts, lesson code, framework documentation, the <code>mini-swe-agent</code> source,
+        and the agentic-AI literature — cross-checked against the wiki. They are derived artifacts:
+        the wiki cites sources, these cite the wiki.
+      </p>
+      <p>
+        Links point at sibling files in the same folder. Keep <code>agents.html</code>,
+        <code>openaisdk.html</code>, <code>crewai.html</code>, and <code>comparison.html</code>
+        alongside this page and they resolve offline.
+      </p>
+    </div>
+  </div>
+</footer>

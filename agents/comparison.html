@@ -1,0 +1,702 @@
+<title>Same Machine, Different Clothing</title>
+
+<style>
+  /* ============================================================
+     This page compares exactly two things, so it borrows exactly
+     two accents — pine for the Agents SDK, ochre for CrewAI — and
+     a third neutral slate for claims that belong to both. Colour
+     is the argument: you can tell whose claim it is before you
+     read it. Neutrals are biased warm-green, the midpoint of the
+     two hues, so neither accent looks pasted on.
+     ============================================================ */
+  :root {
+    --paper:       #F7F7F4;
+    --surface:     #EEEEE9;
+    --surface-2:   #E3E4DD;
+    --ink:         #191B17;
+    --ink-soft:    #494D47;
+    --ink-faint:   #71766F;
+    --rule:        #DADCD4;
+    --rule-strong: #BCBFB5;
+
+    --sdk:         #0E5A50;   --sdk-tint:    #E2EFEC;   --sdk-edge:    #ACCFC8;
+    --crew:        #8A5A16;   --crew-tint:   #F4EEE1;   --crew-edge:   #DFCDA8;
+    --both:        #3F4A52;   --both-tint:   #E8EBEE;   --both-edge:   #C3CBD2;
+
+    --sans:  system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --serif: ui-serif, "Iowan Old Style", Georgia, "Times New Roman", serif;
+    --mono:  ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --measure: 64ch;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:       #0E100D;
+      --surface:     #171A16;
+      --surface-2:   #20241F;
+      --ink:         #E9EBE6;
+      --ink-soft:    #AAB0A8;
+      --ink-faint:   #7B8179;
+      --rule:        #262B24;
+      --rule-strong: #3C423A;
+
+      --sdk:   #5FBCAC;  --sdk-tint:  #0E1F1C;  --sdk-edge:  #1F4039;
+      --crew:  #D3A45C;  --crew-tint: #211A0F;  --crew-edge: #453320;
+      --both:  #9BAAB6;  --both-tint: #171C21;  --both-edge: #2E3841;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper:       #0E100D;
+    --surface:     #171A16;
+    --surface-2:   #20241F;
+    --ink:         #E9EBE6;
+    --ink-soft:    #AAB0A8;
+    --ink-faint:   #7B8179;
+    --rule:        #262B24;
+    --rule-strong: #3C423A;
+
+    --sdk:   #5FBCAC;  --sdk-tint:  #0E1F1C;  --sdk-edge:  #1F4039;
+    --crew:  #D3A45C;  --crew-tint: #211A0F;  --crew-edge: #453320;
+    --both:  #9BAAB6;  --both-tint: #171C21;  --both-edge: #2E3841;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 17px;
+    line-height: 1.66;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 clamp(20px, 5vw, 52px); }
+  .col  { max-width: var(--measure); }
+
+  h1, h2, h3, h4 { margin: 0; font-weight: 650; letter-spacing: -.025em; text-wrap: balance; }
+  h1 { font-size: clamp(2rem, 5.4vw, 3.15rem); line-height: 1.07; }
+  h2 { font-size: clamp(1.4rem, 3vw, 1.85rem); line-height: 1.2; }
+  h3 { font-size: 1.22rem; line-height: 1.3; }
+  h4 { font-size: .98rem; line-height: 1.4; letter-spacing: -.012em; }
+  p  { margin: 0; }
+
+  a { color: var(--sdk); text-underline-offset: 3px; }
+  a:focus-visible { outline: 2px solid var(--rule-strong); outline-offset: 3px; border-radius: 3px; }
+  strong { font-weight: 650; }
+
+  code {
+    font-family: var(--mono); font-size: .85em;
+    background: var(--surface-2); padding: .1em .38em; border-radius: 3px; white-space: nowrap;
+  }
+
+  .eyebrow {
+    font-family: var(--mono); font-size: .7rem; font-weight: 500;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--ink-faint);
+  }
+
+  /* ---------- masthead ---------- */
+  header.mast { padding: clamp(50px, 9vw, 92px) 0 clamp(30px, 5vw, 46px); border-bottom: 1px solid var(--rule); }
+  header.mast h1 { margin: 14px 0 20px; max-width: 16ch; }
+  .standfirst { font-size: clamp(1.02rem, 2vw, 1.15rem); color: var(--ink-soft); max-width: 58ch; }
+  .subjects { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 26px; }
+  .subj {
+    font-family: var(--mono); font-size: .76rem; letter-spacing: .04em;
+    padding: .42em .8em; border-radius: 6px; font-weight: 600;
+  }
+  .subj-sdk  { color: var(--sdk);  background: var(--sdk-tint);  border: 1px solid var(--sdk-edge); }
+  .subj-crew { color: var(--crew); background: var(--crew-tint); border: 1px solid var(--crew-edge); }
+
+  /* ---------- nav ---------- */
+  nav.toc {
+    position: sticky; top: 0; z-index: 20;
+    background: color-mix(in srgb, var(--paper) 92%, transparent);
+    backdrop-filter: blur(10px); border-bottom: 1px solid var(--rule);
+  }
+  nav.toc ol { display: flex; list-style: none; margin: 0; padding: 0; overflow-x: auto; scrollbar-width: thin; }
+  nav.toc a {
+    display: block; white-space: nowrap; padding: 13px 15px 12px; text-decoration: none;
+    font-family: var(--mono); font-size: .73rem; letter-spacing: .06em;
+    color: var(--ink-faint); border-bottom: 2px solid transparent;
+  }
+  nav.toc a:hover { color: var(--ink); border-bottom-color: var(--rule-strong); }
+  nav.toc li:first-child a { padding-left: 0; }
+
+  /* ---------- sections ---------- */
+  section { padding: clamp(46px, 7.5vw, 80px) 0; border-bottom: 1px solid var(--rule); }
+  .sec-head { display: flex; flex-direction: column; gap: 12px; margin-bottom: 30px; }
+  .sec-head p { color: var(--ink-soft); max-width: 60ch; }
+  .stack { display: flex; flex-direction: column; gap: 20px; }
+  .stack-lg { display: flex; flex-direction: column; gap: 40px; }
+
+  /* ---------- the signature device: the two-column ledger ---------- */
+  .ledger {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 2px;
+    background: var(--rule); border: 1px solid var(--rule);
+    border-radius: 10px; overflow: hidden;
+  }
+  .ledger > div { padding: 19px 21px 21px; min-width: 0; display: flex; flex-direction: column; gap: 9px; }
+  .l-sdk  { background: var(--sdk-tint); }
+  .l-crew { background: var(--crew-tint); }
+  .l-sdk .l-label  { color: var(--sdk); }
+  .l-crew .l-label { color: var(--crew); }
+  .l-label {
+    font-family: var(--mono); font-size: .7rem; font-weight: 600;
+    letter-spacing: .13em; text-transform: uppercase;
+  }
+  .ledger p { font-size: .96rem; color: var(--ink-soft); }
+  .ledger p.lead { color: var(--ink); font-size: 1rem; }
+  @media (max-width: 780px) { .ledger { grid-template-columns: 1fr; } }
+
+  /* ---------- callouts ---------- */
+  .box { border-radius: 10px; padding: 18px 20px; display: flex; flex-direction: column; gap: 9px; }
+  .box .lbl { font-family: var(--mono); font-size: .7rem; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; }
+  .box p { font-size: .96rem; }
+  .b-both { background: var(--both-tint); border: 1px solid var(--both-edge); }
+  .b-both .lbl { color: var(--both); }
+  .b-warn { background: var(--crew-tint); border: 1px solid var(--crew-edge); }
+  .b-warn .lbl { color: var(--crew); }
+  .b-key  { background: var(--sdk-tint); border: 1px solid var(--sdk-edge); }
+  .b-key .lbl { color: var(--sdk); }
+  .b-plain { background: var(--surface); border: 1px solid var(--rule); }
+  .b-plain .lbl { color: var(--ink-faint); }
+
+  blockquote {
+    margin: 0; padding-left: 20px; border-left: 2px solid var(--rule-strong);
+    font-family: var(--serif); font-size: 1.12rem; line-height: 1.55; color: var(--ink-soft);
+  }
+  blockquote.big {
+    font-size: clamp(1.2rem, 2.6vw, 1.6rem); line-height: 1.34;
+    color: var(--ink); border-left-width: 3px; padding-left: 24px;
+  }
+  blockquote cite {
+    display: block; margin-top: 10px; font-family: var(--mono); font-style: normal;
+    font-size: .69rem; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-faint);
+  }
+
+  /* ---------- tables ---------- */
+  .tw { overflow-x: auto; border: 1px solid var(--rule); border-radius: 10px; }
+  table { border-collapse: collapse; width: 100%; font-size: .93rem; min-width: 620px; }
+  th, td { text-align: left; padding: 11px 15px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  thead th {
+    font-family: var(--mono); font-size: .69rem; font-weight: 500;
+    letter-spacing: .11em; text-transform: uppercase; background: var(--surface);
+  }
+  th.h-dim  { color: var(--ink-faint); }
+  th.h-sdk  { color: var(--sdk); }
+  th.h-crew { color: var(--crew); }
+  th.h-both { color: var(--both); }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.dim { color: var(--ink-soft); }
+  td.na { color: var(--ink-faint); font-style: italic; }
+
+  /* ---------- numbered differences ---------- */
+  .diff { display: grid; grid-template-columns: 50px 1fr; gap: 0 24px; align-items: start; }
+  .diff-num {
+    font-family: var(--mono); font-size: 1.45rem; line-height: 1.1; font-weight: 600;
+    color: var(--ink-faint); font-variant-numeric: tabular-nums; padding-top: 4px;
+  }
+  .diff-body { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  @media (max-width: 620px) { .diff { grid-template-columns: 1fr; gap: 8px; } .diff-num { font-size: 1.1rem; padding-top: 0; } }
+
+  /* ---------- choose ---------- */
+  .choose { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .choose > div { padding: 22px; border-radius: 11px; display: flex; flex-direction: column; gap: 13px; }
+  .c-sdk  { background: var(--sdk-tint);  border: 1px solid var(--sdk-edge); }
+  .c-crew { background: var(--crew-tint); border: 1px solid var(--crew-edge); }
+  .c-sdk .eyebrow  { color: var(--sdk); }
+  .c-crew .eyebrow { color: var(--crew); }
+  @media (max-width: 720px) { .choose { grid-template-columns: 1fr; } }
+
+  ul.tight { margin: 0; padding-left: 1.15em; display: flex; flex-direction: column; gap: 7px; }
+  ul.tight li { font-size: .95rem; color: var(--ink-soft); line-height: 1.5; }
+  .c-sdk li::marker  { color: var(--sdk); }
+  .c-crew li::marker { color: var(--crew); }
+  ul.tight li::marker { color: var(--ink-faint); }
+
+  /* ---------- gaps ---------- */
+  .gaps { display: flex; flex-direction: column; border-top: 1px solid var(--rule); }
+  .gaps > div {
+    display: grid; grid-template-columns: 34px 1fr; gap: 0 16px;
+    padding: 15px 0; border-bottom: 1px solid var(--rule); align-items: start;
+  }
+  .gap-n { font-family: var(--mono); font-size: .8rem; color: var(--ink-faint); padding-top: 3px; font-variant-numeric: tabular-nums; }
+  .gap-t { display: flex; flex-direction: column; gap: 4px; }
+  .gap-t p { font-size: .93rem; color: var(--ink-soft); }
+
+  footer { padding: clamp(40px, 6vw, 66px) 0 clamp(54px, 8vw, 84px); }
+  footer .col { display: flex; flex-direction: column; gap: 12px; }
+  footer p { font-size: .9rem; color: var(--ink-faint); }
+  footer a { font-family: var(--mono); font-size: .86rem; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+  html { scroll-behavior: smooth; }
+  :target { scroll-margin-top: 62px; }
+</style>
+
+<header class="mast">
+  <div class="wrap">
+    <span class="eyebrow">Framework comparison</span>
+    <h1>Same Machine, Different Clothing</h1>
+    <p class="standfirst">
+      CrewAI and the OpenAI Agents SDK solve one problem with the same parts. What separates them
+      is a single decision — how much of the prompt you write yourself — and everything else
+      follows from it.
+    </p>
+    <div class="subjects">
+      <span class="subj subj-sdk">OpenAI Agents SDK</span>
+      <span class="subj subj-crew">CrewAI</span>
+    </div>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="wrap">
+    <ol>
+      <li><a href="#caveat">Caveat</a></li>
+      <li><a href="#same">What's the same</a></li>
+      <li><a href="#differ">Where they differ</a></li>
+      <li><a href="#four">The four that matter</a></li>
+      <li><a href="#choose">Choosing</a></li>
+      <li><a href="#gaps">What's unknown</a></li>
+    </ol>
+  </div>
+</nav>
+
+<!-- ============ CAVEAT ============ -->
+<section id="caveat">
+  <div class="wrap">
+    <div class="col stack">
+      <div class="box b-warn">
+        <span class="lbl">Evidence caveat, stated up front</span>
+        <p>
+          <strong>No source compares these two frameworks directly.</strong> The CrewAI material
+          never mentions the Agents SDK; the Agents SDK material never mentions CrewAI. Both come
+          from the same course, so the framing is consistent — but what follows is
+          <strong>synthesis, not a sourced head-to-head</strong>. There is no benchmark, no
+          overhead measurement, and no task suite either framework has been run against alongside
+          the other.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SHORT ANSWER ============ -->
+<section id="short">
+  <div class="wrap">
+    <div class="sec-head col">
+      <span class="eyebrow">The short answer</span>
+      <h2>They are the same machine wearing different amounts of clothing</h2>
+    </div>
+
+    <div class="col stack">
+      <p>
+        Underneath, both reduce to the three things every framework abstracts — orchestration, tool
+        calling, structured outputs — and both source sets are emphatic that nothing magical is
+        happening.
+      </p>
+    </div>
+
+    <div class="ledger" style="margin-top:24px">
+      <div class="l-sdk">
+        <span class="l-label">Agents SDK says</span>
+        <p class="lead">
+          "Framework abstractions often reduce to familiar primitives such as prompts, tool calls,
+          and messages."
+        </p>
+      </div>
+      <div class="l-crew">
+        <span class="l-label">CrewAI says</span>
+        <p class="lead">
+          "Once you know one, you pretty much know them all."
+        </p>
+      </div>
+    </div>
+
+    <div class="col stack" style="margin-top:24px">
+      <div class="box b-key">
+        <span class="lbl">The root difference</span>
+        <p>
+          <strong>How much of the prompt you write yourself.</strong> The Agents SDK hands you
+          <code>instructions</code> and gets out of the way. CrewAI asks for role, goal, and
+          backstory, then composes the system prompt for you. YAML separation, the task
+          abstraction, the process switch, and unified memory all follow from that one decision.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SAME ============ -->
+<section id="same">
+  <div class="wrap">
+    <div class="sec-head col">
+      <span class="eyebrow">Part one</span>
+      <h2>What is genuinely the same</h2>
+      <p>Everything in this table is shared. Nothing here should influence your choice.</p>
+    </div>
+
+    <div class="tw">
+      <table>
+        <thead><tr><th class="h-dim">Dimension</th><th class="h-both">Both frameworks</th></tr></thead>
+        <tbody>
+          <tr><td class="dim">Core abstraction</td><td>agent = model + instructions + tools</td></tr>
+          <tr><td class="dim">Tool definition</td><td>a decorator over a Python function; schema derived from name, <strong>type hints</strong>, and <strong>docstring</strong></td></tr>
+          <tr><td class="dim">Structured outputs</td><td>Pydantic <code>BaseModel</code> subclasses</td></tr>
+          <tr><td class="dim">Orchestration modes</td><td>both support code-driven <em>and</em> LLM-driven control flow</td></tr>
+          <tr><td class="dim">Tracing</td><td>built in, and in both cases the recommended way to find out what actually happened</td></tr>
+          <tr><td class="dim">Model portability</td><td>model-agnostic in principle — CrewAI via LiteLLM, the SDK by design</td></tr>
+          <tr><td class="dim">Memory across runs</td><td><strong>off by default in both</strong> — it must be explicitly opted into</td></tr>
+          <tr><td class="dim">What they don't give you</td><td>neither creates intelligence by adding agents</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="col stack" style="margin-top:26px">
+      <h3>Two of these deserve emphasis</h3>
+      <p>
+        <strong>Tool definition is effectively identical.</strong> Both derive the model-facing
+        schema from the same three signals, which means tool-design guidance transfers between
+        them unchanged and the docstring is the contract in both. Tool descriptions are part of
+        the context provided to the model — poor descriptions produce poor tool usage, in either
+        framework.
+      </p>
+      <p>
+        <strong>Memory is opt-in in both, for the same reason.</strong> The model is stateless;
+        something must resupply context. Reusing the same agent object across separate runs does
+        <em>not</em> carry history. CrewAI's <code>memory=True</code> and the SDK's
+        <code>Session</code> are two answers to one problem, and neither is the default.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DIFFER ============ -->
+<section id="differ">
+  <div class="wrap">
+    <div class="sec-head col">
+      <span class="eyebrow">Part two</span>
+      <h2>Where they differ</h2>
+      <p>The full ledger. The four rows that actually change your engineering are expanded after it.</p>
+    </div>
+
+    <div class="tw">
+      <table>
+        <thead>
+          <tr><th class="h-dim">Dimension</th><th class="h-sdk">OpenAI Agents SDK</th><th class="h-crew">CrewAI</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="dim">Philosophy</td><td>lightweight, few abstractions</td><td>opinionated, batteries included</td></tr>
+          <tr><td class="dim">System prompt</td><td>you write <code>instructions</code> directly</td><td>you write <strong>role / goal / backstory</strong>; the framework composes it</td></tr>
+          <tr><td class="dim">Where prompts live</td><td>in code</td><td>in <strong>YAML</strong>, separated from code</td></tr>
+          <tr><td class="dim">Unit of work</td><td>implicit — the run</td><td>explicit <code>Task</code> (description + expected_output)</td></tr>
+          <tr><td class="dim">Project setup</td><td>none; you write the code</td><td><code>crewai create crew</code> scaffolds a project tree</td></tr>
+          <tr><td class="dim">Orchestration switch</td><td>choose the mechanism in code</td><td>one line: <code>Process.sequential</code> or <code>Process.hierarchical</code></td></tr>
+          <tr><td class="dim">Delegation mechanism</td><td><strong>handoffs</strong> and <strong>agents-as-tools</strong></td><td><code>manager_agent</code> + <code>allow_delegation=True</code></td></tr>
+          <tr><td class="dim">Context between steps</td><td>you pass it explicitly</td><td><strong>implicit</strong> — all prior task outputs unless narrowed</td></tr>
+          <tr><td class="dim">Memory</td><td><code>Session</code>, e.g. <code>SQLiteSession</code></td><td><code>memory=True</code> (unified memory)</td></tr>
+          <tr><td class="dim">Guardrails</td><td>first-class: input / output / tool, with tripwires</td><td class="na">not covered in the available sources</td></tr>
+          <tr><td class="dim">Sandbox</td><td><code>SandboxAgent</code> with a manifest and capabilities</td><td class="na">not covered in the available sources</td></tr>
+          <tr><td class="dim">Tool library</td><td>function tools + hosted tools (web search, file search, code interpreter, hosted MCP)</td><td>a large built-in library — search, scrapers, file readers, image generation</td></tr>
+          <tr><td class="dim">Lock-in seam</td><td>hosted tools and hosted MCP</td><td>structural: YAML-to-code binding, prompt shape, process model</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="col stack" style="margin-top:24px">
+      <div class="box b-warn">
+        <span class="lbl">Read the two italic rows carefully</span>
+        <p>
+          They mean the CrewAI transcripts don't discuss guardrails or sandboxing —
+          <strong>not that CrewAI lacks them</strong>. That is a gap in the source set, and it is
+          recorded as one. Absence of a topic in one source set is never evidence of absence in
+          the framework.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ THE FOUR ============ -->
+<section id="four">
+  <div class="wrap">
+    <div class="sec-head col">
+      <span class="eyebrow">Part three</span>
+      <h2>The four differences that actually change your engineering</h2>
+      <p>Numbered because the first one causes the other three.</p>
+    </div>
+
+    <div class="stack-lg">
+
+      <!-- 1 -->
+      <div class="diff">
+        <div class="diff-num">01</div>
+        <div class="diff-body">
+          <h3>Who writes the system prompt</h3>
+          <p style="color:var(--ink-soft)">This is the root difference; everything else is downstream.</p>
+          <div class="ledger">
+            <div class="l-sdk">
+              <span class="l-label">Agents SDK</span>
+              <p>You write <code>instructions</code>. What you wrote is what the model sees.</p>
+            </div>
+            <div class="l-crew">
+              <span class="l-label">CrewAI</span>
+              <p>
+                You write three fields and the framework composes them. Traces show it rendering
+                the YAML goal as "your personal goal is…" and injecting scaffolding like "you must
+                return the actual complete content of the final answer, not a summary."
+              </p>
+            </div>
+          </div>
+          <p>
+            The claimed benefit is that you inherit the CrewAI team's prompt engineering. The
+            documented cost is stated directly: <em>"you have a little bit less transparency into
+            the system prompts that are being put together and sent to the LLM."</em>
+          </p>
+          <div class="box b-key">
+            <span class="lbl">Consequence for practice</span>
+            <p>
+              With CrewAI, <strong>the trace is the only documentation of your real prompt</strong>.
+              You cannot read your prompt off the page — you have to run the thing and look. That
+              changes what "reviewing a change" means.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2 -->
+      <div class="diff">
+        <div class="diff-num">02</div>
+        <div class="diff-body">
+          <h3>The implicit context default</h3>
+          <p style="color:var(--ink-soft)">The most consequential behavioural difference, and the one most likely to bite.</p>
+          <blockquote>
+            "If you don't specify a context, [CrewAI] will include all of the outputs from all
+            prior tasks in the context. If you do specify a context, then crew is more limiting,
+            and it will only include the outputs from the tasks that you mention."
+          </blockquote>
+          <p>
+            So <strong>being explicit narrows rather than widens</strong> — the opposite of most
+            people's intuition. The Agents SDK has no equivalent: context between steps is
+            whatever you pass.
+          </p>
+          <div class="box b-warn">
+            <span class="lbl">Why it matters</span>
+            <p>
+              This is a framework making a context-budget decision on your behalf, invisibly. In a
+              long crew, the default quietly grows the prompt on every task — and billed tokens
+              grow faster than the history does.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3 -->
+      <div class="diff">
+        <div class="diff-num">03</div>
+        <div class="diff-body">
+          <h3>The orchestration switch</h3>
+          <p style="color:var(--ink-soft)">
+            CrewAI collapses the central architectural choice in agent design into one line.
+          </p>
+          <div class="tw">
+            <table>
+              <thead><tr><th class="h-crew">Process</th><th class="h-dim">Behaviour</th><th class="h-dim">Equivalent to</th></tr></thead>
+              <tbody>
+                <tr><td><code>sequential</code></td><td>tasks run in definition order, respecting dependencies</td><td>orchestration <strong>by code</strong></td></tr>
+                <tr><td><code>hierarchical</code></td><td>a manager LLM decides the order and delegates</td><td>orchestration <strong>by LLM</strong></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            That is a genuine strength — it makes the most important decision in agent design cheap
+            to flip and easy to A/B. The Agents SDK requires restructuring code to make the same
+            move.
+          </p>
+          <div class="box b-warn">
+            <span class="lbl">The flip side</span>
+            <p>
+              A one-line switch into LLM orchestration is also a one-line switch into
+              unpredictability. Both source sets land on the same default:
+              <em>use LLM autonomy when autonomy provides real value, not simply because the
+              framework makes it possible.</em>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4 -->
+      <div class="diff">
+        <div class="diff-num">04</div>
+        <div class="diff-body">
+          <h3>Delegation semantics</h3>
+          <p style="color:var(--ink-soft)">The Agents SDK draws a distinction CrewAI does not surface.</p>
+          <div class="ledger">
+            <div class="l-sdk">
+              <span class="l-label">Agents as tools</span>
+              <p class="lead">"Help me do this."</p>
+              <p>The manager keeps control and gets a result back.</p>
+            </div>
+            <div class="l-sdk">
+              <span class="l-label">Handoff</span>
+              <p class="lead">"You take over from here."</p>
+              <p>The specialist becomes the conversation owner.</p>
+            </div>
+          </div>
+          <p>
+            CrewAI's hierarchical mode is closer to the first — a manager delegating and collecting
+            — with no equivalent of a true ownership transfer in the available material.
+          </p>
+          <div class="box b-both">
+            <span class="lbl">How to decide</span>
+            <p>
+              If your problem is <strong>routing</strong> — hand the customer to billing and let
+              billing finish — the SDK models it directly. If your problem is
+              <strong>decomposition</strong> — do these five things and give me the results — both
+              work.
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ CHOOSING ============ -->
+<section id="choose">
+  <div class="wrap">
+    <div class="sec-head col">
+      <span class="eyebrow">Part four</span>
+      <h2>Choosing between them</h2>
+      <p>Based on the sources, not on benchmarks — there are none.</p>
+    </div>
+
+    <div class="choose">
+      <div class="c-sdk">
+        <span class="eyebrow">Reach for the Agents SDK when</span>
+        <ul class="tight">
+          <li>You need to see and control the exact prompt</li>
+          <li>Guardrails, tripwires, or a sandbox are requirements</li>
+          <li>The handoff-vs-agents-as-tools distinction maps onto your problem</li>
+          <li>You want minimal abstraction between your code and the model</li>
+        </ul>
+      </div>
+      <div class="c-crew">
+        <span class="eyebrow">Reach for CrewAI when</span>
+        <ul class="tight">
+          <li>You want a project scaffold and a large tool library on day one</li>
+          <li>Prompts in YAML are worth something — reviewable by non-engineers, editable without touching code</li>
+          <li>Your problem decomposes naturally into agents with assigned tasks</li>
+          <li>You want to A/B code-vs-LLM orchestration cheaply</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="col stack" style="margin-top:30px">
+      <blockquote class="big">
+        The deciding question is not features. It's transparency tolerance.
+      </blockquote>
+      <p>
+        CrewAI trades visibility for speed. If you can debug from traces and you accept that the
+        framework authors your prompt, the trade is good. If you need to reason about the prompt
+        statically — compliance, high-stakes output, or a team that reviews prompts as artifacts —
+        the SDK's directness is worth the extra code.
+      </p>
+      <div class="box b-plain">
+        <span class="lbl">One structural note</span>
+        <p>
+          The thing that eventually forces teams off a framework is <em>fine-grained control over
+          context management</em>. CrewAI's implicit context default is exactly the kind of thing
+          that triggers that migration.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ GAPS ============ -->
+<section id="gaps">
+  <div class="wrap">
+    <div class="sec-head col">
+      <span class="eyebrow">Part five</span>
+      <h2>What the sources cannot tell you</h2>
+      <p>Recorded as gaps rather than papered over.</p>
+    </div>
+
+    <div class="col gaps">
+      <div><span class="gap-n">01</span><div class="gap-t">
+        <h4>No head-to-head</h4>
+        <p>No benchmark, no shared task suite, no cost or latency comparison. Anyone claiming one is faster or better is not citing this source set.</p>
+      </div></div>
+      <div><span class="gap-n">02</span><div class="gap-t">
+        <h4>CrewAI's central opinion is undemonstrated</h4>
+        <p>No evaluation shows role/goal/backstory outperforms a plain system prompt — despite it being the framework's defining design choice.</p>
+      </div></div>
+      <div><span class="gap-n">03</span><div class="gap-t">
+        <h4>No sequential-vs-hierarchical comparison</h4>
+        <p>Not on the same crew and task suite, which is surprising given how cheap the switch is.</p>
+      </div></div>
+      <div><span class="gap-n">04</span><div class="gap-t">
+        <h4>Unified memory is unmeasured</h4>
+        <p>No reported retrieval accuracy, storage policy, or cost profile.</p>
+      </div></div>
+      <div><span class="gap-n">05</span><div class="gap-t">
+        <h4>No agents-as-tools vs. handoffs measurement</h4>
+        <p>The distinction is conceptual; the guidance is judgment.</p>
+      </div></div>
+      <div><span class="gap-n">06</span><div class="gap-t">
+        <h4>Neither framework's overhead is measured</h4>
+        <p>Relative to a hand-written loop — the same gap that applies to every framework.</p>
+      </div></div>
+      <div><span class="gap-n">07</span><div class="gap-t">
+        <h4>Source asymmetry</h4>
+        <p>CrewAI has transcripts focused on building projects; the SDK has a structured deep-dive covering guardrails, sandboxes, and MCP. The coverage is uneven, so the comparison is too.</p>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FRAMING ============ -->
+<section id="framing">
+  <div class="wrap">
+    <div class="sec-head col">
+      <span class="eyebrow">The framing worth keeping</span>
+      <h2>Both source sets arrive at the same deflation</h2>
+    </div>
+    <div class="col stack">
+      <blockquote class="big">
+        Don't over-focus on framework selection. Different frameworks often provide different
+        implementations of broadly similar underlying capabilities.
+        <cite>Course transcript</cite>
+      </blockquote>
+      <p>
+        The capability that transfers between them — good tool descriptions, deliberate context,
+        evaluation against a real outcome, reading traces instead of guessing — is worth more than
+        the choice itself.
+      </p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="col">
+      <span class="eyebrow">Read next</span>
+      <p>
+        <a href="openaisdk.html">openaisdk.html</a> — the Agents SDK, unwrapped to its prompts and messages.<br>
+        <a href="crewai.html">crewai.html</a> — CrewAI read through its traces.<br>
+        <a href="agents.html">agents.html</a> — the same loop with no framework at all.<br>
+        <a href="central.html">central.html</a> — all four, in order.
+      </p>
+      <p>
+        Derived from the project's source corpus and cross-checked against the wiki. This is a
+        derived artifact: the wiki cites sources, this cites the wiki.
+      </p>
+    </div>
+  </div>
+</footer>
