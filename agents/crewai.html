@@ -1,0 +1,1079 @@
+<title>What CrewAI Actually Sends</title>
+
+<style>
+  /* ---------- tokens: complete light palette on bare :root ---------- */
+  :root {
+    --paper:        #FBFAF7;
+    --surface:      #F3F0EA;
+    --surface-2:    #EAE5DC;
+    --ink:          #1E1B2E;
+    --ink-soft:     #4A4459;
+    --ink-faint:    #736C86;
+    --rule:         #DED8CD;
+    --rule-strong:  #C6BEB0;
+
+    --accent:       #96631A;   /* ochre — "what you write" */
+    --accent-tint:  #F6EEDD;
+    --accent-edge:  #E0CFA8;
+
+    --crew:         #5B4A85;   /* violet — "what crew sends" */
+    --crew-tint:    #EFEBF6;
+    --crew-edge:    #D2C9E5;
+
+    --trap:         #96361D;   /* rust — traps only */
+    --trap-tint:    #FAEBE6;
+    --trap-edge:    #E8C8BC;
+
+    --code-bg:      #F5F2EC;
+    --code-ink:     #2A2540;
+
+    --shadow: 0 1px 2px rgba(30,27,46,.05), 0 8px 24px -12px rgba(30,27,46,.12);
+
+    --serif: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --sans:  system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --mono:  ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+    --measure: 68ch;
+  }
+
+  /* dark tokens for the un-stamped (system) state */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:        #151221;
+      --surface:      #1E1A2E;
+      --surface-2:    #272238;
+      --ink:          #E9E5F2;
+      --ink-soft:     #B5AEC9;
+      --ink-faint:    #8A82A1;
+      --rule:         #322C46;
+      --rule-strong:  #453D5E;
+
+      --accent:       #D9A648;
+      --accent-tint:  #2A2216;
+      --accent-edge:  #4D3D1E;
+
+      --crew:         #A895D8;
+      --crew-tint:    #221D33;
+      --crew-edge:    #3C3358;
+
+      --trap:         #E08A6B;
+      --trap-tint:    #2B1B16;
+      --trap-edge:    #4E2E22;
+
+      --code-bg:      #1B1729;
+      --code-ink:     #DCD6EC;
+
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.6);
+    }
+  }
+
+  /* dark tokens for the explicitly-stamped state */
+  :root[data-theme="dark"] {
+    --paper:        #151221;
+    --surface:      #1E1A2E;
+    --surface-2:    #272238;
+    --ink:          #E9E5F2;
+    --ink-soft:     #B5AEC9;
+    --ink-faint:    #8A82A1;
+    --rule:         #322C46;
+    --rule-strong:  #453D5E;
+
+    --accent:       #D9A648;
+    --accent-tint:  #2A2216;
+    --accent-edge:  #4D3D1E;
+
+    --crew:         #A895D8;
+    --crew-tint:    #221D33;
+    --crew-edge:    #3C3358;
+
+    --trap:         #E08A6B;
+    --trap-tint:    #2B1B16;
+    --trap-edge:    #4E2E22;
+
+    --code-bg:      #1B1729;
+    --code-ink:     #DCD6EC;
+
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.6);
+  }
+
+  /* ---------- base ---------- */
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 clamp(20px, 5vw, 56px);
+  }
+
+  .col { max-width: var(--measure); }
+
+  h1, h2, h3, h4 { font-family: var(--serif); text-wrap: balance; margin: 0; font-weight: 600; }
+  h1 { font-size: clamp(2.3rem, 6vw, 3.7rem); line-height: 1.04; letter-spacing: -.02em; }
+  h2 { font-size: clamp(1.6rem, 3.4vw, 2.15rem); line-height: 1.15; letter-spacing: -.015em; }
+  h3 { font-size: 1.24rem; line-height: 1.3; }
+  h4 { font-size: 1.02rem; line-height: 1.35; }
+
+  p { margin: 0; }
+  a { color: var(--accent); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+  a:focus-visible, button:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px;
+  }
+  strong { font-weight: 650; color: var(--ink); }
+  em { font-style: italic; }
+
+  code, kbd { font-family: var(--mono); font-size: .87em; }
+  p code, li code, td code, dd code {
+    background: var(--surface-2);
+    padding: .1em .38em;
+    border-radius: 3px;
+    color: var(--code-ink);
+    white-space: nowrap;
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: .7rem;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 500;
+  }
+
+  /* ---------- masthead ---------- */
+  .masthead {
+    border-bottom: 1px solid var(--rule);
+    padding: clamp(48px, 9vw, 96px) 0 clamp(32px, 5vw, 52px);
+  }
+  .masthead .col { max-width: 30ch; }
+  .masthead h1 { margin-bottom: .5em; }
+  .standfirst {
+    font-size: clamp(1.02rem, 2vw, 1.16rem);
+    color: var(--ink-soft);
+    max-width: 58ch;
+    line-height: 1.6;
+  }
+  .masthead-meta {
+    margin-top: 30px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 26px;
+    align-items: baseline;
+  }
+
+  /* ---------- nav ---------- */
+  nav.toc {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: color-mix(in srgb, var(--paper) 92%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--rule);
+  }
+  nav.toc ol {
+    display: flex; gap: 0;
+    list-style: none; margin: 0; padding: 0;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  nav.toc a {
+    display: block;
+    white-space: nowrap;
+    padding: 13px 16px 12px;
+    font-family: var(--mono);
+    font-size: .74rem;
+    letter-spacing: .05em;
+    color: var(--ink-faint);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+  }
+  nav.toc a:hover { color: var(--ink); border-bottom-color: var(--rule-strong); }
+  nav.toc li:first-child a { padding-left: 0; }
+
+  /* ---------- sections ---------- */
+  section { padding: clamp(52px, 8vw, 88px) 0; border-bottom: 1px solid var(--rule); }
+  .sec-head { display: flex; flex-direction: column; gap: 14px; margin-bottom: 36px; }
+  .sec-head p { color: var(--ink-soft); max-width: 62ch; }
+
+  .stack { display: flex; flex-direction: column; gap: 22px; }
+  .stack-lg { display: flex; flex-direction: column; gap: 40px; }
+
+  /* ---------- the recurring device: you write / crew sends ---------- */
+  .split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 6px 0;
+  }
+  .split > div { padding: 20px 22px 22px; min-width: 0; }
+  .side-you  { background: var(--accent-tint); }
+  .side-crew { background: var(--crew-tint); }
+  .side-you .side-label  { color: var(--accent); }
+  .side-crew .side-label { color: var(--crew); }
+  .side-label {
+    font-family: var(--mono);
+    font-size: .69rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    font-weight: 600;
+    display: block;
+    margin-bottom: 12px;
+  }
+  .split pre { margin: 0; background: transparent; border: 0; padding: 0; }
+  .split .note { font-size: .88rem; color: var(--ink-soft); margin-top: 12px; }
+
+  @media (max-width: 760px) {
+    .split { grid-template-columns: 1fr; }
+  }
+
+  /* ---------- code ---------- */
+  pre {
+    background: var(--code-bg);
+    color: var(--code-ink);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 16px 18px;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: .83rem;
+    line-height: 1.62;
+    margin: 0;
+    tab-size: 2;
+  }
+  pre b   { color: var(--accent); font-weight: 600; }      /* keys you write */
+  pre i   { color: var(--ink-faint); font-style: normal; } /* comments */
+  pre u   { color: var(--crew); text-decoration: none; font-weight: 600; } /* crew-injected */
+  pre s   { color: var(--trap); text-decoration: none; font-weight: 600; } /* danger */
+
+  .filename {
+    font-family: var(--mono);
+    font-size: .72rem;
+    letter-spacing: .06em;
+    color: var(--ink-faint);
+    display: block;
+    margin-bottom: 7px;
+  }
+
+  /* ---------- case blocks ---------- */
+  .case {
+    display: grid;
+    grid-template-columns: 58px 1fr;
+    gap: 0 26px;
+    align-items: start;
+  }
+  .case-num {
+    font-family: var(--serif);
+    font-size: 2.6rem;
+    line-height: .9;
+    color: var(--accent);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    padding-top: 4px;
+  }
+  .case-body { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+  .case-adds {
+    font-family: var(--mono);
+    font-size: .73rem;
+    letter-spacing: .05em;
+    color: var(--ink-faint);
+  }
+  .case-adds b { color: var(--accent); font-weight: 600; }
+  @media (max-width: 620px) {
+    .case { grid-template-columns: 1fr; gap: 10px; }
+    .case-num { font-size: 1.9rem; padding-top: 0; }
+  }
+
+  /* ---------- callouts ---------- */
+  .reveal, .trap, .note-box {
+    border-radius: 9px;
+    padding: 17px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .reveal   { background: var(--crew-tint);   border: 1px solid var(--crew-edge); }
+  .trap     { background: var(--trap-tint);   border: 1px solid var(--trap-edge); }
+  .note-box { background: var(--surface);     border: 1px solid var(--rule); }
+  .reveal .lbl, .trap .lbl, .note-box .lbl {
+    font-family: var(--mono);
+    font-size: .69rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .reveal .lbl { color: var(--crew); }
+  .trap   .lbl { color: var(--trap); }
+  .note-box .lbl { color: var(--ink-faint); }
+  .reveal p, .trap p, .note-box p { font-size: .95rem; }
+
+  blockquote {
+    margin: 0;
+    padding-left: 20px;
+    border-left: 2px solid var(--accent-edge);
+    color: var(--ink-soft);
+    font-family: var(--serif);
+    font-size: 1.06rem;
+    line-height: 1.55;
+  }
+  blockquote cite {
+    display: block;
+    margin-top: 9px;
+    font-family: var(--mono);
+    font-size: .7rem;
+    font-style: normal;
+    letter-spacing: .07em;
+    color: var(--ink-faint);
+  }
+
+  /* ---------- tables ---------- */
+  .tw { overflow-x: auto; border: 1px solid var(--rule); border-radius: 9px; }
+  table { border-collapse: collapse; width: 100%; font-size: .92rem; min-width: 480px; }
+  th, td { text-align: left; padding: 11px 15px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  thead th {
+    font-family: var(--mono);
+    font-size: .69rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 600;
+    background: var(--surface);
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+
+  /* ---------- misc ---------- */
+  .dl { display: grid; grid-template-columns: max-content 1fr; gap: 10px 22px; font-size: .95rem; }
+  .dl dt { font-family: var(--mono); font-size: .8rem; color: var(--accent); padding-top: 2px; }
+  .dl dd { margin: 0; color: var(--ink-soft); }
+  @media (max-width: 620px) { .dl { grid-template-columns: 1fr; gap: 3px 0; } .dl dd { margin-bottom: 12px; } }
+
+  ul.tight { margin: 0; padding-left: 1.15em; display: flex; flex-direction: column; gap: 7px; }
+  ul.tight li { padding-left: .15em; }
+  ul.tight::marker, ul.tight li::marker { color: var(--ink-faint); }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    padding: 20px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .card h4 { color: var(--ink); }
+  .card p { font-size: .92rem; color: var(--ink-soft); }
+
+  .verdict {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+  }
+  .verdict > div { padding: 22px; border-radius: 10px; display: flex; flex-direction: column; gap: 12px; }
+  .verdict .yes { background: var(--accent-tint); border: 1px solid var(--accent-edge); }
+  .verdict .no  { background: var(--surface);     border: 1px solid var(--rule); }
+
+  footer {
+    padding: clamp(42px, 6vw, 70px) 0 clamp(56px, 8vw, 90px);
+    color: var(--ink-faint);
+    font-size: .89rem;
+  }
+  footer .col { display: flex; flex-direction: column; gap: 14px; }
+  footer strong { color: var(--ink-soft); }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  }
+  html { scroll-behavior: smooth; }
+  :target { scroll-margin-top: 64px; }
+</style>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="col">
+      <span class="eyebrow">CrewAI — a working model</span>
+      <h1>What CrewAI Actually Sends</h1>
+    </div>
+    <p class="standfirst">
+      CrewAI is easy to start and hard to see into. This guide builds from the agentic
+      fundamentals up through six worked cases, and each case exposes one thing the
+      framework does on your behalf that never appears in your config files.
+    </p>
+    <div class="masthead-meta">
+      <span class="eyebrow">Foundations → 3 abstractions → 6 cases → traps</span>
+      <span class="eyebrow">Sourced from course transcripts</span>
+    </div>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="wrap">
+    <ol>
+      <li><a href="#foundations">Foundations</a></li>
+      <li><a href="#nouns">Three nouns</a></li>
+      <li><a href="#cases">The cases</a></li>
+      <li><a href="#trace">Reading traces</a></li>
+      <li><a href="#traps">Traps</a></li>
+      <li><a href="#verdict">When to use it</a></li>
+    </ol>
+  </div>
+</nav>
+
+<!-- ============ FOUNDATIONS ============ -->
+<section id="foundations">
+  <div class="wrap">
+    <div class="sec-head col">
+      <span class="eyebrow">Part one</span>
+      <h2>Before CrewAI: what an agent actually is</h2>
+      <p>
+        Every behaviour later in this guide makes sense only against these four ideas.
+        None of them are CrewAI-specific, and CrewAI does not change any of them — it
+        only decides how much of each it writes for you.
+      </p>
+    </div>
+
+    <div class="col stack">
+      <div class="note-box">
+        <span class="lbl">The definition</span>
+        <p style="font-family:var(--serif);font-size:1.15rem;line-height:1.5;color:var(--ink)">
+          An AI agent is an <strong>LLM with tools in a loop to achieve a goal</strong>.
+        </p>
+      </div>
+
+      <p>
+        An LLM takes input tokens, predicts likely tokens, and generates text. It does
+        <em>not</em> take actions. The agent is the surrounding code that calls the model,
+        interprets the output, decides what to do, calls tools, feeds results back, and repeats.
+      </p>
+
+      <div class="note-box">
+        <span class="lbl">The boundary that matters</span>
+        <p><strong>LLM = token generation engine. Agent = code that interprets those tokens and acts on them.</strong>
+          The model never reaches into your computer. Your code does. Tool calling and “autonomy”
+          are both ordinary software: prompt → tokens out → your code parses → your code executes.</p>
+      </div>
+
+      <h3 style="margin-top:14px">Who decides the next step?</h3>
+      <p>
+        This is the single most consequential architectural choice, and CrewAI turns it into
+        a one-line setting — so it is worth having the vocabulary first.
+      </p>
+
+      <div class="tw">
+        <table>
+          <thead>
+            <tr><th></th><th>Workflow</th><th>Agent</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Next step chosen by</strong></td><td>the developer, at design time</td><td>the model, at runtime</td></tr>
+            <tr><td><strong>Path</strong></td><td>predefined</td><td>open-ended</td></tr>
+            <tr><td><strong>Predictability</strong></td><td>high</td><td>low</td></tr>
+            <tr><td><strong>Testing</strong></td><td>conventional</td><td>needs trajectory evaluation</td></tr>
+            <tr><td><strong>Cost per task</strong></td><td>bounded, known</td><td>variable</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <blockquote>
+        If you already know the workflow, there is often little reason to ask an LLM to
+        decide the workflow.
+      </blockquote>
+
+      <h3 style="margin-top:14px">What every framework abstracts</h3>
+      <p>Frameworks are helper libraries. They handle three things and no more:</p>
+      <dl class="dl">
+        <dt>orchestration</dt><dd>connecting multiple LLM calls together</dd>
+        <dt>tool calling</dt><dd>connecting an LLM to functions it can invoke</dd>
+        <dt>structured outputs</dt><dd>getting back data your code can parse</dd>
+      </dl>
+      <p style="margin-top:6px">
+        Together these make an agent loop. The useful axis between frameworks is not features
+        but <strong>how opinionated</strong> they are — how much they decide for you.
+        CrewAI sits firmly at the opinionated end.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ THREE NOUNS ============ -->
+<section id="nouns">
+  <div class="wrap">
+    <div class="sec-head col">
+      <span class="eyebrow">Part two</span>
+      <h2>CrewAI has three nouns</h2>
+      <p>
+        Learn these and you have the whole vocabulary. Everything in Part three is these
+        three things plus one new setting at a time.
+      </p>
+    </div>
+
+    <div class="col stack-lg">
+
+      <div class="stack">
+        <h3>Agent — an LLM with a personality</h3>
+        <p>
+          Where a lightweight framework gives you one <code>instructions</code> field,
+          CrewAI asks for three and composes the system prompt itself.
+        </p>
+        <div class="split">
+          <div class="side-you">
+            <span class="side-label">You write</span>
+<pre><b>role:</b> A compelling debater
+<b>goal:</b> Present a clear argument
+      for or against {motion}
+<b>backstory:</b> An experienced debater
+      with a knack for concise,
+      convincing arguments
+<b>llm:</b> openai/gpt-4o-mini</pre>
+          </div>
+          <div class="side-crew">
+            <span class="side-label">Crew sends</span>
+<pre>You are <u>A compelling debater</u>.
+<u>Your personal goal is:</u> Present a
+clear argument for or against
+{motion}
+<u>An experienced debater with a
+knack for concise, convincing
+arguments</u>
+
+<i>…plus framework scaffolding you
+never wrote</i></pre>
+          </div>
+        </div>
+        <p class="case-adds">
+          The trade: you inherit CrewAI's prompt-engineering work.
+          You lose sight of the prompt.
+        </p>
+      </div>
+
+      <div class="stack">
+        <h3>Task — the unit of work</h3>
+        <p>
+          A task has a <code>description</code> and an <code>expected_output</code>, and is
+          <strong>assigned to an agent</strong>. Functionally, it is the user prompt.
+          CrewAI's own guidance is emphatic about where to spend your effort:
+        </p>
+        <blockquote>
+          You can have good tasks with very loosely defined agents and it will still work well,
+          but if you have a lot of detail on the agents but lousy tasks, then you're going to
+          get lousy performance.
+          <cite>CrewAI docs, via course transcript</cite>
+        </blockquote>
+      </div>
+
+      <div class="stack">
+        <h3>Crew — agents + tasks + a process</h3>
+        <p>
+          The crew binds them and decides execution order. The <code>process</code> setting is
+          where the workflow-versus-agent question from Part one reappears:
+        </p>
+        <div class="tw">
+          <table>
+            <thead><tr><th>Process</th><th>Behaviour</th><th>Equivalent to</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><code>sequential</code></td>
+                <td>tasks run in definition order, respecting declared dependencies</td>
+                <td>orchestration <strong>by code</strong></td>
+              </tr>
+              <tr>
+                <td><code>hierarchical</code></td>
+                <td>a manager LLM decides the order and delegates</td>
+                <td>orchestration <strong>by LLM</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="stack">
+        <h3>Where these live on disk</h3>
+        <p>
+          CrewAI's most-liked feature is that prompts live in YAML, separate from code.
+          <code>crewai create crew &lt;name&gt;</code> scaffolds this for you.
+        </p>
+        <span class="filename">project structure</span>
+<pre>src/project/
+├── config/
+│   ├── <b>agents.yaml</b>   <i># role, goal, backstory, llm</i>
+│   └── <b>tasks.yaml</b>    <i># description, expected_output, agent,
+│                    #   context, output_file, output_pydantic</i>
+├── <b>crew.py</b>           <i># binds YAML keys → objects; process, tools, memory</i>
+└── <b>main.py</b>           <i># inputs dict → kickoff()</i></pre>
+        <div class="trap">
+          <span class="lbl">Brittle seam</span>
+          <p>The function names in <code>crew.py</code> must match the YAML keys
+            <strong>exactly</strong>. A typo produces an obscure key-not-found error that is
+            hard to trace back to its cause.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ CASES ============ -->
+<section id="cases">
+  <div class="wrap">
+    <div class="sec-head col">
+      <span class="eyebrow">Part three</span>
+      <h2>Six cases, each adding one thing</h2>
+      <p>
+        These build strictly in order. Every case introduces exactly one new concept and
+        ends with the behaviour it exposes — usually something CrewAI decided without
+        telling you.
+      </p>
+    </div>
+
+    <div class="stack-lg">
+
+      <!-- CASE 1 -->
+      <div class="case">
+        <div class="case-num">1</div>
+        <div class="case-body">
+          <div>
+            <h3>The minimal crew</h3>
+            <p class="case-adds">Adds: <b>nothing — this is the baseline</b></p>
+          </div>
+          <p>
+            Two agents, two tasks, sequential. A researcher investigates a topic; a reporting
+            analyst writes it up. This is the default scaffold, and it runs out of the box.
+          </p>
+          <span class="filename">tasks.yaml</span>
+<pre><b>research_task:</b>
+  <b>description:</b> Conduct research on {topic}
+  <b>expected_output:</b> A list of 10 bullet points
+  <b>agent:</b> researcher
+
+<b>reporting_task:</b>
+  <b>description:</b> Expand each point into a full section
+  <b>expected_output:</b> A full report in markdown
+  <b>agent:</b> reporting_analyst
+  <b>output_file:</b> report.md</pre>
+          <div class="reveal">
+            <span class="lbl">Behaviour exposed</span>
+            <p>
+              You never wrote a system prompt. CrewAI composed one from role, goal and backstory,
+              and injected its own instructions on top — including lines like
+              <em>“you must return the actual complete content of the final answer, not a summary.”</em>
+              The prompt that reaches the model is a <strong>framework artifact</strong>, not something
+              you can read off the page.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- CASE 2 -->
+      <div class="case">
+        <div class="case-num">2</div>
+        <div class="case-body">
+          <div>
+            <h3>Placeholders and a third task</h3>
+            <p class="case-adds">Adds: <b>{variables} · one agent, many tasks</b></p>
+          </div>
+          <p>
+            A debate. Two agents — <code>debater</code> and <code>judge</code> — and three tasks.
+            The debater both proposes and opposes; the judge decides. Curly-brace placeholders
+            are filled from the <code>inputs</code> dict in <code>main.py</code>.
+          </p>
+          <span class="filename">tasks.yaml · main.py</span>
+<pre><b>propose:</b>
+  <b>description:</b> Argue in favour of {motion}. Be very convincing.
+  <b>agent:</b> debater
+<b>oppose:</b>
+  <b>description:</b> Argue against {motion}. Be very convincing.
+  <b>agent:</b> debater
+<b>decide:</b>
+  <b>description:</b> Review the arguments and decide which is
+                 more convincing. Judge purely on the arguments.
+  <b>agent:</b> judge
+
+<i># main.py</i>
+inputs = {<b>"motion"</b>: input("Enter the motion: ")}</pre>
+          <p>
+            It works. The judge reaches a verdict grounded in both arguments. But notice what
+            was never written: <strong>nothing told the judge about the two prior tasks.</strong>
+          </p>
+          <div class="reveal">
+            <span class="lbl">Behaviour exposed — the big one</span>
+            <p>
+              When a task does <strong>not</strong> declare a <code>context</code> field, CrewAI
+              silently passes it <strong>the outputs of every prior task</strong>. The judge saw
+              the proposal and the opposition because CrewAI decided it should.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- CASE 3 -->
+      <div class="case">
+        <div class="case-num">3</div>
+        <div class="case-body">
+          <div>
+            <h3>Tools, and context made explicit</h3>
+            <p class="case-adds">Adds: <b>built-in tools · the context field</b></p>
+          </div>
+          <p>
+            A financial researcher. One agent gets web search via <code>SerperDevTool</code>;
+            an analyst turns the findings into a report. Tools attach at the <em>agent</em> level.
+          </p>
+          <span class="filename">crew.py · tasks.yaml</span>
+<pre><i># crew.py</i>
+<b>from</b> crewai_tools <b>import</b> SerperDevTool
+
+@agent
+<b>def</b> researcher(self) -&gt; Agent:
+    <b>return</b> Agent(config=self.agents_config['researcher'],
+                 <b>tools=[SerperDevTool()]</b>)
+
+<i># tasks.yaml</i>
+<b>analysis_task:</b>
+  <b>description:</b> Analyse the research findings and write a report
+  <b>agent:</b> analyst
+  <b>context:</b> [research_task]      <i># ← the new thing</i>
+  <b>output_file:</b> output/report.md</pre>
+          <p>
+            Here is the counter-intuitive part. You would expect <code>context</code> to
+            <em>add</em> information. It does the opposite.
+          </p>
+          <div class="reveal">
+            <span class="lbl">Behaviour exposed</span>
+            <p>
+              Declaring <code>context</code> <strong>narrows</strong> what the task receives —
+              from <em>all prior task outputs</em> down to <em>only the tasks you named</em>.
+              Being explicit restricts; staying silent is the permissive option.
+            </p>
+          </div>
+          <div class="trap">
+            <span class="lbl">Why this bites</span>
+            <p>
+              In a long crew, the implicit default grows the prompt on every task. You pay for
+              it in tokens and in context rot, and nothing in your YAML shows it happening.
+              Declare <code>context</code> even when it seems redundant — it is the only way to
+              control what each task sees.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- CASE 4 -->
+      <div class="case">
+        <div class="case-num">4</div>
+        <div class="case-body">
+          <div>
+            <h3>Structured outputs and a custom tool</h3>
+            <p class="case-adds">Adds: <b>Pydantic schemas · the @tool decorator</b></p>
+          </div>
+          <p>
+            A stock picker. Three agents find trending companies, research them, and pick one.
+            Free text will not survive being passed between tasks, so the first two tasks
+            return typed objects.
+          </p>
+          <span class="filename">crew.py</span>
+<pre><b>class</b> TrendingCompany(BaseModel):
+    name: str   = Field(description="Company name")
+    ticker: str = Field(description="Stock ticker symbol")
+    reason: str = Field(description="Why it is trending")
+
+<b>class</b> TrendingCompanyList(BaseModel):
+    companies: List[TrendingCompany]
+
+@task
+<b>def</b> find_trending_companies(self) -&gt; Task:
+    <b>return</b> Task(config=self.tasks_config['find_trending_companies'],
+                <b>output_pydantic=TrendingCompanyList</b>)</pre>
+          <p>Custom tools use a decorator over a plain function — the schema is derived from the
+             name, type hints and docstring:</p>
+          <span class="filename">tools/push_tool.py</span>
+<pre><b>from</b> crewai.tools <b>import</b> tool
+
+<b>@tool("send_push_notification")</b>
+<b>def</b> send_push_notification(message: str) -&gt; str:
+    <i>"""Send a push notification to the user."""</i>
+    requests.post(PUSHOVER_URL, data={...})
+    <b>return</b> '{"notification": "ok"}'</pre>
+          <div class="reveal">
+            <span class="lbl">Behaviour exposed</span>
+            <p>
+              The docstring and type hints <strong>are</strong> the model-facing contract — they
+              become the tool schema the LLM reads. This is identical to how lightweight
+              frameworks do it. Tool definition is the one place CrewAI is not opinionated,
+              and the skill transfers directly.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- CASE 5 -->
+      <div class="case">
+        <div class="case-num">5</div>
+        <div class="case-body">
+          <div>
+            <h3>Memory</h3>
+            <p class="case-adds">Adds: <b>one boolean</b></p>
+          </div>
+          <p>
+            You want the stock picker to avoid recommending the same company twice. Earlier
+            CrewAI versions exposed four configurable memory types. Current CrewAI collapses
+            all of it into unified memory:
+          </p>
+          <span class="filename">crew.py</span>
+<pre><b>return</b> Crew(
+    agents=self.agents,
+    tasks=self.tasks,
+    process=Process.sequential,
+    <b>memory=True</b>,          <i># ← that is the entire API</i>
+)</pre>
+          <p>
+            Mechanically, agents are handed tools that read and write a memory store. It works.
+            The question is what you do when it does not.
+          </p>
+          <div class="reveal">
+            <span class="lbl">Behaviour exposed</span>
+            <p>
+              A one-line opt-in with <strong>no visibility into what was stored or retrieved</strong>.
+              The abstraction is total: no retrieval policy, no eviction rule, no inspection surface.
+              Traces are the only window.
+            </p>
+          </div>
+          <blockquote>
+            If the memory works the way you wanted to, then fabulous. If it doesn't, you can be
+            left scratching your head trying to figure out how do I even debug this?
+            <cite>Course transcript</cite>
+          </blockquote>
+        </div>
+      </div>
+
+      <!-- CASE 6 -->
+      <div class="case">
+        <div class="case-num">6</div>
+        <div class="case-body">
+          <div>
+            <h3>Hierarchical — handing control to a manager</h3>
+            <p class="case-adds">Adds: <b>a manager agent · one changed enum</b></p>
+          </div>
+          <p>
+            So far every crew ran tasks in the order you defined them. Switching to
+            <code>hierarchical</code> hands ordering and delegation to a manager LLM.
+          </p>
+          <span class="filename">crew.py</span>
+<pre>manager = Agent(
+    config=self.agents_config['manager'],
+    <b>allow_delegation=True</b>
+)
+
+<b>return</b> Crew(
+    agents=self.agents,
+    tasks=self.tasks,
+    <s>process=Process.hierarchical,</s>   <i># was Process.sequential</i>
+    <b>manager_agent=manager</b>,
+)</pre>
+          <p>
+            If you omit <code>manager_agent</code>, CrewAI supplies a default one. Specifying
+            your own is more predictable, because you control its prompt.
+          </p>
+          <div class="reveal">
+            <span class="lbl">Behaviour exposed</span>
+            <p>
+              One enum moves the system across the line from Part one — from
+              <strong>orchestration by code</strong> to <strong>orchestration by LLM</strong>.
+              That is a genuine strength: the most important architectural decision in agent
+              design becomes cheap to A/B. It is also a one-line switch into unpredictability,
+              harder testing, and variable cost.
+            </p>
+          </div>
+          <div class="note-box">
+            <span class="lbl">Rule of thumb</span>
+            <p>Use LLM autonomy when autonomy provides real value — not simply because the
+               framework makes it available.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ TRACE ============ -->
+<section id="trace">
+  <div class="wrap">
+    <div class="sec-head col">
+      <span class="eyebrow">Part four</span>
+      <h2>Traces are the documentation</h2>
+      <p>
+        Every case above ended with something CrewAI did that your config did not show.
+        There is exactly one way to see any of it.
+      </p>
+    </div>
+
+    <div class="col stack">
+      <span class="filename">three ways to enable</span>
+<pre>$ crewai traces enable          <i># per project</i>
+CREWAI_TRACING_ENABLED=true     <i># in .env, all projects</i>
+Crew(..., <b>tracing=True</b>)          <i># in code, this crew</i></pre>
+
+      <p>
+        Then <code>crewai login</code> and read them at <code>app.crewai.com</code>. What you
+        get is the per-agent, per-task breakdown: LLM calls, tool calls with inputs and outputs,
+        and — the important tab — <strong>the actual messages sent to the model</strong>.
+      </p>
+
+      <div class="note-box">
+        <span class="lbl">Use traces for two things</span>
+        <p>
+          <strong>One:</strong> ordinary debugging — what did it call, what came back.
+          <strong>Two, and more valuable:</strong> reverse-engineering the framework.
+          Compare the messages tab against your YAML and you can see exactly what CrewAI
+          added, rephrased, and forwarded.
+        </p>
+      </div>
+
+      <p>
+        This is the practical consequence of choosing an opinionated framework, and it changes
+        what code review means. With a lightweight framework you can read a prompt change in a
+        diff. With CrewAI, <strong>you have to run it and look at the trace.</strong>
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TRAPS ============ -->
+<section id="traps">
+  <div class="wrap">
+    <div class="sec-head col">
+      <span class="eyebrow">Part five</span>
+      <h2>Traps that cost hours</h2>
+      <p>Behavioural surprises first, then environment issues. The first three are design
+         consequences; the rest are papercuts that are merely expensive.</p>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <h4>Implicit context</h4>
+        <p>No <code>context</code> field means <em>all</em> prior task outputs are forwarded.
+           Declaring it narrows rather than widens.</p>
+      </div>
+      <div class="card">
+        <h4>Opaque system prompts</h4>
+        <p>You author role, goal and backstory. CrewAI authors the prompt. Only traces show
+           what was actually sent.</p>
+      </div>
+      <div class="card">
+        <h4>Undebuggable memory</h4>
+        <p><code>memory=True</code> gives no retrieval accuracy, storage policy, or inspection
+           surface.</p>
+      </div>
+      <div class="card">
+        <h4>Wrong Gemini key name</h4>
+        <p>CrewAI looks for <code>GEMINI_API_KEY</code>, not <code>GOOGLE_API_KEY</code>. Set both
+           to be safe.</p>
+      </div>
+      <div class="card">
+        <h4>The inner .env</h4>
+        <p><code>crewai create crew</code> writes a nested <code>.env</code> that shadows your
+           project one. Delete it immediately.</p>
+      </div>
+      <div class="card">
+        <h4>Non-overriding dotenv</h4>
+        <p>CrewAI calls <code>load_dotenv()</code> without <code>override=True</code>, so a stale
+           machine-level API key silently wins.</p>
+      </div>
+      <div class="card">
+        <h4>YAML indentation</h4>
+        <p>Misaligning <code>llm:</code> under the agent name instead of beside
+           <code>role:</code> surfaces as a cryptic key error.</p>
+      </div>
+      <div class="card">
+        <h4>Breaking changes</h4>
+        <p>Pin the version. CrewAI ships breaking changes between releases.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ VERDICT ============ -->
+<section id="verdict">
+  <div class="wrap">
+    <div class="sec-head col">
+      <span class="eyebrow">Part six</span>
+      <h2>Choosing it, honestly</h2>
+      <p>
+        The deciding question is not features. It is how much transparency you are willing
+        to trade for speed.
+      </p>
+    </div>
+
+    <div class="verdict">
+      <div class="yes">
+        <span class="eyebrow" style="color:var(--accent)">Reach for CrewAI when</span>
+        <ul class="tight">
+          <li>You want a project scaffold and a large tool library on day one</li>
+          <li>Separating prompts into YAML is worth something — reviewable by non-engineers, editable without touching code</li>
+          <li>Your problem decomposes naturally into agents with assigned tasks</li>
+          <li>You want to A/B code-versus-LLM orchestration cheaply</li>
+        </ul>
+      </div>
+      <div class="no">
+        <span class="eyebrow">Look elsewhere when</span>
+        <ul class="tight">
+          <li>You need to see and control the exact prompt</li>
+          <li>You must reason about prompts statically — compliance, high-stakes output, prompts reviewed as artifacts</li>
+          <li>Fine-grained context control matters; the implicit default fights you</li>
+          <li>You need guardrails or sandboxing as first-class features</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="col stack" style="margin-top:36px">
+      <div class="note-box">
+        <span class="lbl">What the evidence does not say</span>
+        <p>
+          No source evaluates whether role/goal/backstory beats a plain system prompt — CrewAI's
+          defining design choice is undemonstrated. There is no sequential-versus-hierarchical
+          comparison on the same crew, no retrieval-accuracy data for unified memory, and no
+          benchmark against any other framework. Treat the guidance above as reasoning from
+          documented behaviour, not from measurement.
+        </p>
+      </div>
+      <blockquote>
+        Don't over-focus on framework selection. Different frameworks often provide different
+        implementations of broadly similar underlying capabilities.
+        <cite>Course transcript</cite>
+      </blockquote>
+      <p>
+        The skills that transfer — writing good tool descriptions, being deliberate about
+        context, evaluating against a real outcome, reading traces instead of guessing — are
+        worth more than the choice itself.
+      </p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="col">
+      <span class="eyebrow">Sources and status</span>
+      <p>
+        Built from two CrewAI course transcripts and supporting course notes in the project's
+        <code>raw/</code> corpus, cross-checked against the wiki articles on CrewAI, agent
+        frameworks, context engineering and workflow-versus-agent.
+      </p>
+      <p>
+        <strong>Evidence grade:</strong> behaviour described here is documented in those
+        transcripts, not independently verified. Version-sensitive details — the memory API,
+        the process enum, scaffold layout — reflect CrewAI around v1.14 and may drift.
+      </p>
+    </div>
+  </div>
+</footer>
