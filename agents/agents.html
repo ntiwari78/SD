@@ -1,0 +1,991 @@
+<title>Just Python and a While Loop</title>
+
+<style>
+  /* ---------- tokens: complete light palette on bare :root ---------- */
+  :root {
+    --paper:       #F7F8FB;
+    --surface:     #EDEFF5;
+    --surface-2:   #E1E5EE;
+    --ink:         #12151C;
+    --ink-soft:    #434A58;
+    --ink-faint:   #6B7385;
+    --rule:        #D9DDE7;
+    --rule-strong: #BDC4D2;
+
+    --accent:      #1B4C86;   /* ink blue — the hardened version */
+    --accent-tint: #E5ECF5;
+    --accent-edge: #B7C8DE;
+
+    --fragile:     #9A4019;   /* rust — the naive version, and traps */
+    --fragile-tint:#FAEBE3;
+    --fragile-edge:#E7C6B4;
+
+    --code-bg:     #EFF1F7;
+    --code-ink:    #1A1F2B;
+
+    --sans:  system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --serif: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --mono:  ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+    --measure: 66ch;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:       #101319;
+      --surface:     #191D27;
+      --surface-2:   #232833;
+      --ink:         #E6EAF2;
+      --ink-soft:    #A9B1C1;
+      --ink-faint:   #7C8496;
+      --rule:        #272D3A;
+      --rule-strong: #3A4253;
+
+      --accent:      #7BA8DC;
+      --accent-tint: #141E2C;
+      --accent-edge: #2B3E58;
+
+      --fragile:     #DC8B60;
+      --fragile-tint:#241811;
+      --fragile-edge:#452A1C;
+
+      --code-bg:     #151A23;
+      --code-ink:    #DDE3EE;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper:       #101319;
+    --surface:     #191D27;
+    --surface-2:   #232833;
+    --ink:         #E6EAF2;
+    --ink-soft:    #A9B1C1;
+    --ink-faint:   #7C8496;
+    --rule:        #272D3A;
+    --rule-strong: #3A4253;
+
+    --accent:      #7BA8DC;
+    --accent-tint: #141E2C;
+    --accent-edge: #2B3E58;
+
+    --fragile:     #DC8B60;
+    --fragile-tint:#241811;
+    --fragile-edge:#452A1C;
+
+    --code-bg:     #151A23;
+    --code-ink:    #DDE3EE;
+  }
+
+  /* ---------- base ---------- */
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--serif);          /* serif body — reads like a book */
+    font-size: 18px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 clamp(20px, 5vw, 56px); }
+  .col  { max-width: var(--measure); }
+
+  h1, h2, h3, h4 {
+    font-family: var(--sans);           /* sans headings — inverted from the siblings */
+    margin: 0; font-weight: 700;
+    letter-spacing: -.028em;
+    text-wrap: balance;
+  }
+  h1 { font-size: clamp(2.1rem, 5.6vw, 3.4rem); line-height: 1.06; }
+  h2 { font-size: clamp(1.5rem, 3.2vw, 2rem); line-height: 1.18; }
+  h3 { font-size: 1.2rem; line-height: 1.32; letter-spacing: -.02em; }
+  h4 { font-size: 1rem; line-height: 1.4; letter-spacing: -.015em; }
+
+  p { margin: 0; }
+  a { color: var(--accent); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+  strong { font-weight: 650; color: var(--ink); }
+
+  code, kbd { font-family: var(--mono); font-size: .84em; }
+  p code, li code, td code, dd code {
+    background: var(--surface-2); padding: .1em .38em;
+    border-radius: 3px; color: var(--code-ink); white-space: nowrap;
+  }
+
+  .eyebrow {
+    font-family: var(--sans); font-size: .705rem; font-weight: 600;
+    letter-spacing: .17em; text-transform: uppercase; color: var(--ink-faint);
+  }
+
+  /* ---------- masthead ---------- */
+  .masthead { border-bottom: 1px solid var(--rule); padding: clamp(48px, 9vw, 92px) 0 clamp(32px, 5vw, 50px); }
+  .masthead .col { max-width: 22ch; }
+  .masthead h1 { margin-bottom: .44em; }
+  .standfirst { font-size: clamp(1.04rem, 2vw, 1.18rem); color: var(--ink-soft); max-width: 56ch; line-height: 1.62; }
+  .masthead-meta { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px 26px; align-items: baseline; }
+
+  /* ---------- nav ---------- */
+  nav.toc {
+    position: sticky; top: 0; z-index: 20;
+    background: color-mix(in srgb, var(--paper) 92%, transparent);
+    backdrop-filter: blur(10px); border-bottom: 1px solid var(--rule);
+  }
+  nav.toc ol { display: flex; list-style: none; margin: 0; padding: 0; overflow-x: auto; scrollbar-width: thin; }
+  nav.toc a {
+    display: block; white-space: nowrap; padding: 13px 16px 12px;
+    font-family: var(--sans); font-size: .755rem; font-weight: 600; letter-spacing: .05em;
+    color: var(--ink-faint); text-decoration: none; border-bottom: 2px solid transparent;
+  }
+  nav.toc a:hover { color: var(--ink); border-bottom-color: var(--rule-strong); }
+  nav.toc li:first-child a { padding-left: 0; }
+
+  /* ---------- sections ---------- */
+  section { padding: clamp(52px, 8vw, 86px) 0; border-bottom: 1px solid var(--rule); }
+  .sec-head { display: flex; flex-direction: column; gap: 13px; margin-bottom: 34px; }
+  .sec-head p { color: var(--ink-soft); max-width: 60ch; }
+  .stack { display: flex; flex-direction: column; gap: 22px; }
+  .stack-lg { display: flex; flex-direction: column; gap: 42px; }
+
+  /* ---------- recurring device: naive vs hardened ---------- */
+  .vs {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 2px;
+    background: var(--rule); border: 1px solid var(--rule);
+    border-radius: 10px; overflow: hidden; margin: 4px 0;
+  }
+  .vs > div { padding: 19px 21px 21px; min-width: 0; }
+  .v-naive { background: var(--fragile-tint); }
+  .v-hard  { background: var(--accent-tint); }
+  .v-naive .v-label { color: var(--fragile); }
+  .v-hard  .v-label { color: var(--accent); }
+  .v-label {
+    font-family: var(--sans); font-size: .7rem; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase; display: block; margin-bottom: 11px;
+  }
+  .vs pre { margin: 0; background: transparent; border: 0; padding: 0; }
+  @media (max-width: 780px) { .vs { grid-template-columns: 1fr; } }
+
+  /* ---------- code ---------- */
+  pre {
+    background: var(--code-bg); color: var(--code-ink);
+    border: 1px solid var(--rule); border-radius: 8px;
+    padding: 16px 18px; overflow-x: auto;
+    font-family: var(--mono); font-size: .82rem; line-height: 1.62;
+    margin: 0; tab-size: 4;
+  }
+  pre b { color: var(--accent);  font-weight: 600; }
+  pre i { color: var(--ink-faint); font-style: normal; }
+  pre s { color: var(--fragile); text-decoration: none; font-weight: 600; }
+
+  .filename {
+    font-family: var(--sans); font-size: .71rem; font-weight: 600;
+    letter-spacing: .09em; text-transform: uppercase;
+    color: var(--ink-faint); display: block; margin-bottom: 7px;
+  }
+
+  /* ---------- cases ---------- */
+  .case { display: grid; grid-template-columns: 54px 1fr; gap: 0 26px; align-items: start; }
+  .case-num {
+    font-family: var(--sans); font-size: 1.9rem; line-height: 1.05;
+    color: var(--accent); font-weight: 700;
+    font-variant-numeric: tabular-nums; letter-spacing: -.04em; padding-top: 5px;
+  }
+  .case-body { display: flex; flex-direction: column; gap: 17px; min-width: 0; }
+  .case-adds { font-family: var(--sans); font-size: .82rem; color: var(--ink-faint); }
+  .case-adds b { color: var(--accent); font-weight: 650; }
+  @media (max-width: 620px) { .case { grid-template-columns: 1fr; gap: 10px; } .case-num { font-size: 1.5rem; padding-top: 0; } }
+
+  /* ---------- callouts ---------- */
+  .reveal, .trap, .note-box { border-radius: 9px; padding: 17px 20px; display: flex; flex-direction: column; gap: 8px; }
+  .reveal   { background: var(--accent-tint);  border: 1px solid var(--accent-edge); }
+  .trap     { background: var(--fragile-tint); border: 1px solid var(--fragile-edge); }
+  .note-box { background: var(--surface);      border: 1px solid var(--rule); }
+  .reveal .lbl, .trap .lbl, .note-box .lbl {
+    font-family: var(--sans); font-size: .7rem; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase;
+  }
+  .reveal .lbl   { color: var(--accent); }
+  .trap .lbl     { color: var(--fragile); }
+  .note-box .lbl { color: var(--ink-faint); }
+  .reveal p, .trap p, .note-box p { font-size: .97rem; }
+
+  blockquote {
+    margin: 0; padding-left: 20px;
+    border-left: 2px solid var(--accent-edge);
+    color: var(--ink-soft); font-size: 1.08rem; line-height: 1.58;
+  }
+  blockquote cite {
+    display: block; margin-top: 9px;
+    font-family: var(--sans); font-size: .705rem; font-style: normal;
+    letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint);
+  }
+
+  /* ---------- tables ---------- */
+  .tw { overflow-x: auto; border: 1px solid var(--rule); border-radius: 9px; }
+  table { border-collapse: collapse; width: 100%; font-size: .93rem; min-width: 480px; }
+  th, td { text-align: left; padding: 11px 15px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  thead th {
+    font-family: var(--sans); font-size: .7rem; font-weight: 700;
+    letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-faint); background: var(--surface);
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  td code { font-size: .8em; }
+
+  /* ---------- misc ---------- */
+  .dl { display: grid; grid-template-columns: max-content 1fr; gap: 10px 22px; font-size: .96rem; }
+  .dl dt { font-family: var(--mono); font-size: .8rem; color: var(--accent); padding-top: 3px; }
+  .dl dd { margin: 0; color: var(--ink-soft); }
+  @media (max-width: 620px) { .dl { grid-template-columns: 1fr; gap: 3px 0; } .dl dd { margin-bottom: 12px; } }
+
+  ul.tight { margin: 0; padding-left: 1.15em; display: flex; flex-direction: column; gap: 7px; }
+  ul.tight li { padding-left: .15em; }
+  ul.tight li::marker { color: var(--ink-faint); }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--rule);
+    border-radius: 10px; padding: 20px;
+    display: flex; flex-direction: column; gap: 9px;
+  }
+  .card p { font-size: .93rem; color: var(--ink-soft); }
+
+  .verdict { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+  .verdict > div { padding: 22px; border-radius: 10px; display: flex; flex-direction: column; gap: 12px; }
+  .verdict .yes { background: var(--accent-tint); border: 1px solid var(--accent-edge); }
+  .verdict .no  { background: var(--surface);     border: 1px solid var(--rule); }
+
+  .ladder { display: flex; flex-direction: column; gap: 0; border-left: 2px solid var(--rule-strong); padding-left: 0; }
+  .ladder > div {
+    padding: 13px 0 13px 22px; position: relative;
+    border-bottom: 1px solid var(--rule);
+  }
+  .ladder > div:last-child { border-bottom: 0; }
+  .ladder > div::before {
+    content: ""; position: absolute; left: -5px; top: 21px;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent);
+  }
+  .ladder h4 { margin-bottom: 4px; }
+  .ladder p { font-size: .94rem; color: var(--ink-soft); }
+
+  footer { padding: clamp(42px, 6vw, 68px) 0 clamp(56px, 8vw, 88px); color: var(--ink-faint); font-size: .92rem; }
+  footer .col { display: flex; flex-direction: column; gap: 14px; }
+  footer strong { color: var(--ink-soft); }
+
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+  html { scroll-behavior: smooth; }
+  :target { scroll-margin-top: 64px; }
+</style>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="col">
+      <span class="eyebrow">Agents in plain Python — no framework</span>
+      <h1>Just Python and a While Loop</h1>
+    </div>
+    <p class="standfirst">
+      Every agent framework abstracts three things: orchestration, tool calling, and structured
+      outputs. Build those yourself once and the abstractions stop being magic. This guide goes
+      from a bare model call to a bounded, observable agent in eight steps — and each step shows
+      the naive version beside the one that survives contact with production.
+    </p>
+    <div class="masthead-meta">
+      <span class="eyebrow">Foundations → 8 cases → production floor → verdict</span>
+      <span class="eyebrow">Code sourced from the corpus</span>
+    </div>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="wrap">
+    <ol>
+      <li><a href="#foundations">Foundations</a></li>
+      <li><a href="#cases">The build</a></li>
+      <li><a href="#floor">Production floor</a></li>
+      <li><a href="#owe">What you still owe</a></li>
+      <li><a href="#verdict">Verdict</a></li>
+    </ol>
+  </div>
+</nav>
+
+<!-- ============ FOUNDATIONS ============ -->
+<section id="foundations">
+  <div class="wrap">
+    <div class="sec-head col">
+      <span class="eyebrow">Part one</span>
+      <h2>What you are actually building</h2>
+      <p>Four ideas. None require a framework, and skipping the framework does not change any of them.</p>
+    </div>
+
+    <div class="col stack">
+      <div class="note-box">
+        <span class="lbl">The definition</span>
+        <p style="font-family:var(--sans);font-size:1.16rem;line-height:1.45;color:var(--ink);font-weight:600;letter-spacing:-.02em">
+          An AI agent is an LLM with tools in a loop to achieve a goal.
+        </p>
+      </div>
+
+      <p>
+        An LLM takes input tokens, predicts likely tokens, and emits text. That is the whole of
+        what it does. It has no state, no memory, and no ability to act. Everything else —
+        the loop, the tools, the memory, the limits — is code you write.
+      </p>
+
+      <div class="note-box">
+        <span class="lbl">The boundary</span>
+        <p>
+          <strong>LLM = token generation engine. Agent = the code that interprets those tokens
+          and acts on them.</strong> The model does not reach into your machine and run your
+          function. Your software reads what it emitted and decides to call it.
+        </p>
+      </div>
+
+      <p>
+        This matters more without a framework than with one, because you are the layer.
+        Every safety property the system has, you will have typed.
+      </p>
+
+      <h3 style="margin-top:14px">Who decides the next step?</h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th></th><th>Workflow</th><th>Agent</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Next step chosen by</strong></td><td>you, at design time</td><td>the model, at runtime</td></tr>
+            <tr><td><strong>Path</strong></td><td>predefined</td><td>open-ended</td></tr>
+            <tr><td><strong>Predictability</strong></td><td>high</td><td>low</td></tr>
+            <tr><td><strong>Cost per task</strong></td><td>bounded, known</td><td>variable</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <blockquote>
+        If you already know the workflow, there is often little reason to ask an LLM to decide
+        the workflow.
+      </blockquote>
+
+      <h3 style="margin-top:14px">The three jobs you are taking on</h3>
+      <p>A framework is a library that handles these. Without one, they are yours:</p>
+      <dl class="dl">
+        <dt>orchestration</dt><dd>connecting multiple LLM calls together</dd>
+        <dt>tool calling</dt><dd>describing functions, parsing requests, dispatching safely</dd>
+        <dt>structured outputs</dt><dd>getting back data your code can rely on</dd>
+      </dl>
+
+      <div class="note-box">
+        <span class="lbl">Why do this at all</span>
+        <p>
+          Build it yourself once and you can read any framework's documentation and know exactly
+          what it is doing for you — and what it is doing <em>to</em> you. It is also the right
+          choice when you need fine-grained control over context, or when the harness is the
+          product.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CASES ============ -->
+<section id="cases">
+  <div class="wrap">
+    <div class="sec-head col">
+      <span class="eyebrow">Part two</span>
+      <h2>Eight steps from a bare call to an agent</h2>
+      <p>
+        Strictly incremental — each step adds one capability to the previous one. Where the
+        simple version breaks under load, the hardened version sits beside it.
+      </p>
+    </div>
+
+    <div class="stack-lg">
+
+      <!-- 1 -->
+      <div class="case">
+        <div class="case-num">01</div>
+        <div class="case-body">
+          <div><h3>Text in, text out</h3>
+            <p class="case-adds">Adds: <b>nothing — the floor</b></p></div>
+          <p>The whole foundation, one line.</p>
+<pre><b>def</b> simple_generate(self, user_input: str) -&gt; str:
+    <i>"""Simplest possible interaction — just pass text to the LLM."""</i>
+    <b>return</b> self.llm.generate(user_input)</pre>
+          <div class="reveal">
+            <span class="lbl">Behaviour</span>
+            <p>
+              <strong>Probabilistic.</strong> The same prompt twice can give different answers.
+              <strong>Stateless.</strong> It remembers nothing between calls.
+              <strong>No understanding.</strong> It recognises patterns in tokens and predicts
+              likely continuations — that is the mechanism, not a metaphor.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2 -->
+      <div class="case">
+        <div class="case-num">02</div>
+        <div class="case-body">
+          <div><h3>Give it a role</h3>
+            <p class="case-adds">Adds: <b>a system prompt</b></p></div>
+          <p>Same model, same question, different behaviour — by constraint, not capability.</p>
+<pre><b>def</b> generate_with_role(self, user_input: str) -&gt; str:
+    prompt = f<i>"""{self.system_prompt}
+
+User: {user_input}
+Assistant:"""</i>
+    <b>return</b> self.llm.generate(prompt).strip()</pre>
+          <div class="reveal">
+            <span class="lbl">Behaviour</span>
+            <p>
+              <strong>Behaviour is not intelligence — it is constraints.</strong> You are not
+              changing the model, you are shifting probabilities. Responses still vary, but now
+              they vary <em>within the bounds you set</em>.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3 -->
+      <div class="case">
+        <div class="case-num">03</div>
+        <div class="case-body">
+          <div><h3>Make the output parseable</h3>
+            <p class="case-adds">Adds: <b>a schema, validation, retries</b></p></div>
+          <p>
+            Free text cannot drive a program. Asking for JSON is necessary and not sufficient —
+            the model will sometimes wrap it in prose, or emit something malformed.
+          </p>
+          <div class="vs">
+            <div class="v-naive">
+              <span class="v-label">Naive</span>
+<pre>resp = llm.generate(prompt)
+data = json.loads(resp)   <s># throws</s>
+<i># one bad response and
+# the program dies</i></pre>
+            </div>
+            <div class="v-hard">
+              <span class="v-label">Hardened</span>
+<pre><b>for</b> attempt <b>in</b> range(3):
+    resp = llm.generate(
+        prompt, <b>temperature=0.0</b>)
+    parsed = extract_json_from_text(resp)
+    <b>if</b> parsed <b>is not</b> None:
+        <b>return</b> parsed
+<b>return</b> None</pre>
+            </div>
+          </div>
+          <p>
+            Three things doing work here: <strong>temperature 0</strong> for determinism,
+            <strong>tolerant extraction</strong> that finds JSON inside surrounding prose, and a
+            <strong>bounded retry</strong>.
+          </p>
+          <div class="reveal">
+            <span class="lbl">Behaviour — the first engineering moment</span>
+            <p>
+              You are now treating the LLM as a <strong>fallible component</strong>: parse it,
+              validate it, handle failure. Retries convert probabilistic behaviour into reliable
+              behaviour. <strong>Count them</strong> — a rising retry rate is how you detect a
+              prompt or model regression before users do.
+            </p>
+          </div>
+          <div class="trap">
+            <span class="lbl">Non-obvious</span>
+            <p>
+              Multi-line schemas with a worked example outperform single-line ones. And a prompt
+              edit that merely improves phrasing can increase verbosity, push the JSON past the
+              context window, and break parsing — <strong>without changing correctness at all</strong>.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4 -->
+      <div class="case">
+        <div class="case-num">04</div>
+        <div class="case-body">
+          <div><h3>Let it choose</h3>
+            <p class="case-adds">Adds: <b>a finite action space</b></p></div>
+          <p>Instead of generating an answer, the model selects from a fixed list.</p>
+<pre><b>for</b> attempt <b>in</b> range(3):
+    parsed = extract_json_from_text(
+        llm.generate(prompt, temperature=0.0))
+    <b>if</b> parsed <b>and</b> <i>"decision"</i> <b>in</b> parsed:
+        decision = parsed[<i>"decision"</i>]
+        <b>if</b> decision <b>in</b> choices:        <i># ← the load-bearing line</i>
+            <b>return</b> decision
+<b>return</b> None</pre>
+          <div class="reveal">
+            <span class="lbl">Behaviour — agency begins here</span>
+            <p>
+              <strong>Selection is not generation.</strong> Constraining an infinite output space
+              to a handful of options is the cheapest reliability win available. But the model can
+              still return something that <em>looks</em> like a decision and is not in your list —
+              which is why the membership check is not optional.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5 -->
+      <div class="case">
+        <div class="case-num">05</div>
+        <div class="case-body">
+          <div><h3>Let it act</h3>
+            <p class="case-adds">Adds: <b>tools — request separated from execution</b></p></div>
+          <p>
+            The model emits a structured request. Your code decides whether to honour it.
+            Keeping those two things in separate functions is the whole of tool safety.
+          </p>
+<pre><b>def</b> request_tool(self, user_input: str) -&gt; dict | None:
+    <i># prompt describes: calculator(a, b, operation)</i>
+    <b>for</b> attempt <b>in</b> range(3):
+        parsed = extract_json_from_text(
+            self.llm.generate(prompt, temperature=0.0))
+        <b>if</b> parsed <b>and</b> <i>"tool"</i> <b>in</b> parsed <b>and</b> <i>"arguments"</i> <b>in</b> parsed:
+            <b>return</b> parsed
+    <b>return</b> None
+
+<b>def</b> execute_tool_call(self, tool_call: dict):
+    <b>return</b> execute_tool(tool_call[<i>"tool"</i>], tool_call[<i>"arguments"</i>])</pre>
+          <p>
+            Dispatch is where the danger is. A tempting shortcut looks up the function by name in
+            the global namespace:
+          </p>
+          <div class="vs">
+            <div class="v-naive">
+              <span class="v-label">Naive — do not ship this</span>
+<pre>fn = <s>globals()</s>[name]
+result = fn(**args)
+
+<i># elegant, and it exposes
+# every global function
+# to the model</i></pre>
+            </div>
+            <div class="v-hard">
+              <span class="v-label">Hardened</span>
+<pre>TOOL_MAP = {
+  <i>"record_user_details"</i>: record_user_details,
+  <i>"record_unknown_question"</i>: record_unknown_question,
+}
+fn = TOOL_MAP.get(name)
+<b>if</b> fn <b>is</b> None:
+    <b>return</b> <i>"Error: unknown tool"</i></pre>
+            </div>
+          </div>
+          <div class="trap">
+            <span class="lbl">Why globals() is a vulnerability</span>
+            <p>
+              It trusts the model to only ever name a tool you gave it. In principle the model can
+              name <code>exec</code> — or anything else importable in that module — and your
+              dispatcher will happily call it. An <strong>explicit allow-list is the boundary</strong>,
+              and it is one dictionary.
+            </p>
+          </div>
+          <div class="reveal">
+            <span class="lbl">Behaviour</span>
+            <p>
+              <strong>Tools are interfaces, not abilities.</strong> The agent does not have the
+              capability — you do. It describes what it wants through a structured contract you
+              defined, and you retain the right to refuse. This is also why adding capability
+              needs no retraining: you add a function and a description.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6 -->
+      <div class="case">
+        <div class="case-num">06</div>
+        <div class="case-body">
+          <div><h3>Close the loop</h3>
+            <p class="case-adds">Adds: <b>iteration and termination</b></p></div>
+          <p>
+            Everything so far is a single exchange. The agent appears when you repeat: call the
+            model, run whatever tools it asked for, append the results, call again — and stop when
+            it answers without requesting a tool.
+          </p>
+<pre><b>while</b> not goal_achieved:
+    response = call_llm(context)
+
+    <b>if</b> response_requests_tool:
+        result = execute_tool(...)
+        context += result          <i># observation goes back in</i>
+    <b>else</b>:
+        <b>return</b> response          <i># no tool requested → done</i></pre>
+          <div class="reveal">
+            <span class="lbl">Behaviour — this is the whole trick</span>
+            <p>
+              <strong>The software owns the loop.</strong> The software owns tool execution. The
+              model only emits tokens that guide the next step. Everything marketed as autonomy is
+              this <code>while</code> and this <code>if</code>.
+            </p>
+          </div>
+          <p>
+            That version has no brakes. A loop with no bounds is the signature agent failure, and
+            four independent limits are the fix — any one alone is insufficient:
+          </p>
+          <div class="tw">
+            <table>
+              <thead><tr><th>Limit</th><th>Typical</th><th>Why it alone is not enough</th></tr></thead>
+              <tbody>
+                <tr><td>Step cap</td><td>20–50</td><td>five expensive steps can still burn the budget</td></tr>
+                <tr><td>Cost ceiling</td><td><code>$3.00</code></td><td>a cheap loop can run for hours</td></tr>
+                <tr><td>Wall-clock limit</td><td>per deployment</td><td>a hung tool blocks indefinitely</td></tr>
+                <tr><td>No-progress detection</td><td>hash last <em>k</em> actions</td><td>an agent can oscillate under all three</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="note-box">
+            <span class="lbl">A free planning upgrade</span>
+            <p>
+              Give the loop two extra tools — <code>create_checklist(items)</code> and
+              <code>mark_complete(index, notes)</code> — and the model starts planning before it
+              acts and works through items one by one. The visible to-do list in coding agents is
+              exactly this. Nothing else changes; it is the same loop.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7 -->
+      <div class="case">
+        <div class="case-num">07</div>
+        <div class="case-body">
+          <div><h3>Let it remember</h3>
+            <p class="case-adds">Adds: <b>persistence across interactions</b></p></div>
+          <p>
+            Say "My name is Ale" in one call and ask "What's my name?" in the next, and the model
+            has no idea. It never did. What looks like memory is context being resupplied.
+          </p>
+<pre>memory_context = self.memory.get_all()
+memory_str = <i>"You remember:\n"</i> + <i>"\n"</i>.join(f<i>"- {m}"</i> <b>for</b> m <b>in</b> memory_context)
+
+<i># model returns: {"reply": ..., "save_to_memory": "..." | null}</i>
+<b>if</b> parsed.get(<i>"save_to_memory"</i>):
+    self.memory.add(parsed[<i>"save_to_memory"</i>])</pre>
+          <div class="reveal">
+            <span class="lbl">Behaviour</span>
+            <p>
+              <strong>Memory is data storage, not thought.</strong> It is a list you can print,
+              edit, and delete. The model has no direct access to it — it only ever sees what you
+              chose to put in the prompt. Distinguish <strong>context</strong> (this prompt) from
+              <strong>memory</strong> (storage that outlives it).
+            </p>
+          </div>
+          <div class="trap">
+            <span class="lbl">Where this goes wrong</span>
+            <p>
+              Get-all retrieval stops working once memory is large — it floods the context and
+              costs tokens on every turn. You will eventually need relevance, recency, and an
+              eviction rule. Start simple, but know the ceiling is low.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8 -->
+      <div class="case">
+        <div class="case-num">08</div>
+        <div class="case-body">
+          <div><h3>Let it plan</h3>
+            <p class="case-adds">Adds: <b>plans as data → typed actions → a dependency graph</b></p></div>
+          <p>Three refinements of one idea, each making the plan more executable.</p>
+
+          <p><strong>First, a plan is JSON — not a thought:</strong></p>
+<pre>{<i>"steps"</i>: [<i>"Research topic"</i>, <i>"Create outline"</i>, <i>"Write draft"</i>]}</pre>
+          <p class="case-adds">
+            Because it is data, you can <b>inspect it, edit it, validate it, and reuse it</b>
+            before anything executes.
+          </p>
+
+          <p style="margin-top:6px"><strong>Second, vague steps become typed actions.</strong>
+             "Write draft" cannot be validated. This can:</p>
+<pre>{<i>"action"</i>: <i>"generate_text"</i>,
+ <i>"inputs"</i>: {<i>"topic"</i>: <i>"AI agents"</i>, <i>"length"</i>: <i>"1000 words"</i>}}</pre>
+
+          <p style="margin-top:6px"><strong>Third, add dependencies and you have a graph:</strong></p>
+<pre>{<i>"nodes"</i>: [
+  {<i>"id"</i>: <i>"1"</i>, <i>"action"</i>: <i>"research"</i>, <i>"depends_on"</i>: []},
+  {<i>"id"</i>: <i>"2"</i>, <i>"action"</i>: <i>"outline"</i>,  <i>"depends_on"</i>: [<i>"1"</i>]}
+]}
+
+<i># validate BEFORE executing:</i>
+<i>#   every depends_on id exists</i>
+<i>#   the graph is acyclic</i></pre>
+          <div class="reveal">
+            <span class="lbl">Behaviour</span>
+            <p>
+              <strong>Planning is structured data generation, not reasoning.</strong> The graph is
+              not advanced cognition — it is validation plus explicit ordering, which buys you
+              parallel execution of independent nodes and failures contained to single nodes.
+              By this point it feels inevitable rather than clever.
+            </p>
+          </div>
+          <div class="trap">
+            <span class="lbl">What decomposition cannot fix</span>
+            <p>
+              Global constraints. Split a trip into flights, hotels, and food and each part is
+              fine — but <strong>budget and dietary rules belong to no sub-task, so no sub-task
+              checks them</strong>. Neither more decomposition nor a bigger context window solves
+              this. Enforce global constraints in your own code, after the plan runs.
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ PRODUCTION FLOOR ============ -->
+<section id="floor">
+  <div class="wrap">
+    <div class="sec-head col">
+      <span class="eyebrow">Part three</span>
+      <h2>How little you actually need</h2>
+      <p>
+        The strongest evidence that frameworkless is viable is a research agent that deliberately
+        removed almost everything.
+      </p>
+    </div>
+
+    <div class="col stack">
+      <p>
+        <strong>mini-swe-agent</strong>, from the team behind SWE-bench, is roughly 100 lines for
+        the agent class and scores <strong>over 74% on SWE-bench Verified</strong>. Four choices
+        explain it:
+      </p>
+
+      <div class="ladder">
+        <div>
+          <h4>No tools other than bash</h4>
+          <p>Not even the model's tool-calling interface — so it runs with any model at all.
+             Rather than implementing a tool per capability, the model uses the shell.</p>
+        </div>
+        <div>
+          <h4>A completely linear history</h4>
+          <p>Every step appends. The trajectory <em>is</em> the message list you send — nothing to
+             reconcile when debugging or fine-tuning.</p>
+        </div>
+        <div>
+          <h4>subprocess.run for every action</h4>
+          <p>No stateful shell session. Each action is independent, which makes sandboxing a
+             one-line substitution — swap in <code>docker exec</code> — and scaling trivial.</p>
+        </div>
+        <div>
+          <h4>Termination is a message</h4>
+          <p>The loop exits only on a message with <code>role == "exit"</code>, so the reason a run
+             ended is part of the saved trajectory rather than a side channel.</p>
+        </div>
+      </div>
+
+      <p style="margin-top:10px">Its entire safety envelope is a config object:</p>
+      <span class="filename">the whole surface</span>
+<pre><b>class</b> AgentConfig(BaseModel):
+    system_template: str
+    instance_template: str
+    <b>step_limit</b>: int = 0                     <i># 0 = unlimited</i>
+    <b>cost_limit</b>: float = 3.0                 <i># USD</i>
+    <b>wall_time_limit_seconds</b>: int = 0
+    <b>max_consecutive_format_errors</b>: int = 3
+    output_path: Path | None = None</pre>
+
+      <p>
+        Limits are checked <em>before</em> the model call and raised as typed exceptions that
+        append an exit message. The trajectory is written in a <code>finally</code> block, so even
+        a crashed run leaves a complete record.
+      </p>
+
+      <blockquote>
+        We placed a lot of emphasis on tools and special interfaces for the agent. However, one
+        year later, as LMs have become more capable, a lot of this is not needed at all to build a
+        useful agent.
+        <cite>mini-swe-agent, project README</cite>
+      </blockquote>
+
+      <div class="reveal">
+        <span class="lbl">What this is evidence for</span>
+        <p>
+          <strong>Capability moved from the scaffold into the model.</strong> Loop complexity is
+          not where agent performance comes from. A simple loop with good tools and honest limits
+          is a competitive baseline — and a deliberately unopinionated one, which is why it is
+          also the recommended starting point for fine-tuning or RL work that should not overfit
+          to a particular scaffold.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ WHAT YOU STILL OWE ============ -->
+<section id="owe">
+  <div class="wrap">
+    <div class="sec-head col">
+      <span class="eyebrow">Part four</span>
+      <h2>What you still owe the system</h2>
+      <p>
+        Eight cases produce a working agent. These are the jobs a framework would have quietly
+        done, and they are the difference between a demo and something you can operate.
+      </p>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <h4>A context budget</h4>
+        <p>History grows linearly, so billed tokens grow quadratically. Count tokens with the real
+           tokenizer before every call — some APIs truncate silently and your system prompt is
+           what disappears.</p>
+      </div>
+      <div class="card">
+        <h4>Retries with backoff</h4>
+        <p>Exponential backoff with jitter, applied at the <em>tool</em> level where failures are
+           common and recoverable. Retried tools must be idempotent or you will send two emails.</p>
+      </div>
+      <div class="card">
+        <h4>Loop detection</h4>
+        <p>Hash <code>(tool, args)</code> with sorted keys and look for repeats in a sliding
+           window. On detection, escalate — do not iterate harder.</p>
+      </div>
+      <div class="card">
+        <h4>A sandbox</h4>
+        <p>The one control that does not depend on the model behaving. Containers, no network by
+           default, read-only root, CPU and memory caps. Never host privileges.</p>
+      </div>
+      <div class="card">
+        <h4>Untrusted tool output</h4>
+        <p>A fetched page can carry instructions. Treat every tool result as <strong>data, never
+           instructions</strong>, and sanitise before it re-enters context.</p>
+      </div>
+      <div class="card">
+        <h4>Graceful failure</h4>
+        <p>Say what was accomplished, why it stopped, what would unblock it — and preserve state
+           so the task can resume.</p>
+      </div>
+    </div>
+
+    <div class="col stack" style="margin-top:36px">
+      <h3>Two things to build early, not late</h3>
+
+      <p>
+        <strong>Evals.</strong> An eval suite is just a Python file that runs your agent and
+        asserts nothing broke. Start with hard assertions only — JSON is valid, required fields
+        exist, the tool name is one you offer — and five to ten golden cases per capability.
+        Run them before every prompt change.
+      </p>
+<pre><i># the whole idea</i>
+result = agent.generate_structured(case[<i>"input"</i>], case[<i>"schema"</i>])
+<b>assert</b> result <b>is not</b> None
+<b>assert</b> all(f <b>in</b> result <b>for</b> f <b>in</b> case[<i>"must_have_fields"</i>])</pre>
+
+      <p style="margin-top:8px">
+        <strong>Telemetry.</strong> Structured JSON lines, one span per operation, all sharing a
+        trace ID. Then a failure is <code>grep &lt;trace_id&gt; agent.jsonl</code> rather than a
+        guess.
+      </p>
+<pre>@dataclass
+<b>class</b> Span:
+    span_id: str
+    <b>trace_id</b>: str        <i># ← links the whole interaction</i>
+    event_type: str      <i># llm_call | tool_call | memory_op | decision</i>
+    timestamp: str
+    duration_ms: float | None = None
+    data: dict | None = None
+    error: str | None = None</pre>
+
+      <div class="note-box">
+        <span class="lbl">They answer different questions</span>
+        <p>
+          <strong>Evals</strong> run before deployment on known inputs and catch regressions.
+          <strong>Telemetry</strong> runs during deployment on unknown inputs and explains what
+          happened. Neither substitutes for the other.
+        </p>
+      </div>
+
+      <div class="trap">
+        <span class="lbl">The mistake that outranks all of these</span>
+        <p>
+          Measuring output quality instead of outcome. An LLM is very good at producing
+          <em>plausible</em> content — an email can read beautifully and sell nothing. Tie the
+          agent to a real metric: reply rate, tickets resolved, tests passing, revenue.
+          <strong>"Looks good" is not a result.</strong>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ VERDICT ============ -->
+<section id="verdict">
+  <div class="wrap">
+    <div class="sec-head col">
+      <span class="eyebrow">Part five</span>
+      <h2>Staying frameworkless, honestly</h2>
+    </div>
+
+    <div class="verdict">
+      <div class="yes">
+        <span class="eyebrow" style="color:var(--accent)">Stay in plain Python when</span>
+        <ul class="tight">
+          <li>You need fine-grained control over context — the usual reason teams leave a framework</li>
+          <li>The harness itself is your product or differentiator</li>
+          <li>You have strict latency or cost requirements</li>
+          <li>You are doing fine-tuning or RL and must not overfit to a scaffold</li>
+          <li>You are learning — build it once and every framework becomes legible</li>
+        </ul>
+      </div>
+      <div class="no">
+        <span class="eyebrow">Take the framework when</span>
+        <ul class="tight">
+          <li>You are prototyping and speed beats control</li>
+          <li>You need many tool integrations you would otherwise write yourself</li>
+          <li>Your use case fits the framework's abstractions cleanly</li>
+          <li>Built-in tracing, sessions, or guardrails would otherwise be your next month</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="col stack" style="margin-top:36px">
+      <div class="note-box">
+        <span class="lbl">What the evidence does not say</span>
+        <p>
+          No source measures a framework's overhead against a hand-written loop, and none reports
+          how much of end-to-end performance comes from the harness versus the model. The
+          mini-swe-agent result is reported without the model, run count, or date. Treat the
+          guidance here as reasoning from documented behaviour, not from measurement.
+        </p>
+      </div>
+      <blockquote>
+        Don't over-focus on framework selection. Different frameworks often provide different
+        implementations of broadly similar underlying capabilities.
+        <cite>Course transcript</cite>
+      </blockquote>
+      <p>
+        The skills built here — bounding the loop, allow-listing dispatch, validating before
+        executing, treating tool output as untrusted, measuring against a real outcome — transfer
+        to every framework and outlive all of them.
+      </p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="col">
+      <span class="eyebrow">Sources and status</span>
+      <p>
+        Code and claims drawn from the project's <code>raw/</code> corpus: a from-scratch lesson
+        series (basic chat through telemetry), course notes on hand-building the agent loop, the
+        <code>mini-swe-agent</code> source, and the harness chapters of the Hitchhiker's Guide to
+        Agentic AI — cross-checked against the wiki articles on the agent loop, agent harness,
+        tool use, and reliability patterns.
+      </p>
+      <p>
+        <strong>Evidence grade:</strong> the code shown is pedagogical and sourced, not production
+        library code. One note on the corpus itself — the lesson series covers 01 through 12 but
+        <strong>lesson 06, the agent loop, is missing</strong>, though every other lesson references
+        it. Case 06 above is reconstructed from the course notes and mini-swe-agent.
+      </p>
+    </div>
+  </div>
+</footer>
