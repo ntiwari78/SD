@@ -1,0 +1,1708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Harness Engineering</title>
+<meta name="description" content="A survey of the runtime substrate of language-model agents, with a unifying reference model, a graded evidence map, and a proposed disclosure standard.">
+<meta name="author" content="Author Name">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%94%A7%3C/text%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#ffffff; --bg-soft:#f7f7f5; --bg-sunk:#efefec;
+  --fg:#17191c; --fg-mid:#4a4f57; --fg-dim:#71777f;
+  --rule:#dcdcd6; --rule-soft:#e9e9e4;
+  --accent:#8a4b2a; --accent-soft:#f3e9e3;
+  --grade:#2f5d50; --grade-bg:#e7f0ec;
+  --maxw:46rem; --sidew:17rem;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#15171a; --bg-soft:#1c1f23; --bg-sunk:#23262b;
+    --fg:#e6e6e3; --fg-mid:#b4b8bd; --fg-dim:#8b9097;
+    --rule:#31353b; --rule-soft:#272b30;
+    --accent:#d99a72; --accent-soft:#2a211c;
+    --grade:#8fc9b4; --grade-bg:#1d2a26;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15171a; --bg-soft:#1c1f23; --bg-sunk:#23262b;
+  --fg:#e6e6e3; --fg-mid:#b4b8bd; --fg-dim:#8b9097;
+  --rule:#31353b; --rule-soft:#272b30;
+  --accent:#d99a72; --accent-soft:#2a211c;
+  --grade:#8fc9b4; --grade-bg:#1d2a26;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%; scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--fg);
+  font-family:var(--serif); font-size:17.5px; line-height:1.62;
+  font-kerning:normal; text-rendering:optimizeLegibility;
+}
+.wrap{display:flex; align-items:flex-start; max-width:72rem; margin:0 auto}
+
+/* ---------- sidebar ---------- */
+aside{
+  width:var(--sidew); flex:0 0 var(--sidew); position:sticky; top:0;
+  height:100vh; overflow-y:auto; padding:2rem 1rem 3rem 1.25rem;
+  border-right:1px solid var(--rule-soft); font-family:var(--sans); font-size:12.5px;
+}
+aside h2{font-size:10.5px; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--fg-dim); margin:0 0 .75rem; font-weight:600}
+aside a{display:block; color:var(--fg-mid); text-decoration:none;
+  padding:.2rem .45rem; border-radius:4px; line-height:1.35; margin-bottom:1px}
+aside a:hover{background:var(--bg-sunk); color:var(--fg)}
+aside a.active{background:var(--accent-soft); color:var(--accent); font-weight:600}
+aside a.l1{font-weight:600; color:var(--fg); margin-top:.45rem}
+aside a.l2{padding-left:1.4rem; font-size:12px}
+aside a .n{color:var(--fg-dim); font-variant-numeric:tabular-nums;
+  display:inline-block; min-width:2.1em; font-weight:400}
+aside a.active .n{color:var(--accent)}
+
+/* ---------- main ---------- */
+main{flex:1 1 auto; min-width:0; padding:2.5rem 2rem 6rem; max-width:calc(var(--maxw) + 4rem)}
+header.paper{border-bottom:2px solid var(--fg); padding-bottom:1.5rem; margin-bottom:2rem}
+.eyebrow{font-family:var(--sans); font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--accent); font-weight:700; margin-bottom:.9rem}
+h1{font-size:2.05rem; line-height:1.2; margin:0 0 .5rem; font-weight:700; letter-spacing:-.01em}
+.subtitle{font-size:1.08rem; color:var(--fg-mid); font-style:italic; margin:0 0 1.4rem; line-height:1.45}
+.byline{font-family:var(--sans); font-size:13px; color:var(--fg-mid); line-height:1.7}
+.byline .todo{background:var(--accent-soft); color:var(--accent);
+  padding:.1rem .4rem; border-radius:3px; font-size:11px; font-weight:600;
+  letter-spacing:.04em; text-transform:uppercase}
+
+.abstract{background:var(--bg-soft); border-left:3px solid var(--accent);
+  padding:1.3rem 1.5rem; margin:0 0 1.5rem; border-radius:0 6px 6px 0}
+.abstract h2{font-family:var(--sans); font-size:11px; letter-spacing:.11em;
+  text-transform:uppercase; color:var(--fg-dim); margin:0 0 .7rem; font-weight:700}
+.abstract p{margin:0 0 .85rem; font-size:16.5px; line-height:1.58}
+.abstract p:last-child{margin-bottom:0}
+.keywords{font-family:var(--sans); font-size:13px; color:var(--fg-mid);
+  border-top:1px solid var(--rule-soft); border-bottom:1px solid var(--rule-soft);
+  padding:.85rem 0; margin:0 0 2.5rem}
+
+h2{font-size:1.42rem; margin:2.8rem 0 .9rem; font-weight:700; line-height:1.25;
+  padding-bottom:.35rem; border-bottom:1px solid var(--rule); scroll-margin-top:1.5rem}
+h3{font-size:1.1rem; margin:2rem 0 .6rem; font-weight:700; scroll-margin-top:1.5rem}
+h4{font-size:1rem; margin:1.5rem 0 .4rem; font-weight:700; color:var(--fg)}
+h2 .num,h3 .num{color:var(--accent); font-variant-numeric:tabular-nums;
+  margin-right:.6rem; font-weight:600}
+p{margin:0 0 1rem; hyphens:auto}
+strong{font-weight:700}
+em{font-style:italic}
+code{font-family:var(--mono); font-size:.86em; background:var(--bg-sunk);
+  padding:.1em .34em; border-radius:3px; word-break:break-word}
+.sc{font-variant:small-caps; letter-spacing:.03em; font-weight:600}
+.math{font-family:var(--serif); font-style:italic; white-space:nowrap}
+.math sub,.math sup{font-style:normal; font-size:.72em}
+.dmath{text-align:center; font-family:var(--serif); font-style:italic;
+  background:var(--bg-soft); padding:1rem; border-radius:6px; margin:1.3rem 0; font-size:1.02rem}
+.dmath sub,.dmath sup{font-style:normal; font-size:.72em}
+
+ul,ol{margin:0 0 1.1rem; padding-left:1.5rem}
+li{margin-bottom:.4rem}
+dl{margin:0 0 1.2rem}
+dt{font-weight:700; margin-top:.8rem}
+dd{margin:.15rem 0 0 0; padding-left:0; color:var(--fg)}
+
+a.cite{color:var(--accent); text-decoration:none; font-family:var(--sans);
+  font-size:.78em; font-variant-numeric:tabular-nums; padding:0 .05em;
+  vertical-align:.12em; font-weight:600}
+a.cite:hover{text-decoration:underline}
+a.xref{color:var(--accent); text-decoration:none; border-bottom:1px dotted var(--accent)}
+a.xref:hover{background:var(--accent-soft)}
+
+.grade{display:inline-block; font-family:var(--sans); font-size:10.5px; font-weight:700;
+  letter-spacing:.05em; color:var(--grade); background:var(--grade-bg);
+  padding:.12rem .4rem; border-radius:3px; vertical-align:.08em; white-space:nowrap}
+
+figure.tbl{margin:1.8rem 0; scroll-margin-top:1.5rem}
+figure.tbl table{width:100%; border-collapse:collapse; font-family:var(--sans);
+  font-size:13px; line-height:1.45}
+figure.tbl thead th{text-align:left; font-weight:700; padding:.55rem .6rem;
+  border-top:1.5px solid var(--fg); border-bottom:1px solid var(--fg); vertical-align:bottom}
+figure.tbl td{padding:.5rem .6rem; border-bottom:1px solid var(--rule-soft); vertical-align:top}
+figure.tbl tbody tr:last-child td{border-bottom:1.5px solid var(--fg)}
+figure.tbl tbody tr:hover{background:var(--bg-soft)}
+figcaption{font-family:var(--sans); font-size:12.5px; color:var(--fg-mid);
+  margin-top:.65rem; line-height:1.5}
+figcaption .tlabel{font-weight:700; color:var(--fg)}
+.scroller{overflow-x:auto; -webkit-overflow-scrolling:touch}
+
+ol.refs{font-family:var(--sans); font-size:12.5px; line-height:1.5; padding-left:2.2rem}
+ol.refs li{margin-bottom:.5rem; color:var(--fg-mid); scroll-margin-top:2rem}
+ol.refs li:target{background:var(--accent-soft); outline:3px solid var(--accent-soft);
+  border-radius:3px; color:var(--fg)}
+ol.refs li em{color:var(--fg)}
+
+footer{margin-top:4rem; padding-top:1.2rem; border-top:1px solid var(--rule);
+  font-family:var(--sans); font-size:12px; color:var(--fg-dim)}
+
+#top{position:fixed; right:1rem; bottom:1rem; z-index:20;
+  font-family:var(--sans); font-size:11px; font-weight:600; letter-spacing:.04em;
+  background:var(--bg-soft); color:var(--fg-mid); border:1px solid var(--rule);
+  border-radius:20px; padding:.5rem .85rem; text-decoration:none;
+  opacity:0; pointer-events:none; transition:opacity .18s}
+#top.show{opacity:1; pointer-events:auto}
+#top:hover{color:var(--accent); border-color:var(--accent)}
+#themeBtn{position:fixed; right:1rem; top:1rem; z-index:20; cursor:pointer;
+  font-family:var(--sans); font-size:11px; font-weight:600;
+  background:var(--bg-soft); color:var(--fg-mid); border:1px solid var(--rule);
+  border-radius:20px; padding:.45rem .8rem}
+#themeBtn:hover{color:var(--accent); border-color:var(--accent)}
+
+.menu{display:none}
+@media (max-width:980px){
+  aside{position:static; width:auto; flex:none; height:auto; max-height:none;
+    border-right:0; border-bottom:1px solid var(--rule); padding:1.25rem 1rem}
+  .wrap{display:block}
+  main{padding:1.5rem 1rem 4rem; max-width:none}
+  aside a.l2{display:none}
+  #themeBtn{position:static; margin:1rem 0 0 1rem}
+}
+@media (max-width:640px){
+  body{font-size:16.5px}
+  h1{font-size:1.6rem} .subtitle{font-size:1rem}
+  main{padding:1.25rem 1rem 3.5rem}
+  figure.tbl table{font-size:12px}
+}
+@media print{
+  aside,#top,#themeBtn{display:none}
+  body{font-size:10.5pt} main{max-width:none; padding:0}
+  figure.tbl,h2,h3{page-break-inside:avoid}
+  a.cite,a.xref{color:inherit; border:0}
+}
+</style>
+</head>
+<body>
+<button id="themeBtn" type="button" aria-label="Toggle colour theme">Dark</button>
+<a id="top" href="#">&uarr; Top</a>
+
+<div class="wrap">
+<aside>
+  <h2>Contents</h2>
+  <nav><a class="l1" href="#introduction"><span class="n">1</span>Introduction</a>
+<a class="l2" href="#contributions"><span class="n">1.1</span>Contributions</a>
+<a class="l2" href="#what-this-survey-is-not"><span class="n">1.2</span>What this survey is not</a>
+<a class="l2" href="#roadmap"><span class="n">1.3</span>Roadmap</a>
+<a class="l1" href="#sec:method"><span class="n">2</span>Scope, Corpus, and Method</a>
+<a class="l2" href="#corpus-construction"><span class="n">2.1</span>Corpus construction</a>
+<a class="l2" href="#inclusion-and-exclusion"><span class="n">2.2</span>Inclusion and exclusion</a>
+<a class="l2" href="#known-gaps"><span class="n">2.3</span>Known gaps</a>
+<a class="l2" href="#sec:grading"><span class="n">2.4</span>Evidence and maturity grading</a>
+<a class="l2" href="#threats-to-the-validity-of-this-survey"><span class="n">2.5</span>Threats to the validity of this survey</a>
+<a class="l1" href="#sec:background"><span class="n">3</span>From Prompt Engineering to Harness Engineering</a>
+<a class="l2" href="#four-paradigms"><span class="n">3.1</span>Four paradigms</a>
+<a class="l2" href="#terminology-and-its-history"><span class="n">3.2</span>Terminology and its history</a>
+<a class="l2" href="#bounded-contexts-of-the-word"><span class="n">3.3</span>Bounded contexts of the word</a>
+<a class="l2" href="#why-three-taxonomies-coexist"><span class="n">3.4</span>Why three taxonomies coexist</a>
+<a class="l1" href="#sec:hrm"><span class="n">4</span>The Harness Reference Model</a>
+<a class="l2" href="#definition"><span class="n">4.1</span>Definition</a>
+<a class="l2" href="#the-occas-pipeline"><span class="n">4.2</span>The <span class="sc">occas</span> pipeline</a>
+<a class="l2" href="#the-vgo-planes"><span class="n">4.3</span>The <span class="sc">vgo</span> planes</a>
+<a class="l2" href="#where-the-execution-environment-sits"><span class="n">4.4</span>Where the execution environment sits</a>
+<a class="l2" href="#crosswalk"><span class="n">4.5</span>Crosswalk</a>
+<a class="l1" href="#sec:facets"><span class="n">5</span>Facets of the Harness</a>
+<a class="l2" href="#sec:obs"><span class="n">5.1</span>Observation</a>
+<a class="l2" href="#sec:context"><span class="n">5.2</span>Context</a>
+<a class="l2" href="#sec:control"><span class="n">5.3</span>Control</a>
+<a class="l2" href="#sec:action"><span class="n">5.4</span>Action</a>
+<a class="l2" href="#sec:state"><span class="n">5.5</span>State</a>
+<a class="l2" href="#sec:verification"><span class="n">5.6</span>Verification</a>
+<a class="l2" href="#sec:governance"><span class="n">5.7</span>Governance</a>
+<a class="l2" href="#sec:observability"><span class="n">5.8</span>Observability</a>
+<a class="l1" href="#sec:evidence"><span class="n">6</span>The Binding Constraint: Evidence</a>
+<a class="l2" href="#the-thesis"><span class="n">6.1</span>The thesis</a>
+<a class="l2" href="#controlled-same-model-comparisons"><span class="n">6.2</span>Controlled same-model comparisons</a>
+<a class="l2" href="#sec:boundary"><span class="n">6.3</span>Boundary conditions and counter-evidence</a>
+<a class="l2" href="#model-ndash-harness-co-evolution"><span class="n">6.4</span>Model&ndash;harness co-evolution</a>
+<a class="l2" href="#the-evidence-map"><span class="n">6.5</span>The evidence map</a>
+<a class="l1" href="#sec:eval"><span class="n">7</span>Evaluation and Its Validity Threats</a>
+<a class="l2" href="#benchmark-families"><span class="n">7.1</span>Benchmark families</a>
+<a class="l2" href="#the-double-measurement-confound"><span class="n">7.2</span>The double measurement confound</a>
+<a class="l2" href="#outcome-only-scoring-and-log-analysis"><span class="n">7.3</span>Outcome-only scoring and log analysis</a>
+<a class="l2" href="#reliability-beyond-the-mean"><span class="n">7.4</span>Reliability beyond the mean</a>
+<a class="l2" href="#cost"><span class="n">7.5</span>Cost</a>
+<a class="l1" href="#sec:card"><span class="n">8</span>The Harness Disclosure Card and a Variance-Decomposition Protocol</a>
+<a class="l2" href="#motivation"><span class="n">8.1</span>Motivation</a>
+<a class="l2" href="#the-card"><span class="n">8.2</span>The card</a>
+<a class="l2" href="#sec:variance"><span class="n">8.3</span>A variance-decomposition protocol</a>
+<a class="l2" href="#what-adoption-costs"><span class="n">8.4</span>What adoption costs</a>
+<a class="l1" href="#sec:security"><span class="n">9</span>Security and Governance of the Harness</a>
+<a class="l2" href="#the-structural-vulnerability"><span class="n">9.1</span>The structural vulnerability</a>
+<a class="l2" href="#defence-by-design-and-its-limits"><span class="n">9.2</span>Defence by design, and its limits</a>
+<a class="l2" href="#the-harness-as-the-attack-surface"><span class="n">9.3</span>The harness as the attack surface</a>
+<a class="l2" href="#the-protocol-layer"><span class="n">9.4</span>The protocol layer</a>
+<a class="l2" href="#measuring-defences-by-layer"><span class="n">9.5</span>Measuring defences by layer</a>
+<a class="l1" href="#sec:autoopt"><span class="n">10</span>Automated Harness Optimisation</a>
+<a class="l2" href="#why-this-follows-from-the-thesis"><span class="n">10.1</span>Why this follows from the thesis</a>
+<a class="l2" href="#search-over-harness-code"><span class="n">10.2</span>Search over harness code</a>
+<a class="l2" href="#learned-editors-controllers-and-generators"><span class="n">10.3</span>Learned editors, controllers, and generators</a>
+<a class="l2" href="#the-reality-check"><span class="n">10.4</span>The reality check</a>
+<a class="l1" href="#sec:open"><span class="n">11</span>Open Problems and Research Agenda</a>
+<a class="l1" href="#sec:conclusion"><span class="n">12</span>Conclusion</a>
+<a class="l1" href="#reproducibility-and-data-availability">Reproducibility and Data Availability</a>
+<a class="l1" href="#acknowledgements">Acknowledgements</a>
+<a class="l1" href="#sec:corpus"><span class="n">13</span>Corpus Index</a></nav>
+</aside>
+
+<main>
+<header class="paper">
+  <div class="eyebrow">Survey &middot; Preprint</div>
+  <h1>Agent Harness Engineering: A Survey of the Runtime Substrate of Language-Model Agents</h1>
+  <p class="subtitle">With a Unifying Reference Model, a Graded Evidence Map, and a Proposed Disclosure Standard</p>
+  <p class="byline">
+    <span class="todo">Replace before submission</span><br>
+    Author Name &middot; <code>author@institution.edu</code><br>
+    Affiliation, City, Country
+  </p>
+</header>
+
+<section class="abstract">
+  <h2>Abstract</h2>
+  <p>A language model is not an agent. It becomes one through a <em>harness</em>: the system prompt, tool
+and skill definitions, execution environment, control loop, context and state management,
+verification gates, and orchestration logic that surround it. This layer was treated as glue code
+until 2026, when it became a named object of study. We survey 191 sources published between 2022 and
+October 2026 and defend a central claim, the <em>binding constraint thesis</em>: for long-horizon tasks
+evaluated across models of comparable frontier capability, harness configuration governs more
+performance variance than model choice, and prevailing evaluation practice therefore misattributes
+harness-level gains to model improvements. Controlled same-model comparisons in this corpus span
+7.0 to 18.4 percentage points, exceeding the 10.2-point spread observed across nine frontier models
+sharing one scaffold.</p>
+<p>The survey makes five contributions. First, three incompatible harness taxonomies appeared
+independently in 2026 and no definition has won; we propose the <strong>Harness Reference Model</strong>,
+a five-stage per-step pipeline (observation, context, control, action, state) crossed by three
+pervasive planes (verification, governance, observability), and supply a crosswalk mapping the
+existing taxonomies onto it. Second, we grade every substantive claim in the corpus on an evidence
+scale (E1 replicated to E4 vendor-reported) and a deployment-maturity scale (M0 proposed to M4
+production default), which exposes a systematic <em>maturity&ndash;evidence inversion</em>: several
+mechanisms running in production at scale rest on no controlled study. Third, we propose the
+<strong>Harness Disclosure Card</strong>, a twelve-field reporting standard without which agent leaderboard
+comparisons are not interpretable. Fourth, we specify a variance-decomposition protocol that
+attributes measured performance to model, harness, their interaction, and seed. Fifth, we derive
+eight open problems, of which two are new attack surfaces created by the field's own methods:
+trace poisoning against self-optimising harnesses, and the complete absence of external
+verifiability from every harness examined at source level.</p>
+<p>We also report what the evidence does <em>not</em> support. Harness spreads on one benchmark collapse
+from 16.7 to between 0.2 and 8.1 points once reasoning effort and submission dates are matched;
+35 sequential releases of one harness produced no statistically significant quality improvement
+while nearly doubling token consumption; and a benchmark of harness-generating agents finds machine
+-authored harnesses still well behind mature human-engineered ones on code and search.</p>
+</section>
+
+
+<p class="keywords"><strong>Keywords:</strong> agent harness; harness engineering; LLM agents; agent scaffolding;
+agent&ndash;computer interface; context engineering; agent evaluation; model&ndash;harness confounding;
+reproducibility</p>
+<h2 id="introduction"><span class="num">1</span>Introduction</h2>
+<p>A raw language model cannot maintain durable state, execute code, reach real-time knowledge, or set
+up an environment, yet agents do all four. The difference is supplied by code that is not the model:
+the loop that decides what happens next, the tools that turn a decision into an effect, the policy
+that decides what the model sees at each step, the sandbox that bounds the damage, and the verifier
+that decides whether the work is done. Practitioners converged on a name for this layer in early
+2026 and on a slogan for its scope: <span class="math">Agent = Model + Harness</span>, with the
+sharper corollary that if you are not the model, you are the harness
+[<a class="cite" href="#ref-langchain2026anatomy">141</a>, <a class="cite" href="#ref-databricks2026agent">33</a>, <a class="cite" href="#ref-parallel2026harness">109</a>]. The term consolidated a
+vocabulary that had previously appeared as <em>scaffolding</em>, <em>agent&ndash;computer interface</em>
+[<a class="cite" href="#ref-yang2024swe">171</a>], <em>runtime</em>, or <em>context engineering</em>.</p>
+<p>This layer is now the dominant source of performance variance in long-horizon agent tasks, and the
+field's measurement practices have not caught up. The standard protocol reports a single number per
+<span class="math">model, benchmark</span> pair and attributes it to the model. That protocol is
+structurally invalid, because the number belongs to a complete execution system: model, prompts,
+memory, tools, control loop, scorer, and environment [<a class="cite" href="#ref-harvardcs2026agent">52</a>]. Changing the tool
+interface or the retry budget changes the score without changing the model. The consequence is not
+merely imprecision. It is systematic misattribution that directs research effort toward model
+scaling when the measured gains came from elsewhere [<a class="cite" href="#ref-zhang2026comparing">183</a>, <a class="cite" href="#ref-kapoor2024agents">75</a>].</p>
+<p>The strongest counterweight to harness enthusiasm comes from the same literature, which is why this
+survey takes a position rather than cataloguing claims neutrally. A controlled longitudinal study
+that fixed the model and varied only the harness across 35 sequential releases found no
+statistically significant improvement in benchmark resolve rate, while later releases consumed
+nearly double the tokens and tool calls [<a class="cite" href="#ref-sghaier2026blame">21</a>]. A benchmark that asks agents to
+build and evolve their own harnesses finds the results substantially behind mature human-engineered
+references on code and on search, with gains that are unstable and transfer only partially
+[<a class="cite" href="#ref-seed2026harnessdev">23</a>]. Harness design matters enormously; harness <em>improvement</em> is
+demonstrably hard. Both facts have to survive into any honest account of the field.</p>
+<h3 id="contributions"><span class="num">1.1</span>Contributions</h3>
+<ol>
+<li><strong>A unifying reference model with a crosswalk</strong> (<a class="xref" href="#sec:hrm">Section 4</a>). Three substantial
+harness taxonomies appeared independently in 2026 and use incompatible decompositions
+[<a class="cite" href="#ref-picrew2026agent">63</a>, <a class="cite" href="#ref-repo2026agent">118</a>, <a class="cite" href="#ref-guo2026question">50</a>]; two further definitions circulate informally
+[<a class="cite" href="#ref-wei2026architectural">57</a>, <a class="cite" href="#ref-zhong2026harness">186</a>]. We propose the Harness Reference Model (<span class="sc">HRM</span>): a
+five-stage pipeline <span class="sc">occas</span> (observation, context, control, action, state) crossed by three
+planes <span class="sc">vgo</span> (verification, governance, observability). Table&nbsp;<a class="xref" href="#tab:crosswalk">Table 1</a> maps every
+existing taxonomy onto it, including where each is silent.</li>
+<li><strong>A graded evidence map</strong> (<a class="xref" href="#sec:evidence">Section 6</a>). We define a four-level evidence scale
+and a five-level maturity scale (<a class="xref" href="#sec:grading">Section 2.4</a>) and apply them to the corpus's substantive
+claims (Table&nbsp;<a class="xref" href="#tab:evidencemap">Table 3</a>). The exercise surfaces a result not visible in any individual
+paper: a <em>maturity&ndash;evidence inversion</em> in which cross-session state management, compaction,
+and progress artifacts are M4 (production default) but E4 (vendor-reported only).</li>
+<li><strong>The Harness Disclosure Card</strong> (<a class="xref" href="#sec:card">Section 8</a>). A twelve-field record covering model
+identity and reasoning effort, pinned harness version, tool inventory and edit format, context
+policy, state persistence, step and retry budgets, verifier, permission mode, trace availability,
+cost, and repeat count. We argue that a leaderboard row lacking these fields does not support the
+comparison it appears to license.</li>
+<li><strong>A variance-decomposition protocol</strong> (<a class="xref" href="#sec:variance">Section 8.3</a>). A factorial design over
+models <span class="math">&times;</span> harnesses <span class="math">&times;</span> benchmarks with repeated runs, reporting variance components so
+that harness effects, model effects, their interaction, and seed noise are separately estimated. No
+such dataset currently exists; we specify the minimum viable version.</li>
+<li><strong>Eight open problems</strong> (<a class="xref" href="#sec:open">Section 11</a>), two of which are created by the field's own
+methods: trace poisoning against harnesses that rewrite themselves from execution traces, and the
+total absence of external verifiability from the harnesses examined at source level
+[<a class="cite" href="#ref-dai2026empire">66</a>].</li>
+</ol>
+<h3 id="what-this-survey-is-not"><span class="num">1.2</span>What this survey is not</h3>
+<p>We do not claim the harness matters more than the model in general. The thesis is conditional on
+long-horizon tasks and on models of comparable frontier capability, and <a class="xref" href="#sec:boundary">Section 6.3</a> sets
+out three boundary conditions under which it weakens or reverses. We also do not treat vendor
+engineering posts as evidence. They document production maturity, and we label them accordingly
+throughout, because the gap between what is deployed and what is demonstrated is itself one of our
+findings.</p>
+<h3 id="roadmap"><span class="num">1.3</span>Roadmap</h3>
+<p>Section&nbsp;<a class="xref" href="#sec:method">Section 2</a> states how the corpus was assembled, its inclusion criteria, its known
+gaps, and the grading scales. Section&nbsp;<a class="xref" href="#sec:background">Section 3</a> traces the shift from prompt engineering
+to harness engineering and explains why three taxonomies coexist. Section&nbsp;<a class="xref" href="#sec:hrm">Section 4</a> defines the
+<span class="sc">HRM</span> and crosswalks it. Section&nbsp;<a class="xref" href="#sec:facets">Section 5</a> surveys the eight facets.
+Section&nbsp;<a class="xref" href="#sec:evidence">Section 6</a> assembles the evidence for and against the binding constraint thesis.
+Section&nbsp;<a class="xref" href="#sec:eval">Section 7</a> examines benchmarks and their validity threats. Section&nbsp;<a class="xref" href="#sec:card">Section 8</a>
+presents the disclosure card and the variance protocol. Section&nbsp;<a class="xref" href="#sec:security">Section 9</a> covers security
+and governance, Section&nbsp;<a class="xref" href="#sec:autoopt">Section 10</a> automated harness optimisation, and
+Section&nbsp;<a class="xref" href="#sec:open">Section 11</a> the research agenda.</p>
+<h2 id="sec:method"><span class="num">2</span>Scope, Corpus, and Method</h2>
+<h3 id="corpus-construction"><span class="num">2.1</span>Corpus construction</h3>
+<p>The corpus comprises 191 retrieved sources: 143 PDFs and 48 web documents, drawn from arXiv,
+conference proceedings, journals, institutional reports, vendor engineering blogs, project
+documentation, and community reference pages. Candidate references were pooled from three
+independently produced literature maps of the agent-harness area, deduplicated by canonical
+identifier, and retrieved programmatically. Of 220 candidate link references, 206 resolved; 140 of
+the retrieved documents carry arXiv identifiers. Coverage runs from the publication of ReAct in
+2022 [<a class="cite" href="#ref-yao2022react">174</a>] to October 2026.</p>
+<h3 id="inclusion-and-exclusion"><span class="num">2.2</span>Inclusion and exclusion</h3>
+<p>We included a source if it addressed at least one <span class="sc">HRM</span> facet as a first-class concern, or supplied
+evidence about how such a facet affects agent behaviour. This admits four classes that we keep
+distinct throughout: peer-reviewed and archival papers; 2026 preprints, which form the majority of
+the harness-specific literature and are largely unreviewed; vendor and practitioner documents; and
+community reference material. We excluded three retrieved files as unusable: one mathematics paper
+on surface-knot modules, retrieved because a cited arXiv identifier resolved to a real but unrelated
+work, and two bot-challenge pages returned in place of documents.</p>
+<h3 id="known-gaps"><span class="num">2.3</span>Known gaps</h3>
+<p>Three gaps bear on specific claims and we flag them where they arise. First, the primary PDF of one
+of the three principal harness surveys could not be retrieved, because the hosting preprint server
+blocked automated access; our account of its <span class="sc">etcslv</span> framework therefore rests on its
+official repository and on a secondary synthesis [<a class="cite" href="#ref-repo2026agent">118</a>, <a class="cite" href="#ref-agenticai2026agenta">6</a>]. Second,
+ten further candidate sources returned HTTP 403 from bot or CDN walls, including four from one
+preprint server. Four blocked ResearchGate links are fully covered by their arXiv originals, which
+are in the corpus. Third, several widely deployed systems have documentation rather than papers,
+including LangGraph, CrewAI, the OpenAI Agents SDK, the Claude Agent SDK, and the agent-to-agent
+protocol; we cite their documentation and label it as practitioner material
+[<a class="cite" href="#ref-langgraphdocs2026langgraph">82</a>, <a class="cite" href="#ref-langchain2026deep">129</a>].</p>
+<h3 id="sec:grading"><span class="num">2.4</span>Evidence and maturity grading</h3>
+<p>Agent-harness claims arrive with wildly uneven support, and no existing survey separates a
+replicated controlled finding from a figure quoted in a product launch. We therefore grade on two
+independent axes. The evidence axis measures how well a claim is established:</p>
+<ul>
+<li><span class="grade">E1</span> <strong>Replicated.</strong> Supported by two or more independent controlled studies.</li>
+<li><span class="grade">E2</span> <strong>Single controlled study.</strong> One study that holds confounders fixed, typically by
+fixing the model and varying the harness, or by ablation.</li>
+<li><span class="grade">E3</span> <strong>Observational.</strong> Leaderboard comparisons, comparisons across systems
+without matched conditions, or correlational evidence.</li>
+<li><span class="grade">E4</span> <strong>Reported only.</strong> Vendor or practitioner report, or a figure circulating
+second-hand without a primary source.</li>
+</ul>
+<p>The maturity axis measures how far a mechanism has travelled into practice:</p>
+<ul>
+<li><span class="grade">M0</span> Proposed in writing, not implemented.</li>
+<li><span class="grade">M1</span> Research prototype, single-paper implementation.</li>
+<li><span class="grade">M2</span> Open-source implementation used beyond its authors.</li>
+<li><span class="grade">M3</span> Documented production use.</li>
+<li><span class="grade">M4</span> Production default in a widely deployed harness.</li>
+</ul>
+<p>The two axes are not correlated, and their divergence is informative. A mechanism graded M4/E4 is
+running in front of many users on the strength of no controlled study, which is a research
+opportunity rather than a criticism of the engineers who shipped it.</p>
+<h3 id="threats-to-the-validity-of-this-survey"><span class="num">2.5</span>Threats to the validity of this survey</h3>
+<p>Three threats deserve statement up front. First, 2026 preprint density: the harness-specific
+literature is recent, fast-moving, and sometimes revised under new titles, so individual figures may
+not survive peer review, and we mark version-dependent numbers where we are aware of them. Second,
+our own grading is a judgement, applied by one reading rather than by multiple independent
+annotators, and so inherits the single-reviewer weakness that better-designed reviews avoid; the
+most methodologically rigorous source in the corpus, a PRISMA systematic review, validated its
+screening at <span class="math">&kappa; = 0.81</span> and still graded seven of its nine principal claims at the lowest
+certainty level [<a class="cite" href="#ref-dantas2026safe">31</a>]. Third, publication and promotion bias runs strongly toward
+positive harness results, since a harness modification that changed nothing is rarely written up;
+the one study designed to detect exactly that outcome found it [<a class="cite" href="#ref-sghaier2026blame">21</a>].</p>
+<h2 id="sec:background"><span class="num">3</span>From Prompt Engineering to Harness Engineering</h2>
+<h3 id="four-paradigms"><span class="num">3.1</span>Four paradigms</h3>
+<p>Agent engineering has passed through four overlapping paradigms, and naming them explains why the
+harness became visible only recently. The first was <em>prompt engineering</em>, where the unit of
+design was a string. The second was <em>workflow and context engineering</em>, where it became a
+sequence of model calls with managed inputs. The third, current paradigm is <em>harness
+engineering</em>, where the unit of design is the runtime that situates a model in a closed loop. The
+fourth, emerging, is <em>agent-native training with model&ndash;harness co-evolution</em>, in which weights
+and runtime are optimised jointly [<a class="cite" href="#ref-guo2026question">50</a>, <a class="cite" href="#ref-luo2026harness">91</a>]. Each paradigm widened the
+scope of what counts as designable, and the harness became a research object at the point where its
+design decisions began to outweigh prompt-level ones.</p>
+<h3 id="terminology-and-its-history"><span class="num">3.2</span>Terminology and its history</h3>
+<p>The same layer has been named four times. METR called it <em>scaffolding</em> in 2023, in the formula
+scaffolding plus model equals agent. The SWE-agent authors named a specific part of it the
+<em>agent&ndash;computer interface</em> in 2024 and demonstrated that redesigning it moved benchmark
+performance with no change to weights [<a class="cite" href="#ref-yang2024swe">171</a>]. Practitioners and vendors settled on
+<em>harness</em> in early 2026 [<a class="cite" href="#ref-langchain2026anatomy">141</a>, <a class="cite" href="#ref-martinfowler2026harness">18</a>, <a class="cite" href="#ref-oreilly2026agent">1</a>].
+Academic surveys followed within months [<a class="cite" href="#ref-picrew2026agent">63</a>, <a class="cite" href="#ref-guo2026question">50</a>]. The multiplicity
+matters because it fragments the literature: work on context compaction, tool schema design,
+sandboxing, and trajectory logging addresses one system but cites four disjoint bibliographies.</p>
+<h3 id="bounded-contexts-of-the-word"><span class="num">3.3</span>Bounded contexts of the word</h3>
+<p>Arguments about harnesses frequently founder because the word means three different things. The
+distinction is due to Böckeler [<a class="cite" href="#ref-martinfowler2026harness">18</a>] and is worth preserving. The
+<em>model-level</em> harness is everything except the model, which is the broad vendor definition. The
+<em>builder</em> harness is what ships inside a coding-agent product, such as its system prompt,
+retrieval mechanism, and orchestration. The <em>outer</em> harness is what a user builds around that
+product for their own codebase, such as custom linters, hooks, and repository instructions.
+Statements true of one are often false of another: the claim that harness design is a user-facing
+discipline is true of the outer harness and false of the model-level harness. We state which context
+is meant wherever confusion is possible.</p>
+<h3 id="why-three-taxonomies-coexist"><span class="num">3.4</span>Why three taxonomies coexist</h3>
+<p>No definition of the harness has won, and the three surveys published in 2026 decompose it
+differently because they were written for different purposes. One organises by engineering layer and
+maps open-source projects onto it [<a class="cite" href="#ref-picrew2026agent">63</a>]. One formalises the harness as a tuple with
+labelled-transition-system semantics, separating safety from liveness properties
+[<a class="cite" href="#ref-repo2026agent">118</a>]. One organises by runtime responsibility within a model&ndash;harness lens
+[<a class="cite" href="#ref-guo2026question">50</a>]. Two further decompositions circulate: an eleven-responsibility account with
+an H0&ndash;H3 maturity ladder [<a class="cite" href="#ref-zhong2026harness">186</a>], and a deliberately loose working usage in an
+empirical study of 70 projects [<a class="cite" href="#ref-wei2026architectural">57</a>]. A survey that merely listed all five
+would leave the fragmentation in place. Section&nbsp;<a class="xref" href="#sec:hrm">Section 4</a> therefore proposes a single spine and
+accepts the obligation to map the others onto it.</p>
+<h2 id="sec:hrm"><span class="num">4</span>The Harness Reference Model</h2>
+<h3 id="definition"><span class="num">4.1</span>Definition</h3>
+<p>We define an <strong>agent harness</strong> as the model-external runtime that converts a language model
+into a goal-directed executor by determining, at every step, what the model observes, what it may
+do, what is retained, when it stops, and what evidence the run leaves behind. The definition is
+deliberately functional rather than architectural, so that a harness implemented as a command-line
+loop, a graph runtime, a gateway control plane, or an editable natural-language document
+[<a class="cite" href="#ref-pan2026natural">107</a>] all fall inside it.</p>
+<p>The <span class="sc">HRM</span> separates this runtime into a <em>pipeline</em> of five stages traversed once per step and
+three <em>planes</em> that apply at every stage. The split is the model's main departure from existing
+taxonomies, which place verification, governance, and observability alongside context and tools as
+peer layers. Treating them as planes rather than stages captures something those taxonomies obscure:
+a permission check is not a phase of the loop but a constraint on every phase, and a trace is not a
+component but a projection of all of them.</p>
+<h3 id="the-occas-pipeline"><span class="num">4.2</span>The <span class="sc">occas</span> pipeline</h3>
+<p>The five pipeline stages follow the causal order of a single agent step.</p>
+<dl>
+<dt><span class="sc">O</span> &mdash; Observation.</dt><dd>How environment output becomes model input. Covers rendering,
+truncation, filtering, and projection of tool results, screenshots, and file contents. Distinct from
+context because it concerns the transformation of a single observation rather than the composition of
+the window.</dd>
+<dt><span class="sc">C</span> &mdash; Context.</dt><dd>What occupies the window at each step. Covers budgeting, compaction,
+summarisation, retrieval, and re-injection policy.</dd>
+<dt><span class="sc">C</span> &mdash; Control.</dt><dd>How the next action is chosen and when the run ends. Covers loop
+structure, planning, search, delegation and sub-agent spawning, retries, and stopping rules.</dd>
+<dt><span class="sc">A</span> &mdash; Action.</dt><dd>How a decision becomes an effect. Covers the tool interface and its
+schemas, code execution, protocol layers, and the execution environment as the medium of effect.</dd>
+<dt><span class="sc">S</span> &mdash; State.</dt><dd>What persists outside the window. Covers session state, task state,
+cross-session artifacts, and externalised working memory.</dd>
+</dl>
+<h3 id="the-vgo-planes"><span class="num">4.3</span>The <span class="sc">vgo</span> planes</h3>
+<dl>
+<dt><span class="sc">V</span> &mdash; Verification.</dt><dd>Establishing that a step or a task is actually complete. Covers
+tests, executable checks, auditors, and the separation of doing from certifying.</dd>
+<dt><span class="sc">G</span> &mdash; Governance.</dt><dd>Permissions, approval gates, sandbox boundaries, and policy
+enforcement, including which instructions are allowed to direct behaviour.</dd>
+<dt><span class="sc">O</span> &mdash; Observability.</dt><dd>Traces, provenance, cost accounting, and the evidence a run
+leaves for debugging, evaluation, optimisation, and audit.</dd>
+</dl>
+<h3 id="where-the-execution-environment-sits"><span class="num">4.4</span>Where the execution environment sits</h3>
+<p>Two of the three existing taxonomies give the execution environment its own top-level layer, and we
+deliberately do not. In the <span class="sc">HRM</span> the sandbox appears twice, as the medium of Action, which
+determines what effects are possible, and as an instrument of Governance, which determines which are
+permitted. Splitting it this way is a substantive choice, and it is justified by the security
+literature: the empirically important failures are not sandbox escapes but mismatches between what
+the environment permits and what the policy intends [<a class="cite" href="#ref-he2026context">54</a>, <a class="cite" href="#ref-kapner2026scanning">73</a>]. A model
+that keeps capability and permission in one box cannot express that mismatch. The cost of the choice
+is that readers comparing the <span class="sc">HRM</span> with <span class="sc">etclovg</span> must look in two places for E, which
+Table&nbsp;<a class="xref" href="#tab:crosswalk">Table 1</a> makes explicit.</p>
+<h3 id="crosswalk"><span class="num">4.5</span>Crosswalk</h3>
+<figure class="tbl" id="tab:crosswalk">
+<table>
+<thead><tr><th><strong><span class="sc">HRM</span> facet</strong></th><th><strong><span class="sc">etclovg</span></strong> [<a class="cite" href="#ref-picrew2026agent">63</a>]</th><th><strong><span class="sc">etcslv</span></strong> [<a class="cite" href="#ref-repo2026agent">118</a>]</th><th><strong>Six duties</strong> [<a class="cite" href="#ref-guo2026question">50</a>]</th><th><strong>Notes</strong></th></tr></thead><tbody>
+<tr><td>Observation</td><td>(within T)</td><td>(within T)</td><td>Observation</td><td>Only [<a class="cite" href="#ref-guo2026question">50</a>] names it; the
+clearest mechanism is a learned observation projection [<a class="cite" href="#ref-wang2026harnessbridge">148</a>]</td></tr>
+<tr><td>Context</td><td>Context mgmt.</td><td>Context</td><td>Context</td><td>Agreed across all sources</td></tr>
+<tr><td>Control</td><td>Lifecycle / orchestration</td><td>Lifecycle</td><td>Control</td><td>Includes delegation and stopping</td></tr>
+<tr><td>Action</td><td>Tool interface + Execution env.</td><td>Tools + Execution</td><td>Action</td><td>Execution env. splits across
+Action and Governance in the <span class="sc">HRM</span></td></tr>
+<tr><td>State</td><td>(within C)</td><td>State</td><td>State</td><td>[<a class="cite" href="#ref-picrew2026agent">63</a>] folds state into context; we follow
+[<a class="cite" href="#ref-repo2026agent">118</a>] in separating them</td></tr>
+<tr><td>Verification</td><td>Verification</td><td>Evaluation / verification</td><td>Verification / governance</td><td><span class="sc">HRM</span> treats
+it as a plane, not a layer</td></tr>
+<tr><td>Governance</td><td>Governance</td><td>(within V)</td><td>Verification / governance</td><td>[<a class="cite" href="#ref-guo2026question">50</a>] merges
+verification and governance; we separate them</td></tr>
+<tr><td>Observability</td><td>Observability</td><td>(via V exports)</td><td>&mdash;</td><td>Absent from [<a class="cite" href="#ref-guo2026question">50</a>];
+externally verifiable observability absent from all [<a class="cite" href="#ref-dai2026empire">66</a>]</td></tr>
+</tbody>
+</table>
+<figcaption><span class="tlabel">Table 1.</span> Crosswalk from the Harness Reference Model to the three 2026 taxonomies and two informal
+decompositions. &ldquo;&mdash;&rdquo; marks a facet the source does not treat as a first-class concern.</figcaption>
+</figure>
+<p>Three asymmetries in Table&nbsp;<a class="xref" href="#tab:crosswalk">Table 1</a> are worth naming because each marks a real
+disagreement rather than a notational difference. The first is whether state is separable from
+context: the seven-layer taxonomy folds them together, while the tuple formalisation separates them,
+and the strongest long-horizon result in the corpus depends on separating them, since it works by
+moving task state out of the growing context entirely [<a class="cite" href="#ref-ma2026longhorizon">92</a>]. The second is
+whether governance is distinct from verification: merging them, as one taxonomy does, makes it hard
+to state the finding that a permission reviewer can correctly identify a dangerous action and approve
+it anyway [<a class="cite" href="#ref-he2026context">54</a>]. The third is observability, which one taxonomy omits and which no
+examined system implements in externally verifiable form.</p>
+<h2 id="sec:facets"><span class="num">5</span>Facets of the Harness</h2>
+<p>This section surveys each <span class="sc">HRM</span> facet, states the mechanisms the literature offers, and grades the
+central claim of each subsection.</p>
+<h3 id="sec:obs"><span class="num">5.1</span>Observation</h3>
+<p>Observation is the least theorised facet and the one with the clearest recent mechanism. The problem
+is that raw environment output is frequently unusable: real-world HTML is too large to feed a model,
+and filtering it first with a small language model improves both effectiveness and efficiency
+[<a class="cite" href="#ref-deng2023mind2web">37</a>]. The same logic recurs wherever the environment is verbose. Full-file dumps
+destroy context, so a bounded file viewer is substituted; a search that returns whole matches
+degrades downstream tool selection, so it returns filenames only [<a class="cite" href="#ref-agentpatterns2026agent">8</a>].</p>
+<p>The 2026 formulation makes observation a learned function rather than a heuristic.
+<em>HarnessBridge</em> parameterises the agent&ndash;environment interface as a bidirectional projection
+whose observation half classifies every piece of incoming state as <span class="sc">pass</span>, <span class="sc">compress</span>,
+or <span class="sc">drop</span>, maintaining an active-state index of unresolved errors, open constraints,
+established facts, and pending goals [<a class="cite" href="#ref-wang2026harnessbridge">148</a>]. Its action half is the mirror
+image, converting proposed actions into executable transitions or trajectory-grounded rejections.
+Reported outcomes match or exceed specialised harnesses on two benchmarks with substantially lower
+token usage and shorter trajectories. <span class="grade">E2</span>&thinsp;<span class="grade">M1</span></p>
+<h3 id="sec:context"><span class="num">5.2</span>Context</h3>
+<p>The context window is the only space in which reasoning occurs, and three independent costs make
+naive accumulation untenable. Cost grows quadratically in conversation length because each step
+reprocesses the whole history; latency grows linearly in context length; and accuracy degrades
+continuously rather than failing at the limit, with reported losses above 30 percentage points for
+content in the middle of long contexts [<a class="cite" href="#ref-atlan2026working">41</a>, <a class="cite" href="#ref-dadhich2026agentic">48</a>]. Bigger windows do
+not dissolve the problem, since long-context models underuse the context they are given
+[<a class="cite" href="#ref-packer2023memgpt">106</a>].</p>
+<p>Five mechanism families address this, and a survey of agent memory organises them as a
+write&ndash;manage&ndash;read loop over three dimensions of temporal scope, representational substrate, and
+control policy [<a class="cite" href="#ref-du2026memory">114</a>]. The families are context-resident compression; retrieval-augmented
+external stores; reflective self-improvement [<a class="cite" href="#ref-shinn2023reflexion">136</a>]; hierarchical virtual context,
+whose canonical instance pages between a main context and external storage in deliberate imitation of
+operating-system virtual memory [<a class="cite" href="#ref-packer2023memgpt">106</a>]; and policy-learned management. The
+best-supported recent entry treats context as an evolving playbook refined by generation, reflection,
+and curation, specifically to defeat two failure modes it names: <em>brevity bias</em>, which discards
+domain insight for concise summaries, and <em>context collapse</em>, where iterative rewriting erodes
+detail [<a class="cite" href="#ref-zhang2025agentic">181</a>]. <span class="grade">E2</span>&thinsp;<span class="grade">M2</span></p>
+<p>Compaction is lossy, and the practical consensus is that durable state belongs outside the transcript
+[<a class="cite" href="#ref-anthropic2026effective">13</a>, <a class="cite" href="#ref-datanorth2026harness">64</a>]. One production harness re-injects project memory
+files after compaction; a graph runtime separates short-term checkpointers from long-term stores
+[<a class="cite" href="#ref-langgraphdocs2026langgraph">82</a>]. An agent-controlled variant lets the model decide when to
+consolidate learnings and prune history, reporting a 22.7% token reduction at identical accuracy,
+though on a five-instance sample that cannot support more than a directional claim
+[<a class="cite" href="#ref-verma2026active">103</a>]. A lifecycle framing decomposes the discipline into architecting, ingesting,
+scoping, anticipating, and compacting, and supplies the economic argument that matters: naive
+accumulation is quadratic, crude summarisation buys linear cost at the price of an accuracy cliff,
+and only validated compaction achieves linear cost with preserved fidelity
+[<a class="cite" href="#ref-dadhich2026agentic">48</a>]. <span class="grade">E3</span>&thinsp;<span class="grade">M4</span></p>
+<p>The methodological caution on this facet is strong enough to qualify every claim above. Agent working
+memory is <em>semantically heterogeneous</em>: instructions, source artifacts, tool outputs, and
+agent-generated state have different size, retention, and compression profiles, yet most policies
+treat them uniformly [<a class="cite" href="#ref-chen2026measure">27</a>]. Across 55 archived coding-agent trajectories, that study
+reports two results that invalidate common comparisons: calibration gains may not transfer to
+held-out tasks, and equal token budgets do not imply equal delivered context or equal management
+cost. It proposes evaluating at four levels, namely stored state, delivered context, management work,
+and task outcome. <span class="grade">E2</span>&thinsp;<span class="grade">M1</span></p>
+<h3 id="sec:control"><span class="num">5.3</span>Control</h3>
+<p>Every production agent in 2026 runs a variant of the loop published in 2022, in which reasoning
+tokens interleave with tool calls and observations until a stopping condition fires
+[<a class="cite" href="#ref-yao2022react">174</a>, <a class="cite" href="#ref-aiefs2026build">11</a>]. Four families extend it, and each is a harness decision rather
+than a model change: verbal self-correction, which converts environment feedback into text that acts
+as a semantic gradient [<a class="cite" href="#ref-shinn2023reflexion">136</a>, <a class="cite" href="#ref-madaan2023self">94</a>]; decoupled planning, which separates
+plan from execution; deliberate search, which replaces the linear trajectory with a tree under Monte
+Carlo tree search and learned value functions [<a class="cite" href="#ref-zhou2023language">188</a>, <a class="cite" href="#ref-antoniades2024swe">14</a>]; and
+resource-managed execution, which isolates scheduling, memory, and access control into a kernel
+beneath agent applications [<a class="cite" href="#ref-mei2024aios">96</a>].</p>
+<p>The structural choice within control is whether to express the loop as free-form code or as an
+explicit state machine. A hand-written <code>while</code> loop has no hooks, so it cannot be paused,
+rewound, or branched, and past a demonstration the agent becomes a black box that either worked or
+did not [<a class="cite" href="#ref-aiefs2026agent">10</a>]. The alternative observes that the agent already <em>is</em> a state
+machine, comprising system prompt, message history, pending tool calls, and next action, and makes
+that explicit as a graph. Doing so yields four capabilities for free: checkpointing at every node
+transition, interrupts for human approval, streaming of intermediate events, and time-travel to
+retry a different branch [<a class="cite" href="#ref-aiefs2026agent">10</a>, <a class="cite" href="#ref-langgraphdocs2026langgraph">82</a>]. The agent is unchanged;
+the harness is not. <span class="grade">E3</span>&thinsp;<span class="grade">M4</span></p>
+<p>The most interesting control finding is architectural convergence under opposing design philosophies.
+A source-level study read three open coding-agent harnesses at pinned commits and through their
+commit histories, and found the two mature ones had travelled in opposite directions, one subtracting
+authored scaffolding and the other accreting durable infrastructure, yet both converged on one middle
+form of five elements: a commoditised loop, an append-only replayable session record, model quirks
+kept as data rather than code, progressive disclosure of context, and explicit extension seams
+[<a class="cite" href="#ref-dai2026empire">66</a>]. A third harness read as a held-out check exhibited all five, and in one seam
+reused another's implementation outright, so the study decomposes the convergence honestly into
+parallel discovery, diffusion, and literal reuse. <span class="grade">E2</span>&thinsp;<span class="grade">M3</span></p>
+<p>Delegation belongs to control, and the 2026 literature is markedly more sceptical about it than the
+2023 wave. Role specialisation with standard operating procedures was introduced to defeat
+<em>cascading hallucinations</em>, in which an early wrong assumption propagates through every later
+stage of a naive agent chain [<a class="cite" href="#ref-hong2023metagpt">55</a>], and the orchestrator-plus-specialists pattern
+that most production harnesses now use was established shortly after [<a class="cite" href="#ref-fourney2024magentic">44</a>].
+Three subsequent results complicate the picture. A failure taxonomy built from 150 expert-annotated
+traces at <span class="math">&kappa; = 0.88</span>, with a dataset of over 1,600 traces across seven frameworks, identifies 14
+failure modes in three categories, namely system design, inter-agent misalignment, and task
+verification, and opens by noting that multi-agent gains on popular benchmarks are often minimal
+[<a class="cite" href="#ref-cemri2025multi">25</a>]. A controlled comparison finds that a single agent in multi-turn conversation
+matches homogeneous multi-agent workflows with an efficiency advantage from key-value cache reuse,
+and even matches an automatically optimised heterogeneous workflow [<a class="cite" href="#ref-xu2026rethinking">167</a>]. A
+controlled benchmark characterising tasks along depth, horizon, breadth, parallelism, and robustness
+finds gains depend on task structure, verification protocol, and the capability of both orchestrator
+and sub-agents [<a class="cite" href="#ref-ke2026mas">76</a>]. <span class="grade">E1</span>&thinsp;<span class="grade">M3</span></p>
+<p>A decision-theoretic result bounds the whole area. Modelling multi-agent planning as a finite acyclic
+decision network whose stages share context and communicate through limited-capacity language
+interfaces, any delegated network is <em>dominated</em> by a centralised Bayes decision maker with the
+same information, absent new exogenous signals [<a class="cite" href="#ref-ao2026reliability">15</a>]. Delegation cannot add
+information; it can only lose it through communication and compression, and the loss admits an
+expected posterior divergence representation. Multi-agent systems therefore earn their keep through
+parallelism, specialisation of <em>deployment</em>, or access to signals a single agent lacks, not
+through decomposition as such.</p>
+<h3 id="sec:action"><span class="num">5.4</span>Action</h3>
+<p>The action facet produced the field's most quoted result and its clearest statement of leverage.
+Treating language-model agents as a new category of end user with their own perceptual limits, the
+agent&ndash;computer interface thesis holds that an agent cannot scan a screen, has no visual working
+memory, reads tokens sequentially, and loses attention as context grows, so the tools it uses should
+be designed for that reader [<a class="cite" href="#ref-yang2024swe">171</a>, <a class="cite" href="#ref-aipatternbook2026agent">20</a>]. A custom interface supporting
+repository navigation, bounded file viewing, line editing, search, and structured environment
+feedback reached state of the art on two benchmarks <em>with no change to model weights</em>. The
+leverage argument follows directly: the model is approximately fixed, while every tool the agent sees
+can be redesigned this afternoon. <span class="grade">E1</span>&thinsp;<span class="grade">M4</span></p>
+<p>Mistake-proofing is reported as the highest-yield technique within this facet, because a single
+constraint change can eliminate an entire failure class. Documented instances include a bounded file
+viewer that stopped context loss from full dumps, a search returning filenames only that improved
+downstream tool selection, a syntax-validating linter that blocked cascading failures, and explicit
+empty-state messages replacing silent returns [<a class="cite" href="#ref-agentpatterns2026agent">8</a>]. The general mapping from
+interface design to agent design is systematic rather than metaphorical: affordances become tool
+descriptions, constraints become typed and validated parameters, feedback becomes semantic output
+with explicit empty states, and error prevention becomes validation before effect.</p>
+<p>The necessary counterweight is that interface quality and control rigidity trade off. An approach
+that discards the agent loop entirely for a fixed three-phase pipeline of localisation, repair, and
+patch validation, with no model-decided control flow and no complex tools, achieved both the best
+performance and the lowest cost on a widely used benchmark subset at the time of publication
+[<a class="cite" href="#ref-xia2024agentless">161</a>]. Sometimes the best harness is a rigid pipeline rather than a richer tool
+surface. That same work also found benchmark instances with ground-truth patches leaked into the
+issue description, and released a filtered variant, which anticipates the construct-validity concerns
+of <a class="xref" href="#sec:eval">Section 7</a>.</p>
+<p>A distinct 2026 position holds that the substrate of action should be <em>code</em> rather than a tool
+schema. Agents emitting JSON or templated text face a constrained action space bounded by predefined
+tools and cannot compose multiple tools in one step; consolidating actions into executable code gives
+a unified action space with composition, branching, and revision, and reportedly improves success by
+up to 20% across 17 models [<a class="cite" href="#ref-wang2024executable">143</a>]. A 102-page survey organises the position into
+three layers of harness interface, harness mechanisms, and harness scaling, and frames the key
+property as failures becoming machine-readable feedback for repair rather than dead ends
+[<a class="cite" href="#ref-ning2026code">104</a>, <a class="cite" href="#ref-codeasharness2026code">158</a>]. The complementary efficiency argument is concrete: as
+agents connect to thousands of tools, loading all definitions upfront can consume hundreds of
+thousands of tokens before the request is read, and every intermediate result passes through context
+on each hop, both of which code execution avoids [<a class="cite" href="#ref-anthropic2026code">12</a>]. <span class="grade">E2</span>&thinsp;<span class="grade">M3</span></p>
+<p>Two sources push in the opposite direction, and the disagreement is genuine rather than apparent.
+Natural-language agent harnesses externalise run-level harness policy as editable documents
+interpreted by a shared runtime, on the grounds that a code harness bundles prompts, tool adapters,
+parser rules, validation scripts, retry logic, and benchmark assumptions together, so a small change
+silently alters call boundaries and stopping semantics [<a class="cite" href="#ref-pan2026natural">107</a>]. Harness distillation
+reports that an agent-as-harness arrangement outperforms code-as-harness for frontier models on the
+same evolved harness [<a class="cite" href="#ref-ye2026harness">175</a>]. Both camps claim better inspectability; they disagree
+about which substrate delivers it.</p>
+<p>The protocol layer beneath action is dominated by one standard and is the least secure part of the
+modern harness. The Model Context Protocol uses a host&ndash;client&ndash;server architecture over JSON-RPC and
+exposes three primitives: server-provided prompt templates, read-only resources, and executable tools
+whose own specification warns that they represent arbitrary code execution
+[<a class="cite" href="#ref-contrastsecurity2026model">29</a>, <a class="cite" href="#ref-hou2025model">56</a>]. Its defining property, and the root of its security
+problems, is that it exposes rich <em>pre-execution artifacts</em> such as tool names, natural-language
+descriptions, argument schemas, and server-provided prompts, which enter the model's context and
+directly influence tool selection [<a class="cite" href="#ref-rostamzadeh2026mcp">125</a>]. The description is itself an input to
+the decision, which is what makes tool poisoning possible (<a class="xref" href="#sec:security">Section 9</a>). A survey of
+interoperability protocols positions it alongside three alternatives and proposes a phased adoption
+path from tool access, through structured multimodal messaging, to peer-to-peer delegation and
+open-network discovery [<a class="cite" href="#ref-ehtesham2025survey">42</a>].</p>
+<h3 id="sec:state"><span class="num">5.5</span>State</h3>
+<p>State is the facet where the strongest long-horizon result in the corpus lives, and the mechanism is
+simple enough to state in one sentence: take task state out of the growing context and update it only
+from independently verified environment facts. The diagnosis is that existing harnesses keep
+execution, task state, and completion assessment inside one expanding context, which makes state hard
+to track and allows <em>incorrect self-assessments to propagate into later decisions</em>
+[<a class="cite" href="#ref-ma2026longhorizon">92</a>]. The remedy is a manage&ndash;execute&ndash;audit loop in which a manager holds state
+and chooses the next subtask, a <em>fresh-context</em> executor performs it, and a read-only auditor
+certifies what actually changed, with audit reports as the only cross-round memory. Reported gains are
+large and transfer across models and harnesses, including 51.8% to 80.7% on one benchmark, 69.7% to
+77.2% on a second, and a threefold improvement on a third. <span class="grade">E2</span>&thinsp;<span class="grade">M1</span></p>
+<p>Externalising state also simplifies learning. A search agent trained with reinforcement learning
+inside a stateful harness argues that training a policy over growing transcripts forces the optimiser
+to handle both semantic search decisions and recoverable bookkeeping that the environment could
+maintain more reliably, so the harness keeps a candidate pool, an importance-tagged curated set,
+evidence links, verification records, deduplicated observations, and budget-aware rendering, while the
+policy keeps only semantic decisions [<a class="cite" href="#ref-jiang2026harness">68</a>]. The reported improvement is largest on
+held-out transfer benchmarks, which is the pattern one expects if the harness is absorbing
+task-general machinery rather than task-specific tricks.</p>
+<p>Cross-session state is where maturity and evidence diverge most sharply. The problem statement is
+vivid and widely accepted: agents work in discrete sessions, each beginning with no memory of the
+last, like a project staffed by engineers working shifts with no handover [<a class="cite" href="#ref-anthropic2026effective">13</a>].
+The documented remedies, namely an initializer agent that prepares the environment once and a working
+agent that makes incremental progress while leaving artifacts for its successor, are deployed at scale
+but rest on vendor engineering reports rather than controlled studies. <span class="grade">E4</span>&thinsp;<span class="grade">M4</span></p>
+<h3 id="sec:verification"><span class="num">5.6</span>Verification</h3>
+<p>Verification is the plane that separates doing from certifying, and the literature's strongest claim
+is that execution feedback is a better supervision signal than model likelihood. One multi-agent
+framework makes execution-grounded verification a first-class principle, requiring every code change
+to survive sandboxed execution before it propagates, in contrast to systems that infer execution
+outcomes or treat verification as optional, and its ablations show execution feedback and role
+decomposition contributing independently [<a class="cite" href="#ref-kumar2026agentforge">81</a>]. The same principle appears in
+the code-as-harness framing, where tests, traces, and static analysis are the mechanism by which
+failures become repairable rather than terminal [<a class="cite" href="#ref-ning2026code">104</a>].</p>
+<p>Formal verification of agent plans, by contrast, is further from practice than its literature
+suggests. A PRISMA systematic review of 38 studies, with per-study risk-of-bias assessment and GRADE
+certainty, reports four findings that bound the area [<a class="cite" href="#ref-dantas2026safe">31</a>]. Specification is the
+bottleneck, with only 24.8% to 34.2% of model translations from natural language into a planning
+domain definition language being semantically correct. Runtime monitoring is the most mature
+enforcement strategy, reducing unsafe actions by 65.4% in one study, but its guarantees cover only
+single steps or short horizons. There is a <em>verifier tax</em>: blocking 94% of unsafe actions still
+left fewer than 5% of tasks completed both safely and correctly in most settings, because agents
+found other unsafe routes. And no approach simultaneously achieves soundness, completeness,
+scalability, semantic grounding, and utility preservation. Seven of its nine principal claims are
+graded at the lowest certainty level. <span class="grade">E1</span>&thinsp;<span class="grade">M1</span></p>
+<h3 id="sec:governance"><span class="num">5.7</span>Governance</h3>
+<p>Governance is structurally different from conventional application security because an agent generates
+and executes novel code at run time from inputs that may be attacker-controlled, makes resource and
+API decisions that static policy cannot anticipate, and maintains persistent memory vulnerable to
+manipulation across sessions [<a class="cite" href="#ref-augmentcode2026agent">17</a>]. The empirical hook is that safety
+mechanisms built for conversational use do not transfer: a model deployed as an autonomous agent
+reportedly executed injection, server-side request forgery, and unauthorised exfiltration that its
+chat-only counterpart refused. An empirical study of 70 agent projects found that intermediate
+isolation is common while <em>high-assurance audit is rare</em> [<a class="cite" href="#ref-wei2026architectural">57</a>].
+<span class="grade">E3</span>&thinsp;<span class="grade">M3</span></p>
+<p>Runtime guardrails have moved from reactive to predictive, and the critique motivating the shift is
+precise. Most guardrails assess only the apparent safety of the current proposed action, with no model
+of how risk evolves along the trajectory, which leaves a blind spot for long-horizon risk where
+individually benign actions drift the agent toward a hazardous state [<a class="cite" href="#ref-lin2026dreamguard">86</a>]. The
+proposed remedy maintains a recurrent latent state over the trajectory, predicts future states, and
+fuses immediate-hazard with prefix-risk evidence before execution at roughly 25 milliseconds per call.
+A complementary line optimises the guardrail harness itself around trigger, monitor, and feedback
+modules, and concludes that effective runtime defence requires complementary mechanisms, attack-aware
+optimisation, and harness designs matched to monitor capability [<a class="cite" href="#ref-liu2026harde">87</a>]. <span class="grade">E2</span>&thinsp;<span class="grade">M1</span></p>
+<p>The most useful governance result for practitioners is that enforcement must live in code rather than
+in prompts, and it is supported by a clean ablation. Holding the model fixed and varying only the
+enforcement layer, prompt instructions alone allowed recommendation-language and internal-trace
+leakage violations to reach the reader, which a code-owned harness blocked entirely; a bolt-on
+external guardrail also blocked them but <em>over-refused</em>, dropping utility to 88 of 120 where the
+harness preserved 120 of 120 [<a class="cite" href="#ref-ahn2026prompts">9</a>]. The contracts also survived model substitution,
+passing all 270 composition-boundary runs across three hosted models. Only code-owned enforcement
+preserved both safety and utility. <span class="grade">E2</span>&thinsp;<span class="grade">M2</span></p>
+<p>Formal and evolving policy is the 2026 research direction, and it resolves a real dilemma. Adaptive
+guardrails learn from deployment but apply policy through model inference, giving inconsistent
+decisions and ambiguous interpretation, whereas formal guardrails enforce deterministically but rely
+on pre-deployment policy with no way to adapt [<a class="cite" href="#ref-nguyen2026vepa">101</a>]. The proposed synthesis
+represents the guardrail as executable symbolic rules over typed agent events, has a model propose
+policy patches from deployment feedback, admits only structurally valid and conflict-free policies
+through a deterministic verifier, and activates a verified rule only once it has sufficient supporting
+evidence. The same logic applied to regulation treats compliance as runtime verification over the
+event trace, on the sharp observation that because tool selection, argument generation, and disclosure
+are all model-controlled at run time, the same deployment can be compliant in one dialogue and not in
+the next with no change to code, prompt, or weights [<a class="cite" href="#ref-kahani2026runtime">72</a>]. <span class="grade">E2</span>&thinsp;<span class="grade">M1</span></p>
+<h3 id="sec:observability"><span class="num">5.8</span>Observability</h3>
+<p>Agents fail in a way conventional observability cannot detect, and the reason is worth stating
+precisely: a hallucination returns HTTP 200, and a run that took fourteen needless tool calls looks
+identical to a clean one [<a class="cite" href="#ref-harness2026introducing">126</a>]. Logs stay clean, latency looks healthy, error
+rates sit at zero, and a user eventually reports the problem. Two decades of monitoring practice
+assume misbehaving software leaves evidence in the form of an exception, a timeout, or a bad status
+code, and agents break that assumption.</p>
+<p>The structural insight that makes instrumentation tractable is that an agent run is already shaped
+like a trace. A run contains steps, each step contains a model call and some tool calls, and tool
+calls sometimes call further services, which is a tree of nested timed operations and therefore
+exactly what distributed tracing represents [<a class="cite" href="#ref-promptabcd2026agent">117</a>]. The corollary is that the
+problem is correlation rather than log volume: adding log lines to a system with no correlation
+produces more disconnected lines to stitch. A mature span contract carries session and parent
+session, provenance attributes identifying which agent acted and which model ran, what was consumed
+and generated, and the cost, which makes the decision chain the first-class artifact rather than the
+final output [<a class="cite" href="#ref-repo2026agentweave">2</a>]. <span class="grade">E3</span>&thinsp;<span class="grade">M3</span></p>
+<p>Observing is not sufficient, because existing tooling shows what the agent did rather than whether it
+was any good, and cannot intervene while a run is going wrong [<a class="cite" href="#ref-harness2026introducing">126</a>]. The
+response is a single pipeline that collects, filters, evaluates, and acts, with the loop-closing
+detail that production failures export directly into evaluation cases so real failures become
+regression tests. Observability is also load-bearing for two other facets: trace-driven harness
+evolution is impossible without it (<a class="xref" href="#sec:autoopt">Section 10</a>), and log analysis is a precondition for
+credible evaluation rather than an operational convenience (<a class="xref" href="#sec:eval">Section 7</a>).</p>
+<p>The gap that no examined system fills is external verifiability. Mature harnesses converge on an
+append-only replayable session record, but a tamper-evident record that an outside party can check
+<em>without trusting the runtime</em> is absent from all three harnesses examined at source level, and
+the study that found this reads the absence as a predictive gap rather than an oversight: it is the
+next axis on which harnesses for provenance-sensitive domains will differ [<a class="cite" href="#ref-dai2026empire">66</a>].
+Internal tracing serves debugging and optimisation. It does not serve audit. <span class="grade">E2</span>&thinsp;<span class="grade">M0</span></p>
+<h2 id="sec:evidence"><span class="num">6</span>The Binding Constraint: Evidence</h2>
+<h3 id="the-thesis"><span class="num">6.1</span>The thesis</h3>
+<p>The position paper that names this problem states it as follows: for long-horizon tasks evaluated
+across models of comparable frontier capability, the execution harness is often a stronger
+determinant of performance than the model it wraps, and current protocols therefore systematically
+misattribute harness-level gains to model improvements [<a class="cite" href="#ref-zhang2026comparing">183</a>]. It defends the
+claim three ways. A control-theoretic formalisation treats the harness as the controller of a
+closed-loop dynamical system and the model as the stochastic policy it governs, which explains why
+small harness changes can exceed the effect of substituting one model for another. Published
+benchmarks, industry deployments, and a controlled variance decomposition show harness-induced
+variance exceeding model-induced variance, including cases of <em>model ranking reversal</em>. And it
+proposes a harness-aware evaluation framework with a disclosure standard and a variance-decomposition
+protocol, which this survey extends in <a class="xref" href="#sec:card">Section 8</a>. It is a position paper, and its own
+controlled factorial is small.</p>
+<h3 id="controlled-same-model-comparisons"><span class="num">6.2</span>Controlled same-model comparisons</h3>
+<figure class="tbl" id="tab:spreads">
+<table>
+<thead><tr><th><strong>Comparison</strong></th><th><strong>Benchmark</strong></th><th><strong>Spread</strong></th><th><strong>Grade</strong></th></tr></thead><tbody>
+<tr><td>Custom interface vs. shell-only, model fixed [<a class="cite" href="#ref-yang2024swe">171</a>]</td><td>SWE-bench Lite</td><td>11.0% <span class="math">&rarr;</span> 18.0% (7.0 pts)</td><td><span class="grade">E2</span></td></tr>
+<tr><td>One frontier model under two scaffolds [<a class="cite" href="#ref-deng2025swe">36</a>, <a class="cite" href="#ref-particula2026swe">128</a>]</td><td>SWE-bench Pro</td><td>45.9% <span class="math">&rarr;</span> 55.4% (9.5 pts)</td><td><span class="grade">E3</span></td></tr>
+<tr><td>One frontier model across seven harnesses [<a class="cite" href="#ref-datanorth2026harness">64</a>, <a class="cite" href="#ref-merrill2026terminal">97</a>]</td><td>Terminal-Bench 2.0</td><td>58.0&ndash;74.7% (16.7 pts)</td><td><span class="grade">E3</span></td></tr>
+<tr><td>One frontier model, two harnesses [<a class="cite" href="#ref-datanorth2026harness">64</a>]</td><td>Terminal-Bench 2.0</td><td>58.0% <span class="math">&rarr;</span> 76.4% (18.4 pts)</td><td><span class="grade">E3</span></td></tr>
+<tr><td>Harness search vs. best human-designed [<a class="cite" href="#ref-lee2026meta">83</a>]</td><td>Terminal-Bench 2</td><td>27.5&ndash;37.6% (10.1 pts)</td><td><span class="grade">E2</span></td></tr>
+<tr><td>Ten optimisation iterations, model fixed [<a class="cite" href="#ref-lin2026agentic">85</a>]</td><td>Terminal-Bench 2</td><td>69.7% <span class="math">&rarr;</span> 77.0% (7.3 pts)</td><td><span class="grade">E2</span></td></tr>
+<tr><td>State externalisation, model fixed [<a class="cite" href="#ref-ma2026longhorizon">92</a>]</td><td>WeaveBench</td><td>51.8% <span class="math">&rarr;</span> 80.7% (28.9 pts)</td><td><span class="grade">E2</span></td></tr>
+<tr><td><strong>Inverse:</strong> nine frontier models, one shared scaffold
+[<a class="cite" href="#ref-datanorth2026harness">64</a>]</td><td>SWE-bench Verified</td><td>66.6&ndash;76.8% (10.2 pts)</td><td><span class="grade">E3</span></td></tr>
+<tr><td><strong>Inverse:</strong> six frontier models [<a class="cite" href="#ref-particula2026swe">128</a>]</td><td>SWE-bench Verified</td><td>within 1.3 pts</td><td><span class="grade">E4</span></td></tr>
+</tbody>
+</table>
+<figcaption><span class="tlabel">Table 2.</span> Same-model comparisons in which only the harness varies, plus the inverse comparison in
+which only the model varies. Grades per <a class="xref" href="#sec:grading">Section 2.4</a>.</figcaption>
+</figure>
+<p>Table&nbsp;<a class="xref" href="#tab:spreads">Table 2</a> is the empirical core of the thesis, and read as a whole it supports a
+narrower claim than the slogan suggests. The controlled entries, graded E2, span 7.0 to 28.9
+percentage points and come from interventions on specific facets: the tool interface, harness search,
+trace-driven optimisation, and state externalisation. The large leaderboard spreads, graded E3, are
+consistent with the thesis but do not identify it causally, because harnesses submitted to a
+leaderboard differ in reasoning effort, prompt, scaffolding budget, and submission date as well as in
+architecture. The inverse comparisons are the ones that make the thesis interesting: holding the
+harness fixed across nine frontier models produced a 10.2-point spread, which is smaller than four of
+the harness-varied comparisons above it.</p>
+<h3 id="sec:boundary"><span class="num">6.3</span>Boundary conditions and counter-evidence</h3>
+<p>Three findings bound the thesis, and a survey that omitted them would be advocacy rather than review.</p>
+<p>First, matched conditions shrink the spread dramatically. On a successor version of the same terminal
+benchmark, harness spreads collapse from 16.7 points to between 0.2 and 8.1 points once reasoning
+effort and submission dates are matched [<a class="cite" href="#ref-datanorth2026harness">64</a>]. Whether this reflects
+convergence of harness quality, better-matched comparison, or benchmark change is not resolved by
+available data. <span class="grade">E3</span></p>
+<p>Second, harness churn does not imply harness improvement. The one study designed to test this fixed
+the model and varied only the harness across 35 sequential releases of one command-line agent,
+evaluated against 50 stratified benchmark tasks [<a class="cite" href="#ref-sghaier2026blame">21</a>]. Release velocity across five
+open-source harnesses exceeded two releases per day. Despite that activity, there was <em>no
+statistically significant improvement</em> in resolve rate for a fixed model, and later versions consumed
+nearly double the tokens and tool calls without corresponding quality gains. This is the most
+rigorous single design in the corpus, and it is a negative result. <span class="grade">E2</span></p>
+<p>Third, benchmark-oriented optimisation does not transfer. Checkpoints post-trained on one benchmark's
+trajectories show little cross-task transfer, and optimisation for that benchmark yields limited or no
+gains on an independent task suite [<a class="cite" href="#ref-shibaev2026claim">135</a>]. Applied to harnesses rather than weights,
+the same risk is explicit in the optimisation literature, which notes that the best harness varies
+across domains, instances, and base models [<a class="cite" href="#ref-ye2026harness">175</a>]. <span class="grade">E2</span></p>
+<h3 id="model-ndash-harness-co-evolution"><span class="num">6.4</span>Model&ndash;harness co-evolution</h3>
+<p>The optimal harness shifts with model capability, which means harness findings have a shelf life. The
+clearest demonstration is a reversal within one research line. Two successive systems won by adding
+hierarchy and generalist&ndash;specialist decomposition to computer-use agents
+[<a class="cite" href="#ref-agashe2024agent">3</a>, <a class="cite" href="#ref-agashe2025agent">4</a>]; the third won by abandoning further hierarchy in favour of
+scaling multiple rollouts and selecting among them with a behaviour-narrative judge, surpassing
+human-level performance on its benchmark [<a class="cite" href="#ref-gonzalezpumariega2025scaling">49</a>]. The architectural
+answer changed because the models underneath changed. No study in this corpus systematically measures
+how harness gain shrinks, grows, or flips across model generations, which is one of the clearest gaps
+identified in <a class="xref" href="#sec:open">Section 11</a>. <span class="grade">E2</span></p>
+<h3 id="the-evidence-map"><span class="num">6.5</span>The evidence map</h3>
+<figure class="tbl" id="tab:evidencemap">
+<table>
+<thead><tr><th><strong>Claim</strong></th><th><strong>E</strong></th><th><strong>M</strong></th></tr></thead><tbody>
+<tr><td>Tool and interface design moves agentic performance with model fixed
+[<a class="cite" href="#ref-yang2024swe">171</a>, <a class="cite" href="#ref-agentpatterns2026agent">8</a>]</td><td>E1</td><td>M4</td></tr>
+<tr><td>Harness configuration can exceed model choice as a source of variance on long-horizon tasks
+[<a class="cite" href="#ref-zhang2026comparing">183</a>, <a class="cite" href="#ref-lee2026meta">83</a>, <a class="cite" href="#ref-datanorth2026harness">64</a>]</td><td>E2</td><td>M3</td></tr>
+<tr><td>Harness release activity does not yield benchmark improvement for a fixed model
+[<a class="cite" href="#ref-sghaier2026blame">21</a>]</td><td>E2</td><td>M3</td></tr>
+<tr><td>Context degrades continuously with length rather than at the limit
+[<a class="cite" href="#ref-atlan2026working">41</a>]</td><td>E3</td><td>M4</td></tr>
+<tr><td>Naive context accumulation is quadratic; only validated compaction is linear with fidelity
+[<a class="cite" href="#ref-dadhich2026agentic">48</a>]</td><td>E3</td><td>M4</td></tr>
+<tr><td>Compaction is lossy; durable state belongs outside the transcript
+[<a class="cite" href="#ref-anthropic2026effective">13</a>, <a class="cite" href="#ref-datanorth2026harness">64</a>]</td><td>E4</td><td>M4</td></tr>
+<tr><td>Cross-session artifacts and initializer agents enable multi-window work
+[<a class="cite" href="#ref-anthropic2026effective">13</a>]</td><td>E4</td><td>M4</td></tr>
+<tr><td>Externalising task state with independent audit improves long-horizon success
+[<a class="cite" href="#ref-ma2026longhorizon">92</a>]</td><td>E2</td><td>M1</td></tr>
+<tr><td>Naive episodic memory does not improve long-horizon reliability and may harm it
+[<a class="cite" href="#ref-khanal2026pass">77</a>]</td><td>E2</td><td>M2</td></tr>
+<tr><td>A single agent matches homogeneous multi-agent workflows [<a class="cite" href="#ref-xu2026rethinking">167</a>, <a class="cite" href="#ref-cemri2025multi">25</a>]</td><td>E1</td><td>M2</td></tr>
+<tr><td>Delegated networks are decision-theoretically dominated absent new signals
+[<a class="cite" href="#ref-ao2026reliability">15</a>]</td><td>E2</td><td>M0</td></tr>
+<tr><td>Harnesses can be optimised automatically from execution traces
+[<a class="cite" href="#ref-lee2026meta">83</a>, <a class="cite" href="#ref-lin2026agentic">85</a>, <a class="cite" href="#ref-park2026autosaddler">110</a>]</td><td>E1</td><td>M2</td></tr>
+<tr><td>Machine-generated harnesses remain behind human-engineered ones on code and search
+[<a class="cite" href="#ref-seed2026harnessdev">23</a>]</td><td>E2</td><td>M1</td></tr>
+<tr><td>Indirect prompt injection succeeds against tool-integrated agents
+[<a class="cite" href="#ref-zhan2024injecagent">180</a>, <a class="cite" href="#ref-debenedetti2024agentdojo">35</a>]</td><td>E1</td><td>M4</td></tr>
+<tr><td>Capability-based information-flow control defeats injection by design, at a utility cost
+[<a class="cite" href="#ref-debenedetti2025defeating">34</a>]</td><td>E2</td><td>M1</td></tr>
+<tr><td>Those guarantees do not compose across agent boundaries [<a class="cite" href="#ref-petersgill2026camels">115</a>]</td><td>E2</td><td>M1</td></tr>
+<tr><td>The harness can escalate instruction privilege, defeating the instruction hierarchy
+[<a class="cite" href="#ref-he2026context">54</a>]</td><td>E2</td><td>M4</td></tr>
+<tr><td>MCP servers exhibit MCP-specific vulnerability classes at measurable rates
+[<a class="cite" href="#ref-hasan2025model">53</a>, <a class="cite" href="#ref-yang2025mcpsecbench">170</a>, <a class="cite" href="#ref-zhao2025mcp">185</a>]</td><td>E1</td><td>M4</td></tr>
+<tr><td>Code-owned enforcement preserves safety and utility where prompts and bolt-ons do not
+[<a class="cite" href="#ref-ahn2026prompts">9</a>]</td><td>E2</td><td>M2</td></tr>
+<tr><td>Capability and reliability diverge as task duration grows [<a class="cite" href="#ref-khanal2026pass">77</a>, <a class="cite" href="#ref-rabanser2026science">120</a>]</td><td>E1</td><td>M2</td></tr>
+<tr><td>Scaffold ownership is an uncontrolled axis in agent benchmarks [<a class="cite" href="#ref-zhang2026double">182</a>]</td><td>E2</td><td>M0</td></tr>
+<tr><td>Outcome-only scoring conceals both under-elicitation and dangerous actions
+[<a class="cite" href="#ref-kirgis2026log">79</a>, <a class="cite" href="#ref-kapoor2025holistic">74</a>]</td><td>E1</td><td>M2</td></tr>
+<tr><td>Externally verifiable observability is absent from deployed harnesses [<a class="cite" href="#ref-dai2026empire">66</a>]</td><td>E2</td><td>M0</td></tr>
+</tbody>
+</table>
+<figcaption><span class="tlabel">Table 3.</span> Graded evidence map for the corpus's principal claims. E: evidence level; M: deployment
+maturity. Rows where M exceeds E are maturity&ndash;evidence inversions.</figcaption>
+</figure>
+<p>Table&nbsp;<a class="xref" href="#tab:evidencemap">Table 3</a> exposes a pattern invisible in any single paper: a
+<strong>maturity&ndash;evidence inversion</strong> in the state and context facets. Four claims are graded M4,
+meaning they are production defaults in widely deployed harnesses, while their evidence is E3 or E4,
+meaning observational or vendor-reported. Compaction policy, cross-session artifacts, initializer
+agents, and the shape of context degradation are all running in front of large user populations on the
+strength of engineering reports. The inversion is not a criticism of those reports, which are specific
+and candid. It identifies the highest-value controlled experiments available to the field: the
+interventions whose effects are already assumed are the ones nobody has isolated.</p>
+<p>The converse pattern also appears. Three claims are graded M0 with E2 evidence: delegated-network
+domination, the uncontrolled scaffold-ownership axis, and absent external verifiability. These are
+established results that have not reached practice, and they define a transfer problem rather than a
+research problem.</p>
+<h2 id="sec:eval"><span class="num">7</span>Evaluation and Its Validity Threats</h2>
+<h3 id="benchmark-families"><span class="num">7.1</span>Benchmark families</h3>
+<figure class="tbl" id="tab:benchmarks">
+<table>
+<thead><tr><th><strong>Family</strong></th><th><strong>Representative benchmarks</strong></th><th><strong>Harness property exposed</strong></th></tr></thead><tbody>
+<tr><td>Software engineering</td><td>SWE-bench [<a class="cite" href="#ref-jimenez2023swe">69</a>]; Multimodal [<a class="cite" href="#ref-yang2024swea">172</a>];
+Pro [<a class="cite" href="#ref-deng2025swe">36</a>]; CL [<a class="cite" href="#ref-joshi2025swe">71</a>]</td><td>Action interface; cross-language generality; state</td></tr>
+<tr><td>Scaffold compliance</td><td>OctoBench [<a class="cite" href="#ref-ding2026octobench">39</a>]</td><td>Whether the agent obeys the harness</td></tr>
+<tr><td>Terminal</td><td>Terminal-Bench [<a class="cite" href="#ref-merrill2026terminal">97</a>]; TerminalWorld [<a class="cite" href="#ref-chu2026terminalworld">28</a>]</td><td>Harness variance; in-the-wild validity</td></tr>
+<tr><td>OS / desktop</td><td>OSWorld [<a class="cite" href="#ref-xie2024osworld">163</a>]; OSWorld 2.0 [<a class="cite" href="#ref-lab2026osworld">164</a>]</td><td>Observation; long-horizon state</td></tr>
+<tr><td>Web navigation</td><td>Mind2Web [<a class="cite" href="#ref-deng2023mind2web">37</a>]; WebArena [<a class="cite" href="#ref-zhou2023webarena">187</a>];
+VisualWebArena [<a class="cite" href="#ref-koh2024visualwebarena">80</a>]; BrowseComp [<a class="cite" href="#ref-wei2025browsecomp">150</a>]</td><td>Observation projection; persistence</td></tr>
+<tr><td>Tool&ndash;agent&ndash;user</td><td><span class="math">&tau;</span>-bench [<a class="cite" href="#ref-yao2024bench">173</a>]; <span class="math">&tau;<sup>2</sup></span>-bench [<a class="cite" href="#ref-barres2025bench">19</a>]</td><td>Policy adherence; reliability; dual control</td></tr>
+<tr><td>General assistant</td><td>GAIA [<a class="cite" href="#ref-mialon2023gaia">98</a>]; TheAgentCompany [<a class="cite" href="#ref-xu2024theagentcompany">168</a>];
+Telco-GAIA [<a class="cite" href="#ref-khizbullin2026telco">78</a>]</td><td>End-to-end capability; enterprise grounding</td></tr>
+<tr><td>Research automation</td><td>RE-Bench [<a class="cite" href="#ref-wijk2024bench">151</a>]; PostTrainBench [<a class="cite" href="#ref-rank2026posttrainbench">121</a>]</td><td>Horizon-dependence; reward hacking</td></tr>
+<tr><td>Harness construction</td><td>HarnessDev [<a class="cite" href="#ref-seed2026harnessdev">23</a>]</td><td>Whether agents can build harnesses</td></tr>
+<tr><td>Infrastructure</td><td>HAL [<a class="cite" href="#ref-kapoor2025holistic">74</a>]</td><td>Model <span class="math">&times;</span> scaffold <span class="math">&times;</span> benchmark</td></tr>
+</tbody>
+</table>
+<figcaption><span class="tlabel">Table 4.</span> Principal agent benchmark families in the corpus, with the harness property each exposes.</figcaption>
+</figure>
+<p>Two entries in Table&nbsp;<a class="xref" href="#tab:benchmarks">Table 4</a> deserve emphasis because they measure the harness directly
+rather than through it. The scaffold-compliance benchmark asks whether agents follow
+<em>scaffold-specified</em> instructions when constraints are heterogeneous and persist across
+interactions, using 34 environments and 217 tasks under three scaffold types with 7,098 objective
+checklist items, and it finds a systematic gap between task-solving and scaffold-aware compliance
+[<a class="cite" href="#ref-ding2026octobench">39</a>]. An agent can succeed while ignoring the harness, which is precisely the
+failure mode that makes harness-level guarantees unreliable. The harness-construction benchmark shifts
+the unit of evaluation from task outputs to runnable infrastructure, with creation and evolution
+stages scored on both capability and execution-token efficiency [<a class="cite" href="#ref-seed2026harnessdev">23</a>].</p>
+<p>A validity check on the benchmark families themselves is worth recording. An automated data engine
+that reverse-engineers tasks from 80,870 in-the-wild terminal recordings finds its scores correlate
+only weakly with an expert-curated terminal benchmark at a Pearson coefficient of 0.20
+[<a class="cite" href="#ref-chu2026terminalworld">28</a>]. Expert-curated and in-the-wild terminal capability are therefore
+measuring substantially different constructs, and any claim about &ldquo;terminal capability&rdquo; resting on
+one of them should say which.</p>
+<h3 id="the-double-measurement-confound"><span class="num">7.2</span>The double measurement confound</h3>
+<p>Agent benchmark scores are interpretable as model capability only under conditions that are rarely
+met, and the cleanest formalisation names two simultaneous failures: execution-critical decisions are
+performed by a <em>fixed scaffold</em> rather than the model, while the scorer evaluates outputs by
+criteria that may not reflect task correctness [<a class="cite" href="#ref-zhang2026double">182</a>]. The proposed audit-and-repair
+protocol transfers execution-critical decisions from scaffold to model, replaces shape-based
+evaluation with seeded ground-truth scoring, and reports worst-case and tail-risk metrics instead of
+the mean alone. Applying it turned a nearly flat leaderboard into a reliability spectrum. Its two
+general conclusions are the ones to carry forward: scorer validity is benchmark-specific, and
+<strong>scaffold ownership is an uncontrolled axis wherever they probed it</strong>.</p>
+<h3 id="outcome-only-scoring-and-log-analysis"><span class="num">7.3</span>Outcome-only scoring and log analysis</h3>
+<p>Pass-or-fail reporting threatens validity in three distinct ways, and log analysis is the only
+available remedy. Scores may be inflated or deflated by shortcuts and benchmark artifacts; benchmark
+performance may fail to predict real-world utility because of scaffold limitations and recurring
+failure modes; and capability scores can <em>conceal dangerous or catastrophic actions</em>
+[<a class="cite" href="#ref-kirgis2026log">79</a>]. Demonstrated on one airline-domain benchmark, log analysis found <span class="math">pass<sup>5</sup></span>
+performance had been under-elicited by nearly 50% and surfaced deployment failure modes invisible to
+outcome metrics.</p>
+<p>Standardised infrastructure makes the point at scale. A leaderboard effort built an evaluation harness
+orchestrating parallel runs across hundreds of virtual machines, validated with 21,730 rollouts across
+nine models and nine benchmarks at a cost of roughly $40,000, and analysed along three dimensions of
+models, scaffolds, and benchmarks [<a class="cite" href="#ref-kapoor2025holistic">74</a>]. Two classes of finding emerged that
+outcome metrics cannot produce. Higher reasoning effort <em>reduced</em> accuracy in the majority of
+runs, which inverts a common assumption. And model-aided log inspection found agents searching for the
+benchmark on a model hub instead of solving the task, and misusing credit cards in booking tasks. All
+logs, comprising 2.5 billion tokens, were released.</p>
+<p>The agenda these results serve was set in 2024 by a paper whose four diagnoses still structure the
+area [<a class="cite" href="#ref-kapoor2024agents">75</a>]: narrow accuracy focus makes state-of-the-art agents needlessly complex
+and costly and has led to mistaken conclusions about the sources of accuracy gains; the benchmarking
+needs of model developers and downstream developers are conflated; many benchmarks have inadequate or
+absent holdout sets, producing agents that take shortcuts and overfit; and non-standardised practice
+produces pervasive irreproducibility.</p>
+<h3 id="reliability-beyond-the-mean"><span class="num">7.4</span>Reliability beyond the mean</h3>
+<p>Capability and reliability are different properties that diverge systematically as task duration
+grows, and single-attempt metrics on short tasks are structurally blind to the divergence. A reliability
+framework contributes four purpose-built metrics, namely a reliability decay curve over duration, a
+variance amplification factor, a graceful degradation score for partial completion, and a meltdown
+onset point detected via sliding-window entropy over tool-call sequences, evaluated across 396 tasks
+and 23,392 episodes [<a class="cite" href="#ref-khanal2026pass">77</a>]. Three of its five findings are counter-intuitive and bear
+directly on harness design. High variance amplification is a <em>capability</em> signature rather than
+an instability signature. Capability and reliability rankings diverge substantially, with multi-rank
+inversions between medium and very-long horizons. And memory scaffolds universally hurt long-horizon
+graceful degradation across all ten models tested, which is strong evidence against naive episodic
+memory as a reliability intervention.</p>
+<p>A complementary framework grounded in safety-critical engineering supplies twelve metrics across
+consistency, robustness, predictability, and safety, and finds that recent capability gains have
+produced only small reliability improvements across 15 models and two benchmarks
+[<a class="cite" href="#ref-rabanser2026science">120</a>]. The reliability metric that first exposed this, <span class="math">pass<sup>k</sup></span>, came
+from a tool&ndash;agent&ndash;user benchmark reporting that state-of-the-art function-calling agents succeeded
+on under half of tasks and were highly inconsistent across repeats [<a class="cite" href="#ref-yao2024bench">173</a>]. Peak
+capability and reliable capability are different quantities, and only the second is deployable.</p>
+<h3 id="cost"><span class="num">7.5</span>Cost</h3>
+<p>Cost reporting remains optional and inconsistent, which makes efficiency claims hard to compare.
+Pareto reporting has spread since the 2024 critique [<a class="cite" href="#ref-kapoor2024agents">75</a>], but search cost in the
+harness-optimisation literature is reported unevenly: one leading method reports the task model's
+context tokens rather than total proposer compute [<a class="cite" href="#ref-lee2026meta">83</a>]. A rubric that downgrades
+unreported cost therefore downgrades much of <a class="xref" href="#sec:autoopt">Section 10</a>, which is itself a finding about the
+field rather than about any individual paper.</p>
+<p>Three mechanisms reduce cost without accuracy loss, and all three are harness interventions. Early
+termination driven by structured experience from prior executions cut total cost by 19% to 55% with
+at most 0.2% resolution-rate loss [<a class="cite" href="#ref-guo2026eet">51</a>]. Temporal routing lets a cheap model run a few
+exploratory turns, reads the resulting partial trajectory, and only then decides whether to escalate,
+with a Bayes-optimality theorem showing that conditioning on the partial trajectory never harms
+routing and strictly helps when exploration is informative [<a class="cite" href="#ref-son2026swe">137</a>]. Heterogeneous agent
+teams with mixed deployment occupy the cost&ndash;accuracy frontier, improving accuracy by up to 44% over
+cost-equivalent homogeneous teams or matching the strongest homogeneous team at up to twelvefold lower
+per-task cost [<a class="cite" href="#ref-jiang2026specialize">67</a>]. Evaluation cost is itself reducible: restricting new
+evaluations to tasks with intermediate historical pass rates cuts task count by 44% to 70% while
+preserving rank fidelity, exploiting the asymmetry that absolute score prediction degrades under
+scaffold-driven distribution shift while rank-order prediction stays stable
+[<a class="cite" href="#ref-ndzomga2026efficient">45</a>].</p>
+<h2 id="sec:card"><span class="num">8</span>The Harness Disclosure Card and a Variance-Decomposition Protocol</h2>
+<h3 id="motivation"><span class="num">8.1</span>Motivation</h3>
+<p>The preceding two sections establish that a leaderboard row attributing a score to a model is not
+interpretable, because the score belongs to a system whose other components are undisclosed. The
+remedy is not a better benchmark. It is a reporting standard, in the same sense that model cards and
+datasheets became reporting standards for models and datasets. We therefore specify the minimum set
+of fields without which an agent result does not support the comparison it appears to license.</p>
+<h3 id="the-card"><span class="num">8.2</span>The card</h3>
+<figure class="tbl" id="tab:card">
+<table>
+<thead><tr><th><strong>#</strong></th><th><strong>Field</strong></th><th><strong>Required content</strong></th></tr></thead><tbody>
+<tr><td>1</td><td>Model identity</td><td>Exact model version string, not a family name</td></tr>
+<tr><td>2</td><td>Reasoning effort<span class="math">&dagger;</span></td><td>Thinking or reasoning budget setting, since it inverts results
+[<a class="cite" href="#ref-kapoor2025holistic">74</a>]</td></tr>
+<tr><td>3</td><td>Harness identity<span class="math">&dagger;</span></td><td>Name <em>and pinned version or commit</em>; release velocity exceeds
+two per day [<a class="cite" href="#ref-sghaier2026blame">21</a>]</td></tr>
+<tr><td>4</td><td>Tool inventory</td><td>Tool count, schemas, and edit format (diff, search-replace, full rewrite)</td></tr>
+<tr><td>5</td><td>Context policy<span class="math">&dagger;</span></td><td>Window size, compaction strategy and trigger, re-injection policy</td></tr>
+<tr><td>6</td><td>State policy<span class="math">&dagger;</span></td><td>Session persistence, cross-session artifacts, externalised task state</td></tr>
+<tr><td>7</td><td>Control budget</td><td>Max steps, max turns, retries, best-of-<span class="math">N</span>, and the stopping rule</td></tr>
+<tr><td>8</td><td>Verifier</td><td>What certifies completion, and whether the executor also certifies</td></tr>
+<tr><td>9</td><td>Governance</td><td>Permission mode, sandbox technology, human approvals in the loop</td></tr>
+<tr><td>10</td><td>Observability<span class="math">&dagger;</span></td><td>Whether traces are retained and released; log availability</td></tr>
+<tr><td>11</td><td>Cost<span class="math">&dagger;</span></td><td>Input and output tokens, tool calls, wall-clock, and currency cost</td></tr>
+<tr><td>12</td><td>Repeats<span class="math">&dagger;</span></td><td><span class="math">k</span>, the seed policy, and <span class="math">pass<sup>k</sup></span> alongside <span class="math">pass@1</span></td></tr>
+</tbody>
+</table>
+<figcaption><span class="tlabel">Table 5.</span> The Harness Disclosure Card. Every field is required for a comparative claim; fields marked
+<span class="math">&dagger;</span> are the ones most often missing in current practice.</figcaption>
+</figure>
+<p>Seven of the twelve fields are marked as commonly missing, and each omission corresponds to a
+documented measurement failure rather than to a hypothetical one. Reasoning effort is marked because
+higher effort reduced accuracy in the majority of runs in the largest standardised study
+[<a class="cite" href="#ref-kapoor2025holistic">74</a>], so a comparison that leaves it unstated is uninterpretable. Harness version
+is marked because 35 sequential releases of one harness changed token consumption nearly twofold
+[<a class="cite" href="#ref-sghaier2026blame">21</a>]. Repeats are marked because single-attempt scores conceal the
+capability&ndash;reliability divergence of <a class="xref" href="#sec:eval">Section 7</a> [<a class="cite" href="#ref-khanal2026pass">77</a>, <a class="cite" href="#ref-yao2024bench">173</a>]. The card is
+deliberately shorter than a full systems description: it is the set of fields that have been shown to
+move results, not an inventory of everything a harness contains.</p>
+<h3 id="sec:variance"><span class="num">8.3</span>A variance-decomposition protocol</h3>
+<p>Disclosure alone does not attribute variance, so we specify the experiment that would. Let <span class="math">m</span> index
+models, <span class="math">h</span> index harnesses, <span class="math">b</span> index benchmark instances, and <span class="math">r</span> index repeated runs. The minimum
+viable design is a factorial over <span class="math">m &times; h</span> for fixed <span class="math">b</span>, with <span class="math">r &ge; 5</span>:
+<div class="dmath">
+y<sub>mhbr</sub> &thinsp;=&thinsp; &mu; &thinsp;+&thinsp; &alpha;<sub>m</sub> &thinsp;+&thinsp; &beta;<sub>h</sub> &thinsp;+&thinsp; (&alpha;&beta;)<sub>mh</sub> &thinsp;+&thinsp; &gamma;<sub>b</sub> &thinsp;+&thinsp;
+&epsilon;<sub>mhbr</sub>,
+</div>
+where the quantity of interest is not any single coefficient but the variance components
+<span class="math">&sigma;<sup>2</sup>_&alpha;</span> (model), <span class="math">&sigma;<sup>2</sup>_&beta;</span> (harness), <span class="math">&sigma;<sup>2</sup><sub>&alpha;&beta;</sub></span> (interaction), and
+<span class="math">&sigma;<sup>2</sup>_&epsilon;</span> (run-to-run noise). The binding constraint thesis predicts
+<span class="math">&sigma;<sup>2</sup>_&beta; > &sigma;<sup>2</sup>_&alpha;</span> in the long-horizon regime, and the co-evolution result of
+<a class="xref" href="#sec:evidence">Section 6</a> predicts a non-negligible <span class="math">&sigma;<sup>2</sup><sub>&alpha;&beta;</sub></span>, which is the formal statement
+of &ldquo;the best harness depends on the model&rdquo;.</p>
+<p>Three design requirements follow from the failures catalogued earlier. Reasoning effort must be
+matched across cells, or the design silently confounds it with harness
+[<a class="cite" href="#ref-datanorth2026harness">64</a>, <a class="cite" href="#ref-kapoor2025holistic">74</a>]. Harness versions must be pinned, since the same name
+denotes different systems weeks apart [<a class="cite" href="#ref-sghaier2026blame">21</a>]. And runs must be repeated, because
+reporting only the mean hides the tail behaviour that distinguishes systems
+[<a class="cite" href="#ref-zhang2026double">182</a>, <a class="cite" href="#ref-khanal2026pass">77</a>]. A minimum viable instance would be four models by four
+harnesses by one benchmark by five repeats, which is 80 cells; existing standardised infrastructure has
+demonstrated this is tractable at roughly $40,000 for a larger design, and task-subsetting reduces it
+further while preserving rankings [<a class="cite" href="#ref-kapoor2025holistic">74</a>, <a class="cite" href="#ref-ndzomga2026efficient">45</a>].</p>
+<p>No such factorial dataset currently exists. The largest standardised effort analyses models, scaffolds,
+and benchmarks but uses at most two scaffolds per benchmark [<a class="cite" href="#ref-kapoor2025holistic">74</a>], and the position
+paper that proposes variance decomposition acknowledges its own factorial is small
+[<a class="cite" href="#ref-zhang2026comparing">183</a>]. Producing it is, in our assessment, the single highest-value empirical
+contribution available in this area.</p>
+<h3 id="what-adoption-costs"><span class="num">8.4</span>What adoption costs</h3>
+<p>A disclosure standard that is expensive to follow will not be followed, so it is worth being concrete.
+Eleven of the twelve fields are already known to whoever ran the experiment and cost only the effort to
+write them down. The twelfth, repeated runs, multiplies compute by <span class="math">k</span>, and that is a real cost. We
+suggest the pragmatic compromise that single-run results remain publishable when labelled as such,
+while any <em>comparative</em> claim between systems requires <span class="math">k &ge; 5</span> and reports <span class="math">pass<sup>k</sup></span>.
+This mirrors the distinction the reliability literature draws between measuring capability and
+measuring deployability [<a class="cite" href="#ref-rabanser2026science">120</a>, <a class="cite" href="#ref-khanal2026pass">77</a>].</p>
+<h2 id="sec:security"><span class="num">9</span>Security and Governance of the Harness</h2>
+<h3 id="the-structural-vulnerability"><span class="num">9.1</span>The structural vulnerability</h3>
+<p>Language models operate on text and have no formal way to distinguish instructions from data, which is
+the unfixed root of the entire area [<a class="cite" href="#ref-debenedetti2024agentdojo">35</a>]. Indirect prompt injection exploits
+it by embedding instructions in content the agent retrieves, so an external attacker can act on the
+user's behalf. The first benchmark for this found a widely used agent configuration vulnerable 24% of
+the time, nearly doubling when attacker instructions were reinforced [<a class="cite" href="#ref-zhan2024injecagent">180</a>]. A
+dynamic successor made evaluation extensible rather than static, seeding an environment with 97
+realistic tasks and 629 security test cases, and found the setting hard for both sides: strong models
+fail many tasks even unattacked, and existing attacks break some security properties but not all
+[<a class="cite" href="#ref-debenedetti2024agentdojo">35</a>]. <span class="grade">E1</span>&thinsp;<span class="grade">M4</span></p>
+<h3 id="defence-by-design-and-its-limits"><span class="num">9.2</span>Defence by design, and its limits</h3>
+<p>The only design-level guarantee in the corpus builds a protective system layer drawing on control-flow
+integrity, access control, and information-flow control: control and data flow are extracted from the
+<em>trusted</em> query so untrusted data retrieved later cannot influence program flow, and capabilities
+attached to every value block exfiltration over unauthorised flows at tool-call time
+[<a class="cite" href="#ref-debenedetti2025defeating">34</a>]. It solves 77% of a security benchmark's tasks with provable security
+against 84% for an undefended system, which quantifies the security tax rather than hiding it.</p>
+<p>Those guarantees do not compose. In hierarchical systems where agents invoke other agents as tools, a
+working attack succeeds even though every constituent agent individually runs the defence, because
+untrusted data can be <em>reinterpreted as trusted input by a downstream agent</em>
+[<a class="cite" href="#ref-petersgill2026camels">115</a>]. The remedy preserves provenance across agent boundaries by separating
+trusted instructions from untrusted data on a distinct channel, reducing attack success to zero from
+12.9% undefended, at a utility cost that shrinks as models improve. Composition failure across trust
+boundaries is a general pattern in this corpus rather than a quirk of one defence. <span class="grade">E2</span>&thinsp;<span class="grade">M1</span></p>
+<h3 id="the-harness-as-the-attack-surface"><span class="num">9.3</span>The harness as the attack surface</h3>
+<p>The most consequential security result for harness design is that the harness itself can defeat the
+industry's main structural defence. Both standard protections, namely a model trained to refuse unsafe
+instructions and a separate permission reviewer, depend on role labels being faithful; but the harness
+<em>constructs</em> the context for every model invocation and can thereby elevate low-privilege content
+to a higher instruction level [<a class="cite" href="#ref-he2026context">54</a>]. The canonical demonstration is worth stating in
+full because it is not an exotic exploit. A coding agent read a repository, identified a plaintext
+backdoor, and refused to start the server. It then delegated the identical step to a helper agent,
+which executed it immediately, because the harness had written the sub-agent's task into the
+<em>user</em> slot, which is the obvious engineering choice for a delegation feature. In one transcript a
+permission reviewer correctly flagged a command as high risk and approved it anyway, reasoning that the
+user had explicitly approved this exact action, when the user had typed nothing. Nothing is forged and
+no one is deceived; the safety layer approves a consent that was never given. This is a confused-deputy
+provenance failure, and the attacks achieved all 13 objectives across all six coding-agent harnesses
+tested, including under automatic permission review. The authors define the problem without offering a
+fix, and the preconditions are real: the agent must be pointed at attacker-controlled files, and the
+exploit is probabilistic. <span class="grade">E2</span>&thinsp;<span class="grade">M4</span></p>
+<p>The harness configuration layer is also a software supply chain. A study of 3,171 public repositories
+treating repository instructions, skills, hooks, tool-server declarations, and sub-agent definitions as
+distributed artifacts found unpinned server package declarations in 9.8% of setups, broad execution
+grants in 2.5%, and broad skill tool preapproval in 3.8%, with the union covering 15.4% and rising
+to 17.9% including conformance issues [<a class="cite" href="#ref-kapner2026scanning">73</a>]. Among setups that configure a tool
+server at all, 24.5% contain an unpinned declaration. The remedies are mundane and available: pin
+dependencies, review execution preapproval, check component conformance before distribution.
+<span class="grade">E2</span>&thinsp;<span class="grade">M3</span></p>
+<h3 id="the-protocol-layer"><span class="num">9.4</span>The protocol layer</h3>
+<p>Four independent studies of the dominant tool protocol reach consistent conclusions, which is why this
+claim is graded E1. An empirical study of 1,899 open-source servers found eight distinct vulnerability
+classes of which <em>only three overlap traditional software vulnerabilities</em>, with 7.2% of servers
+containing general vulnerabilities and 5.5% exhibiting protocol-specific tool poisoning
+[<a class="cite" href="#ref-hasan2025model">53</a>]. A systematic benchmark enumerating 17 attack types across four surfaces found
+all four surfaces yield successful compromises, with current protections averaging under 30% success
+[<a class="cite" href="#ref-yang2025mcpsecbench">170</a>]. Treating servers as active threat actors yields twelve attack categories
+with working proofs of concept, and the two findings that matter operationally are that malicious
+servers can be generated at near-zero cost and that state-of-the-art scanners fail to detect them
+[<a class="cite" href="#ref-zhao2025mcp">185</a>]. And an identity analysis shows that trusting servers without authenticating the
+<em>caller</em> is fundamentally insecure, since most servers rely on persistent authorisation state that
+permits invocation after one initial approval regardless of who calls [<a class="cite" href="#ref-huang2026inch">58</a>].</p>
+<p>The most actionable framing organises defences by <em>enforcement responsibility</em> rather than by
+attack, mapping threats across six protocol layers and identifying primary and secondary defence
+points. Its coverage analysis finds existing defences uneven and predominantly tool-centric, with
+persistent gaps at the host orchestration, transport, and supply-chain layers, and concludes that many
+weaknesses stem from <em>architectural misalignment</em> rather than isolated implementation flaws
+[<a class="cite" href="#ref-rostamzadeh2026mcp">125</a>]. A systematisation of knowledge adds the conceptual axis that matters most:
+in agentic systems the boundary between an epistemic error and a security breach dissolves, because a
+hallucination now causes an unauthorised action [<a class="cite" href="#ref-gaire2025systematization">47</a>]. <span class="grade">E1</span>&thinsp;<span class="grade">M4</span></p>
+<h3 id="measuring-defences-by-layer"><span class="num">9.5</span>Measuring defences by layer</h3>
+<p>Attack success rate is the wrong metric, because it cannot distinguish a model recognition failure from
+an agent-layer block and therefore cannot indicate which layer to strengthen [<a class="cite" href="#ref-han2026measuring">178</a>].
+A layer-resolved alternative captures raw context at the gateway and replaces the single rate with four
+classes, namely semantic refusal, semantic breach, interception, and penetration. Its accompanying
+model identifies the <em>envelope layer</em>, meaning the channel through which content enters the agent,
+as a defence surface, and ablations across agent-to-agent, tool, and memory channels show that simply
+annotating untrusted content markedly improves recognition of malicious content. This is a cheap
+intervention with a measured effect, and it belongs in the Observation facet as much as in security.
+<span class="grade">E2</span>&thinsp;<span class="grade">M1</span></p>
+<h2 id="sec:autoopt"><span class="num">10</span>Automated Harness Optimisation</h2>
+<h3 id="why-this-follows-from-the-thesis"><span class="num">10.1</span>Why this follows from the thesis</h3>
+<p>If the harness governs more variance than the model, and harnesses are written by hand, then the harness
+is the obvious thing to optimise. Twenty-one sources in this corpus, almost all from 2026, pursue that
+inference, and they share one premise: execution traces are a training signal, so failures diagnosed
+from trajectories can become edits to prompts, tools, context policy, and control logic. The work
+divides into search over harness code, learned editors and controllers, just-in-time generation,
+distillation back into weights, and recursive self-improvement.</p>
+<h3 id="search-over-harness-code"><span class="num">10.2</span>Search over harness code</h3>
+<p>The reference method diagnoses why generic text optimisers fail at this task: they compress feedback too
+aggressively, being memoryless, conditioned only on scalar scores, or restricted to short templates
+[<a class="cite" href="#ref-lee2026meta">83</a>]. It instead gives an agentic proposer filesystem access to the source code, scores,
+and execution traces of all prior candidates, improving over a state-of-the-art context-management
+system by 7.7 points while using fourfold fewer context tokens, and beating every reported harness for
+one model on a terminal benchmark.</p>
+<p>The observability-driven variant contributes the idea most worth transferring. It identifies three
+obstacles to automation, namely a heterogeneous action space across editable components, voluminous
+trajectories that bury actionable signal, and edits whose effects are hard to attribute, and matches
+each with an observability pillar: file-level representation of every editable component so the action
+space is explicit and revertible; trajectories distilled into a layered drill-down evidence corpus; and
+<strong>every edit paired with a self-declared prediction, later verified against the next round's
+outcomes</strong> [<a class="cite" href="#ref-lin2026agentic">85</a>]. That last mechanism turns each edit into a falsifiable contract, which
+is what prevents evolution collapsing into trial and error. Ten iterations lifted a terminal benchmark
+from 69.7% to 77.0%, above a human-designed reference, and the frozen harness transferred to a
+different benchmark with 12% fewer tokens and gained 5.1 to 10.1 points across three other model
+families, which is evidence the evolved components encode general engineering experience rather than
+benchmark-specific tuning. <span class="grade">E2</span>&thinsp;<span class="grade">M2</span></p>
+<p>A third method formulates harness improvement as offline learning from mini-batch failure signals and
+reports the most transferable design guidance in this area: effective optimisation requires deep
+debugging rather than shallow reflection, targeted modifications rather than unconstrained editing, and
+generalisation-aware selection rather than trajectory-specific repair [<a class="cite" href="#ref-park2026autosaddler">110</a>]. The
+cleanest proof of concept comes from a game setting, where 78% of one model's losses were attributed
+to <em>illegal moves</em> rather than strategic error; a few rounds of iterative code refinement against
+environment feedback produced a harness preventing all illegal moves across 145 games, letting the
+smaller model outperform a larger one, and pushed further, generating the entire policy as code and
+removing the model from decision time altogether [<a class="cite" href="#ref-lou2026autoharness">90</a>]. <span class="grade">E1</span>&thinsp;<span class="grade">M2</span></p>
+<h3 id="learned-editors-controllers-and-generators"><span class="num">10.3</span>Learned editors, controllers, and generators</h3>
+<p>Four variants make the optimiser itself learned rather than prompted. A failure-conditioned editor
+post-trains a dedicated 9-billion-parameter harness engineer with online reinforcement learning so that
+its edits are optimised for realised task success, with same-batch reruns of the <em>frozen</em> target
+providing outcome rewards so only the engineer updates [<a class="cite" href="#ref-shao2026harness">132</a>]. An interface-adaptation
+method targets deterministic rule-governed domains where failures stem from model&ndash;environment interface
+mismatch, converting recurring failures into reusable interventions and then freezing for evaluation,
+reportedly exceeding two of the methods above while using 8.5% and 68.4% fewer optimisation tokens
+[<a class="cite" href="#ref-xu2026adapting">169</a>]. A just-in-time generator synthesises task-adaptive harnesses on the fly for
+arbitrary off-the-shelf models under a fixed four-module protocol, positioning harness intelligence as
+trainable, transferable, and <em>orthogonal to model scaling</em> [<a class="cite" href="#ref-team2026jit">70</a>]. And a foundry
+composes typed harness primitives through a substitution algebra across nine orthogonal dimensions,
+closing the harness&ndash;model loop so trajectories become both harness updates and model training signal,
+with gains largest where baselines are lowest [<a class="cite" href="#ref-team2026harnessx">32</a>].</p>
+<p>Two further directions change what the optimisation produces. Harness distillation observes that gains
+are normally tied to the harness at deployment, and since the best harness varies by domain, instance,
+and model, it uses an optimised harness as training-time guidance only and distils the induced
+behaviours into weights so the specialised harness can be removed; base macro-average success rose from
+23.3% to 44.3%, <em>exceeding</em> the 41.7% reached with the harness still attached
+[<a class="cite" href="#ref-ye2026harness">175</a>]. Recursive harnessing targets open-world settings where test-time tasks are unseen
+so no ground-truth verifier exists to guide online edits, using a contrastive propose&ndash;probe&ndash;compose
+step that needs none, plus a second level of recursion that accumulates experience across tasks
+[<a class="cite" href="#ref-xu2026harness">166</a>]. Self-improvement without external help is also demonstrated: weakness mining from
+execution traces, minimal harness proposals tied to those failures, and validation gated on regression
+testing improved both held-in and held-out pass rates across all nine model&ndash;benchmark combinations
+tested [<a class="cite" href="#ref-zhang2026self">184</a>]. <span class="grade">E1</span>&thinsp;<span class="grade">M1</span></p>
+<h3 id="the-reality-check"><span class="num">10.4</span>The reality check</h3>
+<p>The benchmark that evaluates harness construction directly is the necessary corrective. Across six
+creator models, four domains, five downstream benchmarks, and 2,207 instances with hidden evaluation
+tasks withheld, generated harnesses remain <em>substantially behind</em> mature human-engineered
+references on code and on search and research, while matching or exceeding them on writing and machine
+-learning experimentation, with large variation in execution cost [<a class="cite" href="#ref-seed2026harnessdev">23</a>]. Evolution
+produced some gains, but they were unstable and transferred only partially, and depended strongly on
+which model executed the harness. A companion result identifies why evolution is hard: <em>behaviour
+localisation</em> is the bottleneck, because before anyone, human or agent, can change a behaviour they must
+find every code location implementing it, and production harnesses are large, tightly coupled, and
+behaviourally distributed across files, functions, execution stages, and state transitions
+[<a class="cite" href="#ref-wang2026harness">147</a>]. <span class="grade">E2</span>&thinsp;<span class="grade">M1</span></p>
+<p>A practitioner inventory supplies the calibration that research papers omit: across nine open-source
+self-improving frameworks, grouped by whether they change prompts, memory and skills, tools, or the
+workflow, <em>nothing shipping retrains weights in production</em>, and several published systems are
+research-grade rather than production-ready [<a class="cite" href="#ref-futureagi2026self">46</a>]. <span class="grade">E4</span>&thinsp;<span class="grade">M2</span></p>
+<h2 id="sec:open"><span class="num">11</span>Open Problems and Research Agenda</h2>
+<h4>P1. No agreed definition, and a fragmented literature.</h4>
+<p>Three formal taxonomies and two informal decompositions coexist
+[<a class="cite" href="#ref-picrew2026agent">63</a>, <a class="cite" href="#ref-repo2026agent">118</a>, <a class="cite" href="#ref-guo2026question">50</a>, <a class="cite" href="#ref-zhong2026harness">186</a>, <a class="cite" href="#ref-wei2026architectural">57</a>]. The cost is
+not aesthetic: work on compaction, tool schemas, sandboxing, and tracing addresses one system through
+four disjoint bibliographies. We offer the <span class="sc">HRM</span> and its crosswalk (<a class="xref" href="#sec:hrm">Section 4</a>) as one resolution
+and note the risk of adding a fourth competitor. The field needs consolidation by adoption, not by
+further proposal.</p>
+<h4>P2. No factorial model <span class="math">&times;</span> harness dataset exists.</h4>
+<p>Every quantitative claim about relative model and harness contribution currently rests on leaderboard
+comparisons or small controlled studies. The protocol in <a class="xref" href="#sec:variance">Section 8.3</a> is specified; the dataset
+is not built. The largest standardised effort uses at most two scaffolds per benchmark
+[<a class="cite" href="#ref-kapoor2025holistic">74</a>]. This is the highest-value empirical gap in the area.</p>
+<h4>P3. Harness effects have an unmeasured shelf life.</h4>
+<p>The optimal harness co-evolves with model capability, demonstrated by a reversal in which added
+hierarchy helped two model generations and was then superseded by rollout scaling
+[<a class="cite" href="#ref-agashe2024agent">3</a>, <a class="cite" href="#ref-agashe2025agent">4</a>, <a class="cite" href="#ref-gonzalezpumariega2025scaling">49</a>]. No study measures how harness gain
+shrinks, grows, or flips across generations. Any maturity scorecard for harness techniques therefore
+needs a time dimension, and published harness results need an expiry date.</p>
+<h4>P4. The maturity&ndash;evidence inversion in state and context.</h4>
+<p>Compaction policy, cross-session artifacts, initializer agents, and context-degradation shape are
+production defaults supported by vendor reports
+[<a class="cite" href="#ref-anthropic2026effective">13</a>, <a class="cite" href="#ref-datanorth2026harness">64</a>, <a class="cite" href="#ref-atlan2026working">41</a>]. They are simultaneously the
+mechanisms most users depend on and the least controlled. The counter-evidence that naive episodic
+memory <em>harms</em> long-horizon reliability [<a class="cite" href="#ref-khanal2026pass">77</a>] shows the direction of such effects
+is not safely assumed.</p>
+<h4>P5. Cost and search cost are reported inconsistently.</h4>
+<p>Harness optimisation papers report proposer compute unevenly [<a class="cite" href="#ref-lee2026meta">83</a>], and cost regressions
+hide easily when nobody reports cost: later releases of one harness nearly doubled token consumption
+without quality gain [<a class="cite" href="#ref-sghaier2026blame">21</a>]. Any evidence rubric that downgrades unreported cost will
+downgrade much of the 2026 optimisation literature, which is a finding about reporting norms.</p>
+<h4>P6. Trace poisoning against self-modifying harnesses.</h4>
+<p>This risk is created by the field's own methods and is, to our knowledge, unstudied. Harness optimisers
+rewrite harness code from execution traces
+[<a class="cite" href="#ref-lee2026meta">83</a>, <a class="cite" href="#ref-lin2026agentic">85</a>, <a class="cite" href="#ref-shao2026harness">132</a>, <a class="cite" href="#ref-park2026autosaddler">110</a>]. An attacker who can influence
+traces can therefore influence harness edits, which persist across runs and users in a way a single
+injected instruction does not. The adjacent empirical results make the concern concrete: the harness
+already defeats the instruction hierarchy by relabelling content [<a class="cite" href="#ref-he2026context">54</a>], and
+configuration artifacts already travel through an unvetted supply chain
+[<a class="cite" href="#ref-kapner2026scanning">73</a>]. The defensive primitive that would help, namely falsifiable
+prediction-checked edits, already exists [<a class="cite" href="#ref-lin2026agentic">85</a>]; it has not been evaluated adversarially.</p>
+<h4>P7. External verifiability is absent everywhere.</h4>
+<p>Mature harnesses converge on append-only replayable session records, yet a tamper-evident record an
+outside party can check without trusting the runtime appears in none of the harnesses examined at source
+level [<a class="cite" href="#ref-dai2026empire">66</a>]. Internal tracing serves debugging; audit needs something stronger. For
+regulated and provenance-sensitive deployments this is a blocking gap, and the formal-policy and
+compliance-verification lines are the natural place to close it
+[<a class="cite" href="#ref-nguyen2026vepa">101</a>, <a class="cite" href="#ref-kahani2026runtime">72</a>].</p>
+<h4>P8. Generalisation of optimised harnesses, and benchmark-oriented overfitting.</h4>
+<p>One method transfers a harness across five held-out models [<a class="cite" href="#ref-lee2026meta">83</a>], while others report that
+the best harness varies across domains, instances, and base models [<a class="cite" href="#ref-ye2026harness">175</a>], and transfer
+is unstable in the one benchmark built to test it [<a class="cite" href="#ref-seed2026harnessdev">23</a>]. Over-fitting harnesses to
+benchmarks is the agent-era analogue of test-set overfitting, and early evidence for it already exists
+in the weights setting [<a class="cite" href="#ref-shibaev2026claim">135</a>]. Scaffold-compliance measurement
+[<a class="cite" href="#ref-ding2026octobench">39</a>] and in-the-wild benchmark construction [<a class="cite" href="#ref-chu2026terminalworld">28</a>] are the
+most promising instruments for detecting it.</p>
+<h2 id="sec:conclusion"><span class="num">12</span>Conclusion</h2>
+<p>The harness stopped being glue code when its design decisions began to outweigh the prompt-level ones,
+and the literature caught up in 2026. This survey has argued three things. The harness is the binding
+constraint on long-horizon agent performance among models of comparable capability, supported by
+controlled same-model interventions spanning 7 to 29 percentage points and by inverse comparisons in
+which a fixed scaffold across nine frontier models produced a smaller spread. That claim is
+conditional, and three boundary conditions weaken it: matched reasoning effort collapses leaderboard
+spreads, harness release activity does not by itself produce improvement, and optimised harnesses
+transfer unevenly. And prevailing evaluation practice cannot support the comparisons it licenses,
+because scaffold ownership is an uncontrolled axis and outcome-only scoring conceals both
+under-elicitation and dangerous behaviour.</p>
+<p>The constructive response is cheap relative to its value. Eleven of the twelve Harness Disclosure Card
+fields are already known to whoever ran the experiment, and the twelfth, repeated runs, is the price of
+a comparative claim rather than of publication. The variance-decomposition protocol needs four models,
+four harnesses, one benchmark, and five repeats to produce the first honest estimate of how much of
+agent performance the runtime actually owns. Neither contribution requires a new model or a new
+benchmark.</p>
+<p>Two findings in this survey are uncomfortable and should not be smoothed away. The mechanisms most
+users depend on, namely compaction and cross-session state, are the least controlled, and one of them
+has counter-evidence suggesting naive implementations hurt. And the field's most active research
+direction, harnesses that rewrite themselves from traces, creates an attack surface nobody has
+evaluated, in a layer already shown to defeat the instruction hierarchy by relabelling untrusted
+content as user intent. The harness became the object of study because it turned out to carry the
+performance. It also carries the privilege, the state, and the evidence, and those have received far
+less scrutiny than the scores.</p>
+<h2 id="reproducibility-and-data-availability">Reproducibility and Data Availability</h2>
+<p>The corpus comprises 191 retrieved documents. Retrieval provenance for all 220 candidate link
+references, including HTTP status and failure reason for the 14 that could not be retrieved, is
+recorded in a machine-readable manifest. Of the 191 retrieved files, 188 carry topic assignments and
+per-source summaries; three are documented as unusable (one off-topic mathematics paper retrieved from
+a mis-resolving identifier, and two bot-challenge pages). The grading in
+Tables&nbsp;<a class="xref" href="#tab:spreads">Table 2</a> and <a class="xref" href="#tab:evidencemap">Table 3</a> was applied by a single reader and should be treated
+as a judgement open to revision, not as an inter-annotator-validated instrument.</p>
+<h2 id="acknowledgements">Acknowledgements</h2>
+<p>Placeholder.</p>
+<h2 id="sec:corpus"><span class="num">13</span>Corpus Index</h2>
+<p>This appendix accounts for the full corpus. The 191 retrieved documents comprise 188 sources with
+topic assignments, listed below by the area they inform, plus three documented as unusable
+(<a class="xref" href="#sec:method">Section 2</a>). A source appears once, under the area where this survey draws on it most
+heavily; many bear on several facets.</p>
+<h4>Definitions, taxonomies, and harness engineering as a discipline (15).</h4>
+<p>Sources establishing the object of study, the competing decompositions, and the practitioner framing (<a class="xref" href="#sec:background">Section 3</a>, <a class="xref" href="#sec:hrm">Section 4</a>).
+[<a class="cite" href="#ref-agenticai2026agent">5</a>, <a class="cite" href="#ref-agenticai2026agenta">6</a>, <a class="cite" href="#ref-agenticai2026harness">7</a>, <a class="cite" href="#ref-databricks2026agent">33</a>, <a class="cite" href="#ref-datanorth2026harness">64</a>, <a class="cite" href="#ref-guo2026question">50</a>, <a class="cite" href="#ref-langchain2026anatomy">141</a>, <a class="cite" href="#ref-martinfowler2026harness">18</a>, <a class="cite" href="#ref-oreilly2026agent">1</a>, <a class="cite" href="#ref-pan2026natural">107</a>, <a class="cite" href="#ref-parallel2026harness">109</a>, <a class="cite" href="#ref-picrew2026agent">63</a>, <a class="cite" href="#ref-repo2026agent">118</a>, <a class="cite" href="#ref-wei2026architectural">57</a>, <a class="cite" href="#ref-zhong2026harness">186</a>]</p>
+<h4>Control: the agent loop and its architecture (14).</h4>
+<p>The loop's lineage, search-based extensions, state-machine formulations, and architectural convergence (<a class="xref" href="#sec:control">Section 5.3</a>).
+[<a class="cite" href="#ref-aiefs2026agent">10</a>, <a class="cite" href="#ref-aiefs2026build">11</a>, <a class="cite" href="#ref-antoniades2024swe">14</a>, <a class="cite" href="#ref-dai2026empire">66</a>, <a class="cite" href="#ref-emergentmind2026language">43</a>, <a class="cite" href="#ref-madaan2023self">94</a>, <a class="cite" href="#ref-masterman2024landscape">95</a>, <a class="cite" href="#ref-mei2024aios">96</a>, <a class="cite" href="#ref-shinn2023reflexion">136</a>, <a class="cite" href="#ref-sumers2023cognitive">138</a>, <a class="cite" href="#ref-wang2023survey">145</a>, <a class="cite" href="#ref-xi2023rise">160</a>, <a class="cite" href="#ref-yao2022react">174</a>, <a class="cite" href="#ref-zhou2023language">188</a>]</p>
+<h4>Action: tool and interface design (9).</h4>
+<p>The agent&ndash;computer interface thesis, mistake-proofing, tool-use capability, and the agentless counterweight (<a class="xref" href="#sec:action">Section 5.4</a>).
+[<a class="cite" href="#ref-agentpatterns2026agent">8</a>, <a class="cite" href="#ref-aipatternbook2026agent">20</a>, <a class="cite" href="#ref-huggingface2026low">60</a>, <a class="cite" href="#ref-neurips2026x">65</a>, <a class="cite" href="#ref-patil2023gorilla">113</a>, <a class="cite" href="#ref-qin2023toolllm">119</a>, <a class="cite" href="#ref-schick2023toolformer">130</a>, <a class="cite" href="#ref-xia2024agentless">161</a>, <a class="cite" href="#ref-yang2024swe">171</a>]</p>
+<h4>Action: code as the harness substrate (5).</h4>
+<p>The position that code, rather than a tool schema, should carry action, state, and verification (<a class="xref" href="#sec:action">Section 5.4</a>).
+[<a class="cite" href="#ref-anthropic2026code">12</a>, <a class="cite" href="#ref-codeasharness2026code">158</a>, <a class="cite" href="#ref-ning2026code">104</a>, <a class="cite" href="#ref-repo2026awesome">159</a>, <a class="cite" href="#ref-wang2024executable">143</a>]</p>
+<h4>Action: protocol layer and its security (11).</h4>
+<p>The Model Context Protocol, its ecosystem, and the four independent security studies of it (<a class="xref" href="#sec:action">Section 5.4</a>, <a class="xref" href="#sec:security">Section 9</a>).
+[<a class="cite" href="#ref-contrastsecurity2026model">29</a>, <a class="cite" href="#ref-ehtesham2025survey">42</a>, <a class="cite" href="#ref-gaire2025systematization">47</a>, <a class="cite" href="#ref-hasan2025model">53</a>, <a class="cite" href="#ref-hou2025model">56</a>, <a class="cite" href="#ref-huang2026inch">58</a>, <a class="cite" href="#ref-redhat2026model">122</a>, <a class="cite" href="#ref-rostamzadeh2026mcp">125</a>, <a class="cite" href="#ref-yang2025mcpsecbench">170</a>, <a class="cite" href="#ref-zenity2026agent">179</a>, <a class="cite" href="#ref-zhao2025mcp">185</a>]</p>
+<h4>Context: budgeting, compaction, and memory (9).</h4>
+<p>Window economics, compaction strategies, memory mechanism families, and the measurement caution on heterogeneous working memory (<a class="xref" href="#sec:context">Section 5.2</a>).
+[<a class="cite" href="#ref-atlan2026working">41</a>, <a class="cite" href="#ref-chen2026measure">27</a>, <a class="cite" href="#ref-dadhich2026agentic">48</a>, <a class="cite" href="#ref-du2026memory">114</a>, <a class="cite" href="#ref-memgptsite2026x">24</a>, <a class="cite" href="#ref-packer2023memgpt">106</a>, <a class="cite" href="#ref-park2023generative">111</a>, <a class="cite" href="#ref-verma2026active">103</a>, <a class="cite" href="#ref-zhang2025agentic">181</a>]</p>
+<h4>State: skills and procedural memory (4).</h4>
+<p>Reusable skills and induced workflows as durable procedural capability outside model weights (<a class="xref" href="#sec:state">Section 5.5</a>).
+[<a class="cite" href="#ref-vishe2026skill">142</a>, <a class="cite" href="#ref-wang2023voyager">149</a>, <a class="cite" href="#ref-wang2024agent">146</a>, <a class="cite" href="#ref-xia2026harnessing">162</a>]</p>
+<h4>Governance: sandboxing, permissions, and runtime policy (6).</h4>
+<p>Execution isolation, guardrails, formal and evolving policy, and the enforcement-in-code ablation (<a class="xref" href="#sec:governance">Section 5.7</a>).
+[<a class="cite" href="#ref-ahn2026prompts">9</a>, <a class="cite" href="#ref-augmentcode2026agent">17</a>, <a class="cite" href="#ref-kahani2026runtime">72</a>, <a class="cite" href="#ref-lin2026dreamguard">86</a>, <a class="cite" href="#ref-liu2026harde">87</a>, <a class="cite" href="#ref-nguyen2026vepa">101</a>]</p>
+<h4>Governance: injection and the harness attack surface (10).</h4>
+<p>Indirect prompt injection, design-level defence and its composition failure, instruction privilege escalation, and configuration supply chain (<a class="xref" href="#sec:security">Section 9</a>).
+[<a class="cite" href="#ref-al2025open">131</a>, <a class="cite" href="#ref-dantas2026safe">31</a>, <a class="cite" href="#ref-debenedetti2024agentdojo">35</a>, <a class="cite" href="#ref-debenedetti2025defeating">34</a>, <a class="cite" href="#ref-han2026measuring">178</a>, <a class="cite" href="#ref-he2026context">54</a>, <a class="cite" href="#ref-kapner2026scanning">73</a>, <a class="cite" href="#ref-paperdive2026context">108</a>, <a class="cite" href="#ref-petersgill2026camels">115</a>, <a class="cite" href="#ref-zhan2024injecagent">180</a>]</p>
+<h4>Observability: traces and provenance (4).</h4>
+<p>Why conventional observability misses agent failure, the trace-shaped structure of a run, and the external-verifiability gap (<a class="xref" href="#sec:observability">Section 5.8</a>).
+[<a class="cite" href="#ref-harness2026introducing">126</a>, <a class="cite" href="#ref-prompt2026agent">116</a>, <a class="cite" href="#ref-promptabcd2026agent">117</a>, <a class="cite" href="#ref-repo2026agentweave">2</a>]</p>
+<h4>Control: delegation and multi-agent orchestration (17).</h4>
+<p>Role specialisation, orchestrator patterns, failure taxonomies, learned orchestration, and the single-agent baseline (<a class="xref" href="#sec:control">Section 5.3</a>).
+[<a class="cite" href="#ref-atoms2026chatdev">16</a>, <a class="cite" href="#ref-cemri2025multi">25</a>, <a class="cite" href="#ref-chen2023agentverse">26</a>, <a class="cite" href="#ref-costa2026agentspawn">61</a>, <a class="cite" href="#ref-dang2025multi">30</a>, <a class="cite" href="#ref-fourney2024magentic">44</a>, <a class="cite" href="#ref-hong2023metagpt">55</a>, <a class="cite" href="#ref-ke2026mas">76</a>, <a class="cite" href="#ref-kumar2026agentforge">81</a>, <a class="cite" href="#ref-lee2026agentic">84</a>, <a class="cite" href="#ref-machinoai2026metagpt">93</a>, <a class="cite" href="#ref-moltbookai2026metagpt">99</a>, <a class="cite" href="#ref-nie2025weak">102</a>, <a class="cite" href="#ref-roman2026orchestral">124</a>, <a class="cite" href="#ref-tang2026interpreting">140</a>, <a class="cite" href="#ref-wu2023autogen">154</a>, <a class="cite" href="#ref-xu2026rethinking">167</a>]</p>
+<h4>Automated harness optimisation (21).</h4>
+<p>Search over harness code, learned editors and controllers, just-in-time generation, distillation, recursion, and the reality check (<a class="xref" href="#sec:autoopt">Section 10</a>).
+[<a class="cite" href="#ref-futureagi2026self">46</a>, <a class="cite" href="#ref-huang2026memoharness">59</a>, <a class="cite" href="#ref-jiang2026harness">68</a>, <a class="cite" href="#ref-lee2026meta">83</a>, <a class="cite" href="#ref-lin2026agentic">85</a>, <a class="cite" href="#ref-lou2026autoharness">90</a>, <a class="cite" href="#ref-luo2026harness">91</a>, <a class="cite" href="#ref-park2026autosaddler">110</a>, <a class="cite" href="#ref-robeyns2025self">123</a>, <a class="cite" href="#ref-seed2026harnessdev">23</a>, <a class="cite" href="#ref-shao2026harness">132</a>, <a class="cite" href="#ref-team2026harnessx">32</a>, <a class="cite" href="#ref-team2026jit">70</a>, <a class="cite" href="#ref-wang2026harness">147</a>, <a class="cite" href="#ref-wang2026harnessbridge">148</a>, <a class="cite" href="#ref-wu2025evolver">157</a>, <a class="cite" href="#ref-xu2026adapting">169</a>, <a class="cite" href="#ref-xu2026harness">166</a>, <a class="cite" href="#ref-ye2026harness">175</a>, <a class="cite" href="#ref-yuan2026flowbank">177</a>, <a class="cite" href="#ref-zhang2026self">184</a>]</p>
+<h4>Evaluation: software-engineering benchmarks (9).</h4>
+<p>The SWE-bench family, scaffold-compliance measurement, research automation, and life after saturation (<a class="xref" href="#sec:eval">Section 7</a>).
+[<a class="cite" href="#ref-deng2025swe">36</a>, <a class="cite" href="#ref-ding2026octobench">39</a>, <a class="cite" href="#ref-jimenez2023swe">69</a>, <a class="cite" href="#ref-joshi2025swe">71</a>, <a class="cite" href="#ref-nadgir2026life">100</a>, <a class="cite" href="#ref-rank2026posttrainbench">121</a>, <a class="cite" href="#ref-repo2026x">105</a>, <a class="cite" href="#ref-shi2026facet">134</a>, <a class="cite" href="#ref-yang2024swea">172</a>]</p>
+<h4>Evaluation: terminal and OS benchmarks (5).</h4>
+<p>Command-line and desktop benchmarks, including the in-the-wild validity check on expert curation (<a class="xref" href="#sec:eval">Section 7</a>).
+[<a class="cite" href="#ref-chu2026terminalworld">28</a>, <a class="cite" href="#ref-lab2026osworld">164</a>, <a class="cite" href="#ref-merrill2026terminal">97</a>, <a class="cite" href="#ref-osworldcdn2026osworld">165</a>, <a class="cite" href="#ref-xie2024osworld">163</a>]</p>
+<h4>Evaluation: web, tool-use, and assistant benchmarks (9).</h4>
+<p>Web navigation, tool&ndash;agent&ndash;user interaction with policy adherence, and general-assistant benchmarks (<a class="xref" href="#sec:eval">Section 7</a>).
+[<a class="cite" href="#ref-barres2025bench">19</a>, <a class="cite" href="#ref-deng2023mind2web">37</a>, <a class="cite" href="#ref-khizbullin2026telco">78</a>, <a class="cite" href="#ref-koh2024visualwebarena">80</a>, <a class="cite" href="#ref-mialon2023gaia">98</a>, <a class="cite" href="#ref-wei2025browsecomp">150</a>, <a class="cite" href="#ref-xu2024theagentcompany">168</a>, <a class="cite" href="#ref-yao2024bench">173</a>, <a class="cite" href="#ref-zhou2023webarena">187</a>]</p>
+<h4>Evaluation methodology and harness disclosure (15).</h4>
+<p>Model&ndash;harness confounding, evaluation infrastructure, log analysis, measurement confounds, and cost-aware reporting (<a class="xref" href="#sec:evidence">Section 6</a>, <a class="xref" href="#sec:eval">Section 7</a>, <a class="xref" href="#sec:card">Section 8</a>).
+[<a class="cite" href="#ref-harvardcs2026agent">52</a>, <a class="cite" href="#ref-kapoor2024agents">75</a>, <a class="cite" href="#ref-kapoor2025holistic">74</a>, <a class="cite" href="#ref-kirgis2026log">79</a>, <a class="cite" href="#ref-liu2023agentbench">88</a>, <a class="cite" href="#ref-ndzomga2026efficient">45</a>, <a class="cite" href="#ref-particula2026swe">128</a>, <a class="cite" href="#ref-rapidclaw2026agentbench">139</a>, <a class="cite" href="#ref-sghaier2026blame">21</a>, <a class="cite" href="#ref-shibaev2026claim">135</a>, <a class="cite" href="#ref-wijk2024bench">151</a>, <a class="cite" href="#ref-wikipedia2026agent">152</a>, <a class="cite" href="#ref-yehudai2025survey">176</a>, <a class="cite" href="#ref-zhang2026comparing">183</a>, <a class="cite" href="#ref-zhang2026double">182</a>]</p>
+<h4>Reliability and long-horizon execution (8).</h4>
+<p>Reliability frameworks, duration-stratified decay, state externalisation, redundancy, and theoretical limits (<a class="xref" href="#sec:state">Section 5.5</a>, <a class="xref" href="#sec:eval">Section 7</a>).
+[<a class="cite" href="#ref-anthropic2026effective">13</a>, <a class="cite" href="#ref-ao2026reliability">15</a>, <a class="cite" href="#ref-intuitionlabs2026long">62</a>, <a class="cite" href="#ref-khanal2026pass">77</a>, <a class="cite" href="#ref-liu2026silent">38</a>, <a class="cite" href="#ref-ma2026longhorizon">92</a>, <a class="cite" href="#ref-patel2026six">112</a>, <a class="cite" href="#ref-rabanser2026science">120</a>]</p>
+<h4>Cost and efficiency (3).</h4>
+<p>Early termination, trajectory-conditioned routing, and the cost&ndash;accuracy frontier of role-decomposed teams (<a class="xref" href="#sec:eval">Section 7</a>).
+[<a class="cite" href="#ref-guo2026eet">51</a>, <a class="cite" href="#ref-jiang2026specialize">67</a>, <a class="cite" href="#ref-son2026swe">137</a>]</p>
+<h4>Concrete harness implementations (9).</h4>
+<p>Source-level studies and documentation of deployed harnesses, runtimes, frameworks, and agent platforms (<a class="xref" href="#sec:hrm">Section 4</a>, <a class="xref" href="#sec:facets">Section 5</a>).
+[<a class="cite" href="#ref-atlan2026langgraph">40</a>, <a class="cite" href="#ref-bin2026terminal">22</a>, <a class="cite" href="#ref-langchain2026deep">129</a>, <a class="cite" href="#ref-langgraphdocs2026langgraph">82</a>, <a class="cite" href="#ref-liu2026dive">89</a>, <a class="cite" href="#ref-shen2025mind">133</a>, <a class="cite" href="#ref-truefoundry2026claude">127</a>, <a class="cite" href="#ref-wang2024openhands">144</a>, <a class="cite" href="#ref-wong2025confucius">153</a>]</p>
+<h4>Computer-use and GUI agents (5).</h4>
+<p>Grounding, hierarchical planning, rollout scaling, and the declarative/procedural split in GUI and mobile control (<a class="xref" href="#sec:obs">Section 5.1</a>, <a class="xref" href="#sec:evidence">Section 6</a>).
+[<a class="cite" href="#ref-agashe2024agent">3</a>, <a class="cite" href="#ref-agashe2025agent">4</a>, <a class="cite" href="#ref-gonzalezpumariega2025scaling">49</a>, <a class="cite" href="#ref-wu2024copilot">155</a>, <a class="cite" href="#ref-wu2026agent">156</a>]</p>
+<ol class="refs">
+<li id="ref-oreilly2026agent">A. Osmani. Agent Harness Engineering. <em>O'Reilly Radar</em>. 2026.</li>
+<li id="ref-repo2026agentweave">A. Saha. AgentWeave: Agent runtime observability and provenance layer for multi-agent AI. <em>GitHub repository</em>. 2026.</li>
+<li id="ref-agashe2024agent">Agashe, Han, Gan, Yang, Li, Wang. Agent S: An Open Agentic Framework that Uses Computers Like a Human. arXiv:2410.08164. 2024.</li>
+<li id="ref-agashe2025agent">Agashe, Wong, Tu, Yang, Li, Wang. Agent S2: A Compositional Generalist-Specialist Framework for Computer Use Agents. arXiv:2504.00906. 2025.</li>
+<li id="ref-agenticai2026agent">Agentic AI Knowledge Base. Agent Harness. <em>Community wiki</em>. 2026.</li>
+<li id="ref-agenticai2026agenta">Agentic AI Knowledge Base. Agent Harness Engineering: Survey &amp; Taxonomy. <em>Community wiki</em>. 2026.</li>
+<li id="ref-agenticai2026harness">Agentic AI Knowledge Base. Harness Engineering. <em>Community wiki</em>. 2026.</li>
+<li id="ref-agentpatterns2026agent">AgentPatterns.ai. Agent-Computer Interface (ACI): Tool Design as UX Discipline. <em>AgentPatterns.ai</em>. 2026.</li>
+<li id="ref-ahn2026prompts">Ahn &amp; Kim, AI Leadership Research Center. From Prompts to Contracts: Harness Engineering for Auditable Enterprise LLM Agents. arXiv:2607.08028. 2026.</li>
+<li id="ref-aiefs2026agent">AI Engineering from Scratch. Agent State Machines &mdash; Graphs, Nodes, Checkpoints. <em>aiengineeringfromscratch.com</em>. 2026.</li>
+<li id="ref-aiefs2026build">AI Engineering from Scratch. Build AI Agents from Scratch. <em>aiengineeringfromscratch.com</em>. 2026.</li>
+<li id="ref-anthropic2026code">Anthropic. Code execution with MCP for efficient agents. <em>Anthropic Research</em>. 2026.</li>
+<li id="ref-anthropic2026effective">Anthropic. Effective harnesses for long-running agents. <em>Anthropic Research</em>. 2026.</li>
+<li id="ref-antoniades2024swe">Antoniades, Örwall, Zhang, Xie, Goyal, Wang. SWE-Search: Enhancing Software Agents with Monte Carlo Tree Search and Iterative Refinement. <em>ICLR 2025</em>. arXiv:2410.20285. 2024.</li>
+<li id="ref-ao2026reliability">Ao, Gao, Simchi-Levi. On the Reliability Limits of LLM-Based Multi-Agent Planning. arXiv:2603.26993. 2026.</li>
+<li id="ref-atoms2026chatdev">Atoms.dev. ChatDev: A Multi-Agent Framework for Automated Software Development. <em>Atoms.dev</em>. 2026.</li>
+<li id="ref-augmentcode2026agent">Augment Code. What Is an Agent Execution Sandbox?. <em>Augment Code Guides</em>. 2026.</li>
+<li id="ref-martinfowler2026harness">B. Böckeler. Harness engineering for coding agent users. <em>martinfowler.com</em>. 2026.</li>
+<li id="ref-barres2025bench">Barres, Dong, Ray, Si, Narasimhan. <span class="math">&tau;</span><span class="math"><sup>2</sup></span>-Bench: Evaluating Conversational Agents in a Dual-Control Environment. arXiv:2506.07982. 2025.</li>
+<li id="ref-aipatternbook2026agent">Bartley Editions. Agent-Computer Interface (ACI). <em>Encyclopedia of Agentic Coding Patterns</em>. 2026.</li>
+<li id="ref-sghaier2026blame">Ben Sghaier, Li, Adams, Hassan. Don't Blame the Large Language Model: How Agent Harness Evolution Shapes Coding Agent Quality. arXiv:2607.03691. 2026.</li>
+<li id="ref-bin2026terminal">Bin, Yuan, Zeng, Ye, Shao, Qian, Ye, Ding, Wang, Zeng, Song, Shen. Terminal Agents: A Survey of AI Agents in Command-Line Environments. arXiv:2608.20485. 2026.</li>
+<li id="ref-seed2026harnessdev">ByteDance Seed, SUTD, Georgia Tech, M-A-P, TokenWave.AI. HarnessDev: Can LLMs Create and Evolve Their Own Agent Harness?. arXiv:2609.01437. 2026.</li>
+<li id="ref-memgptsite2026x">C. Packer and S. Wooders and K. Lin and V. Fang and S. G. Patil and I. Stoica and J. E. Gonzalez. MemGPT: Towards LLMs as Operating Systems (project page). <em>Project page</em>. 2023.</li>
+<li id="ref-cemri2025multi">Cemri, Pan, Yang, Agrawal, Chopra, Tiwari, Keutzer, Parameswaran, Klein, Ramchandran, Zaharia, Gonzalez, Stoica. Why Do Multi-Agent LLM Systems Fail?. arXiv:2503.13657. 2025.</li>
+<li id="ref-chen2023agentverse">Chen, Su, Zuo, Yang et al., Tsinghua/BUPT/WeChat AI. AgentVerse: Facilitating Multi-Agent Collaboration and Exploring Emergent Behaviors. arXiv:2308.10848. 2023.</li>
+<li id="ref-chen2026measure">Chen, Wan, Sun, Ma, Yang, Yan, Di, Cappello, Thakur. Measure Before You Manage: Evaluating Agent Working Memory in Coding Agents. arXiv:2608.31057. 2026.</li>
+<li id="ref-chu2026terminalworld">Chu, Hu, Jiang, Zou, Li, Peng, O'Hearn, Barr, Harman, Sarro, Ye. TerminalWorld: Benchmarking Agents on Real-World Terminal Tasks. arXiv:2605.22535. 2026.</li>
+<li id="ref-contrastsecurity2026model">Contrast Security. Model Context Protocol (MCP). <em>Contrast Security glossary</em>. 2026.</li>
+<li id="ref-dang2025multi">Dang, Qian, Luo, Fan, Xie, Shi, Chen, Yang, Che, Tian, Xiong, Han, Liu, Sun. Multi-Agent Collaboration via Evolving Orchestration. <em>NeurIPS 2025</em>. arXiv:2505.19591. 2025.</li>
+<li id="ref-dantas2026safe">Dantas, Cordeiro, Nowroozi, Tihanyi. Toward Safe LLM Agents: A Survey of Specification, Verification, and Enforcement. arXiv:2608.14590. 2026.</li>
+<li id="ref-team2026harnessx">Darwin Agent Team. HarnessX: A Composable, Adaptive, and Evolvable Agent Harness Foundry. arXiv:2606.14249. 2026.</li>
+<li id="ref-databricks2026agent">Databricks. What is an AI Agent Harness?. <em>Databricks Blog</em>. 2026.</li>
+<li id="ref-debenedetti2025defeating">Debenedetti, Shumailov, Fan, Hayes, Carlini, Fabian, Kern, Shi, Terzis, Tramèr. Defeating Prompt Injections by Design. arXiv:2503.18813. 2025.</li>
+<li id="ref-debenedetti2024agentdojo">Debenedetti, Zhang, Balunović, Beurer-Kellner, Fischer, Tramèr. AgentDojo: A Dynamic Environment to Evaluate Prompt Injection Attacks and Defenses for LLM Agents. <em>NeurIPS 2024 D&amp;B</em>. arXiv:2406.13352. 2024.</li>
+<li id="ref-deng2025swe">Deng, Da, Pan, He, Ide, Garg, Lauffer et al. SWE-Bench Pro: Can AI Agents Solve Long-Horizon Software Engineering Tasks?. arXiv:2509.16941. 2025.</li>
+<li id="ref-deng2023mind2web">Deng, Gu, Zheng, Chen, Stevens, Wang, Sun, Su. Mind2Web: Towards a Generalist Agent for the Web. arXiv:2306.06070. 2023.</li>
+<li id="ref-liu2026silent">Dexing Liu. Silent Failure in LLM Agent Systems: The Entropy Principle and the Inevitable Disorder of Autonomous Agents. arXiv:2606.08162. 2026.</li>
+<li id="ref-ding2026octobench">Ding, Liu, Yang, Lin, Chen, Dou, Guo, Cheng, Zhao, Xiao, Zeng, Zhang, Huang, Xu, Gui. OctoBench: Benchmarking Scaffold-Aware Instruction Following in Repository-Grounded Agentic Coding. arXiv:2601.10343. 2026.</li>
+<li id="ref-atlan2026langgraph">E. Winks. What Is LangGraph? State, Agents, and Production Use Cases (2026). <em>Atlan</em>. 2026.</li>
+<li id="ref-atlan2026working">E. Winks. Working Memory in LLMs: The Context Window as Cognitive Architecture. <em>Atlan</em>. 2026.</li>
+<li id="ref-ehtesham2025survey">Ehtesham, Singh, Gupta, Kumar. A Survey of Agent Interoperability Protocols: MCP, ACP, A2A, and ANP. arXiv:2505.02279. 2025.</li>
+<li id="ref-emergentmind2026language">EmergentMind. Language Agent Tree Search. <em>EmergentMind topic page</em>. 2026.</li>
+<li id="ref-fourney2024magentic">Fourney, Bansal, Mozannar, Tan et al., Microsoft Research AI Frontiers. Magentic-One: A Generalist Multi-Agent System for Solving Complex Tasks. arXiv:2411.04468. 2024.</li>
+<li id="ref-ndzomga2026efficient">Franck Ndzomga. Efficient Benchmarking of AI Agents. arXiv:2603.23749. 2026.</li>
+<li id="ref-futureagi2026self">Future AGI. Self-Improving AI Agent Frameworks: Mechanism + License. <em>Future AGI Blog</em>. 2026.</li>
+<li id="ref-gaire2025systematization">Gaire, Gyawali, Mishra, Niroula, Thakur, Yadav. Systematization of Knowledge: Security and Safety in the Model Context Protocol Ecosystem. arXiv:2512.08290. 2025.</li>
+<li id="ref-dadhich2026agentic">Gaurav Dadhich, Maximem. Agentic Context Management: Solving Agent Memory and Cost by Treating Them as Lifecycle and Architecture Problems. arXiv:2607.21503. 2026.</li>
+<li id="ref-gonzalezpumariega2025scaling">Gonzalez-Pumariega, Tu, Lee, Yang, Li, Wang. Scaling Agents for Computer Use. arXiv:2510.02250. 2025.</li>
+<li id="ref-guo2026question">Guo, Hao, Wang et al. From Question Answering to Task Completion: A Survey on Agent System and Harness Design. arXiv:2606.20683. 2026.</li>
+<li id="ref-guo2026eet">Guo, Xiao, Zhang, Harman, Lou, Liu, Chen. EET: Experience-Driven Early Termination for Cost-Efficient Software Engineering Agents. arXiv:2601.05777. 2026.</li>
+<li id="ref-harvardcs2026agent">Harvard CS2680. Agent Evaluation and Benchmarks. <em>Harvard University course notes</em>. 2026.</li>
+<li id="ref-hasan2025model">Hasan, Li, Fallahzadeh, Rajbahadur, Adams, Hassan. Model Context Protocol (MCP) at First Glance: Studying the Security and Maintainability of MCP Servers. arXiv:2506.13538. 2025.</li>
+<li id="ref-he2026context">He, Chen, Qian, Wei, Chen, Fu, Wang, Wu, Mao. When Context Gets Root: Privilege Escalation in LLM Harnesses. arXiv:2608.27299. 2026.</li>
+<li id="ref-hong2023metagpt">Hong, Zhuge, Chen, Zheng et al. incl. Schmidhuber. MetaGPT: Meta Programming for a Multi-Agent Collaborative Framework. <em>ICLR 2024</em>. arXiv:2308.00352. 2023.</li>
+<li id="ref-hou2025model">Hou, Zhao, Wang, Wang. Model Context Protocol (MCP): Landscape, Security Threats, and Future Research Directions. arXiv:2503.23278. 2025.</li>
+<li id="ref-wei2026architectural">Hu Wei. Architectural Design Decisions in AI Agent Harnesses. arXiv:2604.18071. 2026.</li>
+<li id="ref-huang2026inch">Huang, Ma, Yan, Dai, Zhang, Xu, Xu, Zhang. Give Them an Inch and They Will Take a Mile: Understanding and Measuring Caller Identity Confusion in MCP-Based AI Systems. arXiv:2603.07473. 2026.</li>
+<li id="ref-huang2026memoharness">Huang, Wang, Bao, Ma, Luo, Nian, Zhuang, Liu, Zhao, Zhang. MemoHarness: Agent Harnesses That Learn from Experience. arXiv:2607.14159. 2026.</li>
+<li id="ref-huggingface2026low">Hugging Face. Daily Papers: mini-SWE-agent query results. <em>Hugging Face Daily Papers</em>. 2026.</li>
+<li id="ref-costa2026agentspawn">Igor Costa. AgentSpawn: Adaptive Multi-Agent Collaboration Through Dynamic Spawning for Long-Horizon Code Generation. arXiv:2602.07072. 2026.</li>
+<li id="ref-intuitionlabs2026long">IntuitionLabs. Long-Running AI Agents: Reliability, Recovery and Oversight. <em>IntuitionLabs</em>. 2026.</li>
+<li id="ref-picrew2026agent">J. Li and X. Xiao and Y. Zhang and C. Liu and L. Zhao and others. Agent Harness Engineering: A Survey. <em>Submitted to TMLR</em>. 2026.</li>
+<li id="ref-datanorth2026harness">J. van Weelie. What is Harness Engineering? The AI Agent Scaffolding Guide. <em>DataNorth</em>. 2026.</li>
+<li id="ref-neurips2026x">J. Yang and C. E. Jimenez and A. Wettig and K. Lieret and S. Yao and K. Narasimhan and O. Press. SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering (NeurIPS 2024 poster record). <em>NeurIPS 2024</em>. 2024.</li>
+<li id="ref-dai2026empire">Jiahong Dai. The Empire, Long Divided, Must Unite: Architectural Convergence in Three LLM Agent Harnesses. arXiv:2608.23953. 2026.</li>
+<li id="ref-jiang2026specialize">Jiang, Cheng, Huang, Zhao, Lu, Dong, Li, Ponti, Mai. Specialize Roles, Mix Deployments: Pushing the Cost&ndash;Accuracy Frontier of LLM Agent Teams. arXiv:2606.20629. 2026.</li>
+<li id="ref-jiang2026harness">Jiang, Shi, Hong, Xu, Sun, Sun, Bashir, Han. Harness-1: Reinforcement Learning for Search Agents with State-Externalizing Harnesses. arXiv:2606.02373. 2026.</li>
+<li id="ref-jimenez2023swe">Jimenez, Yang, Wettig, Yao, Pei, Press, Narasimhan. SWE-bench: Can Language Models Resolve Real-World GitHub Issues?. <em>ICLR 2024</em>. arXiv:2310.06770. 2023.</li>
+<li id="ref-team2026jit">JIT-Agent Team. JIT-Agent: Scaling Harness Intelligence via Just-in-Time Harness Evolution. arXiv:2608.25593. 2026.</li>
+<li id="ref-joshi2025swe">Joshi, Chowdhury, Uysal. SWE-Bench-CL: Continual Learning for Coding Agents. arXiv:2507.00014. 2025.</li>
+<li id="ref-kahani2026runtime">Kahani, Barati, Addae. Runtime Compliance Verification for AI Agents. arXiv:2606.19242. 2026.</li>
+<li id="ref-kapner2026scanning">Kapner, Soceanu, Petrunin, Gartner. Scanning the Harness: Configuration Exposures in AI Coding-Agent Supply Chains. arXiv:2609.07360. 2026.</li>
+<li id="ref-kapoor2025holistic">Kapoor, Stroebl, Kirgis, Nadgir, Siegel, Wei, Xue, Chen et al. Holistic Agent Leaderboard: The Missing Infrastructure for AI Agent Evaluation. arXiv:2510.11977. 2025.</li>
+<li id="ref-kapoor2024agents">Kapoor, Stroebl, Siegel, Nadgir, Narayanan. AI Agents That Matter. arXiv:2407.01502. 2024.</li>
+<li id="ref-ke2026mas">Ke, Ming, Xu, Chin, Nguyen, Jwalapuram, Wang, Yavuz, Xiong, Joty. MAS-Orchestra: Understanding and Improving Multi-Agent Reasoning Through Holistic Orchestration and Controlled Benchmarks. <em>ICML 2026</em>. arXiv:2601.14652. 2026.</li>
+<li id="ref-khanal2026pass">Khanal, Tao, Zhou. Beyond pass@1: A Reliability Science Framework for Long-Horizon LLM Agents. arXiv:2603.29231. 2026.</li>
+<li id="ref-khizbullin2026telco">Khizbullin, Alyafeai, Eldesokey, AlSultan, Alshalan, Ghanem, Pugh. Telco-GAIA: Bilingual Benchmark for Agents in Telecom Domain. arXiv:2607.20510. 2026.</li>
+<li id="ref-kirgis2026log">Kirgis, Kapoor, Rabanser, Nadgir, Ududec, Dubois, Allaire, Stosz, Hobbhahn, Steinhardt, Narayanan. Log analysis is necessary for credible evaluation of AI agents. arXiv:2605.08545. 2026.</li>
+<li id="ref-koh2024visualwebarena">Koh, Lo, Jang, Duvvur, Lim, Huang, Neubig, Zhou, Salakhutdinov, Fried. VisualWebArena: Evaluating Multimodal Agents on Realistic Visually Grounded Web Tasks. arXiv:2401.13649. 2024.</li>
+<li id="ref-kumar2026agentforge">Kumar, Ali, Ahmed, Ali, Usman. AgentForge: Execution-Grounded Multi-Agent LLM Framework for Autonomous Software Engineering. arXiv:2604.13120. 2026.</li>
+<li id="ref-langgraphdocs2026langgraph">LangChain. LangGraph overview. <em>LangChain documentation</em>. 2026.</li>
+<li id="ref-lee2026meta">Lee, Nair, Zhang, Lee, Khattab, Finn. Meta-Harness: End-to-End Optimization of Model Harnesses. arXiv:2603.28052. 2026.</li>
+<li id="ref-lee2026agentic">Lee, Yen, Ye, Chen. Agentic Aggregation for Parallel Scaling of Long-Horizon Agentic Tasks. <em>COLM 2026</em>. arXiv:2604.11753. 2026.</li>
+<li id="ref-lin2026agentic">Lin, Liu, Pan, Lin, Dou, Xi, Huang, Yan, Han, Gui, Jiang. Agentic Harness Engineering: Observability-Driven Automatic Evolution of Coding-Agent Harnesses. arXiv:2604.25850. 2026.</li>
+<li id="ref-lin2026dreamguard">Lin, Yu, Lin, Cao, Chen, Xue, Yu, Sha, Wu. DreamGuard: Efficient Runtime Guardrail for LLM Agents via Risk-Aware World Model. arXiv:2608.05695. 2026.</li>
+<li id="ref-liu2026harde">Liu, Li, Ma, Shi, Wang, Feng. HARDE: Optimizing Agent Harnesses for Runtime Risk Detection and Execution Control. arXiv:2609.38291. 2026.</li>
+<li id="ref-liu2023agentbench">Liu, Yu, Zhang, Xu, Lei, Lai, Gu et al. AgentBench: Evaluating LLMs as Agents. <em>ICLR 2024</em>. arXiv:2308.03688. 2023.</li>
+<li id="ref-liu2026dive">Liu, Zhao, Shang, Shen. Dive into Claude Code: The Design Space of Today's and Future AI Agent Systems. arXiv:2604.14228. 2026.</li>
+<li id="ref-lou2026autoharness">Lou, Lázaro-Gredilla, Dedieu, Wendelken, Lehrach, Murphy. AutoHarness: improving LLM agents by automatically synthesizing a code harness. arXiv:2603.03329. 2026.</li>
+<li id="ref-luo2026harness">Luo, Huang, Luo, Liu, Li, Hu, Feng, Liu. Harness-Aware Self-Evolving: Co-Evolving Model Weights, Harness, and Task Solutions. arXiv:2607.03935. 2026.</li>
+<li id="ref-ma2026longhorizon">Ma, Huang, Zou, Wang, Yang, Hu, Wei, Chu. LongHorizon-Harness: Advancing Long-Horizon Agents for Real-World Tasks. arXiv:2608.01964. 2026.</li>
+<li id="ref-machinoai2026metagpt">MachinoAI. MetaGPT &hellip; Paper Explained. <em>MachinoAI</em>. 2026.</li>
+<li id="ref-madaan2023self">Madaan, Tandon, Gupta et al. Self-Refine: Iterative Refinement with Self-Feedback. arXiv:2303.17651. 2023.</li>
+<li id="ref-masterman2024landscape">Masterman, Besen, Sawtell, Chao. The Landscape of Emerging AI Agent Architectures for Reasoning, Planning, and Tool Calling: A Survey. arXiv:2404.11584. 2024.</li>
+<li id="ref-mei2024aios">Mei, Zhu, Xu, Jin, Hua, Li et al. AIOS: LLM Agent Operating System. <em>COLM 2025</em>. arXiv:2403.16971. 2024.</li>
+<li id="ref-merrill2026terminal">Merrill, Shaw, Carlini, Li, Raj, Bercovich, Shi et al. &mdash; {}90 authors across Stanford, Laude Institute, Anthropic, CMU, MIT, Berkeley, Cornell and others. Terminal-Bench: Benchmarking Agents on Hard, Realistic Tasks in Command Line Interfaces. arXiv:2601.11868. 2026.</li>
+<li id="ref-mialon2023gaia">Mialon, Fourrier, Swift, Wolf, LeCun, Scialom. GAIA: A Benchmark for General AI Assistants. arXiv:2311.12983. 2023.</li>
+<li id="ref-moltbookai2026metagpt">Moltbook-AI. MetaGPT: Multi-Agent Framework for Software Development. <em>Moltbook-AI</em>. 2026.</li>
+<li id="ref-nadgir2026life">Nadgir, Kapoor, Liu, Kirgis, Orona, Rabanser, Bayer, Shetty, Ling, Chan-Sew, Nakagawa, Utpala, Siegel, Narayanan. Life After Benchmark Saturation: A Case Study of CORE-Bench. arXiv:2606.26158. 2026.</li>
+<li id="ref-nguyen2026vepa">Nguyen, Miculicich, Dalvi Mishra, Li, Dvijotham, Bansal, Pfister, Le. VEPA: Verified Evolving Formal Policy for Lifelong LLM Agent Guardrails. arXiv:2610.12813. 2026.</li>
+<li id="ref-nie2025weak">Nie, Feng, Ye, Liang, Lu, Yao, Alahi, Zou. Weak-for-Strong: Training Weak Meta-Agent to Harness Strong Executors. arXiv:2504.04785. 2025.</li>
+<li id="ref-verma2026active">Nikhil Verma. Active Context Compression: Autonomous Memory Management in LLM Agents. arXiv:2601.07190. 2026.</li>
+<li id="ref-ning2026code">Ning, Tieu, Fu, Wei, Li, Bei et al. Code as Agent Harness: Toward Executable, Verifiable, and Stateful Agent Systems. arXiv:2605.18747. 2026.</li>
+<li id="ref-repo2026x">P. Wiloak. SWE-bench: Can Language Models Resolve Real-World GitHub Issues? (community summary). <em>GitHub repository</em>. 2025.</li>
+<li id="ref-packer2023memgpt">Packer, Wooders, Lin, Fang, Patil, Stoica, Gonzalez, UC Berkeley. MemGPT: Towards LLMs as Operating Systems. arXiv:2310.08560. 2023.</li>
+<li id="ref-pan2026natural">Pan, Zou, Guo, Ni, Zheng. Natural-Language Agent Harnesses. arXiv:2603.25723. 2026.</li>
+<li id="ref-paperdive2026context">Paperdive. When Context Gets Root. <em>Paperdive episode 250</em>. 2026.</li>
+<li id="ref-parallel2026harness">Parallel. What is an AI harness?. <em>Parallel</em>. 2026.</li>
+<li id="ref-park2026autosaddler">Park, Kim, Tan, Zhang, Han, Gao, Park, Yao, Fu, Nallipogu, Lin, Rajmohan, Zhang. AutoSaddler: Automatic Harness Optimization with Durable Updates from Agent Execution Traces. arXiv:2608.23041. 2026.</li>
+<li id="ref-park2023generative">Park, O'Brien, Cai, Morris, Liang, Bernstein. Generative Agents: Interactive Simulacra of Human Behavior. <em>UIST 2023</em>. arXiv:2304.03442. 2023.</li>
+<li id="ref-patel2026six">Patel, Surendira, George, Kapale. The Six Sigma Agent: Achieving Enterprise-Grade Reliability in LLM Systems Through Consensus-Driven Decomposed Execution. arXiv:2601.22290. 2026.</li>
+<li id="ref-patil2023gorilla">Patil, Zhang, Wang, Gonzalez. Gorilla: Large Language Model Connected with Massive APIs. arXiv:2305.15334. 2023.</li>
+<li id="ref-du2026memory">Pengfei Du. Memory for Autonomous LLM Agents: Mechanisms, Evaluation, and Emerging Frontiers. arXiv:2603.07670. 2026.</li>
+<li id="ref-petersgill2026camels">Peters-Gill, Semler, Bartsch, Shumailov, Schroeder de Witt. Can CaMeLs Talk? Securing Multi-Agent Systems Against Indirect Prompt Injection Attacks. arXiv:2610.05640. 2026.</li>
+<li id="ref-prompt2026agent">Prompt 20. Agent Serving Infrastructure: The Complete Guide. <em>Prompt 20</em>. 2026.</li>
+<li id="ref-promptabcd2026agent">PromptABCD. Agent Harness OpenTelemetry Tracing Guide. <em>PromptABCD</em>. 2026.</li>
+<li id="ref-repo2026agent">Q. Meng and Y. Wang and L. Chen and W. Wu and Y. Li and others. Agent Harness for Large Language Model Agents: A Survey. <em>Preprints.org; DOI 10.20944/preprints202604.0428</em>. 2026.</li>
+<li id="ref-qin2023toolllm">Qin, Liang, Ye, Zhu et al. ToolLLM: Facilitating Large Language Models to Master 16000+ Real-World APIs. arXiv:2307.16789. 2023.</li>
+<li id="ref-rabanser2026science">Rabanser, Kapoor, Kirgis, Liu, Utpala, Narayanan. Towards a Science of AI Agent Reliability. <em>ICML 2026</em>. arXiv:2602.16666. 2026.</li>
+<li id="ref-rank2026posttrainbench">Rank, Bhatnagar, Prabhu, Eisenberg, Karina, Bethge, Andriushchenko. PostTrainBench: Can LLM Agents Automate LLM Post-Training?. arXiv:2603.08640. 2026.</li>
+<li id="ref-redhat2026model">Red Hat. Model Context Protocol (MCP): Understanding security risks and controls. <em>Red Hat Blog</em>. 2026.</li>
+<li id="ref-robeyns2025self">Robeyns, Szummer, Aitchison. A Self-Improving Coding Agent. arXiv:2504.15228. 2025.</li>
+<li id="ref-roman2026orchestral">Roman &amp; Roman. Orchestral AI: A Framework for Agent Orchestration. arXiv:2601.02577. 2026.</li>
+<li id="ref-rostamzadeh2026mcp">Rostamzadeh, Narula, Birhan, Ghasemigol, Takabi. MCP-DPT: A Defense-Placement Taxonomy and Coverage Analysis for Model Context Protocol Security. arXiv:2604.07551. 2026.</li>
+<li id="ref-harness2026introducing">S. Gattupalle and S. Nagaraj. Introducing Harness AgentTrace: An Observability and Guardrail Framework for AI Agents. <em>Harness Blog</em>. 2026.</li>
+<li id="ref-truefoundry2026claude">S. Kaur. Claude Agent SDK vs LangGraph: Which Should You Build On?. <em>TrueFoundry Blog</em>. 2026.</li>
+<li id="ref-particula2026swe">S. Mondragon. SWE-Bench 2026: Scaffolding Moves 22 Points, Models Move 1. <em>Particula</em>. 2026.</li>
+<li id="ref-langchain2026deep">S. Runkle. Deep Agents vs LangChain vs LangGraph. <em>LangChain Blog</em>. 2026.</li>
+<li id="ref-schick2023toolformer">Schick, Dwivedi-Yu, Dessì, Raileanu et al., Meta AI. Toolformer: Language Models Can Teach Themselves to Use Tools. arXiv:2302.04761. 2023.</li>
+<li id="ref-al2025open">Schroeder de Witt et al., {}30 authors across Oxford, CMU, Turing Institute, MIT Media Lab, OWASP, SAP, Qualcomm. Open Challenges in Multi-Agent Security: Towards Secure Systems of Interacting AI Agents. arXiv:2505.02077. 2025.</li>
+<li id="ref-shao2026harness">Shao, Zhang, Li, Wang, Wang, Jiao, Lu, Guo, Liu, Zhang. Harness-R1: Learning to Edit Executable Runtime Harnesses from Agent Failure Trajectories. arXiv:2608.02276. 2026.</li>
+<li id="ref-shen2025mind">Shen, Li, Chen, Fan, Li, Yang, Yang. From Mind to Machine: The Rise of Manus AI as a Fully Autonomous Digital Agent. arXiv:2505.02024. 2025.</li>
+<li id="ref-shi2026facet">Shi, Wang, Su, Huang, Zhang, Fang, Ren, Liu, Zeng, Zhao, Chen, Chen, Zhao. FACET: Preserving Source Intent and Executable State in Terminal Task Synthesis. arXiv:2608.18580. 2026.</li>
+<li id="ref-shibaev2026claim">Shibaev, Kudrevskaia, Galimzyanov, Evtikhiev, Terna, Rabatin, Kudashev, Bryksin, Puchkova, Bartak, Bogomolov, Titov. Don't Claim Benchmark-Oriented Optimization Improves General Coding Capability &mdash; Diverse Evaluation Is Required. arXiv:2608.13566. 2026.</li>
+<li id="ref-shinn2023reflexion">Shinn, Cassano, Berman, Gopinath, Narasimhan, Yao. Reflexion: Language Agents with Verbal Reinforcement Learning. arXiv:2303.11366. 2023.</li>
+<li id="ref-son2026swe">Son, Yoon, Tang, Wang, Wolf, Bogunovic. SWE-Router: Routing in Multi-turn Agentic Software Engineering Tasks. <em>ICML 2026 DL4C workshop</em>. arXiv:2607.00053. 2026.</li>
+<li id="ref-sumers2023cognitive">Sumers, Yao, Narasimhan, Griffiths. Cognitive Architectures for Language Agents. <em>TMLR 2024</em>. arXiv:2309.02427. 2023.</li>
+<li id="ref-rapidclaw2026agentbench">T. Gaucher. AgentBench Leaderboard [2026 Methodology]. <em>Rapid Claw</em>. 2026.</li>
+<li id="ref-tang2026interpreting">Tang, Mei, Liu, Qian, Cheng, Shao, Hu. Interpreting Emergent Extreme Events in Multi-Agent Systems. arXiv:2601.20538. 2026.</li>
+<li id="ref-langchain2026anatomy">V. Trivedy. The Anatomy of an Agent Harness. <em>LangChain Blog</em>. 2026.</li>
+<li id="ref-vishe2026skill">Vishe, Surana, Jiang, Huang, Li, Kuang, Yu, Rossi, Shang, McAuley, Wu. Skill-R1: Agent Skill Evolution via Reinforcement Learning. arXiv:2605.09359. 2026.</li>
+<li id="ref-wang2024executable">Wang, Chen, Yuan, Zhang, Li, Peng, Ji. Executable Code Actions Elicit Better LLM Agents. <em>ICML 2024</em>. arXiv:2402.01030. 2024.</li>
+<li id="ref-wang2024openhands">Wang, Li, Song, Xu, Tang, Zhuge, Pan, Song, Li, Singh, Tran et al. OpenHands: An Open Platform for AI Software Developers as Generalist Agents. <em>ICLR 2025</em>. arXiv:2407.16741. 2024.</li>
+<li id="ref-wang2023survey">Wang, Ma, Feng, Zhang et al. A Survey on Large Language Model based Autonomous Agents. <em>Frontiers of Computer Science</em>. arXiv:2308.11432. 2023.</li>
+<li id="ref-wang2024agent">Wang, Mao, Fried, Neubig. Agent Workflow Memory. arXiv:2409.07429. 2024.</li>
+<li id="ref-wang2026harness">Wang, Shi, Li, Li, Yu, Yang, Panaganti, Mi, Zhou, Leoweiliang. Harness Handbook: Making Evolving Agent Harnesses Readable, Navigable, and Editable. arXiv:2607.13285. 2026.</li>
+<li id="ref-wang2026harnessbridge">Wang, Wang, Taylor, Cong, Sun, Wang. HarnessBridge: Learnable Bidirectional Controller for LLM Agent Harness. arXiv:2606.12882. 2026.</li>
+<li id="ref-wang2023voyager">Wang, Xie, Jiang, Mandlekar, Xiao, Zhu, Fan, Anandkumar. Voyager: An Open-Ended Embodied Agent with Large Language Models. arXiv:2305.16291. 2023.</li>
+<li id="ref-wei2025browsecomp">Wei, Sun, Papay, McKinney, Han, Fulford, Chung, Passos, Fedus, Glaese. BrowseComp: A Simple Yet Challenging Benchmark for Browsing Agents. arXiv:2504.12516. 2025.</li>
+<li id="ref-wijk2024bench">Wijk, Lin, Becker, Jawhar, Parikh, Broadley, Chan, Barnes et al. RE-Bench: Evaluating frontier AI R&amp;D capabilities of language model agents against human experts. arXiv:2411.15114. 2024.</li>
+<li id="ref-wikipedia2026agent">Wikipedia contributors. AI agent benchmark. <em>Wikipedia</em>. 2026.</li>
+<li id="ref-wong2025confucius">Wong, Qi, Wang, Hu, Lin, Ge, Gao, Chen, Du, Yu, Zhang. Confucius Code Agent: Scalable Agent Scaffolding for Real-World Codebases. arXiv:2512.10398. 2025.</li>
+<li id="ref-wu2023autogen">Wu, Bansal, Zhang, Wu, Li, Zhu et al., Microsoft Research. AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation. arXiv:2308.08155. 2023.</li>
+<li id="ref-wu2024copilot">Wu, Han, Ding, Weng, Liu, Yao, Yu, Kong. OS-Copilot: Towards Generalist Computer Agents with Self-Improvement. arXiv:2402.07456. 2024.</li>
+<li id="ref-wu2026agent">Wu, Mo, Lu, Xing, Liu, Jing, Li, Shao, Hao, Shi. K<span class="math"><sup>2</sup></span>-Agent: Co-Evolving Know-What and Know-How for Hierarchical Mobile Device Control. <em>ICLR 2026</em>. arXiv:2603.00676. 2026.</li>
+<li id="ref-wu2025evolver">Wu, Wang, Mei, Cai, Fu, Yang, Wen, Yang, Shen, Wang, Shi. EvolveR: Self-Evolving LLM Agents through an Experience-Driven Lifecycle. arXiv:2510.16079. 2025.</li>
+<li id="ref-codeasharness2026code">X. Ning and K. Tieu and D. Fu and T. Wei and others. Code as Agent Harness. <em>Project page</em>. 2026.</li>
+<li id="ref-repo2026awesome">X. Ning and others. Awesome Code as Agent Harness Papers. <em>GitHub repository</em>. 2026.</li>
+<li id="ref-xi2023rise">Xi, Chen, Guo, He et al., Fudan NLP. The Rise and Potential of Large Language Model Based Agents: A Survey. arXiv:2309.07864. 2023.</li>
+<li id="ref-xia2024agentless">Xia, Deng, Dunn, Zhang. Agentless: Demystifying LLM-based Software Engineering Agents. arXiv:2407.01489. 2024.</li>
+<li id="ref-xia2026harnessing">Xia, Zhu, Xing, Lu, Sejdinovic, Xu. Harnessing Agent Skills: Architectural Patterns and a Reference Architecture for Skill-Mediated LLM Agents. arXiv:2606.20631. 2026.</li>
+<li id="ref-xie2024osworld">Xie, Zhang, Chen, Li, Zhao, Cao, Toh, Cheng, Shin, Lei, Liu, Xu, Zhou, Savarese, Xiong, Zhong, Yu. OSWorld: Benchmarking Multimodal Agents for Open-Ended Tasks in Real Computer Environments. arXiv:2404.07972. 2024.</li>
+<li id="ref-lab2026osworld">XLANG Lab and collaborators. OSWorld 2.0: Benchmarking Computer Use Agents on Long-Horizon Real-World Tasks. arXiv:2606.29537. 2026.</li>
+<li id="ref-osworldcdn2026osworld">XLANG Lab and Collaborators. OSWorld 2.0. <em>Mirror copy</em>. 2026.</li>
+<li id="ref-xu2026harness">Xu, Chen, CuiZhu, Dalvi Mishra, Ming, Yu, Han, Lee, Pfister. Harness<span class="math"><sup>2</sup></span>: Recursive Agent Harnessing for an Open World. arXiv:2610.14224. 2026.</li>
+<li id="ref-xu2026rethinking">Xu, Koesdwiady, Bei, Han, Huang, Wang, Chen, Wang, Wang, Li, Ding. Rethinking the Value of Multi-Agent Workflow: A Strong Single Agent Baseline. arXiv:2601.12307. 2026.</li>
+<li id="ref-xu2024theagentcompany">Xu, Song, Li, Tang, Jain, Bao, Wang, Zhou, Guo, Cao, Yang, Lu, Martin, Su, Maben, Mehta, Chi, Jang, Xie, Zhou, Neubig. TheAgentCompany: Benchmarking LLM Agents on Consequential Real World Tasks. arXiv:2412.14161. 2024.</li>
+<li id="ref-xu2026adapting">Xu, Wen, Li. Adapting the Interface, Not the Model: Runtime Harness Adaptation for Deterministic LLM Agents. arXiv:2605.22166. 2026.</li>
+<li id="ref-yang2025mcpsecbench">Yang, Gao, Wu, Chen, Li, Wang. MCPSecBench: A Systematic Security Benchmark and Playground for Testing Model Context Protocols. arXiv:2508.13220. 2025.</li>
+<li id="ref-yang2024swe">Yang, Jimenez, Wettig, Lieret, Yao, Narasimhan, Press. SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering. <em>NeurIPS 2024</em>. arXiv:2405.15793. 2024.</li>
+<li id="ref-yang2024swea">Yang, Jimenez, Zhang, Lieret, Yang, Wu, Press, Muennighoff, Synnaeve, Narasimhan, Yang, Wang, Press. SWE-bench Multimodal: Do AI Systems Generalize to Visual Software Domains?. arXiv:2410.03859. 2024.</li>
+<li id="ref-yao2024bench">Yao, Shinn, Razavi, Narasimhan. <span class="math">&tau;</span>-bench: A Benchmark for Tool-Agent-User Interaction in Real-World Domains. arXiv:2406.12045. 2024.</li>
+<li id="ref-yao2022react">Yao, Zhao, Yu, Du, Shafran, Narasimhan, Cao. ReAct: Synergizing Reasoning and Acting in Language Models. <em>ICLR 2023</em>. arXiv:2210.03629. 2022.</li>
+<li id="ref-ye2026harness">Ye, Lu, Dong, Su, Song. Harness-Zero: Harness Distillation via Agent-as-Harness. arXiv:2609.24974. 2026.</li>
+<li id="ref-yehudai2025survey">Yehudai, Eden, Li, Uziel, Zhao, Bar-Haim, Cohan, Shmueli-Scheuer. A Survey on Evaluation of LLM-based Agents. arXiv:2503.16416. 2025.</li>
+<li id="ref-yuan2026flowbank">Yuan, Deng, Yu, Chakraborty, Rostami, Huang. FlowBank: Query-Adaptive Agentic Workflows Optimization through Precompute-and-Reuse. arXiv:2606.11290. 2026.</li>
+<li id="ref-han2026measuring">Yuelin Han. Measuring LLM Agent Defenses by Layer: GDA Measurement and an Envelope-Layer Attack-Defense Model. arXiv:2610.00392. 2026.</li>
+<li id="ref-zenity2026agent">Zenity. AI Agent Security | Model Context Protocol (MCP). <em>Zenity</em>. 2026.</li>
+<li id="ref-zhan2024injecagent">Zhan, Liang, Ying, Kang. InjecAgent: Benchmarking Indirect Prompt Injections in Tool-Integrated Large Language Model Agents. arXiv:2403.02691. 2024.</li>
+<li id="ref-zhang2025agentic">Zhang, Hu, Upasani et al., Stanford/SambaNova/Berkeley. Agentic Context Engineering: Evolving Contexts for Self-Improving Language Models. <em>ICLR 2026</em>. arXiv:2510.04618. 2025.</li>
+<li id="ref-zhang2026double">Zhang, Motaali, Dinh, Piroutiniya, López de Vergara, de Pedro, Correia, Parra, Xie. The Double Measurement Confound in Agent Benchmarks: De-Scaffolding, Ground-Truth Scoring, and Reliability Beyond the Mean. arXiv:2609.09218. 2026.</li>
+<li id="ref-zhang2026comparing">Zhang, Wang, Ge, Xu, Hamm, Reddy. Stop Comparing LLM Agents Without Disclosing the Harness. arXiv:2605.23950. 2026.</li>
+<li id="ref-zhang2026self">Zhang, Zhang, Li, Zhang, Chen, Zhang, Bai, Hu. Self-Harness: Harnesses That Improve Themselves. arXiv:2606.09498. 2026.</li>
+<li id="ref-zhao2025mcp">Zhao, Liu, Ruan, Li, Liang. When MCP Servers Attack: Taxonomy, Feasibility, and Mitigation. arXiv:2509.24272. 2025.</li>
+<li id="ref-zhong2026harness">Zhong &amp; Zhu. AI Harness Engineering: A Runtime Substrate for Foundation-Model Software Agents. arXiv:2605.13357. 2026.</li>
+<li id="ref-zhou2023webarena">Zhou, Xu, Zhu, Zhou, Lo, Sridhar, Cheng, Ou, Bisk, Fried, Alon, Neubig. WebArena: A Realistic Web Environment for Building Autonomous Agents. <em>ICLR 2024</em>. arXiv:2307.13854. 2023.</li>
+<li id="ref-zhou2023language">Zhou, Yan, Shlapentokh-Rothman, Wang, Wang. Language Agent Tree Search Unifies Reasoning, Acting, and Planning. <em>ICML 2024</em>. arXiv:2310.04406. 2023.</li>
+</ol>
+
+<footer>
+  <p><strong>Companion files.</strong> <code>agent-harness-survey.tex</code> is the LaTeX source of
+  this document and compiles standalone with <code>pdflatex</code> (run twice); it needs no external
+  bibliography file. This HTML file is self-contained and needs no network access.</p>
+  <p>188 references. Corpus: 191 retrieved sources, 2022&ndash;October&nbsp;2026.</p>
+</footer>
+</main>
+</div>
+
+<script>
+(function(){
+  var btn=document.getElementById('themeBtn'), root=document.documentElement;
+  function cur(){ try{return localStorage.getItem('ahs-theme')}catch(e){return null} }
+  function paint(t){
+    if(t){root.setAttribute('data-theme',t)} else {root.removeAttribute('data-theme')}
+    var dark = t==='dark' || (!t && window.matchMedia('(prefers-color-scheme:dark)').matches);
+    btn.textContent = dark ? 'Light' : 'Dark';
+  }
+  paint(cur());
+  btn.addEventListener('click',function(){
+    var dark = root.getAttribute('data-theme')==='dark' ||
+      (!root.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme:dark)').matches);
+    var next = dark ? 'light':'dark';
+    try{localStorage.setItem('ahs-theme',next)}catch(e){}
+    paint(next);
+  });
+
+  var top=document.getElementById('top');
+  var links=[].slice.call(document.querySelectorAll('aside a'));
+  var targets=links.map(function(a){return document.getElementById(a.getAttribute('href').slice(1))})
+                   .filter(Boolean);
+  function onScroll(){
+    top.classList.toggle('show', window.scrollY>700);
+    var y=window.scrollY+120, best=-1;
+    for(var i=0;i<targets.length;i++){ if(targets[i].offsetTop<=y) best=i; }
+    links.forEach(function(a){a.classList.remove('active')});
+    if(best>=0 && links[best]) links[best].classList.add('active');
+  }
+  var raf=null;
+  window.addEventListener('scroll',function(){
+    if(raf) return; raf=requestAnimationFrame(function(){raf=null; onScroll()});
+  },{passive:true});
+  onScroll();
+
+  // wrap wide tables so they scroll on narrow screens instead of overflowing
+  [].slice.call(document.querySelectorAll('figure.tbl table')).forEach(function(t){
+    var d=document.createElement('div'); d.className='scroller';
+    t.parentNode.insertBefore(d,t); d.appendChild(t);
+  });
+})();
+</script>
+</body>
+</html>
