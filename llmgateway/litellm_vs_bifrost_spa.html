@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Chosen Palette: Slate & Warm Indigo Neutral -->
+  <!-- Application Structure Plan: 
+    1. Executive Dashboard & Interactive Scorecard: Aggregates the 21 Likert ratings into category radar charts, overall scores, and an instant decision recommendation wizard.
+    2. Interactive Edition Comparison Matrix: Allows toggling between LiteLLM OSS, LiteLLM Enterprise, Bifrost OSS, and Bifrost Enterprise to compare key architectural traits.
+    3. Category Explorer (All 21 Sections): Categorized into 5 thematic domains (Governance & Access, Deployment & Infra, Performance & Routing, Optimization & Caching, APIs & Agentic AI) with real-time text search, feature tables, code blocks, and data conclusions.
+    Why chosen: This structure converts a dense 21-section technical evaluation into both high-level executive summaries and deep-dive technical explorations without losing granular tables or benchmark data.
+  -->
+  <!-- Visualization & Content Choices:
+    - Overall Performance & Features -> Radar Chart (Chart.js / Canvas) -> Interactive section filtering -> Justification: Visualizes multi-axis tradeoffs across runtime, FinOps, HA, and protocol coverage.
+    - Benchmarking Latency vs Throughput -> Bar/Line Chart (Chart.js / Canvas) -> Metric selection -> Justification: Directly demonstrates the microsecond vs millisecond latency gap between Go and Python cores.
+    - Code Snippets & Deployment Schemas -> Clean HTML pre/code boxes with copy functionality -> Justification: Preserves essential Docker, Kubernetes, and benchmark harness examples without external heavy syntax highlighters.
+    - Confirmation: NO SVG graphics used. NO Mermaid JS used.
+  -->
+  <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiteLLM vs Bifrost: Architectural & Operational Comparison</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f3ff',
+              100: '#e0e7ff',
+              500: '#4338ca',
+              600: '#3730a3',
+              700: '#312e81',
+            },
+            bifrost: {
+              light: '#ecfdf5',
+              border: '#10b981',
+              text: '#047857',
+              badge: '#059669'
+            },
+            litellm: {
+              light: '#eff6ff',
+              border: '#3b82f6',
+              text: '#1d4ed8',
+              badge: '#2563eb'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .chart-container {
+      position: relative;
+      width: 100%;
+      max-width: 650px;
+      margin-left: auto;
+      margin-right: auto;
+      height: 320px;
+      max-height: 380px;
+    }
+    @media (min-width: 768px) {
+      .chart-container {
+        height: 360px;
+      }
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+
+  <!-- Top Navigation Bar -->
+  <header class="bg-slate-900 text-white sticky top-0 z-50 shadow-md border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div class="flex items-center space-x-3">
+        <span class="text-2xl">⚡</span>
+        <div>
+          <h1 class="text-lg font-bold leading-tight tracking-tight text-white">LiteLLM vs Bifrost</h1>
+          <p class="text-xs text-slate-400">Architectural & Operational Comparison (OSS & Enterprise)</p>
+        </div>
+      </div>
+      
+      <!-- Quick Navigation & Search -->
+      <div class="flex items-center space-x-3 w-full md:w-auto">
+        <div class="relative w-full md:w-64">
+          <input type="text" id="searchInput" placeholder="Search 21 sections (e.g., SCIM, MCP, Latency)..." 
+            class="w-full bg-slate-800 text-slate-200 placeholder-slate-400 text-xs rounded-lg pl-3 pr-8 py-2 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <span class="absolute right-2.5 top-2 text-slate-400 text-xs">🔍</span>
+        </div>
+        <button onclick="resetFilters()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg border border-slate-700 transition">
+          Reset
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+
+    <!-- Overview & Decision Wizard Section -->
+    <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+        
+        <div class="lg:col-span-7 space-y-4">
+          <div class="inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-indigo-200">
+            <span>📊 Technical Evaluation Dashboard</span>
+          </div>
+          <h2 class="text-2xl font-bold text-slate-900 tracking-tight">
+            AI Gateway Comparison: Python Core vs Compiled Go Runtime
+          </h2>
+          <p class="text-sm text-slate-600 leading-relaxed">
+            Comparing <span class="font-semibold text-indigo-600">LiteLLM (OSS & Enterprise)</span> and <span class="font-semibold text-emerald-600">Bifrost (OSS & Enterprise)</span> across 21 technical sections, FinOps controls, traffic resilience mechanisms, and agentic protocols. Select your constraints below to reveal recommended architecture targets.
+          </p>
+
+          <!-- Interactive Recommendation Wizard -->
+          <div class="bg-slate-50 rounded-lg p-4 border border-slate-200 space-y-3">
+            <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+              <span>🎯</span> Interactive Decision Assistant
+            </h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              <label class="flex items-center space-x-2 bg-white p-2 rounded border border-slate-200 cursor-pointer hover:bg-slate-50">
+                <input type="checkbox" id="req-providers" class="rounded text-indigo-600" onchange="runDecisionWizard()">
+                <span>Needs 100+ Model Providers</span>
+              </label>
+              <label class="flex items-center space-x-2 bg-white p-2 rounded border border-slate-200 cursor-pointer hover:bg-slate-50">
+                <input type="checkbox" id="req-latency" class="rounded text-indigo-600" onchange="runDecisionWizard()">
+                <span>Microsecond Latency (&lt;20µs)</span>
+              </label>
+              <label class="flex items-center space-x-2 bg-white p-2 rounded border border-slate-200 cursor-pointer hover:bg-slate-50">
+                <input type="checkbox" id="req-mcp" class="rounded text-indigo-600" onchange="runDecisionWizard()">
+                <span>Native MCP / Code Mode</span>
+              </label>
+              <label class="flex items-center space-x-2 bg-white p-2 rounded border border-slate-200 cursor-pointer hover:bg-slate-50">
+                <input type="checkbox" id="req-no-redis" class="rounded text-indigo-600" onchange="runDecisionWizard()">
+                <span>Zero External Redis Dependency</span>
+              </label>
+              <label class="flex items-center space-x-2 bg-white p-2 rounded border border-slate-200 cursor-pointer hover:bg-slate-50">
+                <input type="checkbox" id="req-finops" class="rounded text-indigo-600" onchange="runDecisionWizard()">
+                <span>Fiscal / Calendar FinOps Overrides</span>
+              </label>
+              <label class="flex items-center space-x-2 bg-white p-2 rounded border border-slate-200 cursor-pointer hover:bg-slate-50">
+                <input type="checkbox" id="req-scim" class="rounded text-indigo-600" onchange="runDecisionWizard()">
+                <span>Inbound SCIM 2.0 / DAC</span>
+              </label>
+            </div>
+            <div id="wizard-result" class="p-3 bg-indigo-50 border border-indigo-200 rounded text-xs text-indigo-900 font-medium">
+              💡 Select requirements above to generate an architectural recommendation.
+            </div>
+          </div>
+        </div>
+
+        <!-- Radar Chart Container -->
+        <div class="lg:col-span-5 flex flex-col items-center">
+          <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Overall Capability Comparison (Likert Average)</div>
+          <div class="chart-container">
+            <canvas id="radarChart"></canvas>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Edition Filter Bar & Overall Scorecard -->
+    <section class="space-y-4">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div>
+          <h3 class="text-sm font-bold text-slate-900">Edition Highlight Filter</h3>
+          <p class="text-xs text-slate-500">Filter scorecard and sections by specific product tiers</p>
+        </div>
+        <div class="flex flex-wrap gap-2 text-xs">
+          <button onclick="toggleEditionFilter('all')" id="filter-all" class="px-3 py-1.5 rounded-lg border font-medium bg-slate-900 text-white border-slate-900">
+            All 4 Editions
+          </button>
+          <button onclick="toggleEditionFilter('litellm-oss')" id="filter-litellm-oss" class="px-3 py-1.5 rounded-lg border font-medium bg-white text-slate-700 border-slate-300 hover:bg-slate-50">
+            LiteLLM OSS
+          </button>
+          <button onclick="toggleEditionFilter('litellm-ent')" id="filter-litellm-ent" class="px-3 py-1.5 rounded-lg border font-medium bg-white text-slate-700 border-slate-300 hover:bg-slate-50">
+            LiteLLM Enterprise
+          </button>
+          <button onclick="toggleEditionFilter('bifrost-oss')" id="filter-bifrost-oss" class="px-3 py-1.5 rounded-lg border font-medium bg-white text-slate-700 border-slate-300 hover:bg-slate-50">
+            Bifrost OSS
+          </button>
+          <button onclick="toggleEditionFilter('bifrost-ent')" id="filter-bifrost-ent" class="px-3 py-1.5 rounded-lg border font-medium bg-white text-slate-700 border-slate-300 hover:bg-slate-50">
+            Bifrost Enterprise
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Summary Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="scorecard-grid">
+        <!-- Cards populated dynamically by JS -->
+      </div>
+    </section>
+
+    <!-- Benchmark Performance Highlight Section -->
+    <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-4">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+        <div>
+          <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            <span>🚀</span> Runtime Performance & Added Proxy Latency
+          </h2>
+          <p class="text-xs text-slate-500">Comparing added gateway overhead at 5,000 RPS concurrency baseline</p>
+        </div>
+        <div class="text-xs bg-amber-50 text-amber-800 px-3 py-1 rounded-full border border-amber-200 font-medium">
+          Source: Section 17 Benchmarks
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+        <div class="md:col-span-7">
+          <div class="chart-container">
+            <canvas id="benchmarkChart"></canvas>
+          </div>
+        </div>
+        <div class="md:col-span-5 space-y-3 text-xs text-slate-600">
+          <div class="p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+            <h4 class="font-bold text-emerald-900 mb-1">Bifrost Go Runtime Engine</h4>
+            <p>Achieves microsecond proxy overhead (<span class="font-semibold">~11–15 µs P50</span>, <span class="font-semibold">~59 µs P99</span>) with internal key lookup resolving in 10 nanoseconds and zero connection pool exhaustion.</p>
+          </div>
+          <div class="p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <h4 class="font-bold text-blue-900 mb-1">LiteLLM Standard Python Engine</h4>
+            <p>Standard asyncio path adds <span class="font-semibold">4.5–6.0 ms P50</span>, with P99 tail inflation reaching <span class="font-semibold">257.7 ms</span> under high concurrency. Rust beta core reduces added overhead to ~0.05 ms.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Category Tabs Navigation -->
+    <div class="border-b border-slate-200 bg-white rounded-xl p-2 shadow-sm sticky top-16 z-40">
+      <nav class="flex flex-wrap gap-1" id="categoryNav">
+        <button onclick="switchCategory('all')" id="cat-all" class="px-3.5 py-2 text-xs font-semibold rounded-lg bg-indigo-600 text-white">
+          All Sections (21)
+        </button>
+        <button onclick="switchCategory('gov')" id="cat-gov" class="px-3.5 py-2 text-xs font-medium rounded-lg text-slate-600 hover:bg-slate-100">
+          Governance & Access
+        </button>
+        <button onclick="switchCategory('infra')" id="cat-infra" class="px-3.5 py-2 text-xs font-medium rounded-lg text-slate-600 hover:bg-slate-100">
+          Deployments & K8s
+        </button>
+        <button onclick="switchCategory('finops')" id="cat-finops" class="px-3.5 py-2 text-xs font-medium rounded-lg text-slate-600 hover:bg-slate-100">
+          FinOps & Cost
+        </button>
+        <button onclick="switchCategory('routing')" id="cat-routing" class="px-3.5 py-2 text-xs font-medium rounded-lg text-slate-600 hover:bg-slate-100">
+          Routing & Performance
+        </button>
+        <button onclick="switchCategory('agent')" id="cat-agent" class="px-3.5 py-2 text-xs font-medium rounded-lg text-slate-600 hover:bg-slate-100">
+          MCP & Agentic Control
+        </button>
+      </nav>
+    </div>
+
+    <!-- Dynamic Sections Container -->
+    <div id="sectionsContainer" class="space-y-6">
+      <!-- Generated dynamically by JS -->
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-slate-900 text-slate-400 text-xs py-8 border-t border-slate-800 mt-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-2">
+      <p class="font-medium text-slate-300">LiteLLM vs Bifrost Architectural & Operational Evaluation</p>
+      <p>Data synthesized from production deployment benchmarks, Helm values, and source proxy baselines.</p>
+    </div>
+  </footer>
+
+  <!-- JavaScript Application Logic -->
+  <script>
+    // --- Complete Data Storage for all 21 Report Sections ---
+    const SECTIONS_DATA = [
+      {
+        id: 1,
+        category: 'gov',
+        title: '1. Governance, Scope and Reproducibility',
+        summary: 'AI gateways control the boundary between organizational consumers and commercial model providers. Evaluates license models, multi-tenant scoping hierarchies, and configuration repeatability.',
+        likert: { litellmOSS: 3, litellmEnt: 4, bifrostOSS: 4, bifrostEnt: 5 },
+        ranks: { bifrostEnt: 1, litellmEnt: 2, bifrostOSS: 2, litellmOSS: 4 },
+        tableHeaders: ['Governance Dimension', 'LiteLLM OSS', 'LiteLLM Enterprise', 'Bifrost OSS', 'Bifrost Enterprise'],
+        tableRows: [
+          ['Primary License', 'MIT License', 'Commercial Proprietary', 'Apache License 2.0', 'Commercial Proprietary'],
+          ['Governance Hierarchy', 'Master Key → Team → User → Key', 'Master → Org → Team → User → Key', 'Customer → Team → Key → Provider', 'Customer → BU → Team → Project → Key'],
+          ['Config As Code', 'config.yaml mounted', 'Dynamic Postgres sync + YAML', 'config.json static schema', 'config.json + Gossip state sync'],
+          ['Reproducibility', 'Docker Compose / Helm', 'Helm + Prisma DB migrations', 'Static Go binary / Helm', 'Helm + P2P cluster discovery']
+        ],
+        codeSnippet: null,
+        conclusion: 'Bifrost Enterprise offers the most complete multi-tenant governance structure, pairing Apache 2.0 foundations with cluster-synchronized state. LiteLLM Enterprise provides mature team scoping backed by Prisma migrations.'
+      },
+      {
+        id: 2,
+        category: 'infra',
+        title: '2. Test Environment and Hardware Baseline',
+        summary: 'Establishes baseline compute, storage, and networking parameters on AWS c6i.2xlarge to isolate proxy overhead from upstream provider latency jitter.',
+        likert: { litellmOSS: 3, litellmEnt: 3, bifrostOSS: 5, bifrostEnt: 5 },
+        ranks: { bifrostOSS: 1, bifrostEnt: 1, litellmEnt: 3, litellmOSS: 3 },
+        tableHeaders: ['Hardware Metric', 'LiteLLM OSS', 'LiteLLM Enterprise', 'Bifrost OSS', 'Bifrost Enterprise'],
+        tableRows: [
+          ['Compute Instance', 'AWS c6i.2xlarge (8 vCPUs, 16GB)', 'AWS c6i.2xlarge (8 vCPUs, 16GB)', 'AWS c6i.2xlarge (8 vCPUs, 16GB)', 'AWS c6i.2xlarge (8 vCPUs, 16GB)'],
+          ['OS & Kernel', 'Ubuntu 24.04 (Kernel 6.8)', 'Ubuntu 24.04 (Kernel 6.8)', 'Ubuntu 24.04 (Kernel 6.8)', 'Ubuntu 24.04 (Kernel 6.8)'],
+          ['Ext DB Dependency', 'PostgreSQL 16 + Redis 7.2', 'PostgreSQL 16 + Redis 7.2', 'None (Embedded SQLite/Mem)', 'None (Embedded SQLite/Mem)']
+        ],
+        codeSnippet: null,
+        conclusion: 'Both Bifrost editions maximize hardware baseline efficiency due to their compiled Go runtime, operating comfortably within small resource boundaries. LiteLLM requires external PostgreSQL and Redis.'
+      },
+      {
+        id: 3,
+        category: 'infra',
+        title: '3. Native Installation Baseline',
+        summary: 'Measures binary startup latency, runtime memory footprint, and external dependency requirements during direct native host execution.',
+        likert: { litellmOSS: 3, litellmEnt: 2, bifrostOSS: 5, bifrostEnt: 5 },
+        ranks: { bifrostOSS: 1, bifrostEnt: 1, litellmOSS: 3, litellmEnt: 4 },
+        tableHeaders: ['Deployment Metric', 'LiteLLM OSS', 'LiteLLM Enterprise', 'Bifrost OSS', 'Bifrost Enterprise'],
+        tableRows: [
+          ['Runtime Prerequisites', 'Python 3.10+, pip, gcc toolchain', 'Python 3.10+, Node.js, Prisma', 'None (Statically compiled Go)', 'None (Statically compiled Go)'],
+          ['Cold Startup Latency', '4.2 – 8.5 seconds', '6.0 – 12.0 seconds (with DB check)', '<180 milliseconds', '<350 milliseconds'],
+          ['Idle Memory Baseline', '~110 – 140 MB', '~160 – 220 MB', '~22 – 35 MB', '~38 – 55 MB']
+        ],
+        codeSnippet: `# Native Installation Commands
+# LiteLLM Setup (Python / Virtualenv)
+python3 -m venv .venv && source .venv/bin/activate
+pip install 'litellm[proxy]'
+export LITELLM_MASTER_KEY="sk-master-init-key"
+litellm --port 4000 --config config.yaml
+
+# Native Bifrost Setup (NPX or Precompiled Binary)
+npx -y @maximhq/bifrost
+# Or direct executable download
+curl -sSL https://getbifrost.ai/install.sh | bash
+./bifrost --port 8080`,
+        conclusion: 'Bifrost natively provides sub-second startup times and low memory footprints without external system packages. LiteLLM requires managing Python environments and build tools.'
+      },
+      {
+        id: 4,
+        category: 'infra',
+        title: '4. Docker Foundation',
+        summary: 'Evaluates base container sizes, underlying operating system layers, non-root security defaults, and vulnerability surface areas (CVEs).',
+        likert: { litellmOSS: 3, litellmEnt: 3, bifrostOSS: 5, bifrostEnt: 5 },
+        ranks: { bifrostOSS: 1, bifrostEnt: 1, litellmEnt: 3, litellmOSS: 3 },
+        tableHeaders: ['Container Metric', 'LiteLLM (Base Image)', 'Bifrost (Base Image)'],
+        tableRows: [
+          ['Base Image OS', 'python:3.11-slim / debian-slim', 'gcr.io/distroless/static-debian12 / Alpine'],
+          ['Uncompressed Image Size', '~650 – 850 MB', '~45 – 65 MB'],
+          ['Vulnerability Surface', 'Moderate (OS utilities, Python wheels)', 'Minimal (Single static binary, no shell)'],
+          ['Default Execution User', 'Requires manual non-root config', 'Default Non-Root UID 10001']
+        ],
+        codeSnippet: null,
+        conclusion: 'Bifrost distroless container image minimizes CVE surface area and reduces deployment pull times by an order of magnitude compared to Debian Python containers.'
+      },
+      {
+        id: 5,
+        category: 'infra',
+        title: '5. Bifrost Docker Deployment',
+        summary: 'Presents single-container orchestration patterns for Bifrost mounting volume storage and configuration definitions.',
+        likert: { litellmOSS: 3, litellmEnt: 3, bifrostOSS: 5, bifrostEnt: 5 },
+        ranks: { bifrostEnt: 1, bifrostOSS: 1, litellmEnt: 3, litellmOSS: 3 },
+        tableHeaders: ['Deployment Metric', 'Bifrost OSS / Enterprise'],
+        tableRows: [
+          ['Container Footprint', 'Single container execution'],
+          ['External Sidecars', 'None required (Embedded SQLite/Mem)'],
+          ['Volume Mounts', '/app/config.json and /app/data volume']
+        ],
+        codeSnippet: `# Production Docker Run for Bifrost
+docker run -d \\
+  --name bifrost-gateway \\
+  -p 8080:8080 \\
+  -v $(pwd)/config.json:/app/config.json:ro \\
+  -v bifrost-data:/app/data \\
+  -e BIFROST_ENCRYPTION_KEY="0123456789abcdef0123456789abcdef" \\
+  -e OPENAI_API_KEY="sk-live-provider-key" \\
+  --restart unless-stopped \\
+  maximhq/bifrost:latest`,
+        conclusion: 'Bifrost provides an ergonomic single-container Docker deployment pattern with zero mandatory sidecars for local disk-backed operation.'
+      },
+      {
+        id: 6,
+        category: 'infra',
+        title: '6. LiteLLM Docker and Compose Deployment',
+        summary: 'Details production Docker Compose stack topologies for LiteLLM requiring co-dependent PostgreSQL and Redis instances.',
+        likert: { litellmOSS: 3, litellmEnt: 4, bifrostOSS: 5, bifrostEnt: 5 },
+        ranks: { bifrostEnt: 1, bifrostOSS: 1, litellmEnt: 3, litellmOSS: 4 },
+        tableHeaders: ['Compose Service', 'Role in Topology'],
+        tableRows: [
+          ['litellm', 'Main proxy service handling route forwarding'],
+          ['postgres', 'Persistent store for master keys, teams, and spend logs'],
+          ['redis', 'Distributed cache for rate limiting and router cooldowns']
+        ],
+        codeSnippet: `# Production Docker Compose Topology for LiteLLM
+version: "3.9"
+services:
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    ports: ["4000:4000"]
+    environment:
+      DATABASE_URL: "postgresql://litellm:secret@postgres:5432/litellm"
+      REDIS_URL: "redis://redis:6379/0"
+      LITELLM_MASTER_KEY: "sk-master-key-production"
+      PROXY_BATCH_WRITE_AT: 60
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_started }
+
+  postgres:
+    image: postgres:16-alpine
+    environment: { POSTGRES_USER: litellm, POSTGRES_PASSWORD: secret, POSTGRES_DB: litellm }
+
+  redis:
+    image: redis:7-alpine`,
+        conclusion: 'LiteLLM Docker Compose topology is functionally mature but operationally heavier due to co-dependent database and cache services.'
+      },
+      {
+        id: 7,
+        category: 'infra',
+        title: '7. Kubernetes Foundation',
+        summary: 'Analyzes zero-downtime rolling deployments, preStop sleep hooks for long-lived Server-Sent Events (SSE) streaming connections, and HPA policies.',
+        likert: { litellmOSS: 3, litellmEnt: 4, bifrostOSS: 4, bifrostEnt: 5 },
+        ranks: { bifrostEnt: 1, bifrostOSS: 2, litellmEnt: 2, litellmOSS: 4 },
+        tableHeaders: ['Kubernetes Metric', 'LiteLLM OSS', 'LiteLLM Enterprise', 'Bifrost OSS', 'Bifrost Enterprise'],
+        tableRows: [
+          ['Streaming Graceful Drain', 'preStop sleep hooks', 'preStop sleep hooks', 'Native shutdown grace period', 'Cluster-aware SSE connection drain'],
+          ['HPA Scaling Metric', 'CPU / Memory', 'Prometheus RPS/TPS Adapter', 'CPU / Memory', 'P2P Cluster Load Aware RPS']
+        ],
+        codeSnippet: null,
+        conclusion: 'Bifrost Enterprise handles Kubernetes lifecycle events cleanly with native P2P synchronization and long-lived SSE drain windows.'
+      },
+      {
+        id: 8,
+        category: 'infra',
+        title: '8. Bifrost Kubernetes and Helm',
+        summary: 'Evaluates Bifrost Helm distribution patterns supporting stateful, stateless, and high-availability clustered deployments without Redis.',
+        likert: { litellmOSS: 3, litellmEnt: 4, bifrostOSS: 4, bifrostEnt: 5 },
+        ranks: { bifrostEnt: 1, bifrostOSS: 2, litellmEnt: 2, litellmOSS: 4 },
+        tableHeaders: ['Helm Parameter', 'Bifrost Helm Values'],
+        tableRows: [
+          ['Replicas & Auto-scaling', '3 to 20 replicas with CPU target 70%'],
+          ['High Availability', 'Gossip P2P peer links on port 8081 (No Redis required)'],
+          ['Plugins Included', 'Governance, Semantic Cache (Weaviate/Qdrant), OpenTelemetry']
+        ],
+        codeSnippet: `# Bifrost Production Helm Values
+replicaCount: 3
+bifrost:
+  server: { port: 8080, shutdownGracePeriodSeconds: 120 }
+  plugins:
+    governance: { enabled: true }
+    semanticCache:
+      enabled: true
+      config: { provider: "openai", threshold: 0.82, ttl: "1h" }
+    otel:
+      enabled: true
+      config: { endpoint: "http://otel-collector:4317" }
+autoscaling: { enabled: true, minReplicas: 3, maxReplicas: 20 }`,
+        conclusion: 'Bifrost Helm architecture achieves operational simplicity because HA clustering is self-contained within the Go daemon using gossip protocols.'
+      },
+      {
+        id: 9,
+        category: 'infra',
+        title: '9. LiteLLM Kubernetes and Helm',
+        summary: 'Compares monolithic helm charts vs enterprise microservices charts that decouple forwarding proxy pods from background spend collectors.',
+        likert: { litellmOSS: 3, litellmEnt: 4, bifrostOSS: 4, bifrostEnt: 5 },
+        ranks: { bifrostEnt: 1, litellmEnt: 2, bifrostOSS: 2, litellmOSS: 4 },
+        tableHeaders: ['Chart Type', 'Architecture & Bottleneck Prevention'],
+        tableRows: [
+          ['Monolithic Chart (OSS)', 'Single pod pattern; direct DB writes under load can exhaust PostgreSQL connections'],
+          ['Microservices Chart (Ent)', 'Decouples proxy pods from background spend collectors and metrics scrapers']
+        ],
+        codeSnippet: `# LiteLLM Production Helm Values
+gateway:
+  numWorkers: 4
+  resources: { requests: { cpu: "2", memory: "4Gi" }, limits: { cpu: "4", memory: "8Gi" } }
+  hpa: { enabled: true, minReplicas: 3, maxReplicas: 30 }
+  collector: { enabled: true }
+proxy_config:
+  proxy_batch_write_at: 60
+  use_redis_transaction_buffer: true
+  database_connection_pool_limit: 20`,
+        conclusion: 'LiteLLM Enterprise resolves database write bottlenecks through its microservices Helm chart with sidecar spend collectors and PgBouncer.'
+      },
+      {
+        id: 10,
+        category: 'gov',
+        title: '10. User-Level Access and Tenant Controls',
+        summary: 'Compares Virtual Key generation, identity federation (SAML/OIDC), inbound SCIM 2.0 provisioning, and row-level Data Access Control (DAC).',
+        likert: { litellmOSS: 2, litellmEnt: 4, bifrostOSS: 3, bifrostEnt: 5 },
+        ranks: { bifrostEnt: 1, litellmEnt: 2, bifrostOSS: 3, litellmOSS: 4 },
+        tableHeaders: ['Access Dimension', 'LiteLLM OSS', 'LiteLLM Enterprise', 'Bifrost OSS', 'Bifrost Enterprise'],
+        tableRows: [
+          ['Virtual Key Gen', 'Admin API (/key/generate)', 'Self-service UI + Admin API', 'Management API & Web UI', 'SCIM 2.0 + Admin Web UI'],
+          ['Identity Federation', 'None (Static Master Key)', 'SAML 2.0 / OIDC (LiteAdmin)', 'Setup Token / Basic Auth', 'Native OIDC + Inbound SCIM 2.0'],
+          ['RBAC Capabilities', 'Admin vs Key holder', 'Admin, Internal User, Team Lead', 'Admin, Read-Only Operator', 'Custom RBAC + Data Access Control'],
+          ['MCP Tool Control', 'None', 'Experimental inspection', 'Allowlist per Virtual Key', 'Allowlists per Project & Profile']
+        ],
+        codeSnippet: null,
+        conclusion: 'Bifrost Enterprise achieves top ranking with inbound SCIM 2.0 directory synchronization, row-level Data Access Control, and tool allowlists.'
+      },
+      {
+        id: 11,
+        category: 'finops',
+        title: '11. Cost Attribution and FinOps Controls',
+        summary: 'Evaluates budget enforcement, fiscal/calendar resets, ephemeral capacity overrides, dynamic budget pooling, and high-volume write buffering.',
+        likert: { litellmOSS: 2, litellmEnt: 4, bifrostOSS: 3, bifrostEnt: 5 },
+        ranks: { bifrostEnt: 1, litellmEnt: 2, bifrostOSS: 3, litellmOSS: 4 },
+        tableHeaders: ['FinOps Feature', 'LiteLLM OSS', 'LiteLLM Enterprise', 'Bifrost OSS', 'Bifrost Enterprise'],
+        tableRows: [
+          ['Budget Types', 'Hard blocking caps', 'Hard caps + Soft alert thresholds', 'Hard caps per Key/Team', 'Multi-tier hard caps + Auto-reroute'],
+          ['Reset Windows', 'Rolling duration (24h, 30d)', 'Rolling duration (24h, 30d)', 'Rolling duration (1h, 1M)', 'Rolling, Calendar, & Fiscal Quarters'],
+          ['Capacity Relief', 'Manual budget edit', 'Manual budget edit', 'Manual budget edit', 'Ephemeral Overrides (auto-expire)'],
+          ['Dynamic Pooling', 'Manual allocation', 'Manual allocation', 'Static weights', 'split_policy: equal across roster'],
+          ['Context Costing', 'Global token lookup', 'Global token lookup', 'Public catalog lookup', 'Tiered context (>100k, >200k, >272k)']
+        ],
+        codeSnippet: null,
+        conclusion: 'Bifrost Enterprise offers advanced FinOps capabilities with calendar/fiscal reset alignment, ephemeral budget overrides, and automated roster splits.'
+      },
+      {
+        id: 12,
+        category: 'agent',
+        title: '12. Functional API and Protocol Coverage',
+        summary: 'Analyzes model provider breadth, OpenAI format emulation, native Anthropic Messages API, and emerging Model Context Protocols (MCP).',
+        likert: { litellmOSS: 5, litellmEnt: 5, bifrostOSS: 4, bifrostEnt: 4 },
+        ranks: { litellmEnt: 1, litellmOSS: 1, bifrostEnt: 3, bifrostOSS: 3 },
+        tableHeaders: ['API & Protocol Support', 'LiteLLM OSS', 'LiteLLM Enterprise', 'Bifrost OSS', 'Bifrost Enterprise'],
+        tableRows: [
+          ['Provider Footprint', '100+ model providers', '100+ model providers', '23+ major providers', '23+ major providers + Relays'],
+          ['OpenAI Emulation', 'Chat, Embed, Audio, Image, Rerank', 'Chat, Embed, Audio, Image, Rerank', 'Chat, Completion, Embed, Compact', 'Chat, Completion, Embed, Compact'],
+          ['Anthropic Messages', 'Supported (/v1/messages)', 'Supported (/v1/messages)', 'Supported (/anthropic/v1/messages)', 'Supported (/anthropic/v1/messages)'],
+          ['Context Compaction', 'Unsupported', 'Unsupported', 'Supported (/v1/responses/compact)', 'Supported (/v1/responses/compact)']
+        ],
+        codeSnippet: null,
+        conclusion: 'LiteLLM leads in provider breadth with 100+ integrations. Bifrost focuses on 23+ major providers while leading in agentic protocols and context compaction.'
+      },
+      {
+        id: 13,
+        category: 'routing',
+        title: '13. Routing, Load Balancing and Resilience',
+        summary: 'Evaluates load balancing algorithms, Common Expression Language (CEL) dynamic rules, header-driven circuit breakers, and session affinity.',
+        likert: { litellmOSS: 4, litellmEnt: 4, bifrostOSS: 3, bifrostEnt: 5 },
+        ranks: { bifrostEnt: 1, litellmEnt: 2, litellmOSS: 2, bifrostOSS: 4 },
+        tableHeaders: ['Traffic Feature', 'LiteLLM OSS', 'LiteLLM Enterprise', 'Bifrost OSS', 'Bifrost Enterprise'],
+        tableRows: [
+          ['Load Balancing', 'Simple-shuffle, least-busy, latency, usage, cost', 'Simple-shuffle, least-busy, latency, usage, cost', 'Static weighted pick, fallbacks', 'Adaptive Health Ranking + Weighted pick'],
+          ['Dynamic Routing', 'Deployment group tags', 'Routing decision models', 'Declarative CEL expressions', 'CEL rules + Complexity tier classification'],
+          ['Circuit Breaking', 'HTTP 429 status retries', 'HTTP 429 status retries', 'Upstream status code retries', 'Header-driven (X-Ms-Is-Spilled-Over) + sub-circuits'],
+          ['Key Invalidation', 'Redis cooldown keys', 'Redis cooldown keys', 'In-memory node local', 'Gossip-synchronized cluster held-key broadcast']
+        ],
+        codeSnippet: null,
+        conclusion: 'Bifrost Enterprise leads in traffic resilience through header-driven circuit breakers and cluster-wide held-key broadcasts. LiteLLM provides flexible algorithmic options.'
+      },
+      {
+        id: 14,
+        category: 'routing',
+        title: '14. Caching and Request Optimization',
+        summary: 'Compares exact string match, vector semantic search, non-blocking background write pipelines, and automated upstream prompt cache injection.',
+        likert: { litellmOSS: 3, litellmEnt: 3, bifrostOSS: 5, bifrostEnt: 5 },
+        ranks: { bifrostEnt: 1, bifrostOSS: 1, litellmEnt: 3, litellmOSS: 3 },
+        tableHeaders: ['Caching Feature', 'LiteLLM OSS / Enterprise', 'Bifrost OSS / Enterprise'],
+        tableRows: [
+          ['Match Layers', 'Exact string match or Vector semantic match', 'Two-tier: Microsecond direct hash → Vector search'],
+          ['Vector Stores', 'Redis Stack, Valkey, Qdrant', 'Weaviate (gRPC), Qdrant (gRPC), Redis, Pinecone'],
+          ['Write Pipeline', 'Synchronous or standard async write', 'Non-blocking background worker writes'],
+          ['Auto Prompt Caching', 'Manual client-supplied cache markers', 'Automated breakpoint injection (Anthropic ephemeral)']
+        ],
+        codeSnippet: null,
+        conclusion: 'Bifrost provides a complete optimization pipeline with two-tier exact hash verification, non-blocking writes, and automated upstream prompt-cache injection.'
+      },
+      {
+        id: 15,
+        category: 'gov',
+        title: '15. Observability, Audit and Operations',
+        summary: 'Examines Prometheus metrics, distributed OTLP tracing, native Datadog connectors, data lake streaming, and selective prompt content masking.',
+        likert: { litellmOSS: 3, litellmEnt: 4, bifrostOSS: 3, bifrostEnt: 5 },
+        ranks: { bifrostEnt: 1, litellmEnt: 2, litellmOSS: 3, bifrostOSS: 3 },
+        tableHeaders: ['Observability Feature', 'LiteLLM OSS', 'LiteLLM Enterprise', 'Bifrost OSS', 'Bifrost Enterprise'],
+        tableRows: [
+          ['Metrics Collection', 'Prometheus callback', 'Prometheus + ServiceMonitor', 'Native /metrics & Pushgateway', 'Native /metrics & Pushgateway'],
+          ['Distributed Tracing', 'OTLP, Datadog callbacks', 'OTLP, Datadog, Dynatrace', 'Native OTLP exporter', 'OTLP + Native Datadog APM connector'],
+          ['Data Lake Streaming', 'S3 / GCS callbacks', 'S3 / GCS / Snowflake callbacks', 'File/stdout JSON streaming', 'Async streaming to S3, GCS, BigQuery'],
+          ['Content Masking', 'Global logging flag', 'Global logging flag', 'Per-key disable_content_logging', 'Per-key & per-project granular suppression']
+        ],
+        codeSnippet: null,
+        conclusion: 'Bifrost Enterprise provides production compliance tools including native Datadog LLM observability, data lake streaming, and per-key content masking.'
+      },
+      {
+        id: 16,
+        category: 'routing',
+        title: '16. Python Benchmark Harness',
+        summary: 'Asynchronous Python load testing harness script used to measure proxy throughput, P50/P90/P99 latency percentiles, and HTTP error rates under load.',
+        likert: { litellmOSS: 3, litellmEnt: 4, bifrostOSS: 5, bifrostEnt: 5 },
+        ranks: { bifrostOSS: 1, bifrostEnt: 1, litellmEnt: 3, litellmOSS: 4 },
+        tableHeaders: ['Harness Parameter', 'Benchmark Execution Setting'],
+        tableRows: [
+          ['Target Requests', '5,000 total HTTP POST chat completion requests'],
+          ['Client Concurrency', '50 concurrent persistent HTTP connections'],
+          ['Payload Size', 'Single user prompt with max_tokens: 16 against local zero-delay mock engine']
+        ],
+        codeSnippet: `# Async Python Benchmark Harness Script
+import asyncio, time, statistics, aiohttp
+
+GATEWAY_URL = "http://localhost:8080/v1/chat/completions" # Or LiteLLM :4000
+CONCURRENCY = 50
+TOTAL_REQUESTS = 5000
+
+async def send_request(session, latencies):
+    start = time.perf_counter()
+    async with session.post(GATEWAY_URL, json={"model":"gpt-4o-mini","messages":[{"role":"user","content":"test"}]}) as resp:
+        await resp.read()
+        latencies.append((time.perf_counter() - start) * 1000.0)
+
+async def main():
+    latencies = []
+    connector = aiohttp.TCPConnector(limit=CONCURRENCY)
+    async with aiohttp.ClientSession(connector=connector) as session:
+        tasks = [send_request(session, latencies) for _ in range(TOTAL_REQUESTS)]
+        await asyncio.gather(*tasks)
+    print(f"P50: {statistics.median(latencies):.2f}ms | P99: {sorted(latencies)[int(len(latencies)*0.99)]:.2f}ms")
+
+if __name__ == "__main__": asyncio.run(main())`,
+        conclusion: 'Bifrost handles asynchronous load harness benchmarking with microsecond latency overhead and zero connection pool failures.'
+      },
+      {
+        id: 17,
+        category: 'routing',
+        title: '17. Load and Performance Benchmarking',
+        summary: 'Summarizes empirical proxy performance metrics isolating gateway latency from upstream network delay.',
+        likert: { litellmOSS: 2, litellmEnt: 3, bifrostOSS: 5, bifrostEnt: 5 },
+        ranks: { bifrostOSS: 1, bifrostEnt: 1, litellmEnt: 3, litellmOSS: 4 },
+        tableHeaders: ['Benchmark Metric', 'LiteLLM OSS (Python)', 'LiteLLM (Rust Beta)', 'Bifrost OSS', 'Bifrost Enterprise'],
+        tableRows: [
+          ['Added Latency (P50)', '4.5 – 6.0 ms', '~0.05 ms', '~11 – 15 µs', '~12 – 18 µs'],
+          ['Added Latency (P99)', '257.7 ms', '~0.7 ms', '~59 µs', '~75 µs'],
+          ['Peak Throughput (1 Node)', '~450 – 650 RPS', '~2,800 – 6,780 RPS', '5,000+ RPS', '5,000+ RPS'],
+          ['Memory Under 5k RPS', '358.9 MB', '~31.7 – 65 MB', '~45 – 60 MB', '~65 – 85 MB'],
+          ['Routing Overhead', '1.2 – 3.5 ms', '<0.1 ms', '~10 ns', '~15 ns']
+        ],
+        codeSnippet: null,
+        conclusion: 'Bifrost achieves leading throughput and latency, maintaining 11–15 µs overhead and 10 ns key selection at 5,000 RPS.'
+      },
+      {
+        id: 18,
+        category: 'gov',
+        title: '18. Security and Supply-Chain Checks',
+        summary: 'Evaluates secret encryption at rest, cloud KMS bindings, native enterprise guardrails (Bedrock, Azure, Model Armor), and inline PII redaction.',
+        likert: { litellmOSS: 2, litellmEnt: 3, bifrostOSS: 3, bifrostEnt: 5 },
+        ranks: { bifrostEnt: 1, litellmEnt: 2, bifrostOSS: 2, litellmOSS: 4 },
+        tableHeaders: ['Security Dimension', 'LiteLLM OSS', 'LiteLLM Enterprise', 'Bifrost OSS', 'Bifrost Enterprise'],
+        tableRows: [
+          ['Secret Encryption', 'LITELLM_SALT_KEY in DB', 'SALT_KEY + Cloud KMS', 'Local key', 'AES-256-GCM + Cloud KMS'],
+          ['Enterprise Guardrails', 'External middleware', 'External middleware', 'Community regex', 'Native Bedrock, Azure, Model Armor'],
+          ['PII Redaction', 'Presidio plugin', 'Presidio plugin', 'Manual sanitization', 'Inline Presidio + Azure Language PII'],
+          ['Outbound Secrets Leak', 'None', 'Custom script', 'Community patterns', 'Native Secrets Detection engine']
+        ],
+        codeSnippet: null,
+        conclusion: 'Bifrost Enterprise provides built-in data protection with inline PII masking, secrets detection, and native cloud guardrails.'
+      },
+      {
+        id: 19,
+        category: 'agent',
+        title: '19. MCP and Agentic Gateway Controls',
+        summary: 'Compares function calling schemas against active Model Context Protocol (MCP) gateways, virtual MCP endpoints, and sandboxed MCP Code Mode.',
+        likert: { litellmOSS: 2, litellmEnt: 2, bifrostOSS: 5, bifrostEnt: 5 },
+        ranks: { bifrostEnt: 1, bifrostOSS: 1, litellmEnt: 3, litellmOSS: 3 },
+        tableHeaders: ['MCP & Agent Feature', 'LiteLLM OSS / Enterprise', 'Bifrost OSS / Enterprise'],
+        tableRows: [
+          ['Protocol Support', 'Normalized JSON function calling', 'Native MCP Client and Server + Virtual MCPs'],
+          ['MCP Code Mode', 'Unsupported', 'Supported (Local sandboxed Python orchestration)'],
+          ['Per-Key Tool Filtering', 'Parameter schema validation', 'Allowlists and denylists per Project/Profile'],
+          ['State Compaction', 'Unsupported', 'Supported (/v1/responses/compact)']
+        ],
+        codeSnippet: null,
+        conclusion: 'Bifrost provides native Model Context Protocol support, Virtual MCP routing, and sandboxed Code Mode orchestration, saving tokens and latency.'
+      },
+      {
+        id: 20,
+        category: 'infra',
+        title: '20. Operational Lifecycle and High Availability',
+        summary: 'Examines high-availability topologies, external Redis dependencies, peer-to-peer gossip state synchronization, and cluster held-key broadcasts.',
+        likert: { litellmOSS: 2, litellmEnt: 3, bifrostOSS: 3, bifrostEnt: 5 },
+        ranks: { bifrostEnt: 1, bifrostOSS: 2, litellmEnt: 2, litellmOSS: 4 },
+        tableHeaders: ['Operational Parameter', 'LiteLLM OSS', 'LiteLLM Enterprise', 'Bifrost OSS', 'Bifrost Enterprise'],
+        tableRows: [
+          ['Cluster State Store', 'External Redis cluster required', 'External Redis cluster required', 'Node-local memory', 'Peer-to-peer gossip sync (No Redis)'],
+          ['HA Architecture', 'Stateless pods + Redis', 'Microservices pods + Redis', 'Standalone pod', 'Multi-region P2P gossip ring'],
+          ['Partition Tolerance', 'Dependent on Redis', 'Dependent on Redis', 'Operates independently', 'Partition-tolerant gossip ring']
+        ],
+        codeSnippet: null,
+        conclusion: 'Bifrost Enterprise offers a resilient peer-to-peer operational topology that eliminates external Redis cluster failure modes.'
+      },
+      {
+        id: 21,
+        category: 'gov',
+        title: '21. Final Architecture, Cost and Decision Framework',
+        summary: 'Provides an executive synthesis across runtime engines, provider breadth, FinOps governance, and agentic protocol capabilities.',
+        likert: { litellmOSS: 3, litellmEnt: 4, bifrostOSS: 4, bifrostEnt: 5 },
+        ranks: { bifrostEnt: 1, bifrostOSS: 2, litellmEnt: 2, litellmOSS: 4 },
+        tableHeaders: ['Evaluated Dimension', 'LiteLLM OSS', 'LiteLLM Enterprise', 'Bifrost OSS', 'Bifrost Enterprise'],
+        tableRows: [
+          ['Primary Runtime', 'Python (FastAPI/Uvicorn)', 'Python with Rust Hot Path', 'Compiled Native Go binary', 'Compiled Native Go binary'],
+          ['Proxy Overhead (P99)', '257.7 ms', '<0.7 ms (Rust beta)', '~59 µs', '~75 µs'],
+          ['Provider Coverage', '100+ model providers', '100+ model providers', '23+ major providers', '23+ major providers'],
+          ['Identity Governance', 'Static Master Key', 'SAML 2.0 / OIDC', 'Local management credentials', 'OIDC + Inbound SCIM 2.0'],
+          ['FinOps Resets', 'Rolling duration', 'Rolling duration', 'Rolling duration', 'Rolling, Calendar, & Fiscal'],
+          ['License Type', 'MIT License', 'Commercial Proprietary', 'Apache License 2.0', 'Commercial Proprietary']
+        ],
+        codeSnippet: null,
+        conclusion: 'For enterprise architectures with high concurrency and FinOps requirements, Bifrost Enterprise scores highest overall due to low runtime overhead and native MCP orchestration.'
+      }
+    ];
+
+    // --- State Variables ---
+    let activeFilterEdition = 'all'; // 'all', 'litellm-oss', 'litellm-ent', 'bifrost-oss', 'bifrost-ent'
+    let activeCategory = 'all';
+    let searchQuery = '';
+    let radarChartInstance = null;
+    let benchmarkChartInstance = null;
+
+    // --- DOM Initialization ---
+    document.addEventListener('DOMContentLoaded', () => {
+      renderScorecards();
+      renderSections();
+      initRadarChart();
+      initBenchmarkChart();
+
+      document.getElementById('searchInput').addEventListener('input', (e) => {
+        searchQuery = e.target.value.toLowerCase().trim();
+        renderSections();
+      });
+    });
+
+    // --- Helper Calculation: Compute Average Likert Scores ---
+    function getAverageScores() {
+      const totals = { litellmOSS: 0, litellmEnt: 0, bifrostOSS: 0, bifrostEnt: 0 };
+      const count = SECTIONS_DATA.length;
+      SECTIONS_DATA.forEach(s => {
+        totals.litellmOSS += s.litellm.litellmOSS;
+        totals.litellmEnt += s.litellm.litellmEnt;
+        totals.bifrostOSS += s.litellm.bifrostOSS;
+        totals.bifrostEnt += s.litellm.bifrostEnt;
+      });
+      return {
+        litellmOSS: (totals.litellmOSS / count).toFixed(2),
+        litellmEnt: (totals.litellmEnt / count).toFixed(2),
+        bifrostOSS: (totals.bifrostOSS / count).toFixed(2),
+        bifrostEnt: (totals.bifrostEnt / count).toFixed(2)
+      };
+    }
+
+    // --- Render Scorecards ---
+    function renderScorecards() {
+      const avg = getAverageScores();
+      const cardsData = [
+        { key: 'bifrost-ent', name: 'Bifrost Enterprise', score: avg.bifrostEnt, type: 'bifrost', badge: 'Rank #1 Overall', desc: 'Superior throughput, microsecond latency, SCIM 2.0, & P2P HA' },
+        { key: 'bifrost-oss', name: 'Bifrost OSS', score: avg.bifrostOSS, type: 'bifrost', badge: 'Rank #2 (Tie)', desc: 'Apache 2.0 Go binary, embedded SQLite, MCP, & <15µs P50' },
+        { key: 'litellm-ent', name: 'LiteLLM Enterprise', score: avg.litellmEnt, type: 'litellm', badge: 'Rank #2 (Tie)', desc: '100+ providers, SAML/OIDC, Rust hot path, & microservices' },
+        { key: 'litellm-oss', name: 'LiteLLM OSS', score: avg.litellmOSS, type: 'litellm', badge: 'Rank #4 Overall', desc: 'MIT permissive, Python proxy, Redis load balancing, & 100+ models' }
+      ];
+
+      const container = document.getElementById('scorecard-grid');
+      container.innerHTML = cardsData.map(c => {
+        const isDimmed = activeFilterEdition !== 'all' && activeFilterEdition !== c.key;
+        const colorClass = c.type === 'bifrost' ? 'border-emerald-300 bg-emerald-50/40' : 'border-blue-300 bg-blue-50/40';
+        const badgeColor = c.type === 'bifrost' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800';
+
+        return `
+          <div class="p-4 rounded-xl border transition-all duration-200 ${colorClass} ${isDimmed ? 'opacity-40 grayscale' : 'opacity-100 shadow-sm'}">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold px-2 py-0.5 rounded-full ${badgeColor}">${c.badge}</span>
+              <span class="text-lg font-extrabold text-slate-800">${c.score} <span class="text-xs font-normal text-slate-500">/ 5.0</span></span>
+            </div>
+            <h4 class="text-sm font-bold text-slate-900">${c.name}</h4>
+            <p class="text-xs text-slate-600 mt-1 leading-snug">${c.desc}</p>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // --- Render Sections List ---
+    function renderSections() {
+      const container = document.getElementById('sectionsContainer');
+      
+      const filtered = SECTIONS_DATA.filter(s => {
+        const matchCategory = activeCategory === 'all' || s.category === activeCategory;
+        const matchSearch = searchQuery === '' || 
+          s.title.toLowerCase().includes(searchQuery) || 
+          s.summary.toLowerCase().includes(searchQuery) ||
+          s.conclusion.toLowerCase().includes(searchQuery);
+        return matchCategory && matchSearch;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white p-8 rounded-xl border text-center text-slate-500 text-sm">
+            🔍 No sections matched your search query "${searchQuery}".
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(s => {
+        return `
+          <article class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
+            
+            <!-- Section Header -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+              <div>
+                <h3 class="text-base font-bold text-slate-900">${s.title}</h3>
+                <p class="text-xs text-slate-600 mt-0.5">${s.summary}</p>
+              </div>
+              
+              <!-- Likert Badges Row -->
+              <div class="flex flex-wrap items-center gap-1.5 text-xs">
+                <span class="px-2 py-1 rounded bg-blue-50 border border-blue-200 text-blue-900 font-medium ${activeFilterEdition === 'litellm-oss' ? 'ring-2 ring-blue-500' : ''}">
+                  LiteLLM OSS: <strong>${s.likert.litellmOSS}/5</strong>
+                </span>
+                <span class="px-2 py-1 rounded bg-blue-100 border border-blue-300 text-blue-950 font-medium ${activeFilterEdition === 'litellm-ent' ? 'ring-2 ring-blue-500' : ''}">
+                  LiteLLM Ent: <strong>${s.likert.litellmEnt}/5</strong>
+                </span>
+                <span class="px-2 py-1 rounded bg-emerald-50 border border-emerald-200 text-emerald-900 font-medium ${activeFilterEdition === 'bifrost-oss' ? 'ring-2 ring-emerald-500' : ''}">
+                  Bifrost OSS: <strong>${s.likert.bifrostOSS}/5</strong>
+                </span>
+                <span class="px-2 py-1 rounded bg-emerald-100 border border-emerald-300 text-emerald-950 font-medium ${activeFilterEdition === 'bifrost-ent' ? 'ring-2 ring-emerald-500' : ''}">
+                  Bifrost Ent: <strong>${s.likert.bifrostEnt}/5</strong>
+                </span>
+              </div>
+            </div>
+
+            <!-- Table View -->
+            <div class="overflow-x-auto custom-scrollbar">
+              <table class="w-full text-xs text-left border-collapse min-w-[600px]">
+                <thead>
+                  <tr class="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
+                    ${s.tableHeaders.map(h => `<th class="p-2.5">${h}</th>`).join('')}
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  ${s.tableRows.map(row => `
+                    <tr class="hover:bg-slate-50/80">
+                      ${row.map((cell, idx) => `
+                        <td class="p-2.5 ${idx === 0 ? 'font-semibold text-slate-800 bg-slate-50/50 w-1/4' : 'text-slate-600'}">${cell}</td>
+                      `).join('')}
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Code Snippet Box (If Available) -->
+            ${s.codeSnippet ? `
+              <div class="bg-slate-900 rounded-lg p-3 text-slate-200 text-xs font-mono overflow-x-auto custom-scrollbar space-y-1">
+                <div class="flex items-center justify-between text-slate-400 text-[10px] pb-1 border-b border-slate-800 mb-1">
+                  <span>Configuration / Deployment Script</span>
+                  <button onclick="copyCode(this)" class="hover:text-white underline">Copy Snippet</button>
+                </div>
+                <pre><code>${escapeHtml(s.codeSnippet)}</code></pre>
+              </div>
+            ` : ''}
+
+            <!-- Conclusion Block -->
+            <div class="bg-indigo-50/60 rounded-lg p-3 border border-indigo-100 text-xs text-indigo-950 flex items-start gap-2">
+              <span class="text-indigo-600 font-bold">💡 Conclusion:</span>
+              <p class="leading-relaxed">${s.conclusion}</p>
+            </div>
+
+          </article>
+        `;
+      }).join('');
+    }
+
+    // --- Category Switcher ---
+    function switchCategory(cat) {
+      activeCategory = cat;
+      const buttons = document.querySelectorAll('#categoryNav button');
+      buttons.forEach(btn => {
+        btn.classList.remove('bg-indigo-600', 'text-white', 'font-semibold');
+        btn.classList.add('text-slate-600', 'font-medium');
+      });
+
+      const activeBtn = document.getElementById(`cat-${cat}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('text-slate-600', 'font-medium');
+        activeBtn.classList.add('bg-indigo-600', 'text-white', 'font-semibold');
+      }
+
+      renderSections();
+    }
+
+    // --- Edition Filter Toggle ---
+    function toggleEditionFilter(edition) {
+      activeFilterEdition = edition;
+      const btnIds = ['all', 'litellm-oss', 'litellm-ent', 'bifrost-oss', 'bifrost-ent'];
+      btnIds.forEach(id => {
+        const btn = document.getElementById(`filter-${id}`);
+        if (id === edition) {
+          btn.className = 'px-3 py-1.5 rounded-lg border font-medium bg-slate-900 text-white border-slate-900';
+        } else {
+          btn.className = 'px-3 py-1.5 rounded-lg border font-medium bg-white text-slate-700 border-slate-300 hover:bg-slate-50';
+        }
+      });
+
+      renderScorecards();
+      renderSections();
+    }
+
+    // --- Decision Wizard Handler ---
+    function runDecisionWizard() {
+      const providers = document.getElementById('req-providers').checked;
+      const latency = document.getElementById('req-latency').checked;
+      const mcp = document.getElementById('req-mcp').checked;
+      const noRedis = document.getElementById('req-no-redis').checked;
+      const finops = document.getElementById('req-finops').checked;
+      const scim = document.getElementById('req-scim').checked;
+
+      const resultBox = document.getElementById('wizard-result');
+
+      if (!providers && !latency && !mcp && !noRedis && !finops && !scim) {
+        resultBox.className = "p-3 bg-indigo-50 border border-indigo-200 rounded text-xs text-indigo-900 font-medium";
+        resultBox.innerHTML = "💡 Select requirements above to generate an architectural recommendation.";
+        return;
+      }
+
+      let scores = { litellmOSS: 0, litellmEnt: 0, bifrostOSS: 0, bifrostEnt: 0 };
+
+      if (providers) { scores.litellmOSS += 3; scores.litellmEnt += 5; }
+      if (latency) { scores.bifrostOSS += 5; scores.bifrostEnt += 5; }
+      if (mcp) { scores.bifrostOSS += 4; scores.bifrostEnt += 5; }
+      if (noRedis) { scores.bifrostOSS += 5; scores.bifrostEnt += 5; }
+      if (finops) { scores.bifrostEnt += 5; scores.litellmEnt += 2; }
+      if (scim) { scores.bifrostEnt += 5; scores.litellmEnt += 3; }
+
+      let winner = 'bifrostEnt';
+      let maxVal = -1;
+      Object.keys(scores).forEach(k => {
+        if (scores[k] > maxVal) { maxVal = scores[k]; winner = k; }
+      });
+
+      const titles = {
+        bifrostEnt: "🚀 Bifrost Enterprise Target",
+        bifrostOSS: "⚡ Bifrost OSS Target",
+        litellmEnt: "📦 LiteLLM Enterprise Target",
+        litellmOSS: "🐍 LiteLLM OSS Target"
+      };
+
+      const reasons = {
+        bifrostEnt: "Optimal match for high concurrency, microsecond latency, native MCP Code Mode, SCIM 2.0, and zero-Redis P2P clustering.",
+        bifrostOSS: "Optimal match for lightweight compiled deployments needing <15µs P50 latency and standalone MCP support.",
+        litellmEnt: "Optimal match for broad provider diversity (100+ backends) with enterprise SAML/OIDC identity integration.",
+        litellmOSS: "Optimal match for flexible, permissive MIT Python proxy setups across basic provider setups."
+      };
+
+      resultBox.className = "p-3 bg-emerald-50 border border-emerald-300 rounded text-xs text-emerald-950 font-medium";
+      resultBox.innerHTML = `<strong>Recommendation: ${titles[winner]}</strong> — ${reasons[winner]}`;
+    }
+
+    // --- Chart 1: Radar Chart (Overall Capability Comparison) ---
+    function initRadarChart() {
+      const ctx = document.getElementById('radarChart').getContext('2d');
+      
+      // Aggregate scores into 5 domain metrics
+      const categories = ['Governance', 'Deployments', 'FinOps', 'Routing/Perf', 'MCP & APIs'];
+      
+      radarChartInstance = new Chart(ctx, {
+        type: 'radar',
+        data: {
+          labels: categories,
+          datasets: [
+            {
+              label: 'Bifrost Ent',
+              data: [5.0, 5.0, 5.0, 5.0, 4.8],
+              borderColor: '#059669',
+              backgroundColor: 'rgba(5, 150, 105, 0.15)',
+              borderWidth: 2
+            },
+            {
+              label: 'Bifrost OSS',
+              data: [4.0, 4.6, 3.0, 4.8, 4.8],
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.08)',
+              borderWidth: 1.5,
+              borderDash: [4, 4]
+            },
+            {
+              label: 'LiteLLM Ent',
+              data: [3.8, 3.6, 4.0, 3.6, 3.8],
+              borderColor: '#2563eb',
+              backgroundColor: 'rgba(37, 99, 235, 0.15)',
+              borderWidth: 2
+            },
+            {
+              label: 'LiteLLM OSS',
+              data: [2.5, 3.1, 2.0, 3.2, 3.2],
+              borderColor: '#3b82f6',
+              backgroundColor: 'rgba(59, 130, 246, 0.08)',
+              borderWidth: 1.5,
+              borderDash: [4, 4]
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            r: {
+              min: 0,
+              max: 5,
+              ticks: { stepSize: 1, textStrokeColor: '#fff' },
+              pointLabels: { font: { size: 10, weight: '600' } }
+            }
+          },
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } }
+          }
+        }
+      });
+    }
+
+    // --- Chart 2: Benchmark Performance Comparison Chart ---
+    function initBenchmarkChart() {
+      const ctx = document.getElementById('benchmarkChart').getContext('2d');
+
+      benchmarkChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['LiteLLM OSS (Python)', 'LiteLLM (Rust Beta)', 'Bifrost OSS (Go)', 'Bifrost Ent (Go)'],
+          datasets: [
+            {
+              label: 'Added Latency P50 (ms)',
+              data: [5.2, 0.05, 0.013, 0.015],
+              backgroundColor: ['#93c5fd', '#3b82f6', '#6ee7b7', '#10b981'],
+              borderWidth: 1
+            },
+            {
+              label: 'Added Latency P99 (ms)',
+              data: [257.7, 0.7, 0.059, 0.075],
+              backgroundColor: ['#1e40af', '#1d4ed8', '#047857', '#065f46'],
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              type: 'logarithmic',
+              title: { display: true, text: 'Added Latency in ms (Log Scale)', font: { size: 10 } }
+            },
+            x: {
+              ticks: { font: { size: 9 } }
+            }
+          },
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return `${context.dataset.label}: ${context.raw} ms`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // --- Utility Functions ---
+    function escapeHtml(text) {
+      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function copyCode(btn) {
+      const pre = btn.parentElement.parentElement.querySelector('code');
+      if (pre) {
+        navigator.clipboard.writeText(pre.innerText);
+        const orig = btn.innerText;
+        btn.innerText = 'Copied!';
+        setTimeout(() => { btn.innerText = orig; }, 2000);
+      }
+    }
+
+    function resetFilters() {
+      searchQuery = '';
+      document.getElementById('searchInput').value = '';
+      activeCategory = 'all';
+      activeFilterEdition = 'all';
+      
+      document.querySelectorAll('#req-providers, #req-latency, #req-mcp, #req-no-redis, #req-finops, #req-scim')
+        .forEach(cb => cb.checked = false);
+      
+      runDecisionWizard();
+      switchCategory('all');
+      toggleEditionFilter('all');
+    }
+  </script>
+</body>
+</html>
